@@ -1,16 +1,22 @@
-// Parser for the transcript a review engine tees into agent.log. `codex exec`
-// prints this format natively; the claude driver renders its stream-json into
-// the same shape (see internal/review/claudestream.go) so one parser serves
-// every engine. The stream is a sequence of blocks introduced by bare marker
-// lines:
+// Parser for the transcript a review engine tees into agent.log.
+// lib-agent-harness renders every engine's stream into this one shape, so one
+// parser serves every engine. The stream is a sequence of blocks introduced by
+// bare marker lines:
 //
 //   user            the prompt handed to the agent
-//   error           why a run ended without a report (claude only; codex has
-//                   no equivalent, so the marker simply never appears)
+//   error           why a run ended without a report (claude and grok; codex
+//                   has no equivalent, so the marker simply never appears)
 //   thinking        a reasoning summary (absent when summaries are off)
-//   codex | claude  an agent message, named for the engine that produced it
+//   codex | claude | grok
+//                   an agent message, named for the engine that produced it
 //   exec            a command; a " succeeded|exited|failed in <dur>:" line ends
 //                   it and its output follows
+//
+// A "session id: <id>" banner is session metadata wherever it appears. Codex
+// and claude print it first; grok learns its session only when the turn ends,
+// so its banner trails the transcript, and a resumed run adds another. Read
+// as a line of the block it follows, it would land in a command's output or
+// an agent message.
 //
 // Parallel tool calls interleave: several exec markers can appear before any
 // result line, then the results arrive together. Results carry no id, so
@@ -31,7 +37,7 @@ export type ExecEvent = {
 
 // The agent-message kinds, one per engine. Kept as a set so callers can ask
 // "is this the agent talking?" without naming every engine.
-export const agentKinds = ['codex', 'claude'] as const;
+export const agentKinds = ['codex', 'claude', 'grok'] as const;
 export type AgentKind = (typeof agentKinds)[number];
 
 export function isAgentKind(kind: string): kind is AgentKind {
@@ -62,6 +68,7 @@ const markerKind = new Map<string, Exclude<Section, 'meta'>>([
   ['tokens used', 'tokens'],
 ]);
 const execResult = /^ (succeeded|exited|failed)\b.*?(?: in ([^\s:]+))?:?\s*$/;
+const sessionBanner = /^session id: \S+\s*$/;
 
 // parseAgentLog splits the raw stream into events, or returns null when the
 // content doesn't look like a codex exec stream (no markers) so the caller
@@ -88,6 +95,13 @@ export function parseAgentLog(raw: string): LogEvent[] | null {
   };
 
   for (const line of lines) {
+    if (sessionBanner.test(line)) {
+      if (kind !== 'exec') flushProse();
+      sink = null;
+      kind = 'meta';
+      body = [line];
+      continue;
+    }
     const opens = markerKind.get(line);
     if (opens) {
       if (kind !== 'exec') flushProse();

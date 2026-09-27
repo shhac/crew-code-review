@@ -1,6 +1,6 @@
 <script lang="ts">
   import { getReviewLog } from '../lib/api';
-  import { parseAgentLog, verdictShaped, isAgentKind } from '../lib/agentlog';
+  import { parseAgentLog, verdictShaped, isAgentKind, agentKinds } from '../lib/agentlog';
   import { withFeed } from '../lib/feed';
   import { durSecs, prHref, rel, tokens, usd, when } from '../lib/format';
   import { poll } from '../lib/poll';
@@ -51,8 +51,7 @@
     meta: 'session',
     user: 'prompt',
     thinking: 'thinking',
-    codex: 'agent',
-    claude: 'agent',
+    ...Object.fromEntries(agentKinds.map((k) => [k, 'agent'])),
     error: 'failed',
     tokens: 'tokens used',
   };

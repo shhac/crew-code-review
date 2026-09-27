@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { parseAgentLog, verdictShaped, type ExecEvent } from './agentlog';
+import { isAgentKind, parseAgentLog, verdictShaped, type ExecEvent } from './agentlog';
 
 const join = (...lines: string[]) => lines.join('\n');
 
@@ -224,5 +224,46 @@ describe('codex transcripts render through the same parser', () => {
       decision: 'COMMENTED',
       summary: 'Left two inline notes about error handling.',
     });
+  });
+});
+
+// A grok review's log comes from the same harness rendering, with two
+// differences worth pinning: its agent messages carry the "grok" marker, and
+// its session banner arrives at the END (grok names the session only when the
+// turn ends), where it must read as session metadata rather than as more of
+// the command output above it. Same fixture mechanism as above; regenerate
+// with:
+//   go test ./internal/review -update-golden
+describe('grok transcripts render through the same parser', () => {
+  const transcript = readFileSync(
+    new URL('../../../../review/testdata/grok-transcript.golden', import.meta.url),
+    'utf8',
+  );
+
+  it('parses the rendered grok transcript into events', () => {
+    const events = parseAgentLog(transcript);
+    expect(events).not.toBeNull();
+    expect(events!.map((e) => e.kind)).toEqual([
+      'user',
+      'thinking',
+      'grok',
+      'exec',
+      'meta',
+      'tokens',
+    ]);
+  });
+
+  it('reads grok as the agent talking', () => {
+    const agent = parseAgentLog(transcript)!.find((e) => isAgentKind(e.kind))!;
+    expect(agent.kind).toBe('grok');
+    expect('body' in agent ? agent.body : '').toBe('Checking the diff against the linked issue.');
+  });
+
+  it('keeps the trailing session banner out of the command output', () => {
+    const events = parseAgentLog(transcript)!;
+    const exec = events.find((e): e is ExecEvent => e.kind === 'exec')!;
+    expect(exec.output).toBe('diff --git a/main.go b/main.go\n+ added a line');
+    const meta = events.find((e) => e.kind === 'meta')!;
+    expect('body' in meta ? meta.body : '').toBe('session id: 0199aa00-grok-4c1e-9d2b-5e6f7a8b9c0d');
   });
 });
