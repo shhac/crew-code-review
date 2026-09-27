@@ -230,8 +230,10 @@ type ClaudeSettings struct {
 
 // GrokSettings configures the grok review engine (`grok --single`).
 //
-// Sandbox and PermissionMode are Grok's own flags of the same names, passed
-// through; empty leaves each to the CLI's default. Tools narrows the built-in
+// Sandbox and PermissionMode are Grok's own flags of the same names. Empty
+// means "workspace" and "auto", the analogues of codex's workspace-write and
+// claude's auto: headless Grok cancels the whole run at any permission prompt,
+// so the CLI's own default mode cannot run gh at all. Tools narrows the built-in
 // tools to the named ones; empty keeps Grok's default set (it has no verified
 // way to say "none"). Telemetry defaults to reduced, which switches off Grok's
 // client telemetry and its imports of other harnesses' skills, rules, MCP

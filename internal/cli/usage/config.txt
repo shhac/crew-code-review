@@ -45,6 +45,11 @@ KEYS:
   codex.bin | codex.home | codex.model | codex.effort | codex.sandbox
   claude.bin | claude.home | claude.model | claude.effort | claude.permission_mode
   grok.bin | grok.home | grok.model | grok.effort | grok.sandbox | grok.permission_mode
+  grok.permission_mode                 auto (default): the least permissive mode a
+                                       headless review survives (grok cancels the run
+                                       at any permission prompt)
+  grok.sandbox                         workspace (default): writes confined to the
+                                       per-PR workdir, network left for gh
   grok.telemetry                       reduced (default) | standard: reduced turns off
                                        grok's client telemetry and its imports of other
                                        harnesses' config for each review run

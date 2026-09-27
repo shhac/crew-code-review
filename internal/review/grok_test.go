@@ -32,6 +32,20 @@ func TestResolveGrok(t *testing.T) {
 	}
 }
 
+// Left empty, a review runs in the least permissive mode headless grok does
+// not cancel at its first gh call, inside the sandbox that parallels codex's
+// workspace-write. Configured values still win.
+func TestResolveGrokDefaultsPermissionsAndSandbox(t *testing.T) {
+	got := resolveGrok(config.GrokSettings{}).Grok
+	if got.PermissionMode != "auto" || got.Sandbox != "workspace" {
+		t.Errorf("defaults = %+v, want auto permissions in the workspace sandbox", got)
+	}
+	got = resolveGrok(config.GrokSettings{PermissionMode: "bypassPermissions", Sandbox: "off"}).Grok
+	if got.PermissionMode != "bypassPermissions" || got.Sandbox != "off" {
+		t.Errorf("configured values were overridden: %+v", got)
+	}
+}
+
 func TestGrokSendsItsConfiguration(t *testing.T) {
 	e := newGrok(config.GrokSettings{
 		EngineCommon:   config.EngineCommon{Model: "grok-code", Effort: "high", Args: []string{"--no-subagents"}},
