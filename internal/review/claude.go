@@ -4,6 +4,7 @@ import (
 	"cmp"
 
 	"github.com/shhac/crew-code-review/internal/config"
+	harness "github.com/shhac/lib-agent-harness"
 	"github.com/shhac/lib-agent-harness/native"
 )
 
@@ -11,17 +12,13 @@ import (
 //
 // There is no Go Agent SDK; the documented way to drive Claude Code from
 // another language is this CLI surface, which is also what the Python and
-// TypeScript SDKs spawn underneath. Two shape differences from codex are worth
-// knowing: the report arrives in the output stream rather than a file
-// (--json-schema, read from the result event's structured_output), and there
-// is no --cd flag, so the workspace is set as the process working directory.
+// TypeScript SDKs spawn underneath.
 func newClaude(c config.ClaudeSettings, resumePrompt string) *nativeEngine {
 	return &nativeEngine{
 		label:        "claude -p",
 		cfg:          resolveClaude(c),
 		maxResumes:   resolveMaxResumes(c.MaxResumes),
 		resumePrompt: resumePrompt,
-		template:     claudeTemplate,
 	}
 }
 
@@ -86,28 +83,23 @@ var fallbackAllowedTools = []string{"Bash(gh *)", "Read", "Glob", "Grep"}
 // makes every review fail, was reasoning about a configuration one step
 // removed from the one newClaude would build.
 func resolveClaude(c config.ClaudeSettings) native.Config {
-	cfg := native.Config{
-		Engine:         "claude",
-		Binary:         config.DefaultBin("claude", c.Bin),
-		Model:          cmp.Or(c.Model, defaultModel),
-		Effort:         cmp.Or(c.Effort, defaultEffort),
+	options := native.ClaudeOptions{
 		PermissionMode: cmp.Or(c.PermissionMode, defaultPermissionMode),
-		AllowedTools:   c.AllowedTools,
 		MaxBudgetUSD:   c.MaxBudgetUSD,
-		Args:           c.Args,
+	}
+	if len(c.AllowedTools) > 0 {
+		options.AllowedTools = c.AllowedTools
 	}
 	// Auto mode routes every action through the classifier, so a fallback list
 	// would narrow what it may do rather than widen it.
-	if len(cfg.AllowedTools) == 0 && cfg.PermissionMode != autoPermissionMode {
-		cfg.AllowedTools = fallbackAllowedTools
+	if len(options.AllowedTools) == 0 && options.PermissionMode != autoPermissionMode {
+		options.AllowedTools = fallbackAllowedTools
 	}
-	return cfg
-}
-
-// claudeTemplate passes the schema inline; the report comes back in the
-// stream, so nothing is written into the workspace. Claude never reads a
-// schema file, and a workspace that could not hold one used to fail its
-// reviews over it.
-func claudeTemplate(string) (native.Request, error) {
-	return native.Request{Schema: verdictSchema}, nil
+	return native.Config{
+		Provider: c.Provider(string(harness.Claude)),
+		Model:    cmp.Or(c.Model, defaultModel),
+		Effort:   cmp.Or(c.Effort, defaultEffort),
+		Claude:   options,
+		Args:     c.Args,
+	}
 }

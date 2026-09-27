@@ -251,13 +251,7 @@ func reviewRecord(c store.Candidate, v review.Verdict, p review.Provenance, clai
 	rec.Model = p.Model
 	rec.Effort = p.Effort
 	rec.EngineVersion = p.EngineVersion
-	rec.TokensUsed = v.Tokens.Total()
-	rec.FreshTokens = v.Tokens.Fresh()
-	rec.InputTokens = v.Tokens.Input
-	rec.OutputTokens = v.Tokens.Output
-	rec.CacheWriteTokens = v.Tokens.CacheWrite
-	rec.CacheReadTokens = v.Tokens.CacheRead
-	rec.ReasoningTokens = v.Tokens.Reasoning
+	recordTokens(&rec, v.Tokens)
 	rec.UsageRaw = v.UsageRaw
 	rec.CostUSD = v.CostUSD
 	// Our own valuation, frozen here at the rates in force now. Recorded even
@@ -269,6 +263,31 @@ func reviewRecord(c store.Candidate, v review.Verdict, p review.Provenance, clai
 		}
 	}
 	return rec
+}
+
+// recordTokens projects the harness's usage onto the history columns, whose
+// meaning predates it and is kept so old and new rows stay comparable:
+// input_tokens is FRESH input (the harness's Input counts cached tokens too),
+// and fresh_tokens is fresh input + output + cache writes. The class split is
+// recorded only when the engine reported it (Usage.Fresh); otherwise every
+// class stays 0, which the columns already read as unknown and which keeps the
+// cost backfill from pricing a row whose cached input it cannot tell apart.
+// The total is recorded whenever usage is known at all.
+func recordTokens(rec *store.Review, u review.TokenUsage) {
+	if !u.Known {
+		return
+	}
+	rec.TokensUsed = int(u.Total())
+	fresh, ok := u.Fresh()
+	if !ok {
+		return
+	}
+	rec.InputTokens = int(fresh)
+	rec.OutputTokens = int(u.Output)
+	rec.CacheWriteTokens = int(u.CacheWrite)
+	rec.CacheReadTokens = int(u.CacheRead)
+	rec.ReasoningTokens = int(u.Reasoning)
+	rec.FreshTokens = int(fresh + u.Output + u.CacheWrite)
 }
 
 // tail returns the last n bytes of s, whitespace-trimmed, newlines flattened.

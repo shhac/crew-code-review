@@ -76,7 +76,8 @@ func TestReviewResumesTheGivenSessionInsteadOfStartingFresh(t *testing.T) {
 		e.cfg.RunCommand = func(_ context.Context, args []string, _ string, sink, _ io.Writer) error {
 			argv = append(argv, args)
 			_, _ = io.WriteString(sink, `{"type":"turn.completed","usage":{"input_tokens":10}}`+"\n")
-			return os.WriteFile(filepath.Join(workDir, "verdict.json"), []byte(`{"decision":"APPROVED","summary":"finished after the interruption"}`), 0600)
+			path, _ := argValue(args, "--output-last-message")
+			return os.WriteFile(path, []byte(`{"decision":"APPROVED","summary":"finished after the interruption"}`), 0600)
 		}
 		v, err := e.Review(context.Background(), Request{
 			Prompt: "THE FULL PROMPT", WorkDir: workDir, ResumeSession: "prev-session"})

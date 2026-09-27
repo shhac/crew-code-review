@@ -69,15 +69,21 @@ func backfillEstimates(ctx context.Context, prices *pricing.Cache, s store.Store
 // estimator adapts the price table to the scheduler's PriceFn. A model the
 // table does not list, or a review with no class split, yields false: the row
 // records no estimate rather than a zero that would read as a free review.
+//
+// The harness's Input includes cached tokens, so the input rate applies only
+// to the fresh remainder (Usage.Fresh); a usage whose cache split is unknown
+// cannot be priced at all, since valuing its cached reads as fresh input would
+// overstate it by up to tenfold.
 func estimator(prices *pricing.Cache) scheduler.PriceFn {
 	return func(model string, t review.TokenUsage) (float64, bool) {
-		if t.Input+t.Output == 0 {
+		fresh, known := t.Fresh()
+		if !known || t.Total() == 0 {
 			return 0, false
 		}
 		rates, ok := prices.Lookup(model)
 		if !ok {
 			return 0, false
 		}
-		return rates.Cost(t.Input, t.Output, t.CacheWrite, t.CacheRead), true
+		return rates.Cost(int(fresh), int(t.Output), int(t.CacheWrite), int(t.CacheRead)), true
 	}
 }

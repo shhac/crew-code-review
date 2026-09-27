@@ -21,11 +21,11 @@ func TestEstimatorRefusesToGuess(t *testing.T) {
 	// An empty cache lists no model, which is the unlisted-model case.
 	est := estimator(pricing.Open(t.TempDir()))
 
-	if _, ok := est("gpt-5.6", review.TokenUsage{Input: 1000, Output: 200}); ok {
+	if _, ok := est("gpt-5.6", review.TokenUsage{Known: true, Input: 1000, Output: 200, CacheKnown: true}); ok {
 		t.Error("a model the price table does not list must not be estimated")
 	}
 	if _, ok := est("gpt-5.6", review.TokenUsage{CacheWrite: 5000, CacheRead: 900000}); ok {
-		t.Error("a review with no input/output split must not be estimated, even with cache tokens")
+		t.Error("a review with no known usage must not be estimated, even with cache tokens")
 	}
 }
 
@@ -100,7 +100,7 @@ func seedPrices(t *testing.T) *pricing.Cache {
 // cost depends on whether the table was reachable when it finished.
 func TestEstimatorPricesAListedModel(t *testing.T) {
 	prices := seedPrices(t)
-	usage := review.TokenUsage{Input: 1000, Output: 200, CacheWrite: 50000, CacheRead: 900000}
+	usage := review.TokenUsage{Known: true, Input: 951000, Output: 200, CacheWrite: 50000, CacheRead: 900000, CacheKnown: true}
 
 	got, ok := estimator(prices)("listed-model", usage)
 	if !ok {
@@ -112,12 +112,22 @@ func TestEstimatorPricesAListedModel(t *testing.T) {
 		t.Errorf("estimate = %v, want %v", got, want)
 	}
 
+	// Input counts the cached tokens too; only the fresh remainder is
+	// priced at the input rate, which is what history's input column holds.
+	fresh, _ := usage.Fresh()
 	rates, _ := prices.Lookup("listed-model")
 	cr := costRates(rates)
-	backfilled := float64(usage.Input)*cr.Input + float64(usage.Output)*cr.Output +
+	backfilled := float64(fresh)*cr.Input + float64(usage.Output)*cr.Output +
 		float64(usage.CacheWrite)*cr.CacheWrite + float64(usage.CacheRead)*cr.CacheRead
 	if math.Abs(got-backfilled) > 1e-12 {
 		t.Errorf("estimate = %v, backfill = %v: completion and backfill must agree", got, backfilled)
+	}
+
+	// Without the cache split, cached reads cannot be told from fresh input,
+	// and pricing them all as fresh would overstate the review many times.
+	unsplit := review.TokenUsage{Known: true, Input: 951000, Output: 200}
+	if _, ok := estimator(prices)("listed-model", unsplit); ok {
+		t.Error("a usage without a cache split must not be estimated")
 	}
 }
 

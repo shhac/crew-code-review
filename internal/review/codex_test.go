@@ -15,7 +15,8 @@ import (
 
 // TestCodexSendsItsConfiguration pins what a fresh review actually hands
 // codex: the configured dials, the workspace, and the two files the verdict
-// contract runs through.
+// contract runs through, which the harness keeps OUTSIDE the workspace so a
+// workspace-write agent cannot forge its own verdict.
 func TestCodexSendsItsConfiguration(t *testing.T) {
 	full := newCodex(config.CodexSettings{EngineCommon: config.EngineCommon{Model: "some-model", Effort: "high", Args: []string{"-c", "k=v"}}, Sandbox: "read-only"}, "NUDGE")
 	wd := t.TempDir()
@@ -30,14 +31,13 @@ func TestCodexSendsItsConfiguration(t *testing.T) {
 		"--sandbox read-only",
 		"--cd " + wd,
 		"--skip-git-repo-check",
-		"--output-schema " + filepath.Join(wd, "verdict.schema.json"),
-		"--output-last-message " + filepath.Join(wd, "verdict.json"),
 		"-c k=v",
 	} {
 		if !strings.Contains(joined, want) {
 			t.Errorf("args missing %q: %v", want, args)
 		}
 	}
+	assertReportFilesOutside(t, args, wd)
 	// The prompt is the final arg and carries the reporting instruction:
 	// WORKING for intermediate progress, a real outcome as the final message.
 	last := args[len(args)-1]
@@ -74,8 +74,6 @@ func TestCodexResumeArgs(t *testing.T) {
 		"--json",
 		"--skip-git-repo-check",
 		`-c sandbox_mode="read-only"`, // resume has no --sandbox flag; the mode travels as a config override
-		"--output-schema " + filepath.Join(wd, "verdict.schema.json"),
-		"--output-last-message " + filepath.Join(wd, "verdict.json"),
 		"-c k=v",
 		`-c model_reasoning_effort="high"`,
 	} {
@@ -83,6 +81,7 @@ func TestCodexResumeArgs(t *testing.T) {
 			t.Errorf("resume args missing %q: %v", want, args)
 		}
 	}
+	assertReportFilesOutside(t, args, wd)
 	// exec-only flags must not leak into resume, which rejects them.
 	for _, banned := range []string{"--sandbox", "--cd"} {
 		if slices.Contains(args, banned) {
@@ -92,6 +91,23 @@ func TestCodexResumeArgs(t *testing.T) {
 	// The session and the nudge prompt are the positional tail.
 	if n := len(args); args[n-2] != "SESSION-ID" || args[n-1] != "NUDGE" {
 		t.Errorf("resume args must end with session id + nudge, got %v", args[len(args)-2:])
+	}
+}
+
+func assertReportFilesOutside(t *testing.T, args []string, workDir string) {
+	t.Helper()
+	for _, flag := range []string{"--output-schema", "--output-last-message"} {
+		path, ok := argValue(args, flag)
+		if !ok {
+			t.Errorf("args missing %s: %v", flag, args)
+			continue
+		}
+		if rel, err := filepath.Rel(workDir, path); err == nil && !strings.HasPrefix(rel, "..") {
+			t.Errorf("%s %s is inside the workspace %s", flag, path, workDir)
+		}
+	}
+	if _, err := os.Stat(filepath.Join(workDir, "verdict.schema.json")); err == nil {
+		t.Error("the workspace must not hold a schema file any more")
 	}
 }
 
@@ -143,9 +159,10 @@ exit 0
 // workingThenBody simulates the observed failure mode: the initial exec ends
 // cleanly on a WORKING report (after printing its session header), and each
 // resume invocation runs resumeBody instead. Every invocation appends a line
-// to $workdir/invocations and prints a 100-token trailer.
+// to $workdir/invocations (the process runs in the workspace) and prints a
+// 100-token trailer.
 func workingThenBody(resumeBody string) string {
-	return `echo "$(echo "$all_args" | tr '\n' ' ')" >> "$(dirname "$last_msg")/invocations"
+	return `echo "$(echo "$all_args" | tr '\n' ' ')" >> "$PWD/invocations"
 if [ "$resume" = 1 ]; then
 ` + resumeBody + `
 else
@@ -231,7 +248,7 @@ func TestCodexResumeOnWorking(t *testing.T) {
 
 	t.Run("no session header means no resume", func(t *testing.T) {
 		engine := newCodex(config.CodexSettings{EngineCommon: config.EngineCommon{Bin: fakeCodex(t,
-			`echo "$(echo "$all_args" | tr '\n' ' ')" >> "$(dirname "$last_msg")/invocations"
+			`echo "$(echo "$all_args" | tr '\n' ' ')" >> "$PWD/invocations"
 printf '{"decision":"WORKING","summary":"starting"}' > "$last_msg"
 exit 0
 `)}}, "NUDGE")
@@ -268,7 +285,8 @@ func TestCodexResumeExitBranches(t *testing.T) {
 				_, _ = io.WriteString(sink, "diagnostics\n")
 				_, _ = io.WriteString(sink, `{"type":"turn.completed","usage":{"input_tokens":150}}`+"\n")
 			}
-			if err := os.WriteFile(filepath.Join(workDir, "verdict.json"), []byte(report), 0o600); err != nil {
+			path, _ := argValue(args, "--output-last-message")
+			if err := os.WriteFile(path, []byte(report), 0o600); err != nil {
 				t.Fatal(err)
 			}
 			if calls == 1 {
@@ -372,8 +390,9 @@ func TestNewAgentSink(t *testing.T) {
 	})
 }
 
-// A failed resumed invocation cannot inherit an earlier attempt's successful
-// report. The library clears the Codex output file before every invocation.
+// A failed invocation cannot inherit an earlier attempt's successful report,
+// nor one planted in the workspace: the harness reads Codex's report from a
+// fresh private file per invocation.
 func TestCodexDoesNotAcceptStaleReport(t *testing.T) {
 	for _, resume := range []string{"", "old-session"} {
 		t.Run(resume, func(t *testing.T) {

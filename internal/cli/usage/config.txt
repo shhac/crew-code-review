@@ -25,6 +25,7 @@ KEYS:
   <engine>.usage_floor.5h_percent      hold that engine's candidates when its 5 hourly
                                        usage window has less than this % remaining
                                        (default 10, 0 off); <engine> is codex or claude
+                                       (grok reports no quota, so it has no floor)
   <engine>.usage_floor.1w_percent      same for its weekly window (default 10, 0 off)
   candidates.require_review_request    true|false: require an outstanding review
                                        request to discover a PR (default false:
@@ -40,9 +41,14 @@ KEYS:
                                        editor open (default 5m, 0s disables)
   candidates.error_backoff             wait this long after a failed engine attempt
                                        before one retry (default 15m, 0s retires it)
-  review.engine                        codex (default) | claude
-  codex.bin | codex.model | codex.effort | codex.sandbox
-  claude.bin | claude.model | claude.effort | claude.permission_mode
+  review.engine                        codex (default) | claude | grok
+  codex.bin | codex.home | codex.model | codex.effort | codex.sandbox
+  claude.bin | claude.home | claude.model | claude.effort | claude.permission_mode
+  grok.bin | grok.home | grok.model | grok.effort | grok.sandbox | grok.permission_mode
+  grok.telemetry                       reduced (default) | standard: reduced turns off
+                                       grok's client telemetry and its imports of other
+                                       harnesses' config for each review run
+  <engine>.model / <engine>.effort     complete from the engine's own model catalog
   claude.max_budget_usd                per-review ceiling at API rates (0 = uncapped;
                                        set it from the Metrics page's median + peak)
   dashboard.addr                       listen address (default 127.0.0.1:8330)
@@ -57,7 +63,7 @@ EXAMPLES:
 
 NOTES: repos, authors, and prompts have their own command groups (repos usage,
 authors usage, prompts usage); rules live under prompts (prompts rules usage).
-codex.args / claude.args / claude.allowed_tools are edited in the file directly
+codex.args / claude.args / claude.allowed_tools / grok.args / grok.tools are edited in the file directly
 (config path).
 
 ENGINES: both report through the same verdict contract and write the same review

@@ -81,9 +81,9 @@ func TestPreflightJudgesWhatWillActuallyRun(t *testing.T) {
 		// Whatever preflight concluded, it must have concluded it about the
 		// engine's own resolved values.
 		r := resolveClaude(cs)
-		if r.Model != e.cfg.Model || r.PermissionMode != e.cfg.PermissionMode {
+		if r.Model != e.cfg.Model || r.Claude.PermissionMode != e.cfg.Claude.PermissionMode {
 			t.Errorf("%s: preflight resolved %q/%q, engine built %q/%q",
-				name, r.Model, r.PermissionMode, e.cfg.Model, e.cfg.PermissionMode)
+				name, r.Model, r.Claude.PermissionMode, e.cfg.Model, e.cfg.Claude.PermissionMode)
 		}
 		if len(got) != 0 {
 			t.Errorf("%s: a supported default pairing must raise nothing, got %v", name, got)

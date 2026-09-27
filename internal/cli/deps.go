@@ -276,7 +276,7 @@ func reportConfigProblems(cfg config.Config, warnf func(notice, hint string)) {
 // fetchUsage is the real per-engine usage probe, as usage.Cache.Lazy wants it.
 func fetchUsage(ctx context.Context, cfg config.Config) func(string) (usage.Snapshot, error) {
 	return func(engine string) (usage.Snapshot, error) {
-		return usage.Fetch(ctx, usage.Source{Engine: engine, Bin: cfg.BinFor(engine)})
+		return usage.Fetch(ctx, usage.SourceFor(cfg.Review, engine))
 	}
 }
 

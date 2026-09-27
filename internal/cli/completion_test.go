@@ -7,11 +7,14 @@ import (
 	"os"
 	"os/exec"
 	"reflect"
+	"slices"
 	"testing"
 
 	"github.com/spf13/cobra"
 
 	"github.com/shhac/crew-code-review/internal/config"
+	harness "github.com/shhac/lib-agent-harness"
+	"github.com/shhac/lib-agent-harness/catalog"
 )
 
 func TestConfigCompletionHooks(t *testing.T) {
@@ -24,7 +27,7 @@ func TestConfigCompletionHooks(t *testing.T) {
 	}
 	set := findCommand(configCmd, "set")
 	keys, _ := set.ValidArgsFunction(set, nil, "codex.")
-	if !reflect.DeepEqual(keys, []string{"codex.bin", "codex.effort", "codex.max_resumes", "codex.model",
+	if !reflect.DeepEqual(keys, []string{"codex.bin", "codex.effort", "codex.home", "codex.max_resumes", "codex.model",
 		"codex.sandbox", "codex.usage_floor", "codex.usage_floor.1w_percent", "codex.usage_floor.5h_percent"}) {
 		t.Errorf("codex config key completion = %v", keys)
 	}
@@ -33,7 +36,8 @@ func TestConfigCompletionHooks(t *testing.T) {
 		want        []string
 	}{
 		{"schedule.enabled", "", []string{"false", "true"}},
-		{"review.engine", "", []string{"claude", "codex"}}, // completion sorts; review.Engines is default-first
+		{"review.engine", "", []string{"claude", "codex", "grok"}}, // completion sorts; review.Engines is default-first
+		{"grok.telemetry", "", []string{"reduced", "standard"}},
 		{"codex.sandbox", "workspace", []string{"workspace-write"}},
 		{"dashboard.tailscale.mode", "", []string{"funnel", "serve"}},
 	} {
@@ -86,15 +90,39 @@ func fileExists(path string) bool {
 	return !errors.Is(err, fs.ErrNotExist)
 }
 
-func TestParseCodexModels(t *testing.T) {
-	models, err := parseCodexModels([]byte(`{"models":[{"slug":"gpt-5.6-terra","supported_reasoning_levels":[{"effort":"low"},{"effort":"ultra"}]}]}`))
-	if err != nil {
-		t.Fatal(err)
+// Efforts follow the configured model, and with none pinned offer every
+// effort any model takes, once each.
+func TestModelEfforts(t *testing.T) {
+	models := []catalog.Model{
+		{ID: "gpt-5.6-terra", Efforts: []catalog.Effort{{ID: "low"}, {ID: "ultra"}}, EffortsKnown: true},
+		{ID: "gpt-5.6-mini", Efforts: []catalog.Effort{{ID: "low"}, {ID: "medium"}}, EffortsKnown: true},
 	}
-	if got := models[0].Slug; got != "gpt-5.6-terra" {
-		t.Errorf("slug = %q", got)
+	if got := modelEfforts(models, "gpt-5.6-terra"); !slices.Equal(got, []string{"low", "ultra"}) {
+		t.Errorf("pinned model efforts = %v", got)
 	}
-	if got := models[0].SupportedReasoningLevels[1].Effort; got != "ultra" {
-		t.Errorf("effort = %q", got)
+	if got := modelEfforts(models, ""); !slices.Equal(got, []string{"low", "ultra", "medium"}) {
+		t.Errorf("unpinned efforts = %v", got)
+	}
+}
+
+// Completion reads the engine's catalog through the harness, from the
+// configured provider, and offers nothing rather than guessing when it fails.
+func TestCompleteModelsReadsTheConfiguredProvider(t *testing.T) {
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	was := discoverModels
+	t.Cleanup(func() { discoverModels = was })
+	var asked harness.Provider
+	discoverModels = func(_ context.Context, p harness.Provider) ([]catalog.Model, error) {
+		asked = p
+		if p.Engine == harness.Claude {
+			return nil, errors.New("not installed")
+		}
+		return []catalog.Model{{ID: "grok-code"}}, nil
+	}
+	if got := completeModels("grok")(t.Context()); !slices.Equal(got, []string{"grok-code"}) || asked.Engine != harness.Grok {
+		t.Errorf("grok models = %v from %+v", got, asked)
+	}
+	if got := completeModels("claude")(t.Context()); len(got) != 0 {
+		t.Errorf("a failed discovery must offer nothing, got %v", got)
 	}
 }

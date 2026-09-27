@@ -62,8 +62,8 @@ func TestEngineUsagesReportsEveryEngine(t *testing.T) {
 		"claude": {Plan: "max", Primary: &usage.Window{UsedPercent: 8, WindowMins: 300}, FetchedAt: now},
 	}, "claude")
 
-	if len(rows) != len(review.Engines) {
-		t.Fatalf("got %d rows, want one per wired engine (%d)", len(rows), len(review.Engines))
+	if want := usage.Metered(review.Engines); len(rows) != len(want) {
+		t.Fatalf("got %d rows, want one per metered engine (%v)", len(rows), want)
 	}
 	byEngine := map[string]engineUsage{}
 	for _, r := range rows {
@@ -81,12 +81,15 @@ func TestEngineUsagesReportsEveryEngine(t *testing.T) {
 // read as "this engine does not exist" rather than "no data yet".
 func TestEngineUsagesKeepsUnpolledEngines(t *testing.T) {
 	rows := engineUsages(config.Config{}, nil, "codex")
-	if len(rows) != len(review.Engines) {
-		t.Fatalf("got %d rows, want %d", len(rows), len(review.Engines))
+	if want := usage.Metered(review.Engines); len(rows) != len(want) {
+		t.Fatalf("got %d rows, want %d", len(rows), len(want))
 	}
 	for _, r := range rows {
 		if r.Available || r.Error == "" {
 			t.Errorf("%s = %+v, want unavailable with an explanation", r.Engine, r)
+		}
+		if r.Engine == "grok" {
+			t.Error("grok reports no quota, so it has no usage slot to be forever unavailable in")
 		}
 	}
 }

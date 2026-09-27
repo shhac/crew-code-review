@@ -2,8 +2,8 @@
 
 PR review queue + scheduler for AI agents. Discovers candidate pull requests
 across your repos, keeps a DuckDB-backed queue, and reviews each one by handing
-an assembled prompt to a pluggable engine (Codex or Claude Code; default:
-Codex). Ships a dashboard
+an assembled prompt to a pluggable engine (Codex, Claude Code or Grok;
+default: Codex). Ships a dashboard
 you can expose over Tailscale.
 
 - **Deterministic discovery**: finds New and Refreshed candidate PRs via `gh`
@@ -20,8 +20,9 @@ you can expose over Tailscale.
 - **Durable queue**: candidates, positions, and review history (verdict,
   duration, token spend, workspace) in DuckDB, so "we already reviewed this at
   SHA X" survives restarts (that's what powers Refreshed detection).
-- **Pluggable review engine**: `codex` (default) or `claude`; the agent does
-  the actual review, posts to GitHub, and reports back what it did. Both report
+- **Pluggable review engine**: `codex` (default), `claude` or `grok`: every
+  engine lib-agent-harness can run a native agent on. The agent does
+  the actual review, posts to GitHub, and reports back what it did. All report
   through the same verdict contract and write the same review log, so switching
   is a one-key config change. The tool assumes only the `gh` CLI plus whichever
   engine CLI you selected; your prompts may direct the agent to use anything
@@ -466,7 +467,7 @@ add rather than after it.
 
 `~/.config/app.paulie.crew-code-review/config.json` (respects `XDG_CONFIG_HOME`). See
 `config.example.json` for the full shape: `repos`, `gh_user`, `candidates`,
-`schedule`, `review` (engine + prompt + rules + codex/claude), `authors`
+`schedule`, `review` (engine + prompt + rules + codex/claude/grok), `authors`
 (groups + unlisted + overrides), `store`, and `dashboard` (addr + tailscale).
 Group *membership* is **not** in config; it lives in the store; manage it with
 `authors set`.

@@ -42,7 +42,7 @@ internal/
 │   └── diff.go                 # per-file line counts + .gitattributes, GraphQL (never REST)
 ├── review/                     # Engine interface + the one driver + prompt/rule assembly
 │   ├── nativeengine.go         # the driver: one native.Config per engine into native.Run
-│   ├── codex.go / claude.go    # each engine's configuration and defaults, nothing more
+│   ├── codex.go / claude.go / grok.go # each engine's configuration and defaults, nothing more
 │   ├── driver.go               # verdict contract, agent log, bounded WORKING-resume policy
 │   ├── prompt.go               # Facts + prompt assembly
 │   ├── rules.go                # rule matching and its trace (ExplainRules)
@@ -58,8 +58,8 @@ internal/
 │   ├── workspaces.go           # claimWorkspace (create + claim) and SweepWorkspaces (boot retention)
 │   ├── scoring.go              # fetch the diff at claim time, score after the verdict
 │   └── reconcile.go            # release a crashed daemon's claims on this host
-├── usage/                      # per-engine subscription-headroom polling + usage-floor predicate
-├── doctor/                     # preflight: gh/duckdb/engine binary, auth, and config sanity
+├── usage/                      # per-engine subscription-headroom polling (account.Inspect) + usage-floor predicate
+├── doctor/                     # preflight: gh/duckdb/engine binary, auth (account.Inspect), and config sanity
 ├── logbuf/                     # in-memory ring for the daemon's own log tail
 └── dashboard/                  # embedded web UI + JSON API over the store
     ├── dashboard.go            # server core: serveGet/serveWrite frames, apiErr, fail

@@ -5,7 +5,7 @@ package review
 // reporting instruction appended to the prompt), tees its transcript into the
 // same workdir log, and yields to the same bounded resume policy when a run
 // ends before reporting a real outcome. nativeengine.go is the one driver;
-// codex.go and claude.go supply only its application configuration.
+// codex.go, claude.go and grok.go supply only its application configuration.
 // lib-agent-harness/native owns invocation, stream decoding, session
 // identifiers and token accounting.
 
@@ -19,16 +19,19 @@ import (
 	"path/filepath"
 	"regexp"
 
+	harness "github.com/shhac/lib-agent-harness"
 	"github.com/shhac/lib-agent-harness/native"
 )
 
-// verdictSchema constrains the agent's report. codex applies the schema to
-// EVERY assistant message in a run, not just the final one, so WORKING exists
-// as the honest value for intermediate progress notes; without it the agent
-// overloads SKIPPED for "I'm still investigating". claude applies it only to
-// the final structured output, where WORKING instead means the run stopped
-// early. ERROR is deliberately absent: it is a driver's own value for "the
-// invocation failed", never something the agent reports.
+// verdictSchema constrains the agent's report. An engine without unconstrained
+// progress messages (harness.Support(e, harness.Run, harness.ProgressMessages)
+// unsupported: codex) applies the schema to EVERY assistant message in a run,
+// not just the final one, so WORKING exists as the honest value for
+// intermediate progress notes; without it the agent overloads SKIPPED for "I'm
+// still investigating". The others apply it only to the final structured
+// output, where WORKING instead means the run stopped early. ERROR is
+// deliberately absent: it is a driver's own value for "the invocation failed",
+// never something the agent reports.
 const verdictSchema = `{
   "type": "object",
   "properties": {
@@ -59,8 +62,7 @@ const agentLogName = "agent.log"
 // LogPath locates the review agent's live log inside its workspace. The
 // engine tees its output there as the run progresses; the CLI's `queue log`
 // and the dashboard's per-review page both tail it through this one contract.
-// Engines that don't natively emit a readable transcript render one into this
-// same shape rather than inventing a second format (see claude.go).
+// The harness renders every engine's stream into this one shape.
 func LogPath(workDir string) string {
 	return filepath.Join(workDir, agentLogName)
 }
@@ -125,8 +127,8 @@ func resolveMaxResumes(configured *int) int {
 // them is not, which is the whole reason this lives here instead of in each
 // driver. Session, spend, and usage are read off the one stream every
 // invocation of the review writes into, because the harness normalises them
-// there for both engines: an engine that reports no cost (codex) simply leaves
-// it 0.
+// there for every engine: an engine that reports no cost (codex) leaves it
+// unknown, which records as 0.
 type resumableRun struct {
 	engine string // names the engine in error text
 	max    int    // resume attempts allowed
@@ -165,21 +167,39 @@ func (r resumableRun) do() (Verdict, error) {
 // A failed run still carries its spend: the tokens and cost were incurred
 // whether or not a report came back, and an ERROR that hides what it cost is
 // exactly the row you want to see when the budget looks wrong.
+//
+// The harness keeps provider text out of its errors, so the provider's own
+// account of a failed turn (Result.Failure) is appended here, where the old
+// error text used to carry it: an ERROR row that says only "turn failed" sends
+// you to the transcript for the one line that explains it.
 func (r resumableRun) resolve(verdict Verdict, parseErr, runErr error) (Verdict, error) {
 	spent := r.stream.Snapshot()
 	raw := r.raw()
 	if parseErr == nil {
 		verdict.Raw = raw
-		verdict.CostUSD = spent.CostUSD
+		verdict.CostUSD = knownUSD(spent.Cost)
 		verdict.Tokens = spent.Usage
 		verdict.UsageRaw = spent.RawUsage
 		return verdict, nil
 	}
-	failed := Verdict{Decision: DecisionError, Raw: raw, CostUSD: spent.CostUSD, Tokens: spent.Usage, UsageRaw: spent.RawUsage}
+	failed := Verdict{Decision: DecisionError, Raw: raw, CostUSD: knownUSD(spent.Cost), Tokens: spent.Usage, UsageRaw: spent.RawUsage}
 	if runErr != nil {
+		if spent.Failure != "" {
+			return failed, fmt.Errorf("%s: %w: %s", r.engine, runErr, spent.Failure)
+		}
 		return failed, fmt.Errorf("%s: %w", r.engine, runErr)
 	}
 	return failed, fmt.Errorf("%s succeeded but no verdict report: %w", r.engine, parseErr)
+}
+
+// knownUSD is the engine's own valuation when it stated a complete one. A
+// partial figure is not recorded as the run's cost: 0 lets our own estimate
+// stand in (store.Review.EffectiveCostUSD) instead of an understatement.
+func knownUSD(c harness.Cost) float64 {
+	if !c.Known {
+		return 0
+	}
+	return c.USD
 }
 
 // prepareWorkspace resolves the review's workspace, creating a temp one when
@@ -189,18 +209,6 @@ func prepareWorkspace(workDir string) (string, error) {
 		return workDir, nil
 	}
 	return os.MkdirTemp("", "crew-code-review-")
-}
-
-// writeVerdictSchema puts the output schema on disk for the engine that takes
-// a PATH to one. Split out because claude takes the schema inline and never
-// reads a file, so writing it unconditionally made a workspace that could not
-// hold it fail claude reviews over something claude does not use.
-func writeVerdictSchema(workDir string) (string, error) {
-	path := filepath.Join(workDir, "verdict.schema.json")
-	if err := os.WriteFile(path, []byte(verdictSchema), 0o600); err != nil {
-		return "", err
-	}
-	return path, nil
 }
 
 // logSessionPattern matches the session-id banner both transcoders render at
@@ -219,7 +227,7 @@ const maxLogScan = 8 << 20
 // This is what lets an interrupted review continue instead of starting over.
 // The transcript is the only place the session id survives a daemon death —
 // it lives in the transcoder's memory otherwise — which is a good reason for
-// both engines to render it into the shared format rather than keep it.
+// every engine to render it into the shared format rather than keep it.
 //
 // The LAST banner wins: a log that already covers a resume holds several, and
 // the most recent names the session still open.

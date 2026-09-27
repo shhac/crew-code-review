@@ -70,10 +70,6 @@ func completeConfigValue(ctx context.Context, key, prefix string) []string {
 	return nil
 }
 
-func completeConfiguredCodexEfforts(ctx context.Context) []string {
-	return codexModelEfforts(ctx, config.Read().Review.Codex.Model)
-}
-
 // completePositional builds the common "arg 0 completes via first, later
 // args via rest (nil = nothing)" ValidArgsFunction shape.
 // completePositional dispatches to one completer per positional argument, by

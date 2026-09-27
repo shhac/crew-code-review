@@ -3,7 +3,7 @@ crew-code-review: PR review queue + scheduler for AI agents
 WHAT IT DOES:
   Discovers candidate PRs across configured repos (via gh), keeps a DuckDB-backed
   queue, and reviews them by handing an assembled prompt to a pluggable engine
-  (codex or claude; default: codex). Ships a dashboard you can expose over Tailscale.
+  (codex, claude or grok; default: codex). Ships a dashboard you can expose over Tailscale.
 
 COMMANDS:
   serve [--http :8330] [--tailscale serve|funnel]   Run the daemon (dashboard + loops)
@@ -99,7 +99,7 @@ AUTHOR GROUPS: an author belongs to ONE group per repo, and the group IS the
   usage floor is applied per engine: one being out of headroom holds only its
   own candidates.
 
-REVIEW: the engine (codex or claude) receives the main prompt + approval directive +
+REVIEW: the engine (codex, claude or grok) receives the main prompt + approval directive +
   post-outcome instructions (review.on_approve / on_comment / on_reject) + any
   matching rule fragments, performs the review itself, posts to GitHub, and
   reports back what it did (APPROVED|COMMENTED|REQUESTED_CHANGES|SKIPPED).

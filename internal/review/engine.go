@@ -1,6 +1,6 @@
 // Package review runs the actual PR review. The engine is pluggable behind the
-// Engine interface: "codex" (the default) drives `codex exec` and "claude"
-// drives `claude -p`, both through lib-agent-harness. The Go side only
+// Engine interface: "codex" (the default) drives `codex exec`, "claude" drives
+// `claude -p` and "grok" drives `grok --single`, all through lib-agent-harness. The Go side only
 // assembles the prompt (main prompt + rule-derived fragments) and hands over
 // tool access; the engine owns everything fuzzy: the review itself, the
 // comment-only enforcement, and any post-approve Slack steps, all expressed in
@@ -14,7 +14,7 @@ import (
 
 	"github.com/shhac/crew-code-review/internal/config"
 	"github.com/shhac/crew-code-review/internal/store"
-	"github.com/shhac/lib-agent-harness/native"
+	harness "github.com/shhac/lib-agent-harness"
 )
 
 // Verdict is the agent's report of what it actually did for one PR. The agent
@@ -26,9 +26,9 @@ type Verdict struct {
 	Raw      string `json:"raw,omitempty"` // full engine transcript, for debugging
 	// CostUSD is the run's API-rate valuation as the engine reported it, not
 	// money charged: on a subscription it is what the tokens would have cost
-	// at API rates. 0 when the engine reports no cost (codex prints only a
-	// token trailer). Like Tokens, it is stream metadata rather than something
-	// the agent claims, so both are excluded from the report's JSON.
+	// at API rates. 0 when the engine reports no complete cost (codex prints
+	// only a token trailer). Like Tokens, it is stream metadata rather than
+	// something the agent claims, so both are excluded from the report's JSON.
 	CostUSD float64    `json:"-"`
 	Tokens  TokenUsage `json:"-"`
 	// UsageRaw is the engine's own usage payloads, verbatim, as a JSON array
@@ -37,16 +37,17 @@ type Verdict struct {
 	UsageRaw string `json:"-"`
 }
 
-// TokenUsage is one run's token spend, split by the classes that are priced
-// differently. Every engine reports some subset of these and each driver maps
-// its own onto them, so the mapping is stated once per engine instead of
-// inferred downstream from whatever fields happened to be non-zero.
+// TokenUsage is one run's token spend in the harness's one shape. Input counts
+// EVERY prompt token, cached or not, and the cache classes are parts of it,
+// split out only when the engine reported them (CacheKnown); Fresh() is the
+// input neither read from nor written to the cache, and says when it cannot
+// be derived.
 //
 // The classes are not interchangeable: a cached read costs roughly a tenth of
 // fresh input and a sixtieth of output, so a figure that blends them cannot be
 // priced, and one that includes CacheRead cannot be compared between engines
 // that report it and engines that don't.
-type TokenUsage = native.TokenUsage
+type TokenUsage = harness.Usage
 
 // Verdict decisions, aliased from the store's canonical vocabulary (the
 // layer both packages import, so the two sets cannot drift). The first four
@@ -126,11 +127,13 @@ func ResolvedDials(cfg config.ReviewSettings) (model, effort string) {
 
 func buildEngine(cfg config.ReviewSettings) (*nativeEngine, error) {
 	engine := cfg.ResolvedEngine()
-	switch engine {
-	case "codex":
+	switch harness.Engine(engine) {
+	case harness.Codex:
 		return newCodex(cfg.Codex, ResumePrompt(cfg)), nil
-	case "claude":
+	case harness.Claude:
 		return newClaude(cfg.Claude, ResumePrompt(cfg)), nil
+	case harness.Grok:
+		return newGrok(cfg.Grok, ResumePrompt(cfg)), nil
 	default:
 		return nil, fmt.Errorf("Unknown review engine: %q. Valid: %s", engine, strings.Join(Engines, ", "))
 	}

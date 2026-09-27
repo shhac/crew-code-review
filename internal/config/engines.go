@@ -5,59 +5,96 @@ package config
 // per-engine blocks live in schema.go; the review package applies each
 // engine's own defaults on top of what this resolves.
 
-import "slices"
+import (
+	"slices"
 
-// EngineNames lists the wired review engines, default first. It lives here
-// rather than in the review package because config is the one package every
-// consumer already imports: review, the CLI, the dashboard, and doctor all
-// depend on config, and none of them can be depended on in return. Holding it
-// the other way round forced Engine() to restate the default as a literal and
-// needed a cross-package test to catch the two drifting.
+	harness "github.com/shhac/lib-agent-harness"
+)
+
+// DefaultEngine reviews a candidate when nothing names another engine.
+const DefaultEngine = string(harness.Codex)
+
+// EngineNames lists the review engines, default first: every engine the
+// harness can run a native agent on. Asked of harness.Support rather than
+// listed, so an engine the library gains is offered without a list here to
+// update, and one it cannot run (an API endpoint has no native agent) is never
+// offered. It lives here rather than in the review package because config is
+// the one package every consumer already imports.
 //
 // review re-exports this as review.Engines, so existing callers are unchanged.
-var EngineNames = []string{"codex", "claude"}
+var EngineNames = runnableEngines()
 
-// ResolvedEngine is the review engine id, defaulting to the first wired one.
+func runnableEngines() []string {
+	names := []string{DefaultEngine}
+	for _, e := range harness.Engines() {
+		if string(e) != DefaultEngine && harness.Support(e, harness.Run, harness.Available).Usable() {
+			names = append(names, string(e))
+		}
+	}
+	return names
+}
+
+// ResolvedEngine is the review engine id, defaulting to DefaultEngine.
 // On ReviewSettings rather than Config because that is the value the callers
-// which need it actually hold, and three of them were re-deriving the same
-// `if engine == "" { engine = EngineNames[0] }` on top of Config.Engine.
+// which need it actually hold.
 func (r ReviewSettings) ResolvedEngine() string {
 	if r.Engine != "" {
 		return r.Engine
 	}
-	return EngineNames[0]
+	return DefaultEngine
 }
 
 // Engine is the review engine id, defaulting to the first wired engine.
 func (c Config) Engine() string { return c.Review.ResolvedEngine() }
 
 // EngineCommon selects the named engine's shared dials. THE engine switch:
-// the one place that maps a name to its settings, so adding a fourth engine
-// is a case here rather than a hunt through five call sites that each
-// re-derived `if engine == "claude"`.
+// the one place that maps a name to its settings block, so adding an engine
+// is a case here rather than a hunt through the call sites.
 //
-// An unknown name falls back to the default engine's block, which keeps
-// BinFor's long-standing behaviour for a name nothing recognises.
+// An unknown name falls back to the default engine's block, the long-standing
+// behaviour for a name nothing recognises.
 func (r *ReviewSettings) EngineCommon(engine string) *EngineCommon {
-	if engine == "claude" {
+	switch harness.Engine(engine) {
+	case harness.Claude:
 		return &r.Claude.EngineCommon
+	case harness.Grok:
+		return &r.Grok.EngineCommon
 	}
 	return &r.Codex.EngineCommon
 }
 
-// BinFor is the named engine's configured binary, whether or not it is the
-// engine currently selected. Callers that meter or diagnose EVERY engine need
-// this.
-func (c Config) BinFor(engine string) string {
-	return c.Review.EngineCommon(engine).Bin
+// Provider is where the named engine's CLI lives: its binary and login home,
+// as the harness takes them. Empty fields keep the harness's own defaults (the
+// engine's name on PATH, the CLI's usual home), so this is the one place a
+// configured bin or home reaches every mode that launches the CLI.
+func (r ReviewSettings) Provider(engine string) harness.Provider {
+	return r.EngineCommon(engine).Provider(engine)
 }
 
-// ResolveBin is BinFor with the engine's own name as the default, which is
-// what every caller that actually RUNS something needs. BinFor deliberately
-// reports the unresolved value, so six call sites across five packages each
-// re-applied `if bin == "" { bin = "codex" }`; this is that rule, once.
-func (c Config) ResolveBin(engine string) string {
-	return DefaultBin(engine, c.BinFor(engine))
+// Provider is this block's CLI location for the named engine, for the callers
+// that hold one engine's settings rather than the whole review block.
+func (e EngineCommon) Provider(engine string) harness.Provider {
+	return harness.Provider{
+		Engine: harness.Engine(engine),
+		CLI:    harness.CLI{Binary: e.Bin, Home: e.Home},
+	}
+}
+
+// loginCommands is how each CLI signs in. The harness reports whether an
+// engine is logged in, never how to fix it, so the hint is ours.
+var loginCommands = map[string]string{
+	string(harness.Codex):  "login",
+	string(harness.Claude): "auth login",
+	string(harness.Grok):   "login",
+}
+
+// LoginHint is the actionable line for an engine found logged out.
+func LoginHint(engine, bin string) string {
+	sub, ok := loginCommands[engine]
+	if !ok {
+		return "log in with the " + engine + " CLI"
+	}
+	return "run `" + DefaultBin(engine, bin) + " " + sub + "`"
 }
 
 // DefaultBin resolves a possibly-empty binary against an engine name, for the

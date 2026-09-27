@@ -1,6 +1,11 @@
 package config
 
-import "testing"
+import (
+	"slices"
+	"testing"
+
+	harness "github.com/shhac/lib-agent-harness"
+)
 
 // TestEngineCommonIsTheOnlyEngineSwitch pins the property the shared dials
 // exist for: adding an engine should be one case in one function, not a hunt
@@ -15,29 +20,59 @@ func TestEngineCommonIsTheOnlyEngineSwitch(t *testing.T) {
 	if got := c.Review.EngineCommon(c.Engine()); got.Bin != "claude-dev" || got.Model != "opus" || got.Effort != "high" {
 		t.Errorf("EngineCommon(selected) = %+v, want the selected engine's block", *got)
 	}
-	if got := c.BinFor("codex"); got != "codex-dev" {
-		t.Errorf("BinFor names an engine regardless of selection, got %q", got)
+	if got := c.Review.EngineCommon("codex").Bin; got != "codex-dev" {
+		t.Errorf("EngineCommon names an engine regardless of selection, got %q", got)
+	}
+	c.Review.Grok = GrokSettings{EngineCommon: EngineCommon{Bin: "grok-dev"}}
+	if got := c.Review.EngineCommon("grok").Bin; got != "grok-dev" {
+		t.Errorf("grok has its own block, got %q", got)
 	}
 }
 
-// TestResolveBinDefaultsToTheEngineName covers the rule six call sites across
-// five packages were each re-applying: an unset binary means the engine's own
-// name. BinFor deliberately keeps reporting the unresolved value, because
-// `config show` should say what is configured, not what would run.
-func TestResolveBinDefaultsToTheEngineName(t *testing.T) {
-	var bare Config
-	if got := bare.ResolveBin("claude"); got != "claude" {
-		t.Errorf("ResolveBin = %q, want the engine name", got)
+// The engines offered are the ones the harness can run a native agent on,
+// default first; an API endpoint has no native agent, so it is not one.
+func TestEngineNamesAreTheRunnableEngines(t *testing.T) {
+	if EngineNames[0] != DefaultEngine || DefaultEngine != "codex" {
+		t.Errorf("EngineNames = %v, want codex first", EngineNames)
 	}
-	if got := bare.BinFor("claude"); got != "" {
-		t.Errorf("BinFor = %q, want the unresolved empty value", got)
+	for _, want := range []string{"codex", "claude", "grok"} {
+		if !slices.Contains(EngineNames, want) {
+			t.Errorf("EngineNames = %v, missing %s", EngineNames, want)
+		}
 	}
-	set := Config{Review: ReviewSettings{Claude: ClaudeSettings{EngineCommon: EngineCommon{Bin: "/opt/claude"}}}}
-	if got := set.ResolveBin("claude"); got != "/opt/claude" {
-		t.Errorf("ResolveBin = %q, want the configured binary", got)
+	if slices.Contains(EngineNames, string(harness.OpenAICompatible)) {
+		t.Errorf("EngineNames = %v: an API endpoint cannot run a review", EngineNames)
 	}
+}
+
+// Provider carries the configured bin and home as they are, leaving an empty
+// one to the harness's own default rather than restating it.
+func TestProviderCarriesTheEnginesBinAndHome(t *testing.T) {
+	r := ReviewSettings{Grok: GrokSettings{EngineCommon: EngineCommon{Bin: "/opt/grok", Home: "/srv/grok"}}}
+	want := harness.CLI{Binary: "/opt/grok", Home: "/srv/grok"}
+	if got := r.Provider("grok"); got.Engine != harness.Grok || got.CLI != want || got.Problem() != "" {
+		t.Errorf("Provider = %+v, want grok at %+v", got, want)
+	}
+	if got := r.Provider("claude"); got.Engine != harness.Claude || got.CLI != (harness.CLI{}) {
+		t.Errorf("an unconfigured engine = %+v, want only its engine", got)
+	}
+}
+
+func TestLoginHintNamesTheConfiguredBinary(t *testing.T) {
+	if got := LoginHint("claude", ""); got != "run `claude auth login`" {
+		t.Errorf("LoginHint = %q", got)
+	}
+	if got := LoginHint("grok", "/opt/grok"); got != "run `/opt/grok login`" {
+		t.Errorf("LoginHint = %q", got)
+	}
+}
+
+func TestDefaultBinResolvesToTheEngineName(t *testing.T) {
 	if got := DefaultBin("grok", ""); got != "grok" {
 		t.Errorf("DefaultBin = %q: an engine nothing has configured still resolves to its name", got)
+	}
+	if got := DefaultBin("claude", "/opt/claude"); got != "/opt/claude" {
+		t.Errorf("DefaultBin = %q, want the configured binary", got)
 	}
 }
 

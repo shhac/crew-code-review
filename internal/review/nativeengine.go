@@ -6,29 +6,26 @@ import (
 	"github.com/shhac/lib-agent-harness/native"
 )
 
-// nativeEngine is the one review driver, and codex.go and claude.go are its two
-// configurations. The agent performs the review itself (posting to GitHub and
-// running any post-approve steps) and then REPORTS BACK what it did through the
-// shared verdict schema, which Review parses into a Verdict. The engine never
-// posts the review; it only launches the agent and reads the report.
+// nativeEngine is the one review driver, and codex.go, claude.go and grok.go
+// are its configurations. The agent performs the review itself (posting to
+// GitHub and running any post-approve steps) and then REPORTS BACK what it did
+// through the shared verdict schema, which Review parses into a Verdict. The
+// engine never posts the review; it only launches the agent and reads the
+// report.
 //
-// Everything that differs between the CLIs is data: the resolved harness
-// config, how the schema goes in and the report comes out (the request
-// template), and which directory the process runs in. lib-agent-harness turns
-// that into argv, runs it, and normalises the stream.
+// Everything that differs between the CLIs is the resolved harness config.
+// lib-agent-harness turns that into argv, hands every engine the same inline
+// schema (writing Codex's schema and report files privately, outside the
+// workspace the agent can write), runs it, and normalises the stream.
 type nativeEngine struct {
 	label        string // names the invocation in error text: "codex exec", "claude -p"
 	cfg          native.Config
 	maxResumes   int
 	resumePrompt string
-
-	// template builds what every invocation of one review shares, from its
-	// workspace. It may write into the workspace, so it runs once per review.
-	template func(workDir string) (native.Request, error)
 }
 
 func (e *nativeEngine) Provenance(ctx context.Context) Provenance {
-	return Provenance{Engine: e.cfg.Engine, Model: e.cfg.Model, Effort: e.cfg.Effort, EngineVersion: e.version(ctx)}
+	return Provenance{Engine: string(e.cfg.Provider.Engine), Model: e.cfg.Model, Effort: e.cfg.Effort, EngineVersion: e.version(ctx)}
 }
 
 // version probes the CLI's --version uncached: the engine is rebuilt from live
@@ -45,11 +42,6 @@ func (e *nativeEngine) Review(ctx context.Context, req Request) (Verdict, error)
 	if err != nil {
 		return Verdict{Decision: DecisionError}, err
 	}
-	template, err := e.template(workDir)
-	if err != nil {
-		return Verdict{Decision: DecisionError}, err
-	}
-	template.WorkDir = workDir
 
 	sink, buf, closeSink := newAgentSink(workDir)
 	defer closeSink()
@@ -57,12 +49,14 @@ func (e *nativeEngine) Review(ctx context.Context, req Request) (Verdict, error)
 	// One stream spans every invocation of the review, so a resumed run keeps
 	// appending to the same transcript and its usage accumulates by the
 	// engine's own rule.
-	stream, _ := native.NewStream(e.cfg.Engine, sink, native.StreamOptions{Structured: true})
+	stream, err := native.NewStream(e.cfg.Provider.Engine, sink, native.StreamOptions{Structured: true})
+	if err != nil {
+		return Verdict{Decision: DecisionError}, err
+	}
 	cfg := e.cfg
 	var latest native.Result
 	invoke := func(session, prompt string) (err error) {
-		r := template
-		r.ResumeSession, r.Prompt = session, prompt
+		r := native.Request{Prompt: prompt, WorkDir: workDir, Schema: verdictSchema, ResumeSession: session}
 		latest, err = native.Run(ctx, cfg, r, stream)
 		return err
 	}

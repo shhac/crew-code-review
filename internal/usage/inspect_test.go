@@ -7,20 +7,27 @@ import (
 	"testing"
 	"time"
 
+	harness "github.com/shhac/lib-agent-harness"
 	"github.com/shhac/lib-agent-harness/session"
 )
 
-func quotaWindow(id string, used float64, mins int64) session.QuotaWindow {
+// window builds one harness quota window as the library reports it: a kind,
+// the bucket it belongs to (Scope), and a model for a per-model limit.
+func window(kind harness.QuotaKind, scope, model string, used float64, mins int64) harness.QuotaWindow {
 	resets := time.Unix(1790175224, 0).UTC()
-	return session.QuotaWindow{ID: id, UsedPercent: &used, WindowMinutes: &mins, ResetsAt: &resets}
+	return harness.QuotaWindow{Kind: kind, Scope: scope, Model: model, UsedPercent: &used, WindowMinutes: &mins, ResetsAt: &resets}
 }
 
-func measured(windows ...session.QuotaWindow) session.QuotaSnapshot {
-	return session.QuotaSnapshot{
-		Observation: session.Observation{Quality: session.Measured, ObservedAt: time.Now()},
+func measured(windows ...harness.QuotaWindow) harness.QuotaSnapshot {
+	return harness.QuotaSnapshot{
+		Observation: harness.Observation{Quality: harness.Measured, ObservedAt: time.Now()},
 		Complete:    true,
 		Windows:     windows,
 	}
+}
+
+func quota(windows ...harness.QuotaWindow) harness.AccountReport {
+	return harness.AccountReport{Quota: measured(windows...)}
 }
 
 // Inspect reports every window an engine exposes. Only the account-wide pair
@@ -28,30 +35,32 @@ func measured(windows ...session.QuotaWindow) session.QuotaSnapshot {
 // cap, or codex's separate review bucket, which the harness's own fixture
 // shows past 100%) is not what a review spends from, and letting it through
 // would park reviews over it.
-func TestFromInspectionKeepsOnlyTheAccountWindows(t *testing.T) {
+func TestFromReportKeepsOnlyTheAccountWindows(t *testing.T) {
 	for name, tc := range map[string]struct {
-		engine        session.Engine
-		windows       []session.QuotaWindow
+		engine        string
+		windows       []harness.QuotaWindow
 		primary, week float64
 	}{
-		"claude": {session.Claude, []session.QuotaWindow{
-			quotaWindow("five_hour", 30, 300),
-			quotaWindow("model:Fable", 99, 10080),
-			quotaWindow("seven_day", 40, 10080),
-			quotaWindow("seven_day_opus", 99, 10080),
+		"claude": {"claude", []harness.QuotaWindow{
+			window(harness.QuotaSession, "", "", 30, 300),
+			window(harness.QuotaWeeklyModel, "Fable", "Fable", 99, 10080),
+			window(harness.QuotaWeekly, "", "", 40, 10080),
+			window(harness.QuotaWeeklyModel, "opus", "opus", 99, 10080),
 		}, 30, 40},
-		"codex": {session.Codex, []session.QuotaWindow{
-			quotaWindow("codex/primary", 25, 300),
-			quotaWindow("codex/secondary", 60, 10080),
-			quotaWindow("review/primary", 123, 300),
+		// The review bucket is a model-less session window too, listed first
+		// here so only the preference for codex's own bucket can pass.
+		"codex": {"codex", []harness.QuotaWindow{
+			window(harness.QuotaSession, "review", "", 123, 300),
+			window(harness.QuotaSession, "codex", "", 25, 300),
+			window(harness.QuotaWeekly, "codex", "", 60, 10080),
 		}, 25, 60},
-		"codex before per-limit buckets": {session.Codex, []session.QuotaWindow{
-			quotaWindow("default/primary", 10, 300),
-			quotaWindow("default/secondary", 20, 10080),
+		"codex before per-limit buckets": {"codex", []harness.QuotaWindow{
+			window(harness.QuotaSession, "default", "", 10, 300),
+			window(harness.QuotaWeekly, "default", "", 20, 10080),
 		}, 10, 20},
 	} {
 		t.Run(name, func(t *testing.T) {
-			snap, err := fromInspection(tc.engine, session.Inspection{Quota: measured(tc.windows...)}, nil)
+			snap, err := fromReport(Source{Engine: tc.engine}, quota(tc.windows...), nil)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -65,39 +74,36 @@ func TestFromInspectionKeepsOnlyTheAccountWindows(t *testing.T) {
 	}
 }
 
-func TestFromInspectionMapsAWindow(t *testing.T) {
-	in := session.Inspection{
-		Account: session.AccountSnapshot{Plan: "prolite"},
-		Quota:   measured(quotaWindow("codex/primary", 96, 10080)),
-	}
-	snap, err := fromInspection(session.Codex, in, nil)
+func TestFromReportMapsAWindow(t *testing.T) {
+	report := quota(window(harness.QuotaWeekly, "codex", "", 96, 10080))
+	report.Account.Plan = "prolite"
+	snap, err := fromReport(Source{Engine: "codex"}, report, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 	want := Window{UsedPercent: 96, WindowMins: 10080, ResetsAt: 1790175224}
-	if snap.Plan != "prolite" || snap.Primary == nil || *snap.Primary != want || snap.Secondary != nil || !snap.OK() {
-		t.Errorf("snapshot = %+v primary %+v, want plan prolite and %+v alone", snap, snap.Primary, want)
+	if snap.Plan != "prolite" || snap.Secondary == nil || *snap.Secondary != want || snap.Primary != nil || !snap.OK() {
+		t.Errorf("snapshot = %+v secondary %+v, want plan prolite and %+v alone", snap, snap.Secondary, want)
 	}
 
 	// Unreported percent and reset read as zero, as the old readers did; a
 	// window with no duration cannot be placed as 5-hourly or weekly, so it
 	// is not mapped at all.
 	mins := int64(300)
-	bare := session.Inspection{Quota: measured(
-		session.QuotaWindow{ID: "five_hour", WindowMinutes: &mins},
-		session.QuotaWindow{ID: "seven_day"},
-	)}
-	snap, _ = fromInspection(session.Claude, bare, nil)
+	bare := quota(
+		harness.QuotaWindow{Kind: harness.QuotaSession, WindowMinutes: &mins},
+		harness.QuotaWindow{Kind: harness.QuotaWeekly},
+	)
+	snap, _ = fromReport(Source{Engine: "claude"}, bare, nil)
 	if snap.Primary == nil || *snap.Primary != (Window{WindowMins: 300}) || snap.Secondary != nil {
 		t.Errorf("bare windows = %+v / %+v", snap.Primary, snap.Secondary)
 	}
 }
 
-// Inspect returns what it got alongside the joined error, so an account read
-// that failed must not blank a quota that arrived.
-func TestFromInspectionMetersDespiteAFailedAccountRead(t *testing.T) {
-	in := session.Inspection{Quota: measured(quotaWindow("five_hour", 5, 300))}
-	snap, err := fromInspection(session.Claude, in, errors.Join(session.ErrProtocol, nil))
+// Inspect returns what it got alongside its error, so an account read that
+// failed must not blank a quota that arrived.
+func TestFromReportMetersDespiteAFailedAccountRead(t *testing.T) {
+	snap, err := fromReport(Source{Engine: "claude"}, quota(window(harness.QuotaSession, "", "", 5, 300)), session.ErrProtocol)
 	if err != nil || !snap.OK() {
 		t.Errorf("snapshot = %+v, err = %v, want a usable snapshot", snap, err)
 	}
@@ -106,20 +112,21 @@ func TestFromInspectionMetersDespiteAFailedAccountRead(t *testing.T) {
 // Every way of getting no headroom is an error, so Poll records it and the
 // floor fails open; the text is what the dashboard shows beside the empty
 // meter.
-func TestFromInspectionExplainsNoHeadroom(t *testing.T) {
+func TestFromReportExplainsNoHeadroom(t *testing.T) {
 	loggedOut := false
 	for name, tc := range map[string]struct {
-		engine session.Engine
-		in     session.Inspection
+		src    Source
+		report harness.AccountReport
 		err    error
 		want   string
 	}{
-		"logged out":           {session.Codex, session.Inspection{Account: session.AccountSnapshot{LoggedIn: &loggedOut}}, nil, "run `codex login`"},
-		"harness error":        {session.Claude, session.Inspection{}, session.ErrUnsupported, "claude usage: harness operation unsupported"},
-		"provider had nothing": {session.Claude, session.Inspection{Quota: session.QuotaSnapshot{Observation: session.Observation{Reason: "rate limits unavailable"}}}, nil, "rate limits unavailable"},
+		"logged out":           {Source{Engine: "codex"}, harness.AccountReport{Account: harness.AccountSnapshot{LoggedIn: &loggedOut}}, nil, "run `codex login`"},
+		"logged out, own bin":  {Source{Engine: "claude", Bin: "/opt/claude"}, harness.AccountReport{Account: harness.AccountSnapshot{LoggedIn: &loggedOut}}, nil, "run `/opt/claude auth login`"},
+		"harness error":        {Source{Engine: "claude"}, harness.AccountReport{}, session.ErrUnsupported, "claude usage: harness operation unsupported"},
+		"provider had nothing": {Source{Engine: "claude"}, harness.AccountReport{Quota: harness.QuotaSnapshot{Observation: harness.Observation{Reason: "rate limits unavailable"}}}, nil, "rate limits unavailable"},
 	} {
 		t.Run(name, func(t *testing.T) {
-			snap, err := fromInspection(tc.engine, tc.in, tc.err)
+			snap, err := fromReport(tc.src, tc.report, tc.err)
 			if err == nil || !strings.Contains(err.Error(), tc.want) {
 				t.Fatalf("err = %v, want it to mention %q", err, tc.want)
 			}
@@ -133,27 +140,38 @@ func TestFromInspectionExplainsNoHeadroom(t *testing.T) {
 	}
 }
 
+// Fetch asks the source's own engine, at its own bin and home; an engine the
+// harness cannot read quota from is answered without starting anything.
 func TestFetchAsksTheSourcesEngine(t *testing.T) {
-	var asked []session.Options
+	var asked []harness.Provider
 	was := inspect
 	t.Cleanup(func() { inspect = was })
-	inspect = func(_ context.Context, o session.Options) (session.Inspection, error) {
-		asked = append(asked, o)
-		return session.Inspection{Quota: measured(quotaWindow("five_hour", 1, 300), quotaWindow("codex/primary", 1, 300))}, nil
+	inspect = func(_ context.Context, p harness.Provider) (harness.AccountReport, error) {
+		asked = append(asked, p)
+		return quota(window(harness.QuotaSession, "", "", 1, 300)), nil
 	}
 
-	for _, src := range []Source{{Engine: "claude", Bin: "/opt/claude"}, {Engine: "codex"}, {Engine: "something-else"}} {
+	for _, src := range []Source{{Engine: "claude", Bin: "/opt/claude", Home: "/srv/claude"}, {Engine: "codex"}} {
 		if snap, err := Fetch(t.Context(), src); err != nil || !snap.OK() {
 			t.Errorf("Fetch(%+v) = %+v, %v", src, snap, err)
 		}
 	}
-	want := []session.Options{{Engine: session.Claude, Binary: "/opt/claude"}, {Engine: session.Codex}, {Engine: session.Codex}}
-	if len(asked) != len(want) {
-		t.Fatalf("asked %d times, want %d", len(asked), len(want))
-	}
-	for i := range want {
-		if asked[i].Engine != want[i].Engine || asked[i].Binary != want[i].Binary {
-			t.Errorf("call %d = %s %q, want %s %q (an unknown engine falls back to codex)", i, asked[i].Engine, asked[i].Binary, want[i].Engine, want[i].Binary)
+	for _, src := range []Source{{Engine: "grok"}, {Engine: "something-else"}} {
+		if _, err := Fetch(t.Context(), src); err == nil {
+			t.Errorf("Fetch(%+v) must fail: no quota to read", src)
 		}
+	}
+	if len(asked) != 2 {
+		t.Fatalf("asked %d times, want only the two metered engines: %+v", len(asked), asked)
+	}
+	if asked[0].Engine != harness.Claude || asked[0].CLI != (harness.CLI{Binary: "/opt/claude", Home: "/srv/claude"}) || asked[1].Engine != harness.Codex {
+		t.Errorf("asked %+v", asked)
+	}
+}
+
+func TestMeteredAsksTheHarness(t *testing.T) {
+	got := Metered([]string{"codex", "claude", "grok", "gemini"})
+	if strings.Join(got, ",") != "codex,claude" {
+		t.Errorf("Metered = %v, want the engines that report quota", got)
 	}
 }

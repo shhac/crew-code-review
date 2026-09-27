@@ -30,7 +30,7 @@
     "interval": "5m"
   },
   "review": {
-    "//engine_note": "The DEFAULT agent CLI for reviews: \"codex\" or \"claude\". An author group can name its own engine/model/effort, which overrides this for that cohort's PRs, so one cycle can run both. Both report through the same verdict contract and write the same agent.log, so switching is a one-key change; only the matching engine block below applies, patched by whatever the resolved group asked for.",
+    "//engine_note": "The DEFAULT agent CLI for reviews: \"codex\", \"claude\" or \"grok\". An author group can name its own engine/model/effort, which overrides this for that cohort's PRs, so one cycle can run several. Every engine reports through the same verdict contract and writes the same agent.log, so switching is a one-key change; only the matching engine block below applies, patched by whatever the resolved group asked for.",
     "engine": "codex",
     "//main_prompt_note": "The tool assumes only the gh CLI plus whichever engine CLI you selected. Your prompt may direct the agent to use anything else you have set up (skills such as pr-issue-review, extra CLIs such as agent-* tools); that is your prompt's business, and you grant any extra access via codex.args / claude.allowed_tools.",
     "main_prompt": "Act as a friendly PR unblocker. Review this pull request thoroughly: read the diff, the PR description, and any linked context via the gh CLI. Leave one GitHub review with inline comments that help the author move forward.",
@@ -44,7 +44,7 @@
     "resume_prompt": "",
     "codex": {
       "bin": "codex",
-      "//model_note": "Leave empty to use codex's own default model. To pin one, pick a valid id from `codex debug models`; an invalid id fails every review with a 400.",
+      "//model_note": "Leave empty to use codex's own default model. To pin one, pick a valid id (`crew-code-review config set codex.model <TAB>` lists what your login offers); an invalid id fails every review with a 400.",
       "model": "",
       "//effort_note": "Leave empty to use the selected model's default reasoning effort. To pin one, use an effort the selected model supports (today commonly low, medium, high, or xhigh).",
       "effort": "",
@@ -83,6 +83,23 @@
         "1w_percent": 10
       },
       "//max_resumes_note": "How many times to resume a session that ended without a final report before recording an ERROR. Unset means 2; 0 disables resuming.",
+      "max_resumes": 2
+    },
+    "//grok_note": "Applies only when engine is \"grok\". Requires an authenticated Grok CLI (`grok login`); the tool never handles credentials. Grok reports no quota windows, so it has no usage_floor and is never paused for headroom.",
+    "grok": {
+      "bin": "grok",
+      "//model_note": "Leave empty to use grok's own default model; `crew-code-review config set grok.model <TAB>` lists what your login offers.",
+      "model": "",
+      "effort": "",
+      "//permission_mode_note": "Passed to grok --permission-mode (default, acceptEdits, auto, dontAsk, bypassPermissions). Empty leaves it to the CLI. A review needs to run gh without a prompt no headless run can answer, so choose a mode that allows that.",
+      "permission_mode": "",
+      "//sandbox_note": "A grok --sandbox profile; empty leaves it to the CLI. The agent must still reach GitHub through gh.",
+      "sandbox": "",
+      "//tools_note": "Built-in tools to allow; empty keeps grok's default set.",
+      "tools": [],
+      "//telemetry_note": "reduced (the default) switches off grok's client telemetry, trace upload, auto-update and memory, and its imports of other harnesses' skills, rules, MCP servers, hooks and sessions, for each review run. It is not a no-egress guarantee and does not change your xAI account's data settings. standard keeps the CLI's own behaviour.",
+      "telemetry": "reduced",
+      "args": [],
       "max_resumes": 2
     }
   },

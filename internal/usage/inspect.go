@@ -1,6 +1,6 @@
 package usage
 
-// Headroom is read through lib-agent-harness's session.Inspect, which asks
+// Headroom is read through lib-agent-harness's account.Inspect, which asks
 // each engine's own CLI over its native protocol (codex app-server's
 // account/rateLimits/read, claude's get_usage control request) using the login
 // that CLI already holds. Nothing here reads, sends, or stores a credential,
@@ -14,54 +14,50 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/shhac/lib-agent-harness/session"
+	"github.com/shhac/crew-code-review/internal/config"
+	harness "github.com/shhac/lib-agent-harness"
+	"github.com/shhac/lib-agent-harness/account"
 )
 
 // inspect is the harness read, a variable so Fetch's own tests never start a
 // real CLI.
-var inspect = session.Inspect
+var inspect = account.Inspect
 
-// Fetch reads one snapshot from the source's engine. An unrecognised engine
-// falls back to codex, matching NewEngine's default.
+// Metered lists the engines whose subscription windows can be read at all:
+// the ones harness.Support says report quota. An engine outside it (grok has
+// no quota windows) is not polled, so it never shows as a permanent error or
+// pauses a review; the floor fails open for it exactly as for a failed read.
+func Metered(engines []string) []string {
+	var out []string
+	for _, engine := range engines {
+		if harness.Support(harness.Engine(engine), harness.Account, harness.Quota).Usable() {
+			out = append(out, engine)
+		}
+	}
+	return out
+}
+
+// Fetch reads one snapshot from the source's engine.
 func Fetch(ctx context.Context, src Source) (Snapshot, error) {
-	engine := session.Codex
-	if src.Engine == "claude" {
-		engine = session.Claude
+	engine := harness.Engine(src.Engine)
+	if c := harness.Support(engine, harness.Account, harness.Quota); !c.Usable() {
+		return Snapshot{}, fmt.Errorf("%s usage: %s", src.Engine, c.Reason)
 	}
-	in, err := inspect(ctx, session.Options{Engine: engine, Binary: src.Bin})
-	return fromInspection(engine, in, err)
+	report, err := inspect(ctx, harness.Provider{Engine: engine, CLI: harness.CLI{Binary: src.Bin, Home: src.Home}})
+	return fromReport(src, report, err)
 }
 
-// windowIDs names the account-wide windows Snapshot models, in preference
-// order. Inspect also reports windows these overlap (claude's per-model weekly
-// limits, codex's other limit buckets); no floor acts on those, and letting
-// one reach BelowFloor would pause reviews over a scoped limit the review
-// never spends from. A codex CLI that predates per-limit buckets reports its
-// one bucket as "default".
-type windowIDs struct{ primary, secondary []string }
-
-var accountWindows = map[session.Engine]windowIDs{
-	session.Codex:  {primary: []string{"codex/primary", "default/primary"}, secondary: []string{"codex/secondary", "default/secondary"}},
-	session.Claude: {primary: []string{"five_hour"}, secondary: []string{"seven_day"}},
-}
-
-var loginCommand = map[session.Engine]string{
-	session.Codex:  "codex login",
-	session.Claude: "claude auth login",
-}
-
-// fromInspection maps one read onto a Snapshot. Success is judged by the quota
-// alone: Inspect joins the account and quota errors and returns whatever it
-// did get, so a failed account read beside a good quota still meters.
-func fromInspection(engine session.Engine, in session.Inspection, err error) (Snapshot, error) {
-	if !in.Quota.Known() {
-		return Snapshot{}, unavailable(engine, in, err)
+// fromReport maps one read onto a Snapshot. Success is judged by the quota
+// alone: Inspect returns whatever it did get beside its error, so a failed
+// account read beside a good quota still meters.
+func fromReport(src Source, report harness.AccountReport, err error) (Snapshot, error) {
+	if !report.Quota.Known() {
+		return Snapshot{}, unavailable(src, report, err)
 	}
-	ids := accountWindows[engine]
 	return Snapshot{
-		Plan:      in.Account.Plan,
-		Primary:   pick(in.Quota.Windows, ids.primary),
-		Secondary: pick(in.Quota.Windows, ids.secondary),
+		Plan:      report.Account.Plan,
+		Primary:   pick(src.Engine, report.Quota.Windows, harness.QuotaSession),
+		Secondary: pick(src.Engine, report.Quota.Windows, harness.QuotaWeekly),
 		FetchedAt: time.Now(),
 	}, nil
 }
@@ -70,31 +66,46 @@ func fromInspection(engine session.Engine, in session.Inspection, err error) (Sn
 // captured CLI output out of its error values, so their text is safe to show
 // on the dashboard as it is. A login the CLI reports absent gets the one
 // actionable hint.
-func unavailable(engine session.Engine, in session.Inspection, err error) error {
-	if in.Account.LoggedIn != nil && !*in.Account.LoggedIn {
-		return fmt.Errorf("%s is not logged in; run `%s`", engine, loginCommand[engine])
+func unavailable(src Source, report harness.AccountReport, err error) error {
+	if report.Account.LoggedIn != nil && !*report.Account.LoggedIn {
+		return fmt.Errorf("%s is not logged in; %s", src.Engine, config.LoginHint(src.Engine, src.Bin))
 	}
 	if err != nil {
-		return fmt.Errorf("%s usage: %w", engine, err)
+		return fmt.Errorf("%s usage: %w", src.Engine, err)
 	}
-	return fmt.Errorf("%s reports no rate limits (%s)", engine, cmp.Or(in.Quota.Reason, "no reason given"))
+	return fmt.Errorf("%s reports no rate limits (%s)", src.Engine, cmp.Or(report.Quota.Reason, "no reason given"))
 }
 
-// pick returns the first of ids the read reported. A window without a
-// duration is skipped, since BelowFloor tells the 5-hourly window from the
-// weekly one by it.
-func pick(windows []session.QuotaWindow, ids []string) *Window {
-	for _, id := range ids {
-		for _, w := range windows {
-			if w.ID == id && w.WindowMinutes != nil {
-				return toWindow(w)
-			}
+// pick returns the account-wide window of one kind. Inspect also reports
+// windows these overlap (claude's per-model weekly limits, codex's separate
+// limit buckets such as its review allowance); no floor acts on those, and
+// letting one reach BelowFloor would pause reviews over a scoped limit the
+// review never spends from. A per-model window says so (Model); a separate
+// codex bucket does not, so the engine's own bucket is preferred and the
+// harness's first otherwise, which is the only one on a CLI that predates
+// per-limit buckets. A window without a duration is skipped, since BelowFloor
+// tells the 5-hourly window from the weekly one by it.
+func pick(engine string, windows []harness.QuotaWindow, kind harness.QuotaKind) *Window {
+	var first *harness.QuotaWindow
+	for i := range windows {
+		w := &windows[i]
+		if w.Kind != kind || w.Model != "" || w.WindowMinutes == nil {
+			continue
+		}
+		if w.Scope == engine {
+			return toWindow(*w)
+		}
+		if first == nil {
+			first = w
 		}
 	}
-	return nil
+	if first == nil {
+		return nil
+	}
+	return toWindow(*first)
 }
 
-func toWindow(w session.QuotaWindow) *Window {
+func toWindow(w harness.QuotaWindow) *Window {
 	out := &Window{WindowMins: int(*w.WindowMinutes)}
 	if w.UsedPercent != nil {
 		out.UsedPercent = *w.UsedPercent

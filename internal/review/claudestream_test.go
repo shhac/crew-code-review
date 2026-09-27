@@ -78,8 +78,12 @@ func TestTranscodeSplitsUsageFreshFromCached(t *testing.T) {
 		`{"type":"result","subtype":"success","structured_output":{"decision":"APPROVED","summary":"ok"},`+
 			`"usage":{"input_tokens":1000,"output_tokens":200,"cache_creation_input_tokens":30,"cache_read_input_tokens":400000}}`,
 	)
-	if want := (TokenUsage{Input: 1000, Output: 200, CacheWrite: 30, CacheRead: 400000}); tr.Snapshot().Usage != want {
-		t.Errorf("usage = %+v, want %+v (cache writes are work done, cache reads are not)", tr.Snapshot().Usage, want)
+	want := TokenUsage{Known: true, Input: 401030, Output: 200, CacheWrite: 30, CacheRead: 400000, CacheKnown: true}
+	if tr.Snapshot().Usage != want {
+		t.Errorf("usage = %+v, want %+v (Input includes both cache classes)", tr.Snapshot().Usage, want)
+	}
+	if fresh, ok := tr.Snapshot().Usage.Fresh(); !ok || fresh != 1000 {
+		t.Errorf("fresh = %d/%v, want 1000: cache writes and reads are both split out", fresh, ok)
 	}
 }
 
@@ -93,7 +97,7 @@ func TestTranscodeAccumulatesUsageAcrossInvocations(t *testing.T) {
 		`{"type":"result","subtype":"success","structured_output":{"decision":"APPROVED","summary":"ok"},`+
 			`"usage":{"input_tokens":20,"output_tokens":3,"cache_read_input_tokens":7000}}`,
 	)
-	if want := (TokenUsage{Input: 120, Output: 13, CacheRead: 12000}); tr.Snapshot().Usage != want {
+	if want := (TokenUsage{Known: true, Input: 12120, Output: 13, CacheRead: 12000, CacheKnown: true}); tr.Snapshot().Usage != want {
 		t.Errorf("usage = %+v, want %+v (both invocations summed)", tr.Snapshot().Usage, want)
 	}
 }
@@ -248,8 +252,8 @@ func TestTranscodeSumsCostAcrossInvocations(t *testing.T) {
 		`{"type":"result","subtype":"success","structured_output":{"decision":"WORKING","summary":"w"},"usage":{"input_tokens":10},"total_cost_usd":0.25}`,
 		`{"type":"result","subtype":"success","structured_output":{"decision":"COMMENTED","summary":"c"},"usage":{"input_tokens":10},"total_cost_usd":0.5}`,
 	)
-	if tr.Snapshot().CostUSD != 0.75 {
-		t.Errorf("costUSD = %v, want both invocations summed", tr.Snapshot().CostUSD)
+	if c := tr.Snapshot().Cost; !c.Known || c.USD != 0.75 {
+		t.Errorf("cost = %+v, want both invocations summed", c)
 	}
 	if !strings.Contains(got, "~ $0.7500 at API rates") {
 		t.Errorf("transcript must show the running cost:\n%s", got)
@@ -262,8 +266,8 @@ func TestTranscodeOmitsCostWhenUnreported(t *testing.T) {
 	got, tr := transcode(t,
 		`{"type":"result","subtype":"success","structured_output":{"decision":"SKIPPED","summary":"s"},"usage":{"input_tokens":5}}`,
 	)
-	if tr.Snapshot().CostUSD != 0 {
-		t.Errorf("costUSD = %v, want 0", tr.Snapshot().CostUSD)
+	if c := tr.Snapshot().Cost; c.Known || c.USD != 0 {
+		t.Errorf("cost = %+v, want unknown", c)
 	}
 	if strings.Contains(got, "API rates") {
 		t.Errorf("an unreported cost must not render:\n%s", got)
@@ -314,9 +318,13 @@ func TestTranscodeRendersFailureReason(t *testing.T) {
 	if !strings.Contains(got, "error\nerror_during_execution: Claude Code process exited with code 1") {
 		t.Errorf("failure must render under the error marker:\n%s", got)
 	}
-	// And the driver's error names it, rather than saying "no structured output".
-	if _, err := tr.Report(); err == nil || !strings.Contains(err.Error(), "exited with code 1") {
-		t.Errorf("verdict error = %v, want the CLI's own reason", err)
+	// The harness keeps provider text out of its error and hands it over as
+	// Failure, which is what the driver appends to its own error.
+	if _, err := tr.Report(); err == nil {
+		t.Error("a failed turn must not report")
+	}
+	if f := tr.Snapshot().Failure; !strings.Contains(f, "exited with code 1") {
+		t.Errorf("failure = %q, want the CLI's own reason", f)
 	}
 }
 
@@ -348,7 +356,7 @@ func TestTranscodeInterruptedPlaceholderUsageIsUnknown(t *testing.T) {
 		`{"type":"result","is_error":true,"subtype":"error_during_execution","usage":{"input_tokens":0,"output_tokens":0},"total_cost_usd":0}`,
 	)
 	r := tr.Snapshot()
-	if r.UsageKnown || r.CostKnown || !strings.Contains(got, "usage unavailable") || strings.Contains(got, "tokens used\n0") {
+	if r.Usage.Known || r.Cost.Known || !strings.Contains(got, "usage unavailable") || strings.Contains(got, "tokens used\n0") {
 		t.Fatalf("interrupted usage presented as known: %+v\n%s", r, got)
 	}
 }

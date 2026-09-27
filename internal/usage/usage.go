@@ -12,6 +12,8 @@ import (
 	"fmt"
 	"sync"
 	"time"
+
+	"github.com/shhac/crew-code-review/internal/config"
 )
 
 // Window is one rate-limit window: an engine's rolling ~5h window or its
@@ -70,8 +72,15 @@ func BelowFloor(s Snapshot, floor5h, floorWeekly int) (bool, string) {
 // bills against, so it has to follow the configured engine rather than being
 // polled unconditionally.
 type Source struct {
-	Engine string // "codex" (default) | "claude"
+	Engine string // an engine name, as config spells it
 	Bin    string // that engine's binary; empty means its own default name
+	Home   string // that engine's login home; empty means the CLI's own
+}
+
+// SourceFor is the configured engine's source: its binary and home.
+func SourceFor(r config.ReviewSettings, engine string) Source {
+	common := r.EngineCommon(engine)
+	return Source{Engine: engine, Bin: common.Bin, Home: common.Home}
 }
 
 // OK reports whether the snapshot carries usable headroom. A poll that failed

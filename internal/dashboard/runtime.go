@@ -46,13 +46,15 @@ type usageResp struct {
 	Fresh24h     int64         `json:"fresh_tokens_24h"`
 }
 
-// engineUsages renders every engine's cached snapshot in a stable order, with
-// the configured one marked and each judged against its OWN floor. Engines
-// that were never polled still appear, as unavailable: a missing slot would
-// read as "this engine does not exist".
+// engineUsages renders every metered engine's cached snapshot in a stable
+// order, with the configured one marked and each judged against its OWN floor.
+// Metered engines that were never polled still appear, as unavailable: a
+// missing slot would read as "this engine does not exist". An engine that
+// reports no quota at all (grok) has no slot, rather than a permanent error.
 func engineUsages(cfg config.Config, snaps map[string]usage.Snapshot, active string) []engineUsage {
-	out := make([]engineUsage, 0, len(review.Engines))
-	for _, engine := range review.Engines {
+	engines := usage.Metered(review.Engines)
+	out := make([]engineUsage, 0, len(engines))
+	for _, engine := range engines {
 		snap := snaps[engine]
 		row := engineUsage{Engine: engine, Active: engine == active, Available: snap.OK(), Error: snap.Error}
 		if !snap.FetchedAt.IsZero() {

@@ -11,7 +11,6 @@ package doctor
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"os/exec"
 	"strings"
@@ -21,6 +20,9 @@ import (
 	"github.com/shhac/crew-code-review/internal/pricing"
 	"github.com/shhac/crew-code-review/internal/review"
 	"github.com/shhac/crew-code-review/internal/store"
+	harness "github.com/shhac/lib-agent-harness"
+	"github.com/shhac/lib-agent-harness/account"
+	"github.com/shhac/lib-agent-harness/native"
 )
 
 // probeTimeout bounds each external command. Generous enough for a cold
@@ -185,51 +187,92 @@ func Blocking(checks []Check) []Check {
 	return failed
 }
 
-// engineProbe is how one engine is diagnosed: its default binary name, and
-// how to ask it whether it is authenticated. The two auth probes genuinely
-// differ (codex reports via exit code, claude via JSON), which is the only
-// reason this is a table of functions rather than a table of flags.
-type engineProbe struct {
-	installHint string
-	auth        func(ctx context.Context, bin string) Check
-}
-
-// engineProbes is keyed by engine name, with no default entry.
-//
-// It replaced a switch whose `default:` meant codex, so an engine name the
-// switch did not recognise was probed AS codex: a future third engine, or a
-// typo that slipped past validation, would have been reported healthy on the
-// strength of codex being installed. Unknown is now its own answer.
-var engineProbes = map[string]engineProbe{
-	"codex": {
-		installHint: "install the Codex CLI, or set codex.bin",
-		auth: func(ctx context.Context, bin string) Check {
-			return authCheck(ctx, "engine:codex-auth", bin, []string{"login", "status"}, "run `codex login`")
-		},
-	},
-	"claude": {
-		installHint: "install Claude Code, or set claude.bin",
-		auth:        claudeAuthCheck,
-	},
-}
-
 // engineChecks probes one engine's CLI: present, and logged in. Only engines
 // a group can actually route to are probed, so a machine set up for one engine
 // isn't told off for lacking the other.
+//
+// An engine the harness cannot run a review on gets that answer, not a probe:
+// a switch whose default meant codex once reported an unknown engine healthy
+// on the strength of codex being installed.
 func engineChecks(ctx context.Context, engine string, cfg config.Config) []Check {
-	probe, known := engineProbes[engine]
-	if !known {
+	if c := harness.Support(harness.Engine(engine), harness.Run, harness.Available); !c.Usable() {
 		return []Check{{
 			Name: "engine:" + engine, Blocking: true,
-			Detail: fmt.Sprintf("no probe for engine %q", engine),
+			Detail: fmt.Sprintf("engine %q cannot run reviews: %s", engine, c.Reason),
 			Hint:   "valid engines: " + strings.Join(config.EngineNames, ", "),
 		}}
 	}
-	bin := cfg.ResolveBin(engine)
+	provider := cfg.Review.Provider(engine)
 	return []Check{
-		binaryCheck(ctx, "engine:"+engine, bin, "--version", probe.installHint),
-		probe.auth(ctx, bin),
+		versionCheck(ctx, engine, provider),
+		loginCheck(ctx, engine, provider),
 	}
+}
+
+// versionCheck asks the harness for the CLI's version, so the detail line
+// records exactly which build is in play and a missing binary is told apart
+// from one that will not start.
+func versionCheck(ctx context.Context, engine string, provider harness.Provider) Check {
+	name := "engine:" + engine
+	bin := config.DefaultBin(engine, provider.CLI.Binary)
+	hint := fmt.Sprintf("install the %s CLI, or set %s.bin", engine, engine)
+	ctx, cancel := context.WithTimeout(ctx, probeTimeout)
+	defer cancel()
+	version, err := native.Version(ctx, native.Config{Provider: provider})
+	if err == nil {
+		return Check{Name: name, OK: true, Blocking: true, Detail: firstLine(version)}
+	}
+	if facts, ok := harness.ErrorFacts(err); ok && facts.Code == native.CodeExecutableNotFound {
+		return Check{Name: name, Blocking: true, Detail: fmt.Sprintf("%q not on PATH", bin), Hint: hint}
+	}
+	return Check{Name: name, Blocking: true, Detail: fmt.Sprintf("%q found but --version failed: %v", bin, err), Hint: hint}
+}
+
+// accountTimeout bounds a login read. Longer than probeTimeout: the harness
+// starts the CLI's own protocol server and asks it, which is slower than
+// printing a version.
+const accountTimeout = 30 * time.Second
+
+// inspectAccount is the harness's login read, a variable so tests never
+// start a real CLI.
+var inspectAccount = account.Inspect
+
+// loginFallbacks answer for an engine whose inspection can say "logged in"
+// but never "logged out": Claude's handshake has no logged-in flag, so a
+// missing account there is unknown rather than absent. Its own status command
+// does say, so it is asked only then.
+var loginFallbacks = map[harness.Engine]func(context.Context, harness.Provider) Check{
+	harness.Claude: claudeAuthCheck,
+}
+
+// loginCheck asks the harness whether the engine's CLI is logged in, without
+// inference, through the same login the reviews will use.
+func loginCheck(ctx context.Context, engine string, provider harness.Provider) Check {
+	name := "engine:" + engine + "-auth"
+	hint := config.LoginHint(engine, provider.CLI.Binary)
+	if c := harness.Support(provider.Engine, harness.Account, harness.Login); !c.Usable() {
+		return Check{Name: name, Detail: "login cannot be checked: " + c.Reason}
+	}
+	inspectCtx, cancel := context.WithTimeout(ctx, accountTimeout)
+	defer cancel()
+	report, err := inspectAccount(inspectCtx, provider)
+	if loggedIn := report.Account.LoggedIn; loggedIn != nil {
+		if !*loggedIn {
+			return Check{Name: name, Blocking: true, Detail: "not logged in", Hint: hint}
+		}
+		return Check{Name: name, OK: true, Blocking: true,
+			Detail: strings.TrimSpace(report.Account.AuthMethod + " " + report.Account.Plan)}
+	}
+	if fallback, ok := loginFallbacks[provider.Engine]; ok {
+		return fallback(ctx, provider)
+	}
+	detail := "login could not be confirmed"
+	if err != nil {
+		detail += ": " + err.Error()
+	} else if report.Account.Reason != "" {
+		detail += ": " + report.Account.Reason
+	}
+	return Check{Name: name, Blocking: true, Detail: detail, Hint: hint}
 }
 
 // binaryCheck resolves the binary and reads its version, so the detail line
@@ -245,8 +288,8 @@ func binaryCheck(ctx context.Context, name, bin, versionArg, hint string) Check 
 	return Check{Name: name, OK: true, Blocking: true, Detail: firstLine(out)}
 }
 
-// authCheck treats a zero exit as authenticated, which is the contract both
-// `gh auth status` and `codex login status` follow.
+// authCheck treats a zero exit as authenticated, which is the contract
+// `gh auth status` follows.
 func authCheck(ctx context.Context, name, bin string, args []string, hint string) Check {
 	if _, err := exec.LookPath(bin); err != nil {
 		return Check{Name: name, Blocking: true, Detail: fmt.Sprintf("%q not on PATH", bin), Hint: hint}
@@ -256,28 +299,6 @@ func authCheck(ctx context.Context, name, bin string, args []string, hint string
 		return Check{Name: name, Blocking: true, Detail: "not authenticated", Hint: hint}
 	}
 	return Check{Name: name, OK: true, Blocking: true, Detail: firstLine(out)}
-}
-
-// claudeAuthCheck reads the structured status rather than the exit code:
-// `claude auth status` exits 0 while logged out and reports it in the JSON.
-func claudeAuthCheck(ctx context.Context, bin string) Check {
-	const hint = "run `claude auth login`"
-	if _, err := exec.LookPath(bin); err != nil {
-		return Check{Name: "engine:claude-auth", Blocking: true, Detail: fmt.Sprintf("%q not on PATH", bin), Hint: hint}
-	}
-	status, err := readClaudeAuthStatus(ctx, bin)
-	if err != nil {
-		detail := "auth status failed"
-		if errors.Is(err, errClaudeAuthUnreadable) {
-			detail = "auth status was not readable JSON"
-		}
-		return Check{Name: "engine:claude-auth", Blocking: true, Detail: detail, Hint: hint}
-	}
-	if !status.LoggedIn {
-		return Check{Name: "engine:claude-auth", Blocking: true, Detail: "not logged in", Hint: hint}
-	}
-	return Check{Name: "engine:claude-auth", OK: true, Blocking: true,
-		Detail: strings.TrimSpace(fmt.Sprintf("%s %s", status.AuthMethod, status.SubscriptionType))}
 }
 
 func run(ctx context.Context, bin string, args ...string) (string, error) {

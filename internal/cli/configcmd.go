@@ -16,19 +16,17 @@ var (
 	sandboxValues       = []string{"read-only", "workspace-write", "danger-full-access"}
 	tailscaleModeValues = []string{"serve", "funnel"}
 
-	// Claude Code has no model-catalog command to probe (codex has `codex
-	// debug models`), so its vocabularies are listed here. Aliases track the
-	// latest model of each tier, which is what a long-lived config wants;
-	// pinning a dated id stays possible, it just isn't offered.
-	claudeModelValues = []string{
-		"claude-opus-5-5", "claude-sonnet-5", "claude-fable-5", // pinned ids, as the default is
-		"opus", "sonnet", "fable", "haiku", // aliases, which track the latest of each tier
-	}
+	// Model ids and efforts complete from each engine's own catalog (see
+	// models.go). Claude's effort is still VALIDATED against a fixed list,
+	// because it is pinned by default and a typo there fails every review.
 	claudeEffortValues = []string{"low", "medium", "high", "xhigh", "max"}
 	// Only the non-interactive modes: `plan` produces no review and `manual`
 	// waits for an approval no headless run can give. `auto` is the default;
 	// the rest are static allow-list modes for a tighter or looser run.
 	claudePermissionModeValues = []string{"auto", "acceptEdits", "dontAsk", "bypassPermissions"}
+	// Grok's own permission modes, as `grok --help` lists them, less `plan`
+	// for the same reason as claude's.
+	grokPermissionModeValues = []string{"default", "acceptEdits", "auto", "dontAsk", "bypassPermissions"}
 )
 
 // configKeySpec describes one editable scalar once: the lib-agent-cli key
@@ -137,10 +135,12 @@ func configKeySpecs() []configKeySpec {
 			func(c *config.Config) *string { return &c.Review.WorkspaceRetention }, validateHoldDuration)),
 		plain(stringKey("codex.bin", "Codex binary (default codex)",
 			func(c *config.Config) *string { return &c.Review.Codex.Bin }, nil)),
+		plain(stringKey("codex.home", "Codex home, its config and login directory (default: the CLI's own, CODEX_HOME or ~/.codex)",
+			func(c *config.Config) *string { return &c.Review.Codex.Home }, nil)),
 		configKeySpec{key: stringKey("codex.model", "Model passed to codex exec --model",
-			func(c *config.Config) *string { return &c.Review.Codex.Model }, nil), complete: codexModelSlugs},
+			func(c *config.Config) *string { return &c.Review.Codex.Model }, nil), complete: completeModels("codex")},
 		configKeySpec{key: stringKey("codex.effort", "Reasoning effort passed as Codex model_reasoning_effort (empty = model default)",
-			func(c *config.Config) *string { return &c.Review.Codex.Effort }, nil), complete: completeConfiguredCodexEfforts},
+			func(c *config.Config) *string { return &c.Review.Codex.Effort }, nil), complete: completeEfforts("codex")},
 		static(stringKey("codex.sandbox", "Codex sandbox mode (default workspace-write)",
 			func(c *config.Config) *string { return &c.Review.Codex.Sandbox }, validateOneOf("sandbox mode", sandboxValues)), sandboxValues),
 		plain(optionalIntKey("codex.max_resumes", "Resume nudges when a codex run ends on an intermediate WORKING report (default 2, 0 disables)",
@@ -152,8 +152,10 @@ func configKeySpecs() []configKeySpec {
 		plain(usageFloorKey("codex", func(c *config.Config) *config.UsageFloorLimits { return &c.Review.Codex.UsageFloor })),
 		plain(stringKey("claude.bin", "Claude Code binary (default claude)",
 			func(c *config.Config) *string { return &c.Review.Claude.Bin }, nil)),
-		static(stringKey("claude.model", "Model passed to claude --model (alias or full id; default claude-opus-5-5)",
-			func(c *config.Config) *string { return &c.Review.Claude.Model }, nil), claudeModelValues),
+		plain(stringKey("claude.home", "Claude Code config and login directory (default: the CLI's own, CLAUDE_CONFIG_DIR or ~/.claude)",
+			func(c *config.Config) *string { return &c.Review.Claude.Home }, nil)),
+		configKeySpec{key: stringKey("claude.model", "Model passed to claude --model (alias or full id; default claude-opus-5-5)",
+			func(c *config.Config) *string { return &c.Review.Claude.Model }, nil), complete: completeModels("claude")},
 		static(stringKey("claude.effort", "Reasoning effort passed to claude --effort (default medium)",
 			func(c *config.Config) *string { return &c.Review.Claude.Effort }, validateOneOf("effort", claudeEffortValues)), claudeEffortValues),
 		static(stringKey("claude.permission_mode", "Claude permission mode, the analogue of codex.sandbox (default auto: a classifier vets each action, no allow-list needed)",
@@ -167,11 +169,27 @@ func configKeySpecs() []configKeySpec {
 		plain(optionalIntKey("claude.usage_floor.1w_percent", "Hold claude's candidates when its weekly window has less than this % remaining (default 10, 0 disables)",
 			func(c *config.Config) **int { return &c.Review.Claude.UsageFloor.OneWeekPercent }, 0, 100)),
 		plain(usageFloorKey("claude", func(c *config.Config) *config.UsageFloorLimits { return &c.Review.Claude.UsageFloor })),
+		plain(stringKey("grok.bin", "Grok binary (default grok)",
+			func(c *config.Config) *string { return &c.Review.Grok.Bin }, nil)),
+		plain(stringKey("grok.home", "Grok home, its config and login directory (default: the CLI's own, GROK_HOME or ~/.grok)",
+			func(c *config.Config) *string { return &c.Review.Grok.Home }, nil)),
+		configKeySpec{key: stringKey("grok.model", "Model passed to grok --model (empty = the CLI's default)",
+			func(c *config.Config) *string { return &c.Review.Grok.Model }, nil), complete: completeModels("grok")},
+		configKeySpec{key: stringKey("grok.effort", "Reasoning effort passed to grok --reasoning-effort (empty = model default)",
+			func(c *config.Config) *string { return &c.Review.Grok.Effort }, nil), complete: completeEfforts("grok")},
+		plain(stringKey("grok.sandbox", "Grok sandbox profile passed to grok --sandbox (empty = the CLI's default)",
+			func(c *config.Config) *string { return &c.Review.Grok.Sandbox }, nil)),
+		static(stringKey("grok.permission_mode", "Grok permission mode passed to grok --permission-mode (empty = the CLI's default)",
+			func(c *config.Config) *string { return &c.Review.Grok.PermissionMode }, validateOneOf("permission mode", grokPermissionModeValues)), grokPermissionModeValues),
+		static(stringKey("grok.telemetry", "Grok telemetry policy: reduced (default: client telemetry, trace upload and imports of other harnesses' config off for the run) or standard (the CLI's own behaviour)",
+			func(c *config.Config) *string { return &c.Review.Grok.Telemetry }, validateOneOf("telemetry policy", config.GrokTelemetry)), config.GrokTelemetry),
+		plain(optionalIntKey("grok.max_resumes", "Resume nudges when a grok run ends without a final report (default 2, 0 disables)",
+			func(c *config.Config) **int { return &c.Review.Grok.MaxResumes }, 0, 10)),
 		plain(stringKey("dashboard.addr", "Dashboard listen address (default 127.0.0.1:8330; bind wider only deliberately, the dashboard has no auth of its own)",
 			func(c *config.Config) *string { return &c.Dashboard.Addr }, nil)),
 		static(stringKey("dashboard.tailscale.mode", `Tailscale exposure: "", "serve", or "funnel"`,
 			func(c *config.Config) *string { return &c.Dashboard.Tailscale.Mode }, validateOneOf("tailscale mode", tailscaleModeValues)), tailscaleModeValues),
-		plain(stringKey("dashboard.usage_poll_interval", "Codex usage refresh cadence as a Go duration (default 10m)",
+		plain(stringKey("dashboard.usage_poll_interval", "Engine usage refresh cadence as a Go duration (default 10m)",
 			func(c *config.Config) *string { return &c.Dashboard.UsagePollInterval }, validateDuration)),
 		plain(stringKey("store.path", "DuckDB file path (default under XDG data dir)",
 			func(c *config.Config) *string { return &c.Store.Path }, nil)),

@@ -187,15 +187,15 @@ type DiscoverySettings struct {
 // Shared because they are the same QUESTION for every engine, not because
 // engines are interchangeable — they are not. Everything about how an engine
 // is actually invoked (codex's sandbox, claude's permission mode, allowed
-// tools and budget ceiling) deliberately stays on the engine's own struct,
-// because there is no reason to expect a third harness to invoke like either
-// of these two.
+// tools and budget ceiling, grok's telemetry policy) deliberately stays on the
+// engine's own struct, because no two harnesses invoke alike.
 //
 // Embedded anonymously, so the on-disk shape is unchanged: encoding/json
 // flattens promoted fields in both directions, and they stay addressable, so
 // the config key registry's &c.Review.Claude.Bin accessors are untouched.
 type EngineCommon struct {
 	Bin        string   `json:"bin,omitempty"`         // default: the engine's own name
+	Home       string   `json:"home,omitempty"`        // the CLI's config and login directory; default: the CLI's own
 	Model      string   `json:"model,omitempty"`       // e.g. "gpt-5.6", or an alias like "opus"
 	Effort     string   `json:"effort,omitempty"`      // reasoning effort; empty = model default
 	Args       []string `json:"args,omitempty"`        // extra args appended to the engine's invocation
@@ -228,6 +228,25 @@ type ClaudeSettings struct {
 	MaxBudgetUSD   float64  `json:"max_budget_usd,omitempty"`  // --max-budget-usd; 0 = uncapped
 }
 
+// GrokSettings configures the grok review engine (`grok --single`).
+//
+// Sandbox and PermissionMode are Grok's own flags of the same names, passed
+// through; empty leaves each to the CLI's default. Tools narrows the built-in
+// tools to the named ones; empty keeps Grok's default set (it has no verified
+// way to say "none"). Telemetry defaults to reduced, which switches off Grok's
+// client telemetry and its imports of other harnesses' skills, rules, MCP
+// servers and sessions for the run; "standard" keeps the CLI's own behaviour.
+type GrokSettings struct {
+	EngineCommon
+	Sandbox        string   `json:"sandbox,omitempty"`
+	PermissionMode string   `json:"permission_mode,omitempty"`
+	Tools          []string `json:"tools,omitempty"`
+	Telemetry      string   `json:"telemetry,omitempty"` // "reduced" (default) | "standard"
+}
+
+// GrokTelemetry is the vocabulary of GrokSettings.Telemetry, default first.
+var GrokTelemetry = []string{"reduced", "standard"}
+
 // ReviewSettings selects and configures the pluggable review engine.
 //
 // OnApprove/OnComment/OnReject are post-outcome prompt fragments: instructions
@@ -236,7 +255,7 @@ type ClaudeSettings struct {
 // emoji conventions, extra CLIs) belongs HERE, in the user's config, never in
 // the tool or its shipped defaults. The tool itself assumes only gh and codex.
 type ReviewSettings struct {
-	Engine         string `json:"engine,omitempty"`           // "codex" (default) | "claude"
+	Engine         string `json:"engine,omitempty"`           // "codex" (default) | "claude" | "grok"
 	MainPrompt     string `json:"main_prompt,omitempty"`      // inline main review prompt
 	MainPromptPath string `json:"main_prompt_path,omitempty"` // or load it from a file
 	OnApprove      string `json:"on_approve,omitempty"`
@@ -250,6 +269,7 @@ type ReviewSettings struct {
 	WorkspaceRetention string         `json:"workspace_retention,omitempty"`
 	Codex              CodexSettings  `json:"codex,omitempty"`
 	Claude             ClaudeSettings `json:"claude,omitempty"`
+	Grok               GrokSettings   `json:"grok,omitempty"`
 }
 
 // StoreSettings locates the persistent DuckDB file.

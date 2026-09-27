@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/shhac/crew-code-review/internal/config"
+	harness "github.com/shhac/lib-agent-harness"
 )
 
 // invocation is one engine subprocess as the harness asked for it: the argv
@@ -25,7 +26,7 @@ func sent(t *testing.T, e *nativeEngine, req Request) []invocation {
 	var calls []invocation
 	e.cfg.RunCommand = func(_ context.Context, args []string, dir string, stdout, _ io.Writer) error {
 		calls = append(calls, invocation{args: args, dir: dir})
-		return approve(t, e.cfg.Engine, args, stdout)
+		return approve(t, e.cfg.Provider.Engine, args, stdout)
 	}
 	if req.WorkDir == "" {
 		req.WorkDir = t.TempDir()
@@ -36,12 +37,17 @@ func sent(t *testing.T, e *nativeEngine, req Request) []invocation {
 	return calls
 }
 
-// approve answers one invocation with an APPROVED report: claude's arrives in
-// the result event, codex's in the file named by --output-last-message.
-func approve(t *testing.T, engine string, args []string, stdout io.Writer) error {
+// approve answers one invocation with an APPROVED report: claude's and grok's
+// arrive in the final event, codex's in the file the harness names with
+// --output-last-message.
+func approve(t *testing.T, engine harness.Engine, args []string, stdout io.Writer) error {
 	t.Helper()
-	if engine == "claude" {
+	switch engine {
+	case harness.Claude:
 		_, err := io.WriteString(stdout, resultLine(t, "s1", DecisionApproved, 1))
+		return err
+	case harness.Grok:
+		_, err := io.WriteString(stdout, `{"type":"end","stopReason":"end_turn","sessionId":"s1","usage":{"input_tokens":1,"output_tokens":1},"structuredOutput":{"decision":"APPROVED","summary":"ok"}}`+"\n")
 		return err
 	}
 	_, _ = io.WriteString(stdout, `{"type":"turn.completed","usage":{"input_tokens":1}}`+"\n")
@@ -52,7 +58,7 @@ func approve(t *testing.T, engine string, args []string, stdout io.Writer) error
 	return os.WriteFile(path, []byte(`{"decision":"APPROVED","summary":"ok"}`), 0o600)
 }
 
-// Both engines run IN the review's workspace, fresh or resumed. claude has no
+// Every engine runs IN the review's workspace, fresh or resumed. claude has no
 // directory flag, so its process directory is the only way to say where to
 // work. codex has --cd, but `codex exec resume` does not accept it, so a
 // resumed codex took whatever directory the daemon happened to be started in,
@@ -65,6 +71,7 @@ func TestEachEngineRunsInItsWorkspace(t *testing.T) {
 	}{
 		{"codex", newCodex(config.CodexSettings{}, "nudge")},
 		{"claude", newClaude(config.ClaudeSettings{}, "nudge")},
+		{"grok", newGrok(config.GrokSettings{}, "nudge")},
 	} {
 		for _, session := range []string{"", "prev-session"} {
 			t.Run(tc.name+"/resume="+session, func(t *testing.T) {
@@ -95,12 +102,15 @@ func TestProvenanceReportsTheResolvedDials(t *testing.T) {
 		{"codex pinned", newCodex(config.CodexSettings{EngineCommon: config.EngineCommon{Model: "m", Effort: "high"}}, "n"), "m", "high"},
 		{"claude unset", newClaude(config.ClaudeSettings{}, "n"), defaultModel, defaultEffort},
 		{"claude pinned", newClaude(config.ClaudeSettings{EngineCommon: config.EngineCommon{Model: "sonnet", Effort: "xhigh"}}, "n"), "sonnet", "xhigh"},
+		{"grok unset", newGrok(config.GrokSettings{}, "n"), "", ""},
+		{"grok pinned", newGrok(config.GrokSettings{EngineCommon: config.EngineCommon{Model: "grok-code", Effort: "high"}}, "n"), "grok-code", "high"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			tc.engine.cfg.Binary = missing
+			tc.engine.cfg.Provider.CLI.Binary = missing
 			p := tc.engine.Provenance(context.Background())
-			if p.Engine != tc.engine.cfg.Engine || p.Model != tc.wantModel || p.Effort != tc.wantEffort {
-				t.Errorf("provenance = %+v, want %s/%q/%q", p, tc.engine.cfg.Engine, tc.wantModel, tc.wantEffort)
+			engine := string(tc.engine.cfg.Provider.Engine)
+			if p.Engine != engine || p.Model != tc.wantModel || p.Effort != tc.wantEffort {
+				t.Errorf("provenance = %+v, want %s/%q/%q", p, engine, tc.wantModel, tc.wantEffort)
 			}
 			if p.EngineVersion != "" {
 				t.Errorf("a failed version probe must record no version, got %q", p.EngineVersion)

@@ -1,6 +1,8 @@
 package doctor
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -8,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/shhac/crew-code-review/internal/config"
+	harness "github.com/shhac/lib-agent-harness"
 )
 
 // Blocking is what the exit code and the boot warning both key off, so it
@@ -66,7 +69,7 @@ func TestClaudeAuthCheck(t *testing.T) {
 		"malformed":     {`not json`, 0, false, "not readable JSON"},
 		"command fails": {``, 3, false, "auth status failed"},
 	} {
-		c := claudeAuthCheck(t.Context(), fakeClaude(t, tc.body, tc.exit))
+		c := claudeAuthCheck(t.Context(), claudeAt(fakeClaude(t, tc.body, tc.exit)))
 		if c.OK != tc.wantOK {
 			t.Errorf("%s: OK = %v, want %v (detail %q)", name, c.OK, tc.wantOK, c.Detail)
 		}
@@ -82,9 +85,70 @@ func TestClaudeAuthCheck(t *testing.T) {
 // A binary that isn't there at all is the commonest failure, and must be
 // reported as such rather than as an auth problem.
 func TestClaudeAuthCheckMissingBinary(t *testing.T) {
-	c := claudeAuthCheck(t.Context(), "definitely-not-a-real-binary-xyz")
+	c := claudeAuthCheck(t.Context(), claudeAt("definitely-not-a-real-binary-xyz"))
 	if c.OK || !strings.Contains(c.Detail, "not on PATH") {
 		t.Errorf("check = %+v, want a not-on-PATH failure", c)
+	}
+}
+
+func claudeAt(bin string) harness.Provider {
+	return harness.Provider{Engine: harness.Claude, CLI: harness.CLI{Binary: bin}}
+}
+
+// stubAccount replaces the harness's login read for one test.
+func stubAccount(t *testing.T, report harness.AccountReport, err error) *[]harness.Provider {
+	t.Helper()
+	var asked []harness.Provider
+	was := inspectAccount
+	t.Cleanup(func() { inspectAccount = was })
+	inspectAccount = func(_ context.Context, p harness.Provider) (harness.AccountReport, error) {
+		asked = append(asked, p)
+		return report, err
+	}
+	return &asked
+}
+
+// The harness's login read decides wherever it can say yes or no, for every
+// engine alike, and reads the login the reviews will use.
+func TestLoginCheckTrustsTheHarnessWhenItKnows(t *testing.T) {
+	yes, no := true, false
+	asked := stubAccount(t, harness.AccountReport{Account: harness.AccountSnapshot{LoggedIn: &yes, AuthMethod: "chatgpt", Plan: "pro"}}, nil)
+	provider := harness.Provider{Engine: harness.Grok, CLI: harness.CLI{Binary: "/opt/grok", Home: "/srv/grok"}}
+	if c := loginCheck(t.Context(), "grok", provider); !c.OK || c.Name != "engine:grok-auth" || c.Detail != "chatgpt pro" {
+		t.Errorf("logged in = %+v", c)
+	}
+	if got := (*asked)[0]; got.Engine != harness.Grok || got.CLI != provider.CLI {
+		t.Errorf("asked %+v, want the configured provider", got)
+	}
+
+	stubAccount(t, harness.AccountReport{Account: harness.AccountSnapshot{LoggedIn: &no}}, nil)
+	c := loginCheck(t.Context(), "codex", harness.Provider{Engine: harness.Codex})
+	if c.OK || !c.Blocking || c.Detail != "not logged in" || c.Hint != "run `codex login`" {
+		t.Errorf("logged out = %+v", c)
+	}
+}
+
+// Claude's handshake can say "logged in" but never "logged out", so an
+// unknown answer there falls back to its own status command; for an engine
+// with no such fallback, unknown is a blocking failure that says why.
+func TestLoginCheckFallsBackWhenTheHarnessCannotSay(t *testing.T) {
+	stubAccount(t, harness.AccountReport{}, errors.New("inspection failed"))
+	c := loginCheck(t.Context(), "claude", claudeAt(fakeClaude(t, `{"loggedIn":false}`, 0)))
+	if c.OK || c.Detail != "not logged in" {
+		t.Errorf("claude fallback = %+v, want its own status to decide", c)
+	}
+
+	c = loginCheck(t.Context(), "codex", harness.Provider{Engine: harness.Codex})
+	if c.OK || !c.Blocking || !strings.Contains(c.Detail, "could not be confirmed: inspection failed") || c.Hint == "" {
+		t.Errorf("unknown login = %+v, want a blocking failure naming the reason", c)
+	}
+}
+
+// A missing CLI is named as missing, through the harness's own classification.
+func TestVersionCheckOnMissingBinary(t *testing.T) {
+	c := versionCheck(t.Context(), "grok", harness.Provider{Engine: harness.Grok, CLI: harness.CLI{Binary: "definitely-not-a-real-binary-xyz"}})
+	if c.OK || !c.Blocking || !strings.Contains(c.Detail, "not on PATH") || !strings.Contains(c.Hint, "grok.bin") {
+		t.Errorf("check = %+v, want a blocking not-on-PATH failure pointing at grok.bin", c)
 	}
 }
 
@@ -127,9 +191,7 @@ func TestRunEmitsUniqueCheckNames(t *testing.T) {
 	}
 }
 
-// authCheck is the exit-code auth gate for gh AND for codex, the default
-// engine — so it runs on more machines than its JSON-based claude sibling,
-// which is the one that got tested first.
+// authCheck is the exit-code auth gate for gh, which every machine runs.
 func TestAuthCheck(t *testing.T) {
 	okBin := fakeClaude(t, "Logged in using ChatGPT", 0)
 	c := authCheck(t.Context(), "engine:codex-auth", okBin, []string{"login", "status"}, "run `codex login`")
@@ -237,7 +299,7 @@ func TestEngineChecksRefusesToGuessAnUnknownEngine(t *testing.T) {
 	if !strings.Contains(c.Detail, "gemini") {
 		t.Errorf("the detail must name the engine, got %q", c.Detail)
 	}
-	if !strings.Contains(c.Hint, "codex") || !strings.Contains(c.Hint, "claude") {
+	if !strings.Contains(c.Hint, "codex") || !strings.Contains(c.Hint, "claude") || !strings.Contains(c.Hint, "grok") {
 		t.Errorf("the hint must list the engines that do exist, got %q", c.Hint)
 	}
 }

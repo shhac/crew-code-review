@@ -1,0 +1,16 @@
+user
+Review pull request owner/repo#42.
+thinking
+Reading the diff first.
+grok
+Checking the diff against the linked issue.
+exec
+bash
+{"command":"gh pr diff 42"}
+ succeeded in 500ms:
+diff --git a/main.go b/main.go
++ added a line
+session id: 0199aa00-grok-4c1e-9d2b-5e6f7a8b9c0d
+tokens used
+34,800
+~ $0.0123 at API rates

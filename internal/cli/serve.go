@@ -222,17 +222,18 @@ func runningLoops(opts serveOpts, cfg config.Config) dashboard.Running {
 	}
 }
 
-// usageSources lists every engine to meter. All of them, not just the
-// configured one: the dashboard shows them side by side so an operator can
-// see the engine they are NOT using has headroom before deciding to switch,
-// and an engine that is missing or logged out reports that as its state
-// rather than vanishing. The floor consults them the same way, per candidate:
-// a group can name its own engine, so which account a review spends from is a
-// per-candidate answer, not a global one.
+// usageSources lists every engine to meter: every one that reports quota at
+// all, not just the configured one. The dashboard shows them side by side so
+// an operator can see the engine they are NOT using has headroom before
+// deciding to switch, and an engine that is missing or logged out reports that
+// as its state rather than vanishing. The floor consults them the same way,
+// per candidate: a group can name its own engine, so which account a review
+// spends from is a per-candidate answer, not a global one.
 func usageSources(cfg config.Config) []usage.Source {
-	sources := make([]usage.Source, 0, len(review.Engines))
-	for _, engine := range review.Engines {
-		sources = append(sources, usage.Source{Engine: engine, Bin: cfg.BinFor(engine)})
+	engines := usage.Metered(review.Engines)
+	sources := make([]usage.Source, 0, len(engines))
+	for _, engine := range engines {
+		sources = append(sources, usage.SourceFor(cfg.Review, engine))
 	}
 	return sources
 }

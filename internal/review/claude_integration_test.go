@@ -49,7 +49,7 @@ func TestClaudeSmoke(t *testing.T) {
 	if v.Tokens.Total() == 0 {
 		t.Error("token usage must be read back from the result event")
 	}
-	if v.Tokens.Fresh() == 0 {
+	if fresh, ok := v.Tokens.Fresh(); !ok || fresh+v.Tokens.Output == 0 {
 		t.Errorf("usage split = %+v, want the fresh half populated by a real run", v.Tokens)
 	}
 	// A live run always moves a large cached context, but WHICH cache column
@@ -68,9 +68,9 @@ func TestClaudeSmoke(t *testing.T) {
 	if cached == 0 {
 		t.Errorf("usage split = %+v, want the cached context in a cache bucket", v.Tokens)
 	}
-	if v.Tokens.Input >= cached {
+	if fresh, _ := v.Tokens.Fresh(); fresh >= cached {
 		t.Errorf("usage split = %+v: fresh input should be tiny beside the cached context, "+
-			"so an Input this large means cache tokens were parsed into the wrong half", v.Tokens)
+			"so fresh input this large means cache tokens were parsed into the wrong half", v.Tokens)
 	}
 	if v.UsageRaw == "" {
 		t.Error("the verbatim usage payload must be kept, not just the projection")
@@ -114,14 +114,14 @@ func TestClaudeAutoModeSmoke(t *testing.T) {
 	// and the point is that the shipped default model and permission mode
 	// actually work together against the live classifier.
 	engine := newClaude(config.ClaudeSettings{}, "NUDGE")
-	if engine.cfg.PermissionMode != autoPermissionMode {
-		t.Fatalf("permission mode = %q, want the %q default", engine.cfg.PermissionMode, autoPermissionMode)
+	if engine.cfg.Claude.PermissionMode != autoPermissionMode {
+		t.Fatalf("permission mode = %q, want the %q default", engine.cfg.Claude.PermissionMode, autoPermissionMode)
 	}
 	if engine.cfg.Model != defaultModel {
 		t.Fatalf("model = %q, want the %q default", engine.cfg.Model, defaultModel)
 	}
-	if len(engine.cfg.AllowedTools) != 0 {
-		t.Fatalf("auto mode must ship no allow-list, got %v", engine.cfg.AllowedTools)
+	if len(engine.cfg.Claude.AllowedTools) != 0 {
+		t.Fatalf("auto mode must ship no allow-list, got %v", engine.cfg.Claude.AllowedTools)
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)

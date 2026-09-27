@@ -164,7 +164,7 @@ func TestReviewOneCompletesEveryOutcome(t *testing.T) {
 	for _, decision := range decisions {
 		t.Run(decision, func(t *testing.T) {
 			fs := &fakeSchedStore{}
-			fe := &fakeEngine{verdict: review.Verdict{Decision: decision, Summary: "s", Tokens: review.TokenUsage{Input: 4242}}}
+			fe := &fakeEngine{verdict: review.Verdict{Decision: decision, Summary: "s", Tokens: review.TokenUsage{Known: true, Input: 4242, CacheKnown: true}}}
 			s := newTestScheduler(fs, fe)
 
 			c := store.Candidate{Repo: "o/r", Number: 5, Author: "alice", HeadSHA: "sha1"}
@@ -271,7 +271,7 @@ func TestReviewOneRecordsConfiguredCodexModelAndEffort(t *testing.T) {
 	// covered elsewhere (the engine reports CostUSD, the store round-trips it),
 	// but this is the glue between them.
 	fe := &fakeEngine{
-		verdict:    review.Verdict{Decision: review.DecisionCommented, Tokens: review.TokenUsage{Input: 40000, Output: 2575, CacheRead: 150000}, CostUSD: 0.6231},
+		verdict:    review.Verdict{Decision: review.DecisionCommented, Tokens: review.TokenUsage{Known: true, Input: 190000, Output: 2575, CacheRead: 150000, CacheKnown: true}, CostUSD: 0.6231},
 		provenance: &review.Provenance{Engine: "codex", Model: "gpt-5.6-terra", Effort: "high", EngineVersion: "Codex CLI 0.144.0"},
 	}
 	s := newTestScheduler(fs, fe)
@@ -287,6 +287,28 @@ func TestReviewOneRecordsConfiguredCodexModelAndEffort(t *testing.T) {
 	}
 	if got.TokensUsed != 192575 || got.CostUSD != 0.6231 {
 		t.Errorf("spend = %d tokens / $%v, want the engine's reported figures", got.TokensUsed, got.CostUSD)
+	}
+	// The harness counts cached tokens inside Input; history's input column
+	// has always meant FRESH input, and old and new rows must agree.
+	if got.InputTokens != 40000 || got.CacheReadTokens != 150000 || got.FreshTokens != 42575 {
+		t.Errorf("split = input %d / cache read %d / fresh %d, want 40000 / 150000 / 42575",
+			got.InputTokens, got.CacheReadTokens, got.FreshTokens)
+	}
+}
+
+// A usage without a cache split has a known total and nothing else: every
+// class stays 0, which history reads as unknown, so neither the live
+// estimate nor the backfill can price cached reads as fresh input.
+func TestRecordTokensLeavesAnUnknownSplitUnknown(t *testing.T) {
+	var rec store.Review
+	recordTokens(&rec, review.TokenUsage{Known: true, Input: 5000, Output: 300})
+	if rec.TokensUsed != 5300 || rec.InputTokens != 0 || rec.OutputTokens != 0 || rec.FreshTokens != 0 {
+		t.Errorf("record = %+v, want the total alone", rec)
+	}
+	var unknown store.Review
+	recordTokens(&unknown, review.TokenUsage{Input: 5000})
+	if unknown.TokensUsed != 0 {
+		t.Errorf("unknown usage recorded %d tokens, want 0 (unknown)", unknown.TokensUsed)
 	}
 }
 

@@ -12,6 +12,7 @@ import (
 	"github.com/shhac/crew-code-review/internal/config"
 	"github.com/shhac/crew-code-review/internal/logbuf"
 	"github.com/shhac/crew-code-review/internal/review"
+	"github.com/shhac/crew-code-review/internal/usage"
 )
 
 type testLogs struct {
@@ -115,23 +116,25 @@ func TestStartDashboardBindConflict(t *testing.T) {
 	}
 }
 
-// The daemon meters every wired engine, so this list must be derived from the
-// engine roster rather than restated. A hand-written list would silently skip
-// a third engine: no compile error, no failing test, just no usage polled.
+// The daemon meters every wired engine that reports quota, so this list must
+// be derived from the engine roster and the harness rather than restated. A
+// hand-written list would silently skip a new engine; polling one with no
+// quota (grok) would show a permanent error instead of headroom.
 func TestUsageSourcesCoversEveryWiredEngine(t *testing.T) {
 	cfg := config.Config{Review: config.ReviewSettings{
 		Codex:  config.CodexSettings{EngineCommon: config.EngineCommon{Bin: "codex-dev"}},
 		Claude: config.ClaudeSettings{EngineCommon: config.EngineCommon{Bin: "claude-dev"}},
 	}}
 	got := usageSources(cfg)
-	if len(got) != len(review.Engines) {
-		t.Fatalf("got %d sources, want one per wired engine (%d)", len(got), len(review.Engines))
+	metered := usage.Metered(review.Engines)
+	if len(got) != len(metered) || len(metered) != 2 {
+		t.Fatalf("got %d sources, want one per metered engine (%v)", len(got), metered)
 	}
 	bins := map[string]string{}
 	for _, src := range got {
 		bins[src.Engine] = src.Bin
 	}
-	for _, engine := range review.Engines {
+	for _, engine := range metered {
 		if _, ok := bins[engine]; !ok {
 			t.Errorf("engine %q is wired but never metered", engine)
 		}
