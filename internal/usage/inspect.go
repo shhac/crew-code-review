@@ -70,6 +70,9 @@ func unavailable(src Source, report harness.AccountReport, err error) error {
 	if report.Account.LoggedIn != nil && !*report.Account.LoggedIn {
 		return fmt.Errorf("%s is not logged in; %s", src.Engine, config.LoginHint(src.Engine, src.Bin))
 	}
+	if facts, ok := harness.ErrorFacts(err); ok && facts.Code == harness.CodeKeychainUnavailable {
+		return fmt.Errorf("%s usage: the login keychain is locked; unlock it to read usage", src.Engine)
+	}
 	if err != nil {
 		return fmt.Errorf("%s usage: %w", src.Engine, err)
 	}

@@ -13,6 +13,7 @@ import (
 	"github.com/shhac/crew-code-review/internal/config"
 	"github.com/shhac/crew-code-review/internal/review"
 	"github.com/shhac/crew-code-review/internal/store"
+	harness "github.com/shhac/lib-agent-harness"
 )
 
 // fakeSchedStore records the calls reviewOne makes; unused Store methods panic
@@ -627,6 +628,24 @@ func TestRunOneWorkdirFailureLeavesTheRowUntouched(t *testing.T) {
 	}
 	if fe.lastPrompt() != "" {
 		t.Error("the engine must never run")
+	}
+}
+
+// A locked keychain leaves the candidate queued and untouched, like the
+// other pre-claim failures, so it is offered again once unlocked rather than
+// failing twice and retiring.
+func TestRunOneWaitsOutALockedKeychain(t *testing.T) {
+	loginStoreLocked = func(harness.Engine) bool { return true }
+	t.Cleanup(func() { loginStoreLocked = harness.LoginStoreLocked })
+	fs := &fakeSchedStore{}
+	fe := commented()
+	s := newTestScheduler(fs, fe)
+	err := s.runOne(context.Background(), pending{
+		candidate: store.Candidate{Repo: "o/r", Number: 8, HeadSHA: "s8"},
+		cfg:       s.cfg(),
+	})
+	if !errors.Is(err, errKeychainLocked) || len(fs.claims) != 0 || len(fs.completed) != 0 || fe.lastPrompt() != "" {
+		t.Fatalf("err %v claims %+v completed %+v", err, fs.claims, fs.completed)
 	}
 }
 

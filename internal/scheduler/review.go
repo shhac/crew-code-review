@@ -2,6 +2,7 @@ package scheduler
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -10,7 +11,14 @@ import (
 	"github.com/shhac/crew-code-review/internal/discover"
 	"github.com/shhac/crew-code-review/internal/review"
 	"github.com/shhac/crew-code-review/internal/store"
+	harness "github.com/shhac/lib-agent-harness"
 )
+
+// loginStoreLocked is the harness's keychain check, a variable so tests can
+// lock it.
+var loginStoreLocked = harness.LoginStoreLocked
+
+var errKeychainLocked = errors.New("the login keychain is locked")
 
 // pending is a queued candidate paired with its author's resolved policy and
 // the config snapshot it was resolved under. All three travel together from
@@ -35,6 +43,14 @@ type pending struct {
 // queue row exactly as they found it, and the dispatcher always offers the
 // head first.
 func (s *Scheduler) runOne(ctx context.Context, p pending) error {
+	// A locked login keychain is waited out, not reviewed through: the
+	// engine would refuse to start, and two refusals retire the PR as an
+	// error. Nothing is claimed or recorded, so the dispatcher's backoff
+	// offers it again once the owner unlocks the Mac.
+	if name := p.cfg.EngineFor(p.policy); loginStoreLocked(harness.Engine(name)) {
+		s.logf("review %s#%d: waiting for the login keychain to be unlocked before starting %s", p.candidate.Repo, p.candidate.Number, name)
+		return errKeychainLocked
+	}
 	// Built before the claim, so a group pointing at an unbuildable engine
 	// leaves its candidate pending and retryable rather than claimed and
 	// stuck. Boot validation covers the reachable set, so reaching here means
