@@ -80,6 +80,7 @@ func ConfigProblems(cfg config.Config) []string {
 	// defaults forever and say nothing. This is where it says something.
 	problems = append(problems, cfg.ValidateScoring()...)
 	problems = append(problems, cfg.ValidateDurations()...)
+	problems = append(problems, cfg.ValidateDashboard()...)
 	for _, rs := range reachableSettings(cfg) {
 		for _, p := range review.Preflight(rs.settings) {
 			problems = append(problems, rs.where+p)

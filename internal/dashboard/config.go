@@ -126,6 +126,11 @@ type configResp struct {
 	// out is the difference between a postmortem and a shrug.
 	WorkspaceRetention string            `json:"workspace_retention"`
 	Scoring            configScoringResp `json:"scoring"`
+	// Theme is the decoration set to draw, already resolved: the calendar rule
+	// for auto lives in one place (config.seasonalThemes), and uses the
+	// daemon's clock rather than the viewer's, which is close enough for a
+	// pumpkin.
+	Theme string `json:"theme"`
 }
 
 // authorRow is one roster entry with the policy it actually resolves to. The
@@ -179,6 +184,7 @@ func (s *Server) handleConfig(w http.ResponseWriter, r *http.Request) {
 			ErrorBackoff:         cfg.ErrorBackoff().String(),
 		},
 		Scoring: scoringResp(cfg),
+		Theme:   cfg.DashboardTheme(time.Now()),
 		// No usage floor here: it is per engine now, so there is no one
 		// schedule-wide number to publish. The Engine usage panel reports
 		// each engine's own floor when it trips.

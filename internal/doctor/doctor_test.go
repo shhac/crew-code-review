@@ -312,3 +312,12 @@ func isolateFromInstalledTools(t *testing.T) {
 	t.Helper()
 	t.Setenv("PATH", t.TempDir())
 }
+
+// A theme typo shows no decorations rather than failing, so doctor is the
+// only place it surfaces.
+func TestConfigProblemsIncludesAnUnknownTheme(t *testing.T) {
+	problems := ConfigProblems(config.Config{Dashboard: config.DashboardSettings{Theme: "xmas"}})
+	if !strings.Contains(strings.Join(problems, "; "), "dashboard.theme") {
+		t.Errorf("an unknown dashboard.theme must be reported, got %v", problems)
+	}
+}

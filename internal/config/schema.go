@@ -295,6 +295,9 @@ type DashboardSettings struct {
 	// UsagePollInterval is how often the daemon refreshes Codex usage for the
 	// dashboard (Go duration, default 10m).
 	UsagePollInterval string `json:"usage_poll_interval,omitempty"`
+	// Theme is the seasonal decoration set: auto (default, follows the
+	// calendar), none, or a set by name. See theme.go.
+	Theme string `json:"theme,omitempty"`
 }
 
 // Config is the whole on-disk document.

@@ -87,6 +87,7 @@ func TestConfigKeysRoundTrip(t *testing.T) {
 		"dashboard.addr":                     ":9999",
 		"dashboard.tailscale.mode":           "serve",
 		"dashboard.usage_poll_interval":      "15m",
+		"dashboard.theme":                    "halloween",
 		"store.path":                         "/tmp/example.duckdb",
 		"codex.usage_floor.5h_percent":       "25",
 		"codex.usage_floor.1w_percent":       "0",
@@ -272,4 +273,23 @@ func assertSectionClears(t *testing.T, key libcli.ConfigKey) {
 		t.Errorf("%s: after unset get = (%q, %v), want cleared", key.Name, got, set)
 	}
 	assertPersistedKeyUnset(t, inner)
+}
+
+// A misspelt theme would otherwise be saved and silently draw nothing; the
+// key is where it gets stopped, before it reaches the file.
+func TestConfigSetRefusesAnUnknownTheme(t *testing.T) {
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	for _, key := range configKeysFromSpecs(configKeySpecs()) {
+		if key.Name != "dashboard.theme" {
+			continue
+		}
+		if err := key.Set("Halloween"); err == nil {
+			t.Fatal("set dashboard.theme Halloween must fail")
+		}
+		if got, set := key.Get(); set {
+			t.Errorf("a refused value must not be stored, got %q", got)
+		}
+		return
+	}
+	t.Fatal("dashboard.theme is not a registered key")
 }
