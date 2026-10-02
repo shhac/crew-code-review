@@ -16,6 +16,9 @@
   import Overview from './routes/Overview.svelte';
   import Prompt from './routes/Prompt.svelte';
   import ReviewLog from './routes/ReviewLog.svelte';
+  import HalloweenLayer from './lib/theme/halloween/HalloweenLayer.svelte';
+  import HalloweenShelf from './lib/theme/halloween/HalloweenShelf.svelte';
+  import { markTheme, resolveTheme } from './lib/theme/theme';
 
   type Route = 'overview' | 'history' | 'metrics' | 'leaderboard' | 'config' | 'prompt' | 'logs' | 'review';
 
@@ -26,6 +29,11 @@
   // config arrives, so the entry does not visibly appear a moment after load
   // on the overwhelmingly common path where it is on.
   let leaderboardVisible = true;
+
+  // Decorations wait for the config rather than guessing: a set that flashed
+  // up and vanished on load would be worse than one arriving a beat late.
+  let theme = resolveTheme('none');
+  $: markTheme(theme);
 
   const allNav: { route: Route; label: string; path: string }[] = [
     { route: 'overview', label: 'Queue', path: '/' },
@@ -74,7 +82,9 @@
   // mid-session.
   onMount(async () => {
     try {
-      leaderboardVisible = (await getConfig()).scoring.leaderboard_visible;
+      const cfg = await getConfig();
+      leaderboardVisible = cfg.scoring.leaderboard_visible;
+      theme = resolveTheme(cfg.theme);
     } catch {
       // An unreachable API is the feed indicator's job to report. Leaving the
       // entry visible is the better failure: a page that says scoring is off
@@ -101,6 +111,9 @@
         <a href={item.path} class:active={route === item.route} on:click|preventDefault={() => navigate(item.path)}>{item.label}</a>
       {/each}
     </nav>
+    {#if theme === 'halloween'}
+      <HalloweenShelf />
+    {/if}
     <ViewerChip viewer={$viewer} />
     <div class:stale={!$feed.ok} class="feed">
       <span class="signal"></span>
@@ -131,3 +144,7 @@
     {/if}
   </main>
 </div>
+
+{#if theme === 'halloween'}
+  <HalloweenLayer />
+{/if}

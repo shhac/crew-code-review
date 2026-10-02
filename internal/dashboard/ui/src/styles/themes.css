@@ -1,0 +1,15 @@
+/* Seasonal palettes, keyed by the decoration set App marks on <html> (see
+   lib/theme). Only the accents move: the chart and status hues are validated
+   against these surfaces (tokens.css) and stay exactly as they are. */
+:root[data-theme="halloween"] {
+  --accent: #ff8f2e;
+  --accent-edge: rgba(255, 143, 46, .3);
+  --accent-ring: rgba(255, 143, 46, .35);
+  --rule: #ff8f2e;
+}
+
+/* Candlelight pooling at the foot of the page, behind everything on it. */
+:root[data-theme="halloween"] body {
+  background-image: radial-gradient(ellipse 80% 45% at 50% 105%, rgba(255, 120, 30, .1), transparent 70%);
+  background-attachment: fixed;
+}

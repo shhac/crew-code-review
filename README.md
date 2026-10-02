@@ -509,6 +509,13 @@ deliberately.
   what the agent receives (allowed vs not-allowed author variants). Read-only.
 - **Logs**: a live tail of the daemon's own log.
 
+**Seasonal themes.** `dashboard.theme` adds decorations to the dashboard: `auto` (the
+default) switches a set on in its season, which for now means Halloween in October. `none` turns
+decorations off, and naming a set (`halloween`) forces it on. They are purely cosmetic and
+never block a click. Reduced-motion users get the decorations without the
+animation. To preview a set whatever the date, add `?theme=halloween` to the
+URL.
+
 Queue add/reorder/promote are also available as JSON endpoints
 (`POST /api/queue`, `POST /api/queue/reorder`, `POST /api/queue/promote`). The dashboard has no auth, so keep it on your tailnet
 (`--tailscale serve`) unless you mean to expose it.

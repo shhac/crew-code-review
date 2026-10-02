@@ -16,13 +16,19 @@
   padding: 10px 12px; border-radius: 8px; color: #c4c7c4; border: 1px solid transparent;
 }
 .rail nav a:hover, .rail nav a.active {
-  color: #f0f0f0; background: rgba(255,255,255,.06); border-color: rgba(132,203,45,.25);
+  color: #f0f0f0; background: rgba(255,255,255,.06); border-color: var(--accent-edge);
 }
 
 /* The rail's footer stack: the identity chip takes the auto margin that used
    to sit on .feed, so the two push to the bottom together. Kept here because
    it is a statement about the rail's layout, not about either component. */
 .rail .viewer-chip { margin-top: auto; }
+/* A seasonal shelf (lib/theme) sits on the chip, so it takes the auto margin
+   instead; it is only shown where the rail has room to spare. */
+.rail .theme-shelf { margin-top: auto; }
+.rail .theme-shelf + .viewer-chip { margin-top: 0; }
+/* .shell raises it over the shelf's own scoped display rule. */
+@media (max-height: 640px), (max-width: 760px) { .shell .rail .theme-shelf { display: none; } }
 
 .feed {
   display: grid; grid-template-columns: auto 1fr; gap: 2px 8px; align-items: center;
@@ -37,7 +43,7 @@
 main { min-width: 0; padding: 30px clamp(18px, 4vw, 54px) 56px; }
 .hero, .page-head {
   display: flex; justify-content: space-between; gap: 24px; align-items: end;
-  padding-bottom: 24px; border-bottom: 2px solid var(--ink);
+  padding-bottom: 24px; border-bottom: 2px solid var(--rule);
 }
 .page-head { display: block; max-width: 900px; }
 .eyebrow { margin: 0 0 6px; color: var(--accent); font-size: 12px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }

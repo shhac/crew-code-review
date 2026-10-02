@@ -170,6 +170,9 @@ export function seed(bin) {
   // exist makes the meter fail open instead, which is all the UI needs.
   run(['config', 'set', 'codex.bin', 'ccr-e2e-no-codex']);
   run(['config', 'set', 'claude.bin', 'ccr-e2e-no-claude']);
+  // `auto` turns decorations on by the calendar, so the suite would render a
+  // different page in October. theme.spec.ts turns them on deliberately.
+  run(['config', 'set', 'dashboard.theme', 'none']);
   run(['repos', 'add', 'acme/widgets']);
   run(['authors', 'set', '*', 'octocat', 'approver', '--tailscale-login', VIEWER_LOGIN]);
   run(['authors', 'set', '*', 'paul-gh', 'approver', '--tailscale-login', 'paul@example.com']);

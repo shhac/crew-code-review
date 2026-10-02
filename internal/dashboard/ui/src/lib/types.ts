@@ -260,6 +260,8 @@ export type ConfigResponse = {
     scoped_repos: string[];
   };
   workspace_retention: string;
+  // The decoration set to draw, already resolved by the daemon.
+  theme: string;
   reviewing_as?: string;
   repos: ConfigRepo[];
   candidates: {

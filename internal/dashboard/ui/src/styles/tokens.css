@@ -15,6 +15,11 @@
   --surface-warm: #343a35;
   --green: #62aa28;
   --accent: #84cb2d;
+  /* The accent at the strengths chrome uses it, and the heading rule's ink:
+     tokens so a seasonal theme (themes.css) can move them with the accent. */
+  --accent-edge: rgba(132, 203, 45, .25);
+  --accent-ring: rgba(132, 203, 45, .35);
+  --rule: var(--ink);
   --blue: #4f94d9;
   --amber: #d9b13c;
   --red: #d95f52;
