@@ -60,7 +60,7 @@ export function measureFloors(root: Page = document): Map<number, Ledge> {
     const r = el.getBoundingClientRect();
     if (r.width < MIN_WIDTH || r.height === 0) return;
     blocks.push(r);
-    const floor = { left: r.left, right: r.right, y: r[edge] };
+    const floor = { left: r.left, right: r.right, y: r[edge], base: r.bottom };
     if ([...floors.values()].some((f) => overlaps(f, floor))) return;
     floors.set(idOf(el), floor);
     if (edge === 'bottom') rooms.set(idOf(el), roomInside(el, r));

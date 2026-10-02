@@ -102,3 +102,16 @@ test('reduced motion keeps the decorations but stops the roaming', async ({ page
   await page.waitForTimeout(6000);
   await expect(page.locator('.crawler')).toHaveCount(0);
 });
+
+test('turning reduced motion on mid-visit sends the roaming spiders home and keeps the candles', async ({ page }) => {
+  await serveTheme(page, 'halloween');
+  await page.goto('/');
+  await expect(page.locator('.crawler').first()).toBeAttached({ timeout: 20_000 });
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await expect(page.locator('.crawler')).toHaveCount(0);
+  await expect(page.locator('.strands path')).toHaveCount(0);
+  await expect(page.locator('.theme-layer .resident')).toBeAttached();
+  // And they come back when it is turned off again.
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  await expect(page.locator('.crawler').first()).toBeAttached({ timeout: 20_000 });
+});

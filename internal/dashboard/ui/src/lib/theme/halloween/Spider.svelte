@@ -6,7 +6,7 @@
   //
   // The walking legs are code rather than art because a walk is eight legs
   // stepping in turn, and generated frames could not keep them in step.
-  import { cycleLength, legsAt, restingLeg, type LegSpec } from '../spidergait';
+  import { crouched, cycleLength, legsAt, restingLeg, tucked, type LegSpec } from '../spidergait';
   import Limb from './Limb.svelte';
   import body from './spider-body.webp';
   import hangingStrip from './spider-hanging.webp';
@@ -15,6 +15,10 @@
   export let hanging = false;
   // Distance walked, in this drawing's pixels: it, not time, drives the step.
   export let walked = 0;
+  // Gathering for a jump (0 to 1): the body sinks on bending legs.
+  export let crouch = 0;
+  // Mid-jump (0 to 1): the legs drawn in under the body.
+  export let tuck = 0;
 
   const GROUND = 38;
   const STRIDE = 10;
@@ -42,8 +46,10 @@
   const nearRest = nearSide.map((l) => restingLeg(l, GROUND));
 
   $: phase = walked / cycleLength(STRIDE);
-  $: near = legsAt(nearSide, phase, GROUND, STRIDE, LIFT);
-  $: far = legsAt(farSide, phase, GROUND, STRIDE, LIFT);
+  const CROUCH = 4.5;
+  $: sink = crouch * CROUCH;
+  $: near = tucked(legsAt(crouched(nearSide, sink), phase, GROUND, STRIDE, LIFT), nearSide, tuck);
+  $: far = tucked(legsAt(crouched(farSide, sink), phase, GROUND, STRIDE, LIFT), farSide, tuck);
   // The body dips a touch each time a set of feet takes its weight.
   $: bob = moving ? -0.5 * Math.abs(Math.sin(2 * Math.PI * phase)) : 0;
 
@@ -60,7 +66,7 @@
     <g filter="url(#{dim})">
       {#each far as leg, i}<Limb {leg} rest={farRest[i]} />{/each}
     </g>
-    <image href={body} x="16" y={11 + bob} width="38" height="22.3" />
+    <image href={body} x="16" y={11 + bob + sink} width="38" height="22.3" />
     {#each near as leg, i}<Limb {leg} rest={nearRest[i]} />{/each}
   </svg>
 {/if}

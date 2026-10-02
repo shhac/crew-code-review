@@ -28,6 +28,7 @@ const STANCE = 0.65;
 export const cycleLength = (stride: number) => stride / STANCE;
 
 const fract = (n: number) => n - Math.floor(n);
+export const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
 
 // Where the foot is at this point in its cycle: planted and sliding back
 // under the body, or lifted and swinging forward over a low arc.
@@ -45,9 +46,11 @@ export function footAt(spec: LegSpec, phase: number, ground: number, stride: num
 export function kneeFor(hip: Point, foot: Point, thigh: number, shin: number): Point {
   const dx = foot.x - hip.x;
   const dy = foot.y - hip.y;
-  const d = Math.min(Math.hypot(dx, dy), thigh + shin - 1e-6);
+  // Clamped both ways: a foot out of reach straightens the leg, and a foot
+  // pulled in onto its own hip (as a tuck can) still leaves a solvable fold.
+  const d = clamp(Math.hypot(dx, dy), Math.abs(thigh - shin) + 1e-3, thigh + shin - 1e-6);
   const toFoot = Math.atan2(dy, dx);
-  const bend = Math.acos(Math.max(-1, Math.min(1, (thigh * thigh + d * d - shin * shin) / (2 * thigh * d))));
+  const bend = Math.acos(clamp((thigh * thigh + d * d - shin * shin) / (2 * thigh * d), -1, 1));
   const knees = [toFoot - bend, toFoot + bend].map((a) => ({ x: hip.x + thigh * Math.cos(a), y: hip.y + thigh * Math.sin(a) }));
   return knees[0].y <= knees[1].y ? knees[0] : knees[1];
 }
@@ -57,6 +60,24 @@ export function kneeFor(hip: Point, foot: Point, thigh: number, shin: number): P
 export function restingLeg(spec: LegSpec, ground: number): Leg {
   const foot = { x: spec.hip.x + spec.reach, y: ground };
   return { hip: spec.hip, knee: kneeFor(spec.hip, foot, spec.thigh, spec.shin), foot };
+}
+
+// A spider gathering itself to jump: hips sink toward the floor while the
+// feet stay planted, so the knees fold higher.
+export function crouched(specs: LegSpec[], depth: number): LegSpec[] {
+  return specs.map((s) => ({ ...s, hip: { x: s.hip.x, y: s.hip.y + depth } }));
+}
+
+// Legs drawn in under the body, as in the air mid-jump: each foot moves
+// toward a point just below and inside its hip, by `amount` (0 to 1).
+export function tucked(legs: Leg[], specs: LegSpec[], amount: number): Leg[] {
+  if (amount <= 0) return legs;
+  return legs.map((leg, i) => {
+    const spec = specs[i];
+    const under = { x: leg.hip.x + spec.reach * 0.4, y: leg.hip.y + spec.shin * 0.45 };
+    const foot = { x: leg.foot.x + (under.x - leg.foot.x) * amount, y: leg.foot.y + (under.y - leg.foot.y) * amount };
+    return { hip: leg.hip, knee: kneeFor(leg.hip, foot, spec.thigh, spec.shin), foot };
+  });
 }
 
 export function legsAt(specs: LegSpec[], phase: number, ground: number, stride: number, lift: number): Leg[] {

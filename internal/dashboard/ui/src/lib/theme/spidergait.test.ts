@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { cycleLength, footAt, kneeFor, legsAt, restingLeg, type LegSpec } from './spidergait';
+import { crouched, cycleLength, footAt, kneeFor, legsAt, restingLeg, tucked, type LegSpec } from './spidergait';
 
 const leg: LegSpec = { hip: { x: 20, y: 18 }, reach: 8, thigh: 12, shin: 14, beat: 0 };
 const GROUND = 30;
@@ -63,5 +63,30 @@ describe('restingLeg', () => {
     expect(rest.foot).toEqual({ x: leg.hip.x + leg.reach, y: GROUND });
     expect(dist(leg.hip, rest.knee)).toBeCloseTo(leg.thigh);
     expect(dist(rest.knee, rest.foot)).toBeCloseTo(leg.shin);
+  });
+});
+
+describe('crouched and tucked', () => {
+  it('a crouch lowers the hips and keeps the feet on the floor', () => {
+    const [low] = legsAt(crouched([leg], 4), 0.3, GROUND, STRIDE, LIFT);
+    const [high] = legsAt([leg], 0.3, GROUND, STRIDE, LIFT);
+    expect(low.hip.y).toBe(high.hip.y + 4);
+    expect(low.foot.y).toBe(GROUND);
+  });
+
+  it('a tuck draws the feet in under the body and keeps the bones whole', () => {
+    const legs = legsAt([leg], 0.3, GROUND, STRIDE, LIFT);
+    const [tight] = tucked(legs, [leg], 1);
+    expect(tight.foot.y).toBeLessThan(GROUND);
+    expect(Math.abs(tight.foot.x - leg.hip.x)).toBeLessThan(Math.abs(legs[0].foot.x - leg.hip.x));
+    expect(dist(tight.hip, tight.knee)).toBeCloseTo(leg.thigh);
+    expect(tucked(legs, [leg], 0)).toBe(legs);
+  });
+});
+
+describe('kneeFor at the extremes', () => {
+  it('stays finite with the foot on the hip', () => {
+    const knee = kneeFor({ x: 5, y: 5 }, { x: 5, y: 5 }, 10, 10);
+    expect(Number.isFinite(knee.x) && Number.isFinite(knee.y)).toBe(true);
   });
 });

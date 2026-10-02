@@ -73,7 +73,9 @@ internal/
     ├── scorepreview.go         # /api/score/preview: prices a hypothetical PR through score.Compute
     ├── scoresim.go             # /api/score/simulate: surveys a whole candidate scoring policy
     ├── ui/                     # Svelte + Vite source (npm; not embedded)
-    │   └── src/styles/*.css    # global CSS partials; app.css's @import order IS the cascade
+    │   ├── src/styles/*.css    # global CSS partials; app.css's @import order IS the cascade
+    │   ├── src/lib/theme/      # seasonal decorations; spiderwalk/ is the pure spider model
+    │   └── lab/*.html          # dev-only workbenches (`npm run dev`, then /lab/scene.html); never built
     └── assets/                 # BUILT bundle, committed + go:embed'd
 ```
 

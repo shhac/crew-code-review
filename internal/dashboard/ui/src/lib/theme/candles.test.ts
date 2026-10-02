@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { candleSpots } from './candles';
 
-const ledge = (y: number, room: number, left = 0, right = 1000) => ({ left, right, y, room });
+const ledge = (y: number, room: number, left = 0, right = 1000) => ({ left, right, y, base: y + 100, room });
 
 describe('candleSpots', () => {
   it('stands candles only where there is room for the flame', () => {
