@@ -94,6 +94,32 @@ test('a roaming spider does not block a click', async ({ page }) => {
   expect(hits.filter((h) => h.landsOnDecoration)).toEqual([]);
 });
 
+test('climbing leaves a moving silk tail below the spider, then fades the used thread', async ({ page }, testInfo) => {
+  test.setTimeout(60_000);
+  // A repeatable stroll: arrive, walk a little, seek the line just left behind.
+  await page.addInitScript(() => { Math.random = () => 0.2; });
+  await page.setViewportSize({ width: 1440, height: 900 });
+  // Logs has one welcoming ledge (the heading rule), so the climb fits in
+  // this test's wait regardless of the queue/sidebar's data-dependent height.
+  await page.goto('/logs?theme=halloween');
+  const climber = page.locator('.crawler[data-dragline]').first();
+  await expect(climber).toBeAttached({ timeout: 20_000 });
+  const id = await climber.getAttribute('data-dragline');
+  const tail = page.locator(`.strands g[data-strand="line-${id}"]`);
+  await expect(tail).toBeAttached();
+  const path = tail.locator('path.strand');
+  const before = await path.getAttribute('d');
+  await expect.poll(() => path.getAttribute('d')).not.toBe(before);
+  const height = await climber.evaluate((el) => new DOMMatrixReadOnly(getComputedStyle(el).transform).m42);
+  await expect.poll(() => climber.evaluate((el) => new DOMMatrixReadOnly(getComputedStyle(el).transform).m42)).toBeLessThan(height - 60);
+  await page.screenshot({ path: testInfo.outputPath('dragline-climb.png') });
+  await expect(page.locator(`.crawler[data-dragline="${id}"]`)).toHaveCount(0, { timeout: 20_000 });
+  // The spider is off the line, but the used silk remains and fades gently.
+  await expect(tail).toBeAttached();
+  await expect.poll(() => tail.evaluate((el) => Number((el as SVGElement).style.opacity))).toBeLessThan(0.8);
+  await expect(tail).toHaveCount(0, { timeout: 10_000 });
+});
+
 test('reduced motion keeps the decorations but stops the roaming', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await serveTheme(page, 'halloween');
@@ -115,3 +141,49 @@ test('turning reduced motion on mid-visit sends the roaming spiders home and kee
   await page.emulateMedia({ reducedMotion: 'no-preference' });
   await expect(page.locator('.crawler').first()).toBeAttached({ timeout: 20_000 });
 });
+
+// Use the real layout and the production measurement, including cards whose
+// top is blocked by a heading. Those still have walls in the overlay.
+async function geometryErrors(page: Page) {
+  return page.evaluate(() => {
+    const lines = [...document.querySelectorAll<SVGLineElement>('.geometry .floor')].map((el) => ({
+      left: Number(el.getAttribute('x1')), right: Number(el.getAttribute('x2')), y: Number(el.getAttribute('y1')),
+    }));
+    const cards = [...document.querySelectorAll('main .surface, main .queue-board, main .context section, main .terminal, main .metric-kpis > div, main .panel')];
+    const errors = cards.flatMap((el) => {
+      const r = el.getBoundingClientRect();
+      if (r.width < 120 || !r.height) return [];
+      return lines.some((f) => Math.abs(f.y - r.top) < 8 && f.left <= r.left + 2 && f.right >= r.right - 2) ? [] : [`missing card: ${el.className}`];
+    });
+    const heading = document.querySelector('main .hero, main .page-head')?.getBoundingClientRect();
+    if (heading && !lines.some((f) => Math.abs(f.y - heading.bottom) < 1)) errors.push('missing heading rule');
+    if (heading && lines.some((f) => Math.abs(f.y - heading.top) < 1)) errors.push('phantom heading top');
+    return errors;
+  });
+}
+
+for (const width of [1440, 390]) {
+  test(`Halloween geometry follows all dashboard pages at ${width}px`, async ({ page }, testInfo) => {
+    await page.setViewportSize({ width, height: 900 });
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    for (const path of ['/', '/history', '/metrics', '/leaderboard', '/config', '/prompt', '/logs', '/review/acme/widgets/103']) {
+      await page.goto(`${path}?theme=halloween&theme-debug=1`);
+      await expect(page.locator('.geometry .floor').first()).toBeAttached();
+      if (path === '/metrics') await expect(page.locator('.metric-kpis > div')).toHaveCount(6);
+      if (path === '/config' || path === '/prompt') await expect(page.locator('main .surface').first()).toBeVisible();
+      await expect.poll(() => geometryErrors(page), { message: path }).toEqual([]);
+      if (path === '/metrics') {
+        const grid = await page.locator('.metric-kpis').boundingBox();
+        expect(grid).not.toBeNull();
+        const floors = await page.locator('.geometry .floor').evaluateAll((els) => els.map((el) => ({
+          left: Number(el.getAttribute('x1')), right: Number(el.getAttribute('x2')), y: Number(el.getAttribute('y1')),
+        })));
+        expect(floors.some((f) => Math.abs(f.y - grid!.y) < 1 && f.right - f.left > grid!.width - 1)).toBe(width === 390);
+        await page.screenshot({ path: testInfo.outputPath(`metrics-geometry-${width}.png`), fullPage: true });
+        await page.locator('main').evaluate(() => window.scrollTo(0, 300));
+        await expect.poll(() => geometryErrors(page)).toEqual([]);
+      }
+      if (path === '/leaderboard') await expect(page.locator('.geometry .wall')).toHaveCount(0);
+    }
+  });
+}

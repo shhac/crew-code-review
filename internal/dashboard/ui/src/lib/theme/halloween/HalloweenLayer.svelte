@@ -7,7 +7,7 @@
   import { onMount } from 'svelte';
   import { candleSpots, type CandleSpot } from '../candles';
   import { measureFloors, type Ledge } from '../floors';
-  import { advance, away, pose, type Choice, type Frame, type Pose, type World } from '../spiderwalk';
+  import { advance, away, BOTTOM_WEB, pose, WEB, type Choice, type Frame, type Pose, type World } from '../spiderwalk';
   import { movingPointer, stepped, strandPath, strands, type Strand } from '../strands';
   import squatStub from './candle-stub-0.webp';
   import tallStub from './candle-stub-1.webp';
@@ -43,6 +43,9 @@
 
   let candles: CandleSpot[] = [];
   let silk: Strand[] = [];
+  const debug = new URLSearchParams(location.search).get('theme-debug') === '1';
+  let dirty = true;
+  let measuredAt = -Infinity;
 
   // The corner webs are drawn only where CSS shows them; the spiders must
   // agree about where home is.
@@ -55,12 +58,16 @@
 
   function measure() {
     floors = measureFloors();
-    candles = candleSpots(floors, STUBS.length);
+    candles = candleSpots(floors, STUBS.length, innerHeight);
+    dirty = false;
+    measuredAt = performance.now();
     return floors;
   }
 
   function advanceAll(dt: number) {
-    const here = measure();
+    // Animation keeps its full frame rate; layout reads happen when the page
+    // changes. The occasional refresh also catches CSS-only layout changes.
+    const here = dirty || performance.now() - measuredAt >= 250 ? measure() : floors;
     const frame = frameNow();
     world = advance(world, { floors: here, frame, dt: dt * timeScale, rand: Math.random, prefer, pointer: movingPointer(pointer, performance.now()) });
     crawlers = crawlers.map((c, i) => {
@@ -89,21 +96,29 @@
       crawlers = crawlers.map((c) => ({ ...c, pose: null }));
       silk = [];
       measure();
-      addEventListener('scroll', measure, { capture: true, passive: true });
-      addEventListener('resize', measure);
       loop.timer = window.setInterval(measure, 1000);
     };
     const stop = () => {
       cancelAnimationFrame(loop.frame);
       clearInterval(loop.timer);
-      removeEventListener('scroll', measure, true);
-      removeEventListener('resize', measure);
     };
     const restart = () => {
       stop();
       if (reduced.matches) startStill();
       else startMotion();
     };
+    const changed = () => {
+      dirty = true;
+      if (reduced.matches) {
+        cancelAnimationFrame(loop.frame);
+        loop.frame = requestAnimationFrame(measure);
+      }
+    };
+    const changes = new MutationObserver(changed);
+    const main = document.querySelector('main');
+    if (main) changes.observe(main, { subtree: true, childList: true, attributes: true, characterData: true });
+    addEventListener('scroll', changed, { capture: true, passive: true });
+    addEventListener('resize', changed);
     reduced.addEventListener('change', restart);
     addEventListener('pointermove', moved, { passive: true });
     restart();
@@ -111,13 +126,31 @@
       stop();
       reduced.removeEventListener('change', restart);
       removeEventListener('pointermove', moved);
+      removeEventListener('scroll', changed, true);
+      removeEventListener('resize', changed);
+      changes.disconnect();
     };
   });
 </script>
 
 <div class="theme-layer" aria-hidden="true">
-  <div class="web top-right"><div class="sway"><Web size={170} /></div></div>
-  <div class="web bottom-right"><div class="sway"><Web size={120} /></div></div>
+  <div class="web top-right"><div class="sway"><Web size={WEB} /></div></div>
+  <div class="web bottom-right"><div class="sway"><Web size={BOTTOM_WEB} /></div></div>
+
+  {#if debug}
+    <svg class="geometry" width="100%" height="100%">
+      {#each [...floors] as [id, f] (id)}
+        <g data-floor-id={id} data-walkable={f.walkable}>
+          <line class="floor" class:blocked={f.walkable === false} x1={f.left} y1={f.y} x2={f.right} y2={f.y} />
+          {#if f.base > f.y}
+            <line class="wall" x1={f.left} y1={f.y} x2={f.left} y2={f.base} />
+            <line class="wall" x1={f.right} y1={f.y} x2={f.right} y2={f.base} />
+          {/if}
+          <text x={f.left + 4} y={f.y - 4}>{id}{f.walkable === false ? ' · no headroom' : ''}</text>
+        </g>
+      {/each}
+    </svg>
+  {/if}
 
   <div class="resident">
     <span class="thread"></span>
@@ -146,7 +179,7 @@
     </defs>
     {#each silk as s (s.key)}
       {@const d = strandPath(s)}
-      <g style="opacity: {s.opacity}">
+      <g data-strand={s.key} style="opacity: {s.opacity}">
         <path class="strand" {d} stroke="url(#silk-{s.key})" />
         <path class="glint" {d} style="--length: {Math.hypot(s.x2 - s.x1, s.y2 - s.y1)}" />
       </g>
@@ -159,6 +192,7 @@
       <div
         class="crawler"
         class:extra={i > 0}
+        data-dragline={p.dragline}
         style="transform: translate({p.x}px, {p.y}px) rotate({p.rotate}deg) scale({c.scale * (0.3 + 0.7 * p.fade)}); opacity: {p.fade}"
       >
         <div class="sprite" class:hanging={p.drawing === 'hang'} style="--dir: {p.dir}">
@@ -172,6 +206,12 @@
 <style>
   /* Below Modal (50), so a dialog is never decorated over. */
   .theme-layer { position: fixed; inset: 0; z-index: 40; pointer-events: none; overflow: hidden; }
+  .geometry { position: absolute; inset: 0; }
+  .geometry line { stroke-width: 1; stroke-dasharray: 4 3; }
+  .geometry .floor { stroke: #78c8ff; }
+  .geometry .blocked { stroke: #ff8f2e; }
+  .geometry .wall { stroke: #bd9cff; }
+  .geometry text { fill: #78c8ff; font: 10px ui-monospace, monospace; }
 
   /* Web.svelte draws a top-left web; mirroring about the box centre moves it
      into the other corners. The sway pivots on the web's own corner. */

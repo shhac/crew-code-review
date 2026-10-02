@@ -29,4 +29,12 @@ describe('candleSpots', () => {
     const many = new Map(Array.from({ length: 10 }, (_, i) => [i + 1, ledge(100 + i * 80, 40)] as const));
     expect(candleSpots(many, 3).length).toBeLessThanOrEqual(5);
   });
+
+  it('does not spend the candle cap on ledges above or below the viewport', () => {
+    const offscreen = Array.from({ length: 5 }, (_, i) => [i, ledge(-100 - i * 50, 40)] as const);
+    const visible = new Map([...offscreen, [10, ledge(300, 40)], [11, ledge(1400, 40)]]);
+    const spots = candleSpots(visible, 3, 800);
+    expect(spots).toHaveLength(2);
+    expect(spots.every((s) => s.y === 300)).toBe(true);
+  });
 });

@@ -14,7 +14,7 @@
 
 // base is where the floor's element ends below it: a card's bottom edge, or
 // for a heading rule the rule itself. Walls are found from it.
-export type Floor = { left: number; right: number; y: number; base: number };
+export type Floor = { left: number; right: number; y: number; base: number; walkable?: boolean };
 export type Floors = ReadonlyMap<number, Floor>;
 // The area the spiders live in. bottomWeb says whether the bottom-right corner
 // web is drawn (it is hidden on narrow screens), so a spider can go home to it.
@@ -27,7 +27,9 @@ export type Dir = 1 | -1;
 export type Tie = { floor: number | null; x: number };
 // A dragline: the safety thread a spider leaves behind when it drops onto a
 // floor, which it (or another spider) can climb back up later.
-export type Line = { id: number; top: Tie; bottom: { floor: number; x: number }; age: number };
+// Claimed silk is unavailable to other spiders; released counts seconds
+// since its climber stepped off, so the used thread can settle and fade.
+export type Line = { id: number; top: Tie; bottom: { floor: number; x: number }; age: number; claimed?: boolean; released?: number };
 
 // The ways off a floor, named so the lab can ask for one.
 export type Choice = 'drop' | 'jump' | 'wall' | 'web' | 'side' | 'leave' | 'line' | 'turn';
@@ -66,7 +68,7 @@ export type Dangle = {
 //         into the bottom-right web;
 //   web:  from the right end of `from` up the strands of the top-right web.
 export type Route =
-  | { via: 'line'; top: Tie; floor: number; x: number }
+  | { via: 'line'; top: Tie; floor: number; x: number; lineId?: number }
   | { via: 'wall'; from: number; to: number; toward: Dir }
   | { via: 'side'; from: number; toward: Dir }
   | { via: 'web'; from: number };
@@ -104,6 +106,8 @@ export type Pose = {
   fade: number;
   // A thread drawn from here to (x, y), if the spider is on one.
   silk: { x: number; y: number } | null;
+  // The complete dragline remains behind the spider as it climbs.
+  dragline?: number;
 };
 
 // What a step did besides moving the spider: a dragline left behind, or one
@@ -159,11 +163,14 @@ export const JUMP_ARC = 24;
 export const UPRIGHT = 26;
 // The corner webs' squares, as the layer draws them.
 export const WEB = 170;
+export const BOTTOM_WEB = 120;
+export const topWebSize = (frame: Frame) => frame.width <= 760 ? WEB * 0.7 : WEB;
 // Below the bottom of the frame, far enough that nothing of the spider shows.
 export const BELOW = 70;
 export const LINE_LIFE = 60;
 export const LINE_FADE = 15;
 export const MAX_LINES = 3;
+export const USED_LINE_FADE = 6;
 
 // How likely each way off a floor's end is, when it is there to be taken.
 // Seeking a dragline is decided while walking, not at an end.
@@ -189,7 +196,7 @@ export const away = (rand: Rand, lo = 3, hi = 9): Away => ({ kind: 'away', left:
 // Arrival is choosy, so a spider lands somewhere it will be seen; staying is
 // not, so scrolling a card off screen takes its spider with it rather than
 // making it vanish mid-page.
-export const welcoming = (f: Floor, frame: Frame) => f.y >= TOP_MARGIN && f.y <= frame.height - BOTTOM_MARGIN;
+export const welcoming = (f: Floor, frame: Frame) => f.walkable !== false && f.y >= TOP_MARGIN && f.y <= frame.height - BOTTOM_MARGIN;
 export const inView = (f: Floor, frame: Frame) => f.y >= -OFFSCREEN && f.y <= frame.height + OFFSCREEN;
 
 export const EASES = {

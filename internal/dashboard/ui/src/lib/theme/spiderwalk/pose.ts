@@ -77,12 +77,12 @@ export function pose(s: Spider, floors: Floors, frame: Frame = NOWHERE): Pose | 
       // as the spider goes up it, the spider swinging with it.
       const angle = swayAngle(s.sway ?? 0);
       const swung = swing(path.silk, at, angle);
-      return { ...restingPose(swung.x, swung.y, s.dir, true), rotate: path.rotate + (s.dir === -1 ? 180 : 0) + angle, silk: path.silk };
+      return { ...restingPose(swung.x, swung.y, s.dir, true), rotate: path.rotate + (s.dir === -1 ? 180 : 0) + angle, silk: path.silk, dragline: s.route.lineId };
     }
     case 'walk':
     case 'rest': {
       const f = floors.get(s.floor);
-      if (!f) return null;
+      if (!f || f.walkable === false) return null;
       return restingPose(f.left + s.x, f.y, s.dir, s.kind === 'walk');
     }
   }

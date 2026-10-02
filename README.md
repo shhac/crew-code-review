@@ -515,6 +515,9 @@ decorations off, and naming a set (`halloween`) forces it on. They are purely co
 never block a click. Reduced-motion users get the decorations without the
 animation. To preview a set whatever the date, add `?theme=halloween` to the
 URL.
+For geometry checks, use `?theme=halloween&theme-debug=1`: blue lines mark
+walkable floors, purple lines mark walls, and orange lines mark tops with too
+little headroom for a spider. The overlay also passes clicks through.
 
 Queue add/reorder/promote are also available as JSON endpoints
 (`POST /api/queue`, `POST /api/queue/reorder`, `POST /api/queue/promote`). The dashboard has no auth, so keep it on your tailnet

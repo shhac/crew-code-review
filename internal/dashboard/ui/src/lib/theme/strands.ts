@@ -2,7 +2,7 @@
 // counts their steps: pure functions of the walker's world, kept out of the
 // component so they can be tested.
 import { clamp } from './spidergait';
-import { LINE_FADE, LINE_LIFE, tiePoint, type Floors, type Line, type Pose } from './spiderwalk';
+import { LINE_FADE, LINE_LIFE, USED_LINE_FADE, tiePoint, type Floors, type Line, type Pose } from './spiderwalk';
 
 // bend is how far the strand's middle sits off the straight line between
 // its ends, sideways: a slack thread curves, a taut one does not.
@@ -41,7 +41,16 @@ export function strands(lines: readonly Line[], poses: readonly (Pose | null)[],
     const top = tiePoint(l.top, floors);
     const bottom = tiePoint(l.bottom, floors);
     if (!top || !bottom) return [];
-    return [{ key: `line-${l.id}`, x1: top.x, y1: top.y, x2: bottom.x, y2: bottom.y, opacity: lineOpacity(l.age), bend: drift(l.id, seconds) }];
+    const climber = poses.find((p) => p?.dragline === l.id);
+    if (climber) {
+      // Above the feet the line is taut. Below them the used length remains
+      // tied to the lower card, bowing and stirring as the spider swings.
+      const length = Math.hypot(bottom.x - climber.x, bottom.y - climber.y);
+      return [{ key: `line-${l.id}`, x1: climber.x, y1: climber.y, x2: bottom.x, y2: bottom.y, opacity: 1, bend: drift(l.id, seconds) + Math.min(12, length * 0.06) }];
+    }
+    const opacity = l.claimed ? clamp(1 - (l.released ?? 0) / USED_LINE_FADE, 0, 1) : lineOpacity(l.age);
+    const settling = l.claimed ? Math.min(12, Math.hypot(bottom.x - top.x, bottom.y - top.y) * 0.06) * clamp(1 - (l.released ?? 0) / SETTLE, 0, 1) : 0;
+    return [{ key: `line-${l.id}`, x1: top.x, y1: top.y, x2: bottom.x, y2: bottom.y, opacity, bend: drift(l.id, seconds) + settling }];
   });
   const held = poses.flatMap((p, i) => (p?.silk ? [{ key: `held-${i}`, x1: p.silk.x, y1: p.silk.y, x2: p.x, y2: p.y, opacity: 1, bend: 0 }] : []));
   return [...left, ...held];

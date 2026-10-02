@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { advance, away, pose, weighted, type Choice, type Floor, type Frame, type Line, type Pose, type Spider, type World } from '.';
+import { floorBelow, jumpTarget, reachesTopWeb, resolve, wallTarget } from './routes';
+import { USED_LINE_FADE } from './model';
 
 const frame: Frame = { width: 1200, height: 800, bottomWeb: false };
 const card = (y: number, left = 300, right = 900, base = y + 120): Floor => ({ left, right, y, base });
@@ -44,6 +46,53 @@ function run(
 
 const spiders = (trail: Run[]) => trail.map((r) => r.world.spiders[0]);
 const walking = (s: Spider, floor: number) => s.kind === 'walk' && s.floor === floor;
+
+describe('measured geometry', () => {
+  it('never arrives, drops or jumps onto a top without headroom', () => {
+    const floor = { ...card(300), walkable: false };
+    const floors = new Map([[1, floor]]);
+    const ctx = { floors, frame, dt: 1 / 60, rand: fixed(0.5) };
+    expect(advance({ spiders: [away(fixed(0))], lines: [], nextLine: 1 }, ctx).spiders[0].kind).toBe('away');
+    expect(floorBelow(ctx, 400, 100)).toBeNull();
+    expect(jumpTarget(ctx, card(300, 0, 280), 1)).toBeNull();
+    expect(wallTarget(ctx, card(400, 0, 280), 1)).toBeNull();
+  });
+
+  it('uses the smaller mobile top web and the 120px bottom web', () => {
+    const mobile = { ...frame, width: 600 };
+    const ctx = { floors: new Map(), frame: mobile, dt: 0, rand: fixed(0) };
+    expect(reachesTopWeb(ctx, card(150, 100, 586), 1)).toBe(false);
+    expect(reachesTopWeb(ctx, card(100, 100, 586), 1)).toBe(true);
+    const bottom = new Map([[1, card(300, 300, 1050, 1000)]]);
+    expect(resolve({ via: 'side', from: 1, toward: 1 }, bottom, { ...frame, bottomWeb: true })?.end).toBe('out');
+    bottom.set(1, card(300, 300, 1100, 1000));
+    expect(resolve({ via: 'side', from: 1, toward: 1 }, bottom, { ...frame, bottomWeb: true })?.end).toEqual({ web: 'bottom' });
+  });
+});
+
+describe('used draglines', () => {
+  it('protects active silk from age, offscreen anchors and the idle-thread cap', () => {
+    const floors = new Map([[1, card(100)], [2, card(1400)], [3, card(700)]]);
+    const used: Line = { id: 1, top: { floor: 1, x: 200 }, bottom: { floor: 2, x: 200 }, age: 70, claimed: true };
+    const climbing: Spider = { kind: 'climb', route: { via: 'line', top: used.top, floor: 2, x: 200, lineId: 1 }, along: 700, dir: 1 };
+    const idle: Line[] = [2, 3, 4, 5].map((id) => ({ id, top: used.top, bottom: { floor: 3, x: 200 }, age: 0 }));
+    const world = advance({ spiders: [climbing], lines: [used, ...idle], nextLine: 6 }, { floors, frame, dt: 0.1, rand: fixed(0.5) });
+    expect(world.lines.map((l) => l.id)).toEqual([1, 3, 4, 5]);
+    expect(world.lines[0].released).toBeUndefined();
+    const released = advance({ ...world, spiders: [{ kind: 'rest', floor: 1, x: 200, dir: 1, left: 10 }] }, { floors, frame, dt: USED_LINE_FADE, rand: fixed(0.5) });
+    expect(released.lines.some((l) => l.id === 1)).toBe(false);
+  });
+
+  it('does not let a second spider claim the same thread', () => {
+    const floors = new Map([[1, card(200)], [2, card(420)]]);
+    const line: Line = { id: 5, top: { floor: 1, x: 250 }, bottom: { floor: 2, x: 250 }, age: 0 };
+    const spider: Spider = { kind: 'walk', floor: 2, x: 250, dir: 1, left: 100, goal: 5 };
+    const world = advance({ spiders: [spider, { ...spider }], lines: [line], nextLine: 6 }, { floors, frame, dt: 1 / 60, rand: fixed(0.5) });
+    expect(world.spiders[0]).toMatchObject({ kind: 'act', next: { kind: 'climb' } });
+    expect(world.spiders[1]).toMatchObject({ kind: 'walk', goal: null });
+    expect(world.lines[0].claimed).toBe(true);
+  });
+});
 
 describe('arriving', () => {
   it('lets itself down from the top onto a floor, and leaves its thread there', () => {
@@ -123,14 +172,18 @@ describe('the ways down and back up', () => {
     expect(trail.slice(up).find((s) => s.kind !== 'dangle')).toMatchObject({ kind: 'act', next: { kind: 'rest', floor: 1 } });
   });
 
-  it('climbs a dragline back up to the floor it hangs from, taking the thread with it', () => {
+  it('claims a dragline without erasing its silk, then fades it after climbing', () => {
     const floors = new Map([[1, card(200)], [2, card(420)]]);
     const line: Line = { id: 5, top: { floor: 1, x: 250 }, bottom: { floor: 2, x: 250 }, age: 0 };
     const trail = run(at(2, 120), floors, 30, { prefer: 'line', lines: [line] });
     const climbing = trail.findIndex((r) => r.world.spiders[0].kind === 'climb');
     expect(climbing).toBeGreaterThan(0);
-    expect(trail[climbing].world.lines.filter((l) => l.id === 5)).toEqual([]);
+    expect(trail[climbing].world.lines.filter((l) => l.id === 5)).toEqual([expect.objectContaining({ claimed: true })]);
+    expect(trail[climbing].poses[0]?.dragline).toBe(5);
     expect(spiders(trail).slice(climbing).some((s) => walking(s, 1))).toBe(true);
+    const released = trail.find((r) => r.world.lines.some((l) => l.id === 5 && l.released !== undefined));
+    expect(released).toBeDefined();
+    expect(trail.at(-1)?.world.lines.some((l) => l.id === 5)).toBe(false);
   });
 
   it('climbs the side of a taller card beside it, onto its top', () => {

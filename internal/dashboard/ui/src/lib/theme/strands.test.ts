@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { lineOpacity, movingPointer, stepped, strandPath, strands } from './strands';
-import { LINE_FADE, LINE_LIFE, type Floor, type Line, type Pose } from './spiderwalk';
+import { LINE_FADE, LINE_LIFE, USED_LINE_FADE, type Floor, type Line, type Pose } from './spiderwalk';
 
 const floor = (y: number, left = 100): Floor => ({ left, right: left + 500, y, base: y + 100 });
 const walking = (x: number, y: number): Pose => ({ drawing: 'walk', x, y, dir: 1, rotate: 0, moving: true, crouch: 0, tuck: 0, fade: 1, silk: null });
@@ -29,6 +29,24 @@ describe('strands', () => {
   it('draws the thread a spider is on taut, from its tie to the spider', () => {
     const hanging: Pose = { ...walking(150, 260), drawing: 'hang', silk: { x: 150, y: 200 } };
     expect(strands([], [null, hanging], floors, 3)).toEqual([{ key: 'held-1', x1: 150, y1: 200, x2: 150, y2: 260, opacity: 1, bend: 0 }]);
+  });
+
+  it('keeps used silk below the climber, joined to its taut upper segment', () => {
+    const climbing: Pose = { ...walking(157, 280), silk: { x: 150, y: 200 }, dragline: 3 };
+    const parts = strands([{ ...line(20), claimed: true }], [climbing], floors, 3);
+    expect(parts).toHaveLength(2);
+    expect(parts[0]).toMatchObject({ key: 'line-3', x1: 157, y1: 280, x2: 150, y2: 400, opacity: 1 });
+    expect(parts[0].bend).not.toBe(0);
+    expect(parts[1]).toMatchObject({ x1: 150, y1: 200, x2: 157, y2: 280, bend: 0 });
+    const moved = strands([{ ...line(20), claimed: true }], [{ ...climbing, x: 154, y: 240 }], floors, 4);
+    expect(moved[0]).toMatchObject({ x1: 154, y1: 240, x2: 150, y2: 400 });
+  });
+
+  it('lets the complete used thread settle and fade after the spider steps off', () => {
+    const released = (seconds: number) => strands([{ ...line(70), claimed: true, released: seconds }], [], floors, 0)[0];
+    expect(released(0)).toMatchObject({ y1: 200, y2: 400, opacity: 1 });
+    expect(released(USED_LINE_FADE / 2).opacity).toBeCloseTo(0.5);
+    expect(released(USED_LINE_FADE).opacity).toBe(0);
   });
 });
 

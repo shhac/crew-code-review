@@ -8,7 +8,7 @@ const el = (r: Box) => ({ getBoundingClientRect: () => ({ ...r, width: r.right -
 const page = (cards: Box[], rules: Box[] = []) => ({
   querySelectorAll: (sel: string) => (sel.includes('.hero') ? rules : cards).map(el),
 });
-const ys = (root: ReturnType<typeof page>) => [...measureFloors(root).values()].map((f) => f.y).sort((a, b) => a - b);
+const ys = (root: ReturnType<typeof page>) => [...measureFloors(root).values()].filter((f) => f.walkable).map((f) => f.y).sort((a, b) => a - b);
 
 describe('measureFloors', () => {
   it('walks card tops and heading rules', () => {
@@ -21,8 +21,28 @@ describe('measureFloors', () => {
     expect(ys(page([outer, inner]))).toEqual([200]);
   });
 
-  it('drops a card tucked so close under a rule that a spider would not fit', () => {
-    expect(ys(page([{ left: 0, right: 600, top: 184, bottom: 500 }], [{ left: 0, right: 600, top: 40, bottom: 160 }]))).toEqual([160]);
+  it('keeps the walls of a cramped card without offering its top as a landing', () => {
+    const root = page([{ left: 0, right: 600, top: 184, bottom: 500 }], [{ left: 0, right: 600, top: 40, bottom: 160 }]);
+    expect(ys(root)).toEqual([160]);
+    expect([...measureFloors(root).values()]).toContainEqual(expect.objectContaining({ y: 184, base: 500, walkable: false }));
+  });
+
+  it('measures physical cards rather than the layout section between them', () => {
+    let selected = '';
+    measureFloors({ querySelectorAll: (sel) => { if (!sel.includes('.hero')) selected = sel; return []; } });
+    expect(selected).toContain('.metric-kpis > div');
+    expect(selected).not.toMatch(/main section(?:,|$)/);
+  });
+
+  it('does not invent side walls for a borderless table panel', () => {
+    const panel = { ...el({ left: 0, right: 600, top: 200, bottom: 700 }), matches: () => true };
+    const root = { querySelectorAll: (sel: string) => sel.includes('.hero') ? [] : [panel] };
+    expect([...measureFloors(root).values()][0]).toMatchObject({ y: 200, base: 200 });
+  });
+
+  it('preserves clearance when the preceding card scrolls above the viewport', () => {
+    const root = page([{ left: 0, right: 600, top: -200, bottom: -40 }, { left: 0, right: 600, top: 10, bottom: 300 }]);
+    expect([...measureFloors(root).values()].find((f) => f.y === 10)?.room).toBe(50);
   });
 
   it('ignores slivers too narrow to walk', () => {
