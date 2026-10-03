@@ -1,5 +1,5 @@
 <script lang="ts">
-  import holly from './holly.svg';
+  import holly from './holly.webp';
 </script>
 
 <div class="theme-shelf christmas-shelf" aria-hidden="true"><img src={holly} alt="" width="48" height="32" /></div>

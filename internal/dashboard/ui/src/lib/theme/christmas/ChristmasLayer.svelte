@@ -8,9 +8,7 @@
   import { sceneLoop } from '../lifecycle';
   import { createBird, advanceBird, reconcileBird, birdPose, type Bird, type Scene } from './robin';
   import { reconcileSnow, wipeSnow, renderSnow, type Snow } from './wipe';
-  import robin from './robin-perch.svg';
-  import alert from './robin-alert.svg';
-  import flight from './robin-flight.svg?raw';
+  import RobinArt from './RobinArt.svelte';
 
   // Injected by the synthetic lab; the dashboard uses real elapsed time.
   export let clock: () => number = () => performance.now();
@@ -78,8 +76,7 @@
   {#if drawing}
     <div class="robin" data-pose={drawing.pose}
       style="left: {drawing.x - ROBIN.anchorX}px; top: {drawing.y - ROBIN.anchorY}px; width: {ROBIN.width}px; height: {ROBIN.height}px; transform: scaleX({drawing.dir}); transform-origin: {ROBIN.anchorX}px {ROBIN.anchorY}px; --wing: {drawing.wing}deg">
-      {#if drawing.pose === 'flight'}{@html flight}
-      {:else}<img src={drawing.pose === 'alert' ? alert : robin} alt="" width={ROBIN.width} height={ROBIN.height} />{/if}
+      <RobinArt pose={drawing.pose} />
     </div>
   {/if}
 </div>
@@ -89,6 +86,4 @@
   path { fill: #eaf0ec; }
   .shadow { fill: #b9cbd0; }
   .robin { position: absolute; max-width: none; }
-  .robin :global(svg) { width: 100%; height: 100%; }
-  .robin :global(.raised-wing) { transform: rotate(var(--wing)); transform-origin: 64px 57px; }
 </style>

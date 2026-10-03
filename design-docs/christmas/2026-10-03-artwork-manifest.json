@@ -1,0 +1,106 @@
+{
+  "date": "2026-10-03",
+  "revision": "uncommitted CCR-4 task working tree (content pinned below)",
+  "generation_tool": "image_gen.imagegen; underlying model/version not exposed",
+  "alignment_tool": "ImageMagick 7.1.2-32 Q16-HDRI aarch64",
+  "encoder": "cwebp 1.6.0; libsharpyuv 0.4.2",
+  "encoding_flags": [
+    "-lossless",
+    "-q",
+    "100",
+    "-m",
+    "6",
+    "-exact",
+    "-metadata",
+    "none"
+  ],
+  "rgba": "sRGB, straight 8-bit RGBA; alpha-weighted EWA Triangle resampling",
+  "robin": {
+    "cell": [
+      128,
+      112
+    ],
+    "foot_anchor": [
+      64,
+      100
+    ],
+    "wing_pivot": [
+      64,
+      57
+    ],
+    "display_scale": 0.35
+  },
+  "holly": {
+    "cell": [
+      96,
+      64
+    ],
+    "baseline": 55,
+    "display_size": [
+      48,
+      32
+    ]
+  },
+  "hashes": {
+    "design-docs/christmas/aligned/flight-preview.png": "b1b331fdf3fa9da94bb3e79aab248d24f9c66e94d0eb982bc5686bb18c93e908",
+    "design-docs/christmas/aligned/holly.png": "51d6ea674504a80cf8e9e3d01b5f03a1fde4490f41fc9345ef7a92c00d6fd41a",
+    "design-docs/christmas/aligned/holly.webp": "8b5bc27cb2e87bd16819194d2715b842d0e1b94fa918aa9a5f6de439df213397",
+    "design-docs/christmas/aligned/robin-alert.png": "c0492bfd693c27d5c39aa9090bca3e4db8a50b799e649833f2c11eafd4718bee",
+    "design-docs/christmas/aligned/robin-alert.webp": "ce2d4a92c681cefac50433babf78db7649a8e329c2b37d3d320dc0cef9a8f286",
+    "design-docs/christmas/aligned/robin-flight-wing.png": "be2ac7eb9f49cfb4a6ccdd62ff0fd464644dab7bb9f0aabf693d5230e20838d0",
+    "design-docs/christmas/aligned/robin-flight-wing.webp": "508b941eaf322255bc9d80d534c162da2b69658d76158b30f3ff78bcade597fa",
+    "design-docs/christmas/aligned/robin-flight.png": "c3240e11096a59c9ef81ac1a1be29d3601708c13257a1b388300718742b5cdd5",
+    "design-docs/christmas/aligned/robin-flight.webp": "62af46ccdaf7565beddd2fdf3a655d616b1bed7d0ab07fa5ee12242fda0b9826",
+    "design-docs/christmas/aligned/robin-perch.png": "c3c6207d945d149a9b9728c66bc16ac430bf527c732cc8b92bfea25811fc4e82",
+    "design-docs/christmas/aligned/robin-perch.webp": "e9d871e3f720fe55bf70fc40991e8dcc82a67514889038785d67e53e9a79237a",
+    "design-docs/christmas/christmas-current-design.svg": "be2c96e5ae2f97a33d9b4c80abcf00169ebaf41b60a7b6e0c025eb7fd3394e7f",
+    "design-docs/christmas/export-artwork.py": "d86457ba5a1f7ce4083eb81d4f96cd2bab5754cc934be51029c00e66a93220b1",
+    "design-docs/christmas/originals/holly.png": "1fca13389842279d0524cb2b4e8e82ae134da1290af752dd2679006b94e267e2",
+    "design-docs/christmas/originals/robin-alert.png": "0e5717f3c2ebcf0bd068e3232d045439722c6f0e8392642debb9ac2863e5b1de",
+    "design-docs/christmas/originals/robin-flight-wing.png": "be50879341024a0b0d2dd13ad2b752e7ba02766fdb94dd7646d34af195277fe6",
+    "design-docs/christmas/originals/robin-flight.png": "7c3b5c1ddccd6080e2acde0a9276cddd87faeddff7fa9f34c162eda64172f960",
+    "design-docs/christmas/originals/robin-perch.png": "dfd4736d673ce0c34a85a55c47fb3ee5e560ce55ad60c4780db64f6324209d28",
+    "design-docs/christmas/references/christmas-raster-design-brief.md": "0531fe285764664ca3ea08a4c793fe3fc52c6bf3c105612999e0ef60497cd5e6",
+    "design-docs/christmas/references/generation-provenance.md": "f672b8b2bede0e01c94c3a1f6545c50971e46e53323557b6e1e87899111b9c24",
+    "design-docs/christmas/references/robin-perch-style-study.png": "41c7d22ab5a4220853722a5d49ed6f1bd49afb22289ef81544314fec98551c42",
+    "design-docs/christmas/references/robin-study-provenance.md": "617ac1dbde03f8defe7ed008d689b5a94b1cdd3e2bc04b56457bd470bd54729b",
+    "design-docs/christmas/test_artwork.py": "c5feea2002839f82d6ccd4efed524310d34b29e275eb81304d7d8f26741bb34a",
+    "design-docs/christmas/validate-artwork.py": "5838dddaa92dc08a6c5dd23aba07546e828a844e0e14cec82661d6b5f4e79188",
+    "design-docs/halloween/candle-stubs.png": "e5ab4c59015eb079f4cb5c9dbd3f1d9ff5578cbcb04a37bec41908723df7d284",
+    "design-docs/halloween/candles.png": "51a6ce2ae518b24d97116f27456c9cfe088b1ac1509371b88f223d8863b5f771",
+    "design-docs/halloween/pumpkins.png": "e2b446f481495b9b618bd3c4b067e28ca7dcac13a7116b9a382cc4fd6de7567a",
+    "design-docs/halloween/spider-body-side.png": "16a39040c9dc5d5dd3445a80a12af2393cf52e5b93824405f214717b3102daf7",
+    "design-docs/halloween/spider-hanging-atlas.png": "f8f237a8df36e357cbf3e49e02ab97e32f296ee1269dd763aba915fdbb8acda2",
+    "design-docs/halloween/spider-leg-segments.png": "de8018740964b53f9edffb61cc36ca4432b6a8a1ba0662e3f10baa0f0f4bc9b4",
+    "design-docs/halloween/spider-walk-atlas.png": "35db2a249a9d4e6d91d5511eb173fcd9d3e5b0c8a5865462d701319f694f5f73",
+    "internal/dashboard/ui/lab/artwork.html": "c7bbf6a091cbb856c2eb2b981f98437c0c85347d27be4e540d668f4b1c2dd24f",
+    "internal/dashboard/ui/lab-tests/artwork.spec.ts": "8f2a2e6865321e3308512cd749fedd10038d03e02d8cecc69d83e3544c138b8a",
+    "internal/dashboard/ui/src/lab/Artwork.svelte": "be814d6dedbb6ea979563ec1a6a12e80120cd17a5da348ab9604f3a564629832",
+    "internal/dashboard/ui/src/lab/artwork.ts": "96a96a66deef45db961fa7d4c77c9d74509d48af8ed624a2d49200a5b7c64df4",
+    "internal/dashboard/ui/src/lib/theme/christmas/ChristmasLayer.svelte": "784326ef43bd8a9161475dbeb62f3d53f2abc8c571ca2e274144d2cbf3405eea",
+    "internal/dashboard/ui/src/lib/theme/christmas/ChristmasShelf.svelte": "a440a6ff489a6726c84a9496e26d6a5f3d148d25c524c75858f0059d802092d1",
+    "internal/dashboard/ui/src/lib/theme/christmas/RobinArt.svelte": "5359304db51458eb8d951462861332a569796e5f25f71a4195303bfb43a57497",
+    "internal/dashboard/ui/src/lib/theme/christmas/artwork.test.ts": "a7dbaa66996f2829a6f3bdcd7064d9c954226f18fb2d91359fd7453e04cf3106",
+    "internal/dashboard/ui/src/lib/theme/christmas/holly.webp": "8b5bc27cb2e87bd16819194d2715b842d0e1b94fa918aa9a5f6de439df213397",
+    "internal/dashboard/ui/src/lib/theme/christmas/robin-alert.webp": "ce2d4a92c681cefac50433babf78db7649a8e329c2b37d3d320dc0cef9a8f286",
+    "internal/dashboard/ui/src/lib/theme/christmas/robin-flight-wing.webp": "508b941eaf322255bc9d80d534c162da2b69658d76158b30f3ff78bcade597fa",
+    "internal/dashboard/ui/src/lib/theme/christmas/robin-flight.webp": "62af46ccdaf7565beddd2fdf3a655d616b1bed7d0ab07fa5ee12242fda0b9826",
+    "internal/dashboard/ui/src/lib/theme/christmas/robin-perch.webp": "e9d871e3f720fe55bf70fc40991e8dcc82a67514889038785d67e53e9a79237a",
+    "internal/dashboard/ui/src/lib/theme/halloween/candles.webp": "24095eae5200d772d22760625d2ac849788479143c11be499dd701641ee6c20b",
+    "internal/dashboard/ui/src/lib/theme/halloween/pumpkins.webp": "1203afec8b4510d8c4bef3bb8558a2eb3289d5b15581d716a4c3004e95c9f58b",
+    "internal/dashboard/ui/src/lib/theme/halloween/spider-body.webp": "8619b36147559e1534b0b50f82e8d39b360eeefd6444945bd58568670bdd6c6a"
+  },
+  "bundle": {
+    "assets/candles-BZ4zc9nm.webp": "24095eae5200d772d22760625d2ac849788479143c11be499dd701641ee6c20b",
+    "assets/holly-DWK21WRL.webp": "8b5bc27cb2e87bd16819194d2715b842d0e1b94fa918aa9a5f6de439df213397",
+    "assets/index-BbntfiLD.css": "443a9d6f9277fd80f22d7980b216a13448e19ff837226b5343df169b7841177c",
+    "assets/index-ZskOTBEx.js": "931d47eaaf6f07d52f34b0904ce31003deafa471053a5ee2c7266f993dc0214e",
+    "assets/pumpkins-Bc_YxEAv.webp": "1203afec8b4510d8c4bef3bb8558a2eb3289d5b15581d716a4c3004e95c9f58b",
+    "assets/robin-alert-B_yn_CEB.webp": "ce2d4a92c681cefac50433babf78db7649a8e329c2b37d3d320dc0cef9a8f286",
+    "assets/robin-flight-BabkmBad.webp": "62af46ccdaf7565beddd2fdf3a655d616b1bed7d0ab07fa5ee12242fda0b9826",
+    "assets/robin-perch-CbkXcmr6.webp": "e9d871e3f720fe55bf70fc40991e8dcc82a67514889038785d67e53e9a79237a",
+    "assets/spider-hanging-B6aprlkR.webp": "71f4b6f47908c3959016ed1c83b875e690629ad68f690ec7c15506c87f6dbe7c",
+    "index.html": "852927a01809c436afc0f5ac4ff073f7856672fd44de90c38f194e5ebc594f1d",
+    "mascot.webp": "d6cbd86f5854e47a1a0a16184800ae07e1d40b5ffcc36c0aaee07ef3599f2537"
+  }
+}
