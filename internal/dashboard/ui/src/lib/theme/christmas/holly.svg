@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="96" height="64" viewBox="0 0 96 64">
+<defs>
+ <linearGradient id="body" x2=".6" y2="1"><stop stop-color="#a98b6a"/><stop offset="1" stop-color="#695544"/></linearGradient>
+ <linearGradient id="breast" x2=".2" y2="1"><stop stop-color="#e3a16a"/><stop offset="1" stop-color="#ba6142"/></linearGradient>
+ <symbol id="robin-base" viewBox="0 0 128 112">
+  <path d="M45 66L12 55 24 81 49 82Z" fill="#695544"/>
+  <ellipse cx="65" cy="61" rx="33" ry="32" fill="url(#body)"/>
+  <circle cx="84" cy="38" r="22" fill="url(#body)"/>
+  <path d="M79 36Q103 37 101 63Q95 87 75 90Q55 82 62 62Q65 49 79 36Z" fill="url(#breast)"/>
+  <path d="M51 70Q62 84 78 89Q65 96 50 83Z" fill="#e5d9bf"/>
+  <path d="M101 39L115 44 101 47Z" fill="#403d37"/>
+  <circle cx="94" cy="33" r="3.8" fill="#282b29"/><circle cx="95" cy="32" r="1.1" fill="#fff5dc"/>
+  <path d="M59 87L57 100M73 87L71 100M51 100H63M65 100H77" stroke="#655443" stroke-width="2.3" stroke-linecap="round" fill="none"/>
+ </symbol>
+ <symbol id="robin-perch" viewBox="0 0 128 112">
+  <use href="#robin-base" width="128" height="112"/>
+  <path d="M45 49Q67 43 78 66L63 80Q44 74 45 49Z" fill="#7c6652"/>
+  <path d="M50 55L65 70M49 62L59 74" stroke="#b59a77" stroke-width="2" stroke-linecap="round"/>
+ </symbol>
+ <symbol id="robin-alert" viewBox="0 0 128 112">
+  <use href="#robin-perch" width="128" height="112"/>
+  <path d="M90 29Q94 25 99 29" fill="none" stroke="#e5d9bf" stroke-width="1.6"/>
+ </symbol>
+ <symbol id="robin-flight" viewBox="0 0 128 112">
+  <use href="#robin-base" width="128" height="112"/>
+  <path d="M51 59Q28 38 29 7Q50 15 72 47L74 62Z" fill="#7c6652"/>
+  <path d="M35 17L58 47M34 28L53 51M37 39L49 56" stroke="#b59a77" stroke-width="2" stroke-linecap="round"/>
+ </symbol>
+ <symbol id="holly" viewBox="0 0 96 64">
+  <path d="M45 34L13 9 15 22 3 24 16 33 9 45 29 43 35 54Z" fill="#466558"/>
+  <path d="M47 34L82 6 77 22 94 22 82 34 90 46 68 42 63 55Z" fill="#365648"/>
+  <path d="M20 28L44 36 76 27" fill="none" stroke="#87a18b" stroke-width="1.5"/>
+  <g fill="#a34f48"><circle cx="43" cy="36" r="7"/><circle cx="55" cy="38" r="7"/><circle cx="49" cy="47" r="7"/></g>
+  <g fill="#d29a79"><circle cx="41" cy="34" r="1.6"/><circle cx="53" cy="36" r="1.6"/></g>
+ </symbol>
+</defs>
+<use href="#holly" width="96" height="64"/>
+</svg>

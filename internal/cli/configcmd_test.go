@@ -289,6 +289,9 @@ func TestConfigSetRefusesAnUnknownTheme(t *testing.T) {
 		if got, set := key.Get(); set {
 			t.Errorf("a refused value must not be stored, got %q", got)
 		}
+		if err := key.Set("christmas"); err != nil {
+			t.Fatalf("Christmas rejected: %v", err)
+		}
 		return
 	}
 	t.Fatal("dashboard.theme is not a registered key")

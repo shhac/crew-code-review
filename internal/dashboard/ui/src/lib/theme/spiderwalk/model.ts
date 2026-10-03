@@ -14,7 +14,8 @@
 
 // base is where the floor's element ends below it: a card's bottom edge, or
 // for a heading rule the rule itself. Walls are found from it.
-export type Floor = { left: number; right: number; y: number; base: number; walkable?: boolean };
+import type { Floor } from '../scene';
+export type { Floor } from '../scene';
 export type Floors = ReadonlyMap<number, Floor>;
 // The area the spiders live in. bottomWeb says whether the bottom-right corner
 // web is drawn (it is hidden on narrow screens), so a spider can go home to it.

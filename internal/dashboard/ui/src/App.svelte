@@ -16,6 +16,8 @@
   import Overview from './routes/Overview.svelte';
   import Prompt from './routes/Prompt.svelte';
   import ReviewLog from './routes/ReviewLog.svelte';
+  import ChristmasLayer from './lib/theme/christmas/ChristmasLayer.svelte';
+  import ChristmasShelf from './lib/theme/christmas/ChristmasShelf.svelte';
   import HalloweenLayer from './lib/theme/halloween/HalloweenLayer.svelte';
   import HalloweenShelf from './lib/theme/halloween/HalloweenShelf.svelte';
   import { markTheme, resolveTheme } from './lib/theme/theme';
@@ -113,6 +115,8 @@
     </nav>
     {#if theme === 'halloween'}
       <HalloweenShelf />
+    {:else if theme === 'christmas'}
+      <ChristmasShelf />
     {/if}
     <ViewerChip viewer={$viewer} />
     <div class:stale={!$feed.ok} class="feed">
@@ -147,4 +151,6 @@
 
 {#if theme === 'halloween'}
   <HalloweenLayer />
+{:else if theme === 'christmas'}
+  <ChristmasLayer />
 {/if}

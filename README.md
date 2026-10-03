@@ -510,14 +510,21 @@ deliberately.
 - **Logs**: a live tail of the daemon's own log.
 
 **Seasonal themes.** `dashboard.theme` adds decorations to the dashboard: `auto` (the
-default) switches a set on in its season, which for now means Halloween in October. `none` turns
-decorations off, and naming a set (`halloween`) forces it on. They are purely cosmetic and
+default) switches a set on in its season, Halloween in October and Christmas throughout December. `none` turns
+decorations off, and naming a set (`halloween` or `christmas`) forces it on. They are purely cosmetic and
 never block a click. Reduced-motion users get the decorations without the
 animation. To preview a set whatever the date, add `?theme=halloween` to the
 URL.
 For geometry checks, use `?theme=halloween&theme-debug=1`: blue lines mark
 walkable floors, purple lines mark walls, and orange lines mark tops with too
 little headroom for a spider. The overlay also passes clicks through.
+
+December uses quiet snow on measured card tops and heading rules, one perched
+robin and a small rail holly sprig. Preview with `?theme=christmas`; set
+`dashboard.theme=none` to opt out. The current scene is still, including under
+reduced motion; snow wiping and robin reactions are the dependent follow-up.
+Design and phase boundaries: [Christmas scene](design-docs/christmas/README.md).
+
 
 Queue add/reorder/promote are also available as JSON endpoints
 (`POST /api/queue`, `POST /api/queue/reorder`, `POST /api/queue/promote`). The dashboard has no auth, so keep it on your tailnet

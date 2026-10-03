@@ -1,4 +1,4 @@
-import type { Floor } from './spiderwalk';
+import type { Floor } from './scene';
 
 // Only actual cards have walls. A layout section (notably the KPI grid) must
 // not bridge the gaps between its children with an invisible platform.
@@ -15,7 +15,7 @@ const HEADROOM = 34;
 
 // A floor also knows how much clear space sits on it, up to whatever is
 // above: enough for a spider to pass under is not enough to stand a candle.
-export type Ledge = Floor & { room: number };
+export type Ledge = Floor & { room: number; kind?: 'card' | 'heading' };
 
 // What measuring needs from the page: the document, or a fake one in tests.
 type Box = { left: number; right: number; top: number; bottom: number; width: number; height: number };
@@ -54,6 +54,7 @@ function roomAbove(f: Floor, blocks: Box[]): number {
 export function measureFloors(root: Page = document): Map<number, Ledge> {
   const floors = new Map<number, Floor>();
   const rooms = new Map<number, number>();
+  const kinds = new Map<number, Ledge['kind']>();
   const blocks: Box[] = [];
   const add = (el: Measurable, edge: 'top' | 'bottom') => {
     const r = el.getBoundingClientRect();
@@ -64,6 +65,7 @@ export function measureFloors(root: Page = document): Map<number, Ledge> {
     const floor = { left: r.left, right: r.right, y: r[edge], base: el.matches?.('.panel') ? r[edge] : r.bottom };
     if ([...floors.values()].some((f) => overlaps(f, floor))) return;
     floors.set(idOf(el), floor);
+    kinds.set(idOf(el), edge === 'top' ? 'card' : 'heading');
     if (edge === 'bottom') rooms.set(idOf(el), roomInside(el, r));
   };
   // Document order lists a parent before its children, so the outer card
@@ -75,6 +77,6 @@ export function measureFloors(root: Page = document): Map<number, Ledge> {
     [...floors]
       // Retain the card's wall geometry even if its top has no headroom.
       // Arrival and landing choose only walkable ledges.
-      .map(([id, f]) => [id, { ...f, walkable: !cramped(f, all), room: rooms.get(id) ?? roomAbove(f, blocks) }]),
+      .map(([id, f]) => [id, { ...f, kind: kinds.get(id), walkable: !cramped(f, all), room: rooms.get(id) ?? roomAbove(f, blocks) }]),
   );
 }

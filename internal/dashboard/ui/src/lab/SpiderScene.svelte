@@ -3,6 +3,15 @@
   // heading rule, a stack of cards (wall climbs between them), cards side by
   // side across a narrow gap (jumps), one sitting higher than its neighbour
   // (a jump up), and one running past the bottom of the window (a way out).
+  import ChristmasLayer from '../lib/theme/christmas/ChristmasLayer.svelte';
+  import ChristmasShelf from '../lib/theme/christmas/ChristmasShelf.svelte';
+  import HalloweenShelf from '../lib/theme/halloween/HalloweenShelf.svelte';
+  import ViewerChip from '../lib/ViewerChip.svelte';
+  import { markTheme, resolveTheme } from '../lib/theme/theme';
+  let theme = resolveTheme('halloween');
+  let empty = false;
+  let clicks = 0;
+  $: markTheme(theme);
   import type { Ledge } from '../lib/theme/floors';
   import HalloweenLayer from '../lib/theme/halloween/HalloweenLayer.svelte';
   import { away, pose, type Choice, type Spider, type World } from '../lib/theme/spiderwalk';
@@ -43,24 +52,45 @@
   ];
 </script>
 
-<div class="scene">
+<div class="shell scene">
+  <!-- Use the dashboard's footer stack and CSS, not independently placed art. -->
+  <aside class="rail">
+    <button class="brand" type="button">
+      <img src="/mascot.webp" alt="" width="64" height="64" />
+      <span><strong>agent</strong><em>code review</em></span>
+    </button>
+    <nav aria-label="Dashboard">
+      {#each ['Overview', 'History', 'Metrics', 'Leaderboard', 'Config', 'Prompt', 'Logs'] as label}
+        <a href="#lab">{label}</a>
+      {/each}
+    </nav>
+    {#if theme === 'halloween'}
+      <HalloweenShelf />
+    {:else if theme === 'christmas'}
+      <ChristmasShelf />
+    {/if}
+    <ViewerChip />
+    <div class="feed"><span class="signal"></span><span>synthetic</span><small>no daemon connection</small></div>
+  </aside>
   <main>
-    <header class="hero">
+    <header class="hero" style:display={empty ? 'none' : undefined}>
       <div>
         <p class="eyebrow">spider lab</p>
         <h1>Scene</h1>
       </div>
     </header>
     <div class="board">
-      {#each cards as c}
+      {#each empty ? [] : cards as c}
         <section class="surface card" style="left: {c.left}%; top: {c.top}px; width: {c.width}%; height: {c.height}px">
-          <h3>{c.label}</h3>
+          <h3>{c.label}</h3><button on:click={() => clicks++}>Click through {clicks}</button>
         </section>
       {/each}
     </div>
   </main>
 </div>
 <div class="controls">
+  <label>theme <select bind:value={theme}><option>halloween</option><option>christmas</option><option>none</option></select></label>
+  <label><input type="checkbox" bind:checked={empty} /> empty</label>
   <label>speed {timeScale}x <input type="range" min="0.1" max="2" step="0.1" bind:value={timeScale} /></label>
   <label>route
     <select bind:value={prefer}>
@@ -69,8 +99,12 @@
   </label>
   <label><input type="checkbox" bind:checked={debug} /> debug</label>
 </div>
+{#if theme === 'halloween'}
 <HalloweenLayer {timeScale} prefer={prefer || undefined} bind:world bind:floors />
-{#if debug}
+{:else if theme === 'christmas'}
+<ChristmasLayer />
+{/if}
+{#if debug && theme === 'halloween'}
   <svg class="debug" width="100%" height="100%" aria-hidden="true">
     {#each [...floors] as [id, f] (id)}
       <line x1={f.left} y1={f.y} x2={f.right} y2={f.y} />

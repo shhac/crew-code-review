@@ -11,6 +11,18 @@ const page = (cards: Box[], rules: Box[] = []) => ({
 const ys = (root: ReturnType<typeof page>) => [...measureFloors(root).values()].filter((f) => f.walkable).map((f) => f.y).sort((a, b) => a - b);
 
 describe('measureFloors', () => {
+  it('retains element IDs through scroll and classifies heading content clearance', () => {
+    let scroll = 0;
+    const card = { getBoundingClientRect: () => ({ left: 0, right: 200, top: 200 - scroll, bottom: 400 - scroll, width: 200, height: 200 }) };
+    const heading = { ...el({ left: 0, right: 200, top: 40, bottom: 100 }), children: [el({ left: 0, right: 180, top: 40, bottom: 98 })] };
+    const root = { querySelectorAll: (sel: string) => sel.includes('.hero') ? [heading] : [card] };
+    const before = measureFloors(root);
+    const id = [...before].find(([, f]) => f.kind === 'card')![0];
+    expect([...before.values()].find((f) => f.kind === 'heading')?.room).toBe(2);
+    scroll = 20;
+    expect(measureFloors(root).get(id)).toMatchObject({ y: 180, kind: 'card', base: 380 });
+  });
+
   it('walks card tops and heading rules', () => {
     expect(ys(page([{ left: 0, right: 600, top: 300, bottom: 500 }], [{ left: 0, right: 600, top: 40, bottom: 160 }]))).toEqual([160, 300]);
   });

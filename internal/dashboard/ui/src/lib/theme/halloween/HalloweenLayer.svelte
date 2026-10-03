@@ -5,6 +5,8 @@
   // floors. The layer takes no pointer events, so nothing here can stand
   // between a person and a button.
   import { onMount } from 'svelte';
+  import Geometry from '../Geometry.svelte';
+  import { observeLayout } from '../layout';
   import { candleSpots, type CandleSpot } from '../candles';
   import { measureFloors, type Ledge } from '../floors';
   import { advance, away, BOTTOM_WEB, pose, WEB, type Choice, type Frame, type Pose, type World } from '../spiderwalk';
@@ -114,11 +116,7 @@
         loop.frame = requestAnimationFrame(measure);
       }
     };
-    const changes = new MutationObserver(changed);
-    const main = document.querySelector('main');
-    if (main) changes.observe(main, { subtree: true, childList: true, attributes: true, characterData: true });
-    addEventListener('scroll', changed, { capture: true, passive: true });
-    addEventListener('resize', changed);
+    const stopObserving = observeLayout(changed);
     reduced.addEventListener('change', restart);
     addEventListener('pointermove', moved, { passive: true });
     restart();
@@ -126,30 +124,17 @@
       stop();
       reduced.removeEventListener('change', restart);
       removeEventListener('pointermove', moved);
-      removeEventListener('scroll', changed, true);
-      removeEventListener('resize', changed);
-      changes.disconnect();
+      stopObserving();
     };
   });
 </script>
 
-<div class="theme-layer" aria-hidden="true">
+<div class="theme-layer seasonal-overlay" aria-hidden="true">
   <div class="web top-right"><div class="sway"><Web size={WEB} /></div></div>
   <div class="web bottom-right"><div class="sway"><Web size={BOTTOM_WEB} /></div></div>
 
   {#if debug}
-    <svg class="geometry" width="100%" height="100%">
-      {#each [...floors] as [id, f] (id)}
-        <g data-floor-id={id} data-walkable={f.walkable}>
-          <line class="floor" class:blocked={f.walkable === false} x1={f.left} y1={f.y} x2={f.right} y2={f.y} />
-          {#if f.base > f.y}
-            <line class="wall" x1={f.left} y1={f.y} x2={f.left} y2={f.base} />
-            <line class="wall" x1={f.right} y1={f.y} x2={f.right} y2={f.base} />
-          {/if}
-          <text x={f.left + 4} y={f.y - 4}>{id}{f.walkable === false ? ' · no headroom' : ''}</text>
-        </g>
-      {/each}
-    </svg>
+    <Geometry {floors} />
   {/if}
 
   <div class="resident">
@@ -205,13 +190,8 @@
 
 <style>
   /* Below Modal (50), so a dialog is never decorated over. */
-  .theme-layer { position: fixed; inset: 0; z-index: 40; pointer-events: none; overflow: hidden; }
-  .geometry { position: absolute; inset: 0; }
-  .geometry line { stroke-width: 1; stroke-dasharray: 4 3; }
-  .geometry .floor { stroke: #78c8ff; }
-  .geometry .blocked { stroke: #ff8f2e; }
-  .geometry .wall { stroke: #bd9cff; }
-  .geometry text { fill: #78c8ff; font: 10px ui-monospace, monospace; }
+
+
 
   /* Web.svelte draws a top-left web; mirroring about the box centre moves it
      into the other corners. The sway pivots on the web's own corner. */

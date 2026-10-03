@@ -13,6 +13,7 @@ import (
 func TestHandleConfigNamesTheResolvedTheme(t *testing.T) {
 	for configured, want := range map[string]string{
 		config.ThemeHalloween: config.ThemeHalloween,
+		config.ThemeChristmas: config.ThemeChristmas,
 		config.ThemeNone:      config.ThemeNone,
 		"xmas":                config.ThemeNone,
 	} {
