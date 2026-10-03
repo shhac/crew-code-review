@@ -2,11 +2,12 @@ package pricing
 
 import (
 	"context"
+	"io"
 	"math"
 	"net/http"
-	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -33,44 +34,71 @@ const sampleTable = `{
   "some-embedding-model": {"mode": "embedding"}
 }`
 
-func serve(t *testing.T, body string, etag string, hits *int) *httptest.Server {
-	t.Helper()
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if hits != nil {
-			*hits++
-		}
-		w.Header().Set("ETag", etag)
-		if r.Header.Get("If-None-Match") == etag {
-			w.WriteHeader(http.StatusNotModified)
-			return
-		}
-		_, _ = w.Write([]byte(body))
-	}))
-	t.Cleanup(srv.Close)
-	return srv
+type priceSource struct {
+	body, etag string
+	mu         sync.Mutex
+	hits       *int
 }
 
-// withSource points the package at a test server. SourceURL is a const so the
-// request URL is built from it; the test swaps the client's transport instead,
-// which also proves the conditional-GET headers are what we claim.
-func withSource(t *testing.T, c *Cache, srv *httptest.Server) {
+func serve(t *testing.T, body, etag string, hits *int) *priceSource {
 	t.Helper()
-	base := srv.URL
-	c.client = &http.Client{Transport: rewriteTo(base)}
+	return &priceSource{body: body, etag: etag, hits: hits}
 }
 
-type rewriteTo string
-
-func (r rewriteTo) RoundTrip(req *http.Request) (*http.Response, error) {
-	target := *req.URL
-	base, err := http.NewRequest(req.Method, string(r), nil)
-	if err != nil {
-		return nil, err
+// RoundTrip serves conditional GETs without opening sockets.
+func (s *priceSource) RoundTrip(req *http.Request) (*http.Response, error) {
+	s.mu.Lock()
+	if s.hits != nil {
+		*s.hits++
 	}
-	target.Scheme, target.Host = base.URL.Scheme, base.URL.Host
-	clone := req.Clone(req.Context())
-	clone.URL = &target
-	return http.DefaultTransport.RoundTrip(clone)
+	s.mu.Unlock()
+	status, body := http.StatusOK, s.body
+	if req.Header.Get("If-None-Match") == s.etag {
+		status, body = http.StatusNotModified, ""
+	}
+	headers := make(http.Header)
+	headers.Set("ETag", s.etag)
+	return &http.Response{StatusCode: status, Header: headers,
+		Body: io.NopCloser(strings.NewReader(body)), Request: req}, nil
+}
+
+func withSource(t *testing.T, c *Cache, source http.RoundTripper) {
+	t.Helper()
+	c.client = &http.Client{Transport: source}
+}
+
+func TestPriceSourceConditionalResponses(t *testing.T) {
+	hits := 0
+	source := serve(t, sampleTable, `"v1"`, &hits)
+	for _, conditional := range []bool{false, true, false} {
+		req, err := http.NewRequest(http.MethodGet, SourceURL, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if conditional {
+			req.Header.Set("If-None-Match", `"v1"`)
+		}
+		resp, err := source.RoundTrip(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		body, err := io.ReadAll(resp.Body)
+		_ = resp.Body.Close()
+		if err != nil {
+			t.Fatal(err)
+		}
+		wantStatus, wantBody := http.StatusOK, sampleTable
+		if conditional {
+			wantStatus, wantBody = http.StatusNotModified, ""
+		}
+		if resp.StatusCode != wantStatus || string(body) != wantBody || resp.Header.Get("ETag") != `"v1"` {
+			t.Fatalf("response = %d %q %q", resp.StatusCode, body, resp.Header.Get("ETag"))
+		}
+		resp.Header.Set("ETag", "changed")
+	}
+	if hits != 3 {
+		t.Errorf("hits = %d, want 3", hits)
+	}
 }
 
 func TestParseTableSkipsTheSchemaDoc(t *testing.T) {
@@ -253,9 +281,9 @@ func TestOpenOnEmptyDirDegradesQuietly(t *testing.T) {
 // covered only scheduler and cli. Meaningful only under -race.
 func TestCacheIsSafeForConcurrentUse(t *testing.T) {
 	dir := t.TempDir()
-	// nil hits: serve's counter is unguarded, and concurrent refreshes would
-	// race on the TEST's bookkeeping rather than on anything in the Cache.
-	srv := serve(t, sampleTable, `"v1"`, nil)
+	// Exercise the fixture bookkeeping concurrently too.
+	hits := 0
+	srv := serve(t, sampleTable, `"v1"`, &hits)
 	c := Open(dir)
 	withSource(t, c, srv)
 

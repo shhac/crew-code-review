@@ -2,10 +2,14 @@ package cli
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net"
+	"os"
+	"os/exec"
 	"strings"
 	"sync"
+	"syscall"
 	"testing"
 	"time"
 
@@ -99,7 +103,8 @@ func TestTeeSinksFillTheRingAtBothSeverities(t *testing.T) {
 func TestStartDashboardBindConflict(t *testing.T) {
 	ln, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
-		t.Fatal(err)
+		dashboardListenFailure(t, err)
+		return
 	}
 	defer func() { _ = ln.Close() }()
 
@@ -141,5 +146,88 @@ func TestUsageSourcesCoversEveryWiredEngine(t *testing.T) {
 	}
 	if bins["codex"] != "codex-dev" || bins["claude"] != "claude-dev" {
 		t.Errorf("bins = %v, want each engine's configured binary", bins)
+	}
+}
+
+// Only socket permission restrictions may excuse the real bind guard locally.
+func dashboardListenFailure(t *testing.T, err error) {
+	t.Helper()
+	if errors.Is(err, os.ErrPermission) || errors.Is(err, syscall.EPERM) || errors.Is(err, syscall.EACCES) {
+		if os.Getenv("CREW_CODE_REVIEW_TEST_NO_SKIP") != "1" {
+			t.Skipf("environment refused a socket: %v", err)
+		}
+	}
+	t.Fatalf("reserving dashboard socket: %v", err)
+}
+
+// Child invocations exercise testing.T's actual skip/fail behavior without sockets.
+func TestDashboardListenFailure(t *testing.T) {
+	const childKey = "CREW_CODE_REVIEW_TEST_LISTEN_ERROR"
+	failures := map[string]error{
+		"eperm":      syscall.EPERM,
+		"eacces":     syscall.EACCES,
+		"permission": os.ErrPermission,
+		"occupied":   syscall.EADDRINUSE,
+	}
+	if name := os.Getenv(childKey); name != "" {
+		err := failures[strings.TrimPrefix(name, "wrapped-")]
+		if err == nil {
+			t.Fatalf("unknown injected error %q", name)
+		}
+		if strings.HasPrefix(name, "wrapped-") {
+			err = &net.OpError{Op: "listen", Net: "tcp", Err: &os.SyscallError{Syscall: "bind", Err: err}}
+		}
+		dashboardListenFailure(t, err)
+		t.Fatal("listen failure returned without skipping or failing")
+	}
+	binary, err := os.Executable()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for name, injected := range failures {
+		for _, wrapped := range []bool{false, true} {
+			for _, strict := range []string{"", "0", "true", "1"} {
+				name := name
+				if wrapped {
+					name = "wrapped-" + name
+				}
+				t.Run(name+"/strict="+strict, func(t *testing.T) {
+					ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+					defer cancel()
+					cmd := exec.CommandContext(ctx, binary, "-test.run=^TestDashboardListenFailure$", "-test.v")
+					// Remove inherited values so the empty case really is unset.
+					for _, entry := range os.Environ() {
+						if !strings.HasPrefix(entry, childKey+"=") && !strings.HasPrefix(entry, "CREW_CODE_REVIEW_TEST_NO_SKIP=") {
+							cmd.Env = append(cmd.Env, entry)
+						}
+					}
+					cmd.Env = append(cmd.Env, childKey+"="+name)
+					if strict != "" {
+						cmd.Env = append(cmd.Env, "CREW_CODE_REVIEW_TEST_NO_SKIP="+strict)
+					}
+					output, err := cmd.CombinedOutput()
+					if ctx.Err() != nil {
+						t.Fatalf("child timed out: %s", output)
+					}
+					wantSkip := !errors.Is(injected, syscall.EADDRINUSE) && strict != "1"
+					skipped := strings.Contains(string(output), "--- SKIP: TestDashboardListenFailure")
+					if skipped != wantSkip || (err == nil) != wantSkip {
+						t.Fatalf("want skip=%v, exit=%v: %s", wantSkip, err, output)
+					}
+					if !wantSkip {
+						var exitErr *exec.ExitError
+						if !errors.As(err, &exitErr) || exitErr.ExitCode() != 1 {
+							t.Fatalf("unexpected child failure: %v", err)
+						}
+					}
+					if !strings.Contains(string(output), injected.Error()) {
+						t.Errorf("original error missing: %s", output)
+					}
+					if wantSkip && !strings.Contains(string(output), "environment refused a socket") {
+						t.Errorf("skip reason missing: %s", output)
+					}
+				})
+			}
+		}
 	}
 }

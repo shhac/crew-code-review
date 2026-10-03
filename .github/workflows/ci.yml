@@ -8,6 +8,9 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      # CI must exercise the real occupied-port guard, never skip it.
+      CREW_CODE_REVIEW_TEST_NO_SKIP: "1"
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-go@v6
