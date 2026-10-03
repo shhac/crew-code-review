@@ -5,6 +5,8 @@
   // floors. The layer takes no pointer events, so nothing here can stand
   // between a person and a button.
   import { onMount } from 'svelte';
+  import { observePointer } from "../pointer";
+  import { sceneLoop } from "../lifecycle";
   import Geometry from '../Geometry.svelte';
   import { observeLayout } from '../layout';
   import { candleSpots, type CandleSpot } from '../candles';
@@ -80,52 +82,20 @@
   }
 
   onMount(() => {
-    const reduced = matchMedia('(prefers-reduced-motion: reduce)');
-    const loop = { frame: 0, last: 0, timer: 0 };
-    const tick = (now: number) => {
-      // Capped so a backgrounded tab does not come back to one giant leap.
-      advanceAll(Math.min(0.1, (now - loop.last) / 1000));
-      loop.last = now;
-      loop.frame = requestAnimationFrame(tick);
-    };
-    const startMotion = () => {
-      loop.last = performance.now();
-      loop.frame = requestAnimationFrame(tick);
-    };
-    // Without motion the spiders stay home, but the candles still have to
-    // follow their floors as the page scrolls and changes.
-    const startStill = () => {
-      crawlers = crawlers.map((c) => ({ ...c, pose: null }));
-      silk = [];
-      measure();
-      loop.timer = window.setInterval(measure, 1000);
-    };
-    const stop = () => {
-      cancelAnimationFrame(loop.frame);
-      clearInterval(loop.timer);
-    };
-    const restart = () => {
-      stop();
-      if (reduced.matches) startStill();
-      else startMotion();
-    };
-    const changed = () => {
-      dirty = true;
-      if (reduced.matches) {
-        cancelAnimationFrame(loop.frame);
-        loop.frame = requestAnimationFrame(measure);
-      }
-    };
+    let last = performance.now();
+    const loop = sceneLoop((now, reduced) => {
+      if (reduced) {
+        crawlers = crawlers.map((c) => ({ ...c, pose: null }));
+        silk = [];
+        measure();
+      } else advanceAll(Math.min(0.1, (now - last) / 1000));
+      last = now;
+    }, () => { dirty = true; pointer.at = -Infinity; last = performance.now(); });
+    const changed = () => { dirty = true; pointer.at = -Infinity; loop.invalidate(); };
     const stopObserving = observeLayout(changed);
-    reduced.addEventListener('change', restart);
-    addEventListener('pointermove', moved, { passive: true });
-    restart();
-    return () => {
-      stop();
-      reduced.removeEventListener('change', restart);
-      removeEventListener('pointermove', moved);
-      stopObserving();
-    };
+    const stopPointer = observePointer(moved, () => { pointer.at = -Infinity; });
+    const timer = window.setInterval(() => { if (matchMedia("(prefers-reduced-motion: reduce)").matches) changed(); }, 1000);
+    return () => { loop.stop(); stopPointer(); stopObserving(); clearInterval(timer); };
   });
 </script>
 

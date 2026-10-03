@@ -23,8 +23,10 @@
  </symbol>
  <symbol id="robin-flight" viewBox="0 0 128 112">
   <use href="#robin-base" width="128" height="112"/>
+  <g class="raised-wing">
   <path d="M51 59Q28 38 29 7Q50 15 72 47L74 62Z" fill="#7c6652"/>
   <path d="M35 17L58 47M34 28L53 51M37 39L49 56" stroke="#b59a77" stroke-width="2" stroke-linecap="round"/>
+  </g>
  </symbol>
  <symbol id="holly" viewBox="0 0 96 64">
   <path d="M45 34L13 9 15 22 3 24 16 33 9 45 29 43 35 54Z" fill="#466558"/>

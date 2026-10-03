@@ -6,6 +6,39 @@ const CARD_TOPS = 'main .surface, main .queue-board, main .context section, main
 // Page headings sit on a rule; the spider walks along the rule, not the text.
 const HEADING_RULES = 'main .hero, main .page-head';
 
+export type Obstacle = { left: number; right: number; top: number; bottom: number };
+const visibleBox = (r: Box) => r.width > 0 && r.height > 0 && [r.left, r.right, r.top, r.bottom].every(Number.isFinite);
+// Range rectangles follow rendered text (including wrapped lines), independent
+// of the element's tag. Container bounds would also block their empty space.
+export function measureRenderedText(doc: Document = document): Obstacle[] {
+  const main = doc.querySelector('main');
+  if (!main) return [];
+  const walker = doc.createTreeWalker(main, 4 /* NodeFilter.SHOW_TEXT */);
+  const range = doc.createRange();
+  const boxes: Obstacle[] = [];
+  for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+    const parent = node.parentElement;
+    if (!node.textContent?.trim() || !parent || parent.closest('script, style, template')) continue;
+    const style = getComputedStyle(parent);
+    if (style.visibility === 'hidden' || style.visibility === 'collapse' || style.display === 'none') continue;
+    range.selectNodeContents(node);
+    for (const r of Array.from(range.getClientRects())) {
+      if (visibleBox(r)) boxes.push({ left: r.left, right: r.right, top: r.top, bottom: r.bottom });
+    }
+  }
+  return boxes;
+}
+// Text and charts block birds even when they do not provide a ledge.
+export function measureObstacles(root: Page = document, text: () => readonly Obstacle[] = measureRenderedText): Obstacle[] {
+  const boxes = [...text()];
+  // Controls can paint values without DOM text nodes; retain their full bounds.
+  root.querySelectorAll(`${CARD_TOPS}, main svg, main canvas, main button, main input, main textarea, main select`).forEach((el) => {
+    const r = el.getBoundingClientRect();
+    if (visibleBox(r)) boxes.push(r);
+  });
+  return boxes;
+}
+
 const MIN_WIDTH = 120;
 // A nested card that starts where its parent does is the same edge twice.
 const SAME_EDGE = 8;

@@ -5,7 +5,8 @@ export type Sample = { x: number; depth: number };
 
 function eligible(f: Ledge, width: number, height: number, x: number): boolean {
   const px = f.left + x;
-  return f.walkable !== false && f.room >= 42 && f.y >= 42 && f.y <= height - 12
+  return [f.left, f.right, f.y, width, height, x].every(Number.isFinite)
+    && f.walkable !== false && f.room >= 42 && f.y >= 42 && f.y <= height - 12
     && x >= 24 && x <= f.right - f.left - 24 && px >= 24 && px <= width - 24;
 }
 
@@ -24,6 +25,7 @@ export function choosePerch(floors: ReadonlyMap<number, Ledge>, width: number, h
 
 // Local sampling keeps the seeded shape fixed when a ledge scrolls or resizes.
 export function snowProfile(id: number, floor: Ledge, foot?: number): Sample[] {
+  if (![floor.left, floor.right, floor.y].every(Number.isFinite) || Number.isNaN(floor.room)) return [];
   const end = floor.right - floor.left - 8;
   const cap = Math.min(floor.kind === 'heading' ? 3 : 7, 9, floor.room - 4);
   if (end <= 8 || cap < 1) return [];

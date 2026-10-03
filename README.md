@@ -519,10 +519,14 @@ For geometry checks, use `?theme=halloween&theme-debug=1`: blue lines mark
 walkable floors, purple lines mark walls, and orange lines mark tops with too
 little headroom for a spider. The overlay also passes clicks through.
 
-December uses quiet snow on measured card tops and heading rules, one perched
+December uses quiet snow on measured card tops and heading rules, one interactive
 robin and a small rail holly sprig. Preview with `?theme=christmas`; set
-`dashboard.theme=none` to opt out. The current scene is still, including under
-reduced motion; snow wiping and robin reactions are the dependent follow-up.
+`dashboard.theme=none` to opt out. Moving a mouse or hovering pen clears snow
+along the full stroke; it waits 1.5 seconds and recovers with a four-second
+half-life. The robin alerts to nearby movement and takes safe hops or flights
+away, never across cards, charts or text. Touch and contact gestures do nothing.
+Reduced motion shows seeded snow, a safe perched robin and holly, without
+interaction or animation. Scene state is ephemeral and never written to disk.
 Design and phase boundaries: [Christmas scene](design-docs/christmas/README.md).
 
 

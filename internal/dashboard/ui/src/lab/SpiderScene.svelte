@@ -11,6 +11,11 @@
   let theme = resolveTheme('halloween');
   let empty = false;
   let clicks = 0;
+  // Lab-only deterministic simulation; no daemon or API is involved.
+  let manual = new URLSearchParams(location.search).get('clock') === 'manual';
+  let elapsed = 0;
+  let randomValue = .5;
+  let blocked = false;
   $: markTheme(theme);
   import type { Ledge } from '../lib/theme/floors';
   import HalloweenLayer from '../lib/theme/halloween/HalloweenLayer.svelte';
@@ -80,6 +85,12 @@
       </div>
     </header>
     <div class="board">
+      {#if blocked && !empty}
+        {#each cards as c}
+          <svg class="route-blocker" aria-label="synthetic chart obstacle" width="12" height="60"
+            style="left: calc({c.left + c.width / 2}% - 6px); top: {c.top - 60}px"><text x="0" y="25">Chart</text></svg>
+        {/each}
+      {/if}
       {#each empty ? [] : cards as c}
         <section class="surface card" style="left: {c.left}%; top: {c.top}px; width: {c.width}%; height: {c.height}px">
           <h3>{c.label}</h3><button on:click={() => clicks++}>Click through {clicks}</button>
@@ -91,6 +102,15 @@
 <div class="controls">
   <label>theme <select bind:value={theme}><option>halloween</option><option>christmas</option><option>none</option></select></label>
   <label><input type="checkbox" bind:checked={empty} /> empty</label>
+  <label><input type="checkbox" bind:checked={blocked} /> blocked routes</label>
+  <label><input type="checkbox" bind:checked={manual} /> manual clock</label>
+  {#if manual}
+    <output data-scene-time>{elapsed}</output>
+    <button on:click={() => elapsed += 1000}>Advance 1s</button>
+    <button on:click={() => elapsed += 100}>Advance 100ms</button>
+    <button on:click={() => elapsed += 16000}>Advance 16s</button>
+    <label>random <input aria-label="random" type="number" min="0" max="1" step=".5" bind:value={randomValue} /></label>
+  {/if}
   <label>speed {timeScale}x <input type="range" min="0.1" max="2" step="0.1" bind:value={timeScale} /></label>
   <label>route
     <select bind:value={prefer}>
@@ -102,7 +122,7 @@
 {#if theme === 'halloween'}
 <HalloweenLayer {timeScale} prefer={prefer || undefined} bind:world bind:floors />
 {:else if theme === 'christmas'}
-<ChristmasLayer />
+{#key manual}<ChristmasLayer clock={() => manual ? elapsed : performance.now()} random={manual ? () => randomValue : Math.random} />{/key}
 {/if}
 {#if debug && theme === 'halloween'}
   <svg class="debug" width="100%" height="100%" aria-hidden="true">
@@ -123,6 +143,7 @@
   main { padding: 30px 60px; }
   .board { position: relative; height: 1100px; margin-top: 40px; }
   .card { position: absolute; background: var(--surface); padding: 14px 18px; box-sizing: border-box; }
+  .route-blocker { position: absolute; }
   .debug { position: fixed; inset: 0; z-index: 45; pointer-events: none; }
   .debug line { stroke: rgba(120, 200, 255, .7); stroke-dasharray: 4 3; }
   .debug text { fill: rgba(120, 200, 255, .9); font: 10px ui-monospace, monospace; }
@@ -133,5 +154,6 @@
   .controls {
     position: fixed; left: 60px; bottom: 16px; z-index: 60; display: flex; gap: 16px; align-items: center;
     padding: 8px 12px; border-radius: 8px; background: rgba(0, 0, 0, .75); font-size: 12px;
+    max-width: calc(100vw - 120px); flex-wrap: wrap;
   }
 </style>

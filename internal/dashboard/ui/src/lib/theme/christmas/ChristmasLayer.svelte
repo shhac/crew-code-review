@@ -1,29 +1,65 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { measureFloors, type Ledge } from '../floors';
+  import { measureFloors, measureObstacles, type Ledge } from '../floors';
   import Geometry from '../Geometry.svelte';
   import { observeLayout } from '../layout';
-  import { choosePerch, ROBIN, snowPath, snowProfile, type Perch } from './snow';
+  import { ROBIN, snowPath, snowProfile } from './snow';
+  import { pointerTracker, observePointer } from '../pointer';
+  import { sceneLoop } from '../lifecycle';
+  import { createBird, advanceBird, reconcileBird, birdPose, type Bird, type Scene } from './robin';
+  import { reconcileSnow, wipeSnow, renderSnow, type Snow } from './wipe';
   import robin from './robin-perch.svg';
+  import alert from './robin-alert.svg';
+  import flight from './robin-flight.svg?raw';
+
+  // Injected by the synthetic lab; the dashboard uses real elapsed time.
+  export let clock: () => number = () => performance.now();
+  export let random: () => number = Math.random;
 
   const debug = new URLSearchParams(location.search).get('theme-debug') === '1';
   let floors: ReadonlyMap<number, Ledge> = new Map();
-  let perch: Perch | null = null;
+  let scene: Scene = { floors, obstacles: [], width: 0, height: 0 };
+  let bird: Bird = createBird(scene, 0, random);
+  let snow: ReadonlyMap<number, Snow[]> = new Map();
+  let now = 0;
+  let reduced = false;
+  $: perch = bird.perch;
+  $: drawing = birdPose(bird, scene, now);
   onMount(() => {
-    let frame = 0;
-    let active = true;
-    const measure = () => {
-      frame = 0;
-      if (!active) return;
+    const pointer = pointerTracker();
+    let dirty = true, measuredAt = -Infinity, fresh = true;
+    const reset = () => { pointer.reset(); dirty = true; };
+    const measure = (time: number) => {
       floors = measureFloors();
-      perch = choosePerch(floors, innerWidth, innerHeight, perch);
+      scene = { floors, obstacles: measureObstacles(), width: innerWidth, height: innerHeight };
+      snow = reconcileSnow(floors, snow);
+      bird = fresh ? createBird(scene, time, random) : reconcileBird(bird, scene, time, random);
+      fresh = false; dirty = false; measuredAt = performance.now();
     };
-    const changed = () => { if (!frame && active) frame = requestAnimationFrame(measure); };
+    const loop = sceneLoop((_time, still) => {
+      now = clock();
+      if (still !== reduced) { reduced = still; snow = new Map(); reset(); }
+      if (dirty) measure(now);
+      bird = still ? { ...bird, action: null, alert: false } : advanceBird(bird, scene, now, random);
+    }, reset);
+    const changed = () => { reset(); loop.invalidate(); };
     const stopObserving = observeLayout(changed);
-    // Catches CSS-only changes as Halloween does, without a motion loop.
-    const timer = window.setInterval(changed, 1000);
-    measure();
-    return () => { active = false; stopObserving(); clearInterval(timer); cancelAnimationFrame(frame); };
+    const stopPointer = observePointer((e) => {
+      if (reduced || dirty || document.hidden) { pointer.reset(); return; }
+      const stroke = pointer.move(e, clock());
+      if (!stroke) return;
+      snow = wipeSnow(snow, floors, stroke);
+      bird = advanceBird(bird, scene, stroke.at, random, stroke);
+    }, pointer.reset);
+    // CSS-only changes need a measurement, but unchanged geometry must not
+    // cancel an action every second. Compare bounds before invalidating.
+    const timer = window.setInterval(() => {
+      if (document.hidden || performance.now() - measuredAt < 1000) return;
+      const next = measureFloors();
+      const obstacles = measureObstacles();
+      if (JSON.stringify([...next]) !== JSON.stringify([...floors]) || JSON.stringify(obstacles) !== JSON.stringify(scene.obstacles)) changed();
+    }, 1000);
+    return () => { loop.stop(); stopPointer(); stopObserving(); clearInterval(timer); };
   });
 </script>
 
@@ -31,17 +67,20 @@
   {#if debug}<Geometry {floors} />{/if}
   <svg width="100%" height="100%">
     {#each [...floors] as [id, f] (id)}
-      {@const samples = snowProfile(id, f, perch?.floor === id ? perch.x : undefined)}
+      {@const foot = !bird.action && perch?.floor === id ? perch.x : undefined}
+      {@const samples = reduced ? snowProfile(id, f, foot) : renderSnow(snow.get(id) ?? [], now, foot)}
       <g transform="translate({f.left} {f.y})">
         <path data-snow={id} d={snowPath(samples)} />
         <path class="shadow" d={snowPath(samples.map((s) => ({ ...s, depth: Math.min(.65, s.depth) })))} />
       </g>
     {/each}
   </svg>
-  {#if perch && floors.has(perch.floor)}
-    {@const f = floors.get(perch.floor)!}
-    <img class="robin" src={robin} alt="" width={ROBIN.width} height={ROBIN.height}
-      style="left: {f.left + perch.x - ROBIN.anchorX}px; top: {f.y - ROBIN.anchorY}px; transform: scaleX({perch.dir}); transform-origin: {ROBIN.anchorX}px {ROBIN.anchorY}px" />
+  {#if drawing}
+    <div class="robin" data-pose={drawing.pose}
+      style="left: {drawing.x - ROBIN.anchorX}px; top: {drawing.y - ROBIN.anchorY}px; width: {ROBIN.width}px; height: {ROBIN.height}px; transform: scaleX({drawing.dir}); transform-origin: {ROBIN.anchorX}px {ROBIN.anchorY}px; --wing: {drawing.wing}deg">
+      {#if drawing.pose === 'flight'}{@html flight}
+      {:else}<img src={drawing.pose === 'alert' ? alert : robin} alt="" width={ROBIN.width} height={ROBIN.height} />{/if}
+    </div>
   {/if}
 </div>
 
@@ -50,4 +89,6 @@
   path { fill: #eaf0ec; }
   .shadow { fill: #b9cbd0; }
   .robin { position: absolute; max-width: none; }
+  .robin :global(svg) { width: 100%; height: 100%; }
+  .robin :global(.raised-wing) { transform: rotate(var(--wing)); transform-origin: 64px 57px; }
 </style>
