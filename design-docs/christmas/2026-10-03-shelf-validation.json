@@ -1,0 +1,106 @@
+{
+  "results": [
+    {
+      "command": [
+        "go",
+        "vet",
+        "./..."
+      ],
+      "cwd": ".",
+      "exit_code": 0,
+      "output": ""
+    },
+    {
+      "command": [
+        "go",
+        "test",
+        "./..."
+      ],
+      "cwd": ".",
+      "exit_code": 0,
+      "output": "?   \tgithub.com/shhac/crew-code-review/cmd/crew-code-review\t[no test files]\nok  \tgithub.com/shhac/crew-code-review/internal/cli\t2.323s\nok  \tgithub.com/shhac/crew-code-review/internal/config\t0.462s\nok  \tgithub.com/shhac/crew-code-review/internal/dashboard\t0.351s\nok  \tgithub.com/shhac/crew-code-review/internal/discover\t2.049s\nok  \tgithub.com/shhac/crew-code-review/internal/docguard\t0.417s\nok  \tgithub.com/shhac/crew-code-review/internal/doctor\t1.153s\nok  \tgithub.com/shhac/crew-code-review/internal/logbuf\t(cached)\nok  \tgithub.com/shhac/crew-code-review/internal/pricing\t0.291s\nok  \tgithub.com/shhac/crew-code-review/internal/prref\t(cached)\nok  \tgithub.com/shhac/crew-code-review/internal/review\t1.801s\nok  \tgithub.com/shhac/crew-code-review/internal/scheduler\t1.059s\nok  \tgithub.com/shhac/crew-code-review/internal/score\t(cached)\nok  \tgithub.com/shhac/crew-code-review/internal/store\t1.420s\nok  \tgithub.com/shhac/crew-code-review/internal/usage\t(cached)\n"
+    },
+    {
+      "command": [
+        "npm",
+        "run",
+        "check"
+      ],
+      "cwd": "internal/dashboard/ui",
+      "exit_code": 0,
+      "output": "\n> check\n> svelte-check --threshold error\n\nLoading svelte-check in workspace: /Users/paul/.local/state/app.paulie.crew-assistant/projects/e7e4ad3aec8c876df82792f9/tasks/98b803c07f2aea1aa15d91a9/clone/internal/dashboard/ui\nGetting Svelte diagnostics...\n\n====================================\nsvelte-check found 0 errors and 3 warnings in 3 files\n"
+    },
+    {
+      "command": [
+        "npm",
+        "run",
+        "test"
+      ],
+      "cwd": "internal/dashboard/ui",
+      "exit_code": 0,
+      "output": "\n> test\n> vitest run\n\n7:38:21 PM [vite-plugin-svelte] no Svelte config found at /Users/paul/.local/state/app.paulie.crew-assistant/projects/e7e4ad3aec8c876df82792f9/tasks/98b803c07f2aea1aa15d91a9/clone/internal/dashboard/ui - using default configuration.\n\n RUN  v4.1.10 /Users/paul/.local/state/app.paulie.crew-assistant/projects/e7e4ad3aec8c876df82792f9/tasks/98b803c07f2aea1aa15d91a9/clone/internal/dashboard/ui\n\n\n Test Files  32 passed (32)\n      Tests  363 passed (363)\n   Start at  19:38:21\n   Duration  2.14s (transform 2.17s, setup 0ms, import 3.26s, tests 1.45s, environment 2ms)\n\n"
+    },
+    {
+      "command": [
+        "python3",
+        "-m",
+        "unittest",
+        "discover",
+        "-s",
+        "design-docs/christmas",
+        "-p",
+        "test_*.py"
+      ],
+      "cwd": ".",
+      "exit_code": 0,
+      "output": "..magick: unable to open image '/Users/paul/.local/state/app.paulie.crew-assistant/projects/e7e4ad3aec8c876df82792f9/tasks/98b803c07f2aea1aa15d91a9/clone/design-docs/christmas/missing.webp': No such file or directory @ error/blob.c/OpenBlob/3683.\nmagick: no decode delegate for this image format `/Users/paul/.local/state/app.paulie.crew-assistant/projects/e7e4ad3aec8c876df82792f9/tasks/98b803c07f2aea1aa15d91a9/clone/design-docs/christmas/validate-artwork.py' @ error/constitute.c/ReadImage/739.\n.......Saving file '/Users/paul/.local/state/app.paulie.crew-assistant/projects/e7e4ad3aec8c876df82792f9/tasks/98b803c07f2aea1aa15d91a9/clone/design-docs/christmas/tmp24hs9v9_/.shelf-y_xc_31_/tree.webp'\nFile:      /Users/paul/.local/state/app.paulie.crew-assistant/projects/e7e4ad3aec8c876df82792f9/tasks/98b803c07f2aea1aa15d91a9/clone/design-docs/christmas/tmp24hs9v9_/.shelf-y_xc_31_/tree.png\nDimension: 176 x 166\nOutput:    20016 bytes (5.48 bpp)\nLossless-ARGB compressed size: 20016 bytes\n  * Header size: 2673 bytes, image data size: 17317\n  * Lossless features used: PREDICTION CROSS-COLOR-TRANSFORM SUBTRACT-GREEN\n  * Precision Bits: histogram=2 prediction=2 cross-color=2 cache=0\nSaving file '/Users/paul/.local/state/app.paulie.crew-assistant/projects/e7e4ad3aec8c876df82792f9/tasks/98b803c07f2aea1aa15d91a9/clone/design-docs/christmas/tmp24hs9v9_/.shelf-w6hkqfe8/tree.webp'\nFile:      /Users/paul/.local/state/app.paulie.crew-assistant/projects/e7e4ad3aec8c876df82792f9/tasks/98b803c07f2aea1aa15d91a9/clone/design-docs/christmas/tmp24hs9v9_/.shelf-w6hkqfe8/tree.png\nDimension: 176 x 166\nOutput:    20016 bytes (5.48 bpp)\nLossless-ARGB compressed size: 20016 bytes\n  * Header size: 2673 bytes, image data size: 17317\n  * Lossless features used: PREDICTION CROSS-COLOR-TRANSFORM SUBTRACT-GREEN\n  * Precision Bits: histogram=2 prediction=2 cross-color=2 cache=0\nSaving file '/Users/paul/.local/state/app.paulie.crew-assistant/projects/e7e4ad3aec8c876df82792f9/tasks/98b803c07f2aea1aa15d91a9/clone/design-docs/christmas/tmp24hs9v9_/.shelf-w6hkqfe8/presents.webp'\nFile:      /Users/paul/.local/state/app.paulie.crew-assistant/projects/e7e4ad3aec8c876df82792f9/tasks/98b803c07f2aea1aa15d91a9/clone/design-docs/christmas/tmp24hs9v9_/.shelf-w6hkqfe8/presents.png\nDimension: 248 x 132\nOutput:    30086 bytes (7.35 bpp)\nLossless-ARGB compressed size: 30086 bytes\n  * Header size: 3656 bytes, image data size: 26404\n  * Lossless features used: PREDICTION CROSS-COLOR-TRANSFORM SUBTRACT-GREEN\n  * Precision Bits: histogram=2 prediction=2 cross-color=2 cache=0\nSaving file '/Users/paul/.local/state/app.paulie.crew-assistant/projects/e7e4ad3aec8c876df82792f9/tasks/98b803c07f2aea1aa15d91a9/clone/design-docs/christmas/tmp24hs9v9_/.shelf-6m4pt2w4/tree.webp'\nFile:      /Users/paul/.local/state/app.paulie.crew-assistant/projects/e7e4ad3aec8c876df82792f9/tasks/98b803c07f2aea1aa15d91a9/clone/design-docs/christmas/tmp24hs9v9_/.shelf-6m4pt2w4/tree.png\nDimension: 176 x 166\nOutput:    20016 bytes (5.48 bpp)\nLossless-ARGB compressed size: 20016 bytes\n  * Header size: 2673 bytes, image data size: 17317\n  * Lossless features used: PREDICTION CROSS-COLOR-TRANSFORM SUBTRACT-GREEN\n  * Precision Bits: histogram=2 prediction=2 cross-color=2 cache=0\nSaving file '/Users/paul/.local/state/app.paulie.crew-assistant/projects/e7e4ad3aec8c876df82792f9/tasks/98b803c07f2aea1aa15d91a9/clone/design-docs/christmas/tmp24hs9v9_/.shelf-6m4pt2w4/presents.webp'\nFile:      /Users/paul/.local/state/app.paulie.crew-assistant/projects/e7e4ad3aec8c876df82792f9/tasks/98b803c07f2aea1aa15d91a9/clone/design-docs/christmas/tmp24hs9v9_/.shelf-6m4pt2w4/presents.png\nDimension: 248 x 132\nOutput:    30086 bytes (7.35 bpp)\nLossless-ARGB compressed size: 30086 bytes\n  * Header size: 3656 bytes, image data size: 26404\n  * Lossless features used: PREDICTION CROSS-COLOR-TRANSFORM SUBTRACT-GREEN\n  * Precision Bits: histogram=2 prediction=2 cross-color=2 cache=0\n.magick: improper image header `/Users/paul/.local/state/app.paulie.crew-assistant/projects/e7e4ad3aec8c876df82792f9/tasks/98b803c07f2aea1aa15d91a9/clone/design-docs/christmas/tmp2oopk6sa/invalid.png' @ error/png.c/ReadPNGImage/3956.\nmagick: unable to open image '/Users/paul/.local/state/app.paulie.crew-assistant/projects/e7e4ad3aec8c876df82792f9/tasks/98b803c07f2aea1aa15d91a9/clone/design-docs/christmas/tmp2oopk6sa/invalid.png': No such file or directory @ error/blob.c/OpenBlob/3683.\n...\n----------------------------------------------------------------------\nRan 13 tests in 9.199s\n\nOK\n"
+    },
+    {
+      "command": [
+        "make",
+        "dashboard"
+      ],
+      "cwd": ".",
+      "exit_code": 0,
+      "output": "npm --prefix internal/dashboard/ui run build\n\n> build\n> node scripts/clean-assets.mjs && vite build\n\n7:38:34 PM [vite-plugin-svelte] no Svelte config found at /Users/paul/.local/state/app.paulie.crew-assistant/projects/e7e4ad3aec8c876df82792f9/tasks/98b803c07f2aea1aa15d91a9/clone/internal/dashboard/ui - using default configuration.\nvite v7.3.6 building client environment for production...\ntransforming...\n\u2713 223 modules transformed.\nrendering chunks...\ncomputing gzip size...\n../assets/index.html                             0.51 kB \u2502 gzip:  0.31 kB\n../assets/assets/robin-flight-BabkmBad.webp      8.10 kB\n../assets/assets/robin-perch-CbkXcmr6.webp       8.55 kB\n../assets/assets/robin-alert-B_yn_CEB.webp       8.68 kB\n../assets/assets/candles-BZ4zc9nm.webp          13.59 kB\n../assets/assets/tree-ydsWHMp9.webp             20.02 kB\n../assets/assets/pumpkins-Bc_YxEAv.webp         22.23 kB\n../assets/assets/spider-hanging-B6aprlkR.webp   26.45 kB\n../assets/assets/presents-B68Ob9Cx.webp         30.09 kB\n../assets/assets/index-C31E82hT.css             51.60 kB \u2502 gzip: 11.05 kB\n../assets/assets/index-BAxmnQ1c.js             231.55 kB \u2502 gzip: 94.43 kB\n\u2713 built in 948ms\n7:38:34 PM [vite-plugin-svelte] src/routes/History.svelte:145:12 Non-interactive element `<p>` cannot have interactive role 'button'\nhttps://svelte.dev/e/a11y_no_noninteractive_element_to_interactive_role\n143:           {@const open = expanded.has(rowKey(r))}\n144:           <div class=\"review-row-wrap\" class:open>\n145:             <p\n                   ^\n146:               class=\"review-row\"\n147:               role=\"button\"\n7:38:34 PM [vite-plugin-svelte] src/routes/Metrics.svelte:86:10 noninteractive element cannot have nonnegative tabIndex value\nhttps://svelte.dev/e/a11y_no_noninteractive_tabindex\n84:           {@const open = expandedModels.has(modelKey(row))}\n85:           {@const splits = row.versions.length > 1}\n86:           <p\n                ^\n87:             class=\"metric-row\"\n88:             class:open\n7:38:34 PM [vite-plugin-svelte] src/lib/RosterTable.svelte:70:8 Non-interactive element `<p>` cannot have interactive role 'button'\nhttps://svelte.dev/e/a11y_no_noninteractive_element_to_interactive_role\n68:       <p class=\"authors-head\"><b>Repo</b><b>GitHub</b><b>Group</b><b>Gets</b><b>Name</b></p>\n69:       {#each visibleAuthors as a}\n70:         <p\n              ^\n71:           class=\"author-row\"\n72:           class:open={expanded.has(rowKey(a))}\n",
+      "bundle_sha256": {
+        "assets/candles-BZ4zc9nm.webp": "24095eae5200d772d22760625d2ac849788479143c11be499dd701641ee6c20b",
+        "assets/index-BAxmnQ1c.js": "7007d6b3070b590cd0048b451d027895c7349cc275828d13ef5218f3c6cf5124",
+        "assets/index-C31E82hT.css": "41e5c41c38c2092001a309b476e5c4dd231ec47742ad461c4e847cff765d0c0a",
+        "assets/presents-B68Ob9Cx.webp": "86474f16a3e99c3c9741c08873c5b6103255fc1c30ce101062dc8e2d4533b7e4",
+        "assets/pumpkins-Bc_YxEAv.webp": "1203afec8b4510d8c4bef3bb8558a2eb3289d5b15581d716a4c3004e95c9f58b",
+        "assets/robin-alert-B_yn_CEB.webp": "ce2d4a92c681cefac50433babf78db7649a8e329c2b37d3d320dc0cef9a8f286",
+        "assets/robin-flight-BabkmBad.webp": "62af46ccdaf7565beddd2fdf3a655d616b1bed7d0ab07fa5ee12242fda0b9826",
+        "assets/robin-perch-CbkXcmr6.webp": "e9d871e3f720fe55bf70fc40991e8dcc82a67514889038785d67e53e9a79237a",
+        "assets/spider-hanging-B6aprlkR.webp": "71f4b6f47908c3959016ed1c83b875e690629ad68f690ec7c15506c87f6dbe7c",
+        "assets/tree-ydsWHMp9.webp": "2ce89fb41a3736fff17c0500ffdeaf26f484a39be9abbfb38d4586d6cb15443a",
+        "index.html": "bbe044b92676f4be699e1cc4ec487315ae0f3ca8f1ba58637602177df6cc77c1",
+        "mascot.webp": "d6cbd86f5854e47a1a0a16184800ae07e1d40b5ffcc36c0aaee07ef3599f2537"
+      }
+    },
+    {
+      "command": [
+        "make",
+        "dashboard"
+      ],
+      "cwd": ".",
+      "exit_code": 0,
+      "output": "npm --prefix internal/dashboard/ui run build\n\n> build\n> node scripts/clean-assets.mjs && vite build\n\n7:38:36 PM [vite-plugin-svelte] no Svelte config found at /Users/paul/.local/state/app.paulie.crew-assistant/projects/e7e4ad3aec8c876df82792f9/tasks/98b803c07f2aea1aa15d91a9/clone/internal/dashboard/ui - using default configuration.\nvite v7.3.6 building client environment for production...\ntransforming...\n\u2713 223 modules transformed.\nrendering chunks...\ncomputing gzip size...\n../assets/index.html                             0.51 kB \u2502 gzip:  0.31 kB\n../assets/assets/robin-flight-BabkmBad.webp      8.10 kB\n../assets/assets/robin-perch-CbkXcmr6.webp       8.55 kB\n../assets/assets/robin-alert-B_yn_CEB.webp       8.68 kB\n../assets/assets/candles-BZ4zc9nm.webp          13.59 kB\n../assets/assets/tree-ydsWHMp9.webp             20.02 kB\n../assets/assets/pumpkins-Bc_YxEAv.webp         22.23 kB\n../assets/assets/spider-hanging-B6aprlkR.webp   26.45 kB\n../assets/assets/presents-B68Ob9Cx.webp         30.09 kB\n../assets/assets/index-C31E82hT.css             51.60 kB \u2502 gzip: 11.05 kB\n../assets/assets/index-BAxmnQ1c.js             231.55 kB \u2502 gzip: 94.43 kB\n\u2713 built in 924ms\n7:38:36 PM [vite-plugin-svelte] src/routes/History.svelte:145:12 Non-interactive element `<p>` cannot have interactive role 'button'\nhttps://svelte.dev/e/a11y_no_noninteractive_element_to_interactive_role\n143:           {@const open = expanded.has(rowKey(r))}\n144:           <div class=\"review-row-wrap\" class:open>\n145:             <p\n                   ^\n146:               class=\"review-row\"\n147:               role=\"button\"\n7:38:36 PM [vite-plugin-svelte] src/routes/Metrics.svelte:86:10 noninteractive element cannot have nonnegative tabIndex value\nhttps://svelte.dev/e/a11y_no_noninteractive_tabindex\n84:           {@const open = expandedModels.has(modelKey(row))}\n85:           {@const splits = row.versions.length > 1}\n86:           <p\n                ^\n87:             class=\"metric-row\"\n88:             class:open\n7:38:36 PM [vite-plugin-svelte] src/lib/RosterTable.svelte:70:8 Non-interactive element `<p>` cannot have interactive role 'button'\nhttps://svelte.dev/e/a11y_no_noninteractive_element_to_interactive_role\n68:       <p class=\"authors-head\"><b>Repo</b><b>GitHub</b><b>Group</b><b>Gets</b><b>Name</b></p>\n69:       {#each visibleAuthors as a}\n70:         <p\n              ^\n71:           class=\"author-row\"\n72:           class:open={expanded.has(rowKey(a))}\n",
+      "bundle_sha256": {
+        "assets/candles-BZ4zc9nm.webp": "24095eae5200d772d22760625d2ac849788479143c11be499dd701641ee6c20b",
+        "assets/index-BAxmnQ1c.js": "7007d6b3070b590cd0048b451d027895c7349cc275828d13ef5218f3c6cf5124",
+        "assets/index-C31E82hT.css": "41e5c41c38c2092001a309b476e5c4dd231ec47742ad461c4e847cff765d0c0a",
+        "assets/presents-B68Ob9Cx.webp": "86474f16a3e99c3c9741c08873c5b6103255fc1c30ce101062dc8e2d4533b7e4",
+        "assets/pumpkins-Bc_YxEAv.webp": "1203afec8b4510d8c4bef3bb8558a2eb3289d5b15581d716a4c3004e95c9f58b",
+        "assets/robin-alert-B_yn_CEB.webp": "ce2d4a92c681cefac50433babf78db7649a8e329c2b37d3d320dc0cef9a8f286",
+        "assets/robin-flight-BabkmBad.webp": "62af46ccdaf7565beddd2fdf3a655d616b1bed7d0ab07fa5ee12242fda0b9826",
+        "assets/robin-perch-CbkXcmr6.webp": "e9d871e3f720fe55bf70fc40991e8dcc82a67514889038785d67e53e9a79237a",
+        "assets/spider-hanging-B6aprlkR.webp": "71f4b6f47908c3959016ed1c83b875e690629ad68f690ec7c15506c87f6dbe7c",
+        "assets/tree-ydsWHMp9.webp": "2ce89fb41a3736fff17c0500ffdeaf26f484a39be9abbfb38d4586d6cb15443a",
+        "index.html": "bbe044b92676f4be699e1cc4ec487315ae0f3ca8f1ba58637602177df6cc77c1",
+        "mascot.webp": "d6cbd86f5854e47a1a0a16184800ae07e1d40b5ffcc36c0aaee07ef3599f2537"
+      }
+    }
+  ],
+  "two_builds_identical": true
+}

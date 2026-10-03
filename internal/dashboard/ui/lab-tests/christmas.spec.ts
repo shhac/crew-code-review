@@ -60,7 +60,7 @@ for (const width of [1440, 480]) {
     await page.goto('/lab/scene.html?theme=christmas');
     await expect(page.locator('[data-christmas]')).toHaveCount(1);
     await expect(page.locator('.robin')).toHaveCount(1);
-    await expect(page.locator('.christmas-shelf img')).toHaveCount(1);
+    await expect(page.locator('.christmas-shelf img')).toHaveCount(2);
     if (width > 760) await expect(page.locator('.christmas-shelf')).toBeVisible();
     else await expect(page.locator('.christmas-shelf')).toBeHidden();
     const bounds = await page.locator('[data-snow]').evaluateAll((els) => els.map((el) => {

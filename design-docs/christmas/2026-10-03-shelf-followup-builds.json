@@ -1,0 +1,35 @@
+{
+  "first_build_exit_code": 0,
+  "first_build_sha256": {
+    "assets/candles-BZ4zc9nm.webp": "24095eae5200d772d22760625d2ac849788479143c11be499dd701641ee6c20b",
+    "assets/index-BAxmnQ1c.js": "7007d6b3070b590cd0048b451d027895c7349cc275828d13ef5218f3c6cf5124",
+    "assets/index-C31E82hT.css": "41e5c41c38c2092001a309b476e5c4dd231ec47742ad461c4e847cff765d0c0a",
+    "assets/presents-B68Ob9Cx.webp": "86474f16a3e99c3c9741c08873c5b6103255fc1c30ce101062dc8e2d4533b7e4",
+    "assets/pumpkins-Bc_YxEAv.webp": "1203afec8b4510d8c4bef3bb8558a2eb3289d5b15581d716a4c3004e95c9f58b",
+    "assets/robin-alert-B_yn_CEB.webp": "ce2d4a92c681cefac50433babf78db7649a8e329c2b37d3d320dc0cef9a8f286",
+    "assets/robin-flight-BabkmBad.webp": "62af46ccdaf7565beddd2fdf3a655d616b1bed7d0ab07fa5ee12242fda0b9826",
+    "assets/robin-perch-CbkXcmr6.webp": "e9d871e3f720fe55bf70fc40991e8dcc82a67514889038785d67e53e9a79237a",
+    "assets/spider-hanging-B6aprlkR.webp": "71f4b6f47908c3959016ed1c83b875e690629ad68f690ec7c15506c87f6dbe7c",
+    "assets/tree-ydsWHMp9.webp": "2ce89fb41a3736fff17c0500ffdeaf26f484a39be9abbfb38d4586d6cb15443a",
+    "index.html": "bbe044b92676f4be699e1cc4ec487315ae0f3ca8f1ba58637602177df6cc77c1",
+    "mascot.webp": "d6cbd86f5854e47a1a0a16184800ae07e1d40b5ffcc36c0aaee07ef3599f2537"
+  },
+  "second_build_exit_code": 0,
+  "second_build_output": "npm --prefix internal/dashboard/ui run build\n\n> build\n> node scripts/clean-assets.mjs && vite build\n\n8:04:52 PM [vite-plugin-svelte] no Svelte config found at /Users/paul/.local/state/app.paulie.crew-assistant/projects/e7e4ad3aec8c876df82792f9/tasks/98b803c07f2aea1aa15d91a9/clone/internal/dashboard/ui - using default configuration.\nvite v7.3.6 building client environment for production...\ntransforming...\n\u2713 223 modules transformed.\nrendering chunks...\ncomputing gzip size...\n../assets/index.html                             0.51 kB \u2502 gzip:  0.31 kB\n../assets/assets/robin-flight-BabkmBad.webp      8.10 kB\n../assets/assets/robin-perch-CbkXcmr6.webp       8.55 kB\n../assets/assets/robin-alert-B_yn_CEB.webp       8.68 kB\n../assets/assets/candles-BZ4zc9nm.webp          13.59 kB\n../assets/assets/tree-ydsWHMp9.webp             20.02 kB\n../assets/assets/pumpkins-Bc_YxEAv.webp         22.23 kB\n../assets/assets/spider-hanging-B6aprlkR.webp   26.45 kB\n../assets/assets/presents-B68Ob9Cx.webp         30.09 kB\n../assets/assets/index-C31E82hT.css             51.60 kB \u2502 gzip: 11.03 kB\n../assets/assets/index-BAxmnQ1c.js             231.55 kB \u2502 gzip: 95.51 kB\n\u2713 built in 7.96s\n8:04:53 PM [vite-plugin-svelte] src/routes/History.svelte:145:12 Non-interactive element `<p>` cannot have interactive role 'button'\nhttps://svelte.dev/e/a11y_no_noninteractive_element_to_interactive_role\n143:           {@const open = expanded.has(rowKey(r))}\n144:           <div class=\"review-row-wrap\" class:open>\n145:             <p\n                   ^\n146:               class=\"review-row\"\n147:               role=\"button\"\n8:04:53 PM [vite-plugin-svelte] src/routes/Metrics.svelte:86:10 noninteractive element cannot have nonnegative tabIndex value\nhttps://svelte.dev/e/a11y_no_noninteractive_tabindex\n84:           {@const open = expandedModels.has(modelKey(row))}\n85:           {@const splits = row.versions.length > 1}\n86:           <p\n                ^\n87:             class=\"metric-row\"\n88:             class:open\n8:04:56 PM [vite-plugin-svelte] src/lib/RosterTable.svelte:70:8 Non-interactive element `<p>` cannot have interactive role 'button'\nhttps://svelte.dev/e/a11y_no_noninteractive_element_to_interactive_role\n68:       <p class=\"authors-head\"><b>Repo</b><b>GitHub</b><b>Group</b><b>Gets</b><b>Name</b></p>\n69:       {#each visibleAuthors as a}\n70:         <p\n              ^\n71:           class=\"author-row\"\n72:           class:open={expanded.has(rowKey(a))}\n",
+  "second_build_sha256": {
+    "assets/candles-BZ4zc9nm.webp": "24095eae5200d772d22760625d2ac849788479143c11be499dd701641ee6c20b",
+    "assets/index-BAxmnQ1c.js": "7007d6b3070b590cd0048b451d027895c7349cc275828d13ef5218f3c6cf5124",
+    "assets/index-C31E82hT.css": "41e5c41c38c2092001a309b476e5c4dd231ec47742ad461c4e847cff765d0c0a",
+    "assets/presents-B68Ob9Cx.webp": "86474f16a3e99c3c9741c08873c5b6103255fc1c30ce101062dc8e2d4533b7e4",
+    "assets/pumpkins-Bc_YxEAv.webp": "1203afec8b4510d8c4bef3bb8558a2eb3289d5b15581d716a4c3004e95c9f58b",
+    "assets/robin-alert-B_yn_CEB.webp": "ce2d4a92c681cefac50433babf78db7649a8e329c2b37d3d320dc0cef9a8f286",
+    "assets/robin-flight-BabkmBad.webp": "62af46ccdaf7565beddd2fdf3a655d616b1bed7d0ab07fa5ee12242fda0b9826",
+    "assets/robin-perch-CbkXcmr6.webp": "e9d871e3f720fe55bf70fc40991e8dcc82a67514889038785d67e53e9a79237a",
+    "assets/spider-hanging-B6aprlkR.webp": "71f4b6f47908c3959016ed1c83b875e690629ad68f690ec7c15506c87f6dbe7c",
+    "assets/tree-ydsWHMp9.webp": "2ce89fb41a3736fff17c0500ffdeaf26f484a39be9abbfb38d4586d6cb15443a",
+    "index.html": "bbe044b92676f4be699e1cc4ec487315ae0f3ca8f1ba58637602177df6cc77c1",
+    "mascot.webp": "d6cbd86f5854e47a1a0a16184800ae07e1d40b5ffcc36c0aaee07ef3599f2537"
+  },
+  "two_builds_identical": true,
+  "matches_owner_accepted_draft_bundle": true
+}

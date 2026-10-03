@@ -25,10 +25,18 @@
 .rail .viewer-chip { margin-top: auto; }
 /* A seasonal shelf (lib/theme) sits on the chip, so it takes the auto margin
    instead; it is only shown where the rail has room to spare. */
-.rail .theme-shelf { margin-top: auto; }
+/* When the rail is just above the hide boundary, let the footer allocation
+   shrink instead of pushing the identity down. Keep full-sized art on the
+   bottom of that allocation, above the chip rather than overflowing onto it. */
+.rail .theme-shelf { margin-top: auto; min-height: 0; align-items: flex-end; }
 .rail .theme-shelf + .viewer-chip { margin-top: 0; }
 /* .shell raises it over the shelf's own scoped display rule. */
-@media (max-height: 640px), (max-width: 760px) { .shell .rail .theme-shelf { display: none; } }
+@media (max-height: 640px), (max-width: 760px) {
+  .shell .rail .theme-shelf { display: none; }
+  /* A hidden shelf cannot own the footer's free space. Return it to the
+     identity chip, exactly as when no seasonal shelf is mounted. */
+  .shell .rail .theme-shelf + .viewer-chip { margin-top: auto; }
+}
 
 .feed {
   display: grid; grid-template-columns: auto 1fr; gap: 2px 8px; align-items: center;

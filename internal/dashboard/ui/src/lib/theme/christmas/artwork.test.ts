@@ -43,7 +43,30 @@ it('replaces every layer use while retaining the existing outer registration and
   expect(ROBIN.anchorX).toBeCloseTo(22.4);
   expect(ROBIN.anchorY).toBe(35);
   const { body } = render(ChristmasShelf);
-  expect(body).toContain('holly.webp');
+  expect(body).toContain('tree.webp');
+  expect(body).toContain('presents.webp');
   expect(body).toContain('theme-shelf christmas-shelf');
-  expect(body).toContain('width="48" height="32"');
+  expect(body).toContain('width="88" height="83"');
+  expect(body).toContain('width="124" height="66"');
+  expect(body.match(/class="fairy-light /g)).toHaveLength(7);
+  expect(body).toContain('aria-hidden="true"');
+  expect(body.match(/alt=""/g)).toHaveLength(2);
+});
+
+it('twinkles only opacity and leaves steady click-through lights under reduced motion', () => {
+  const source = readFileSync(new URL('./ChristmasShelf.svelte', import.meta.url), 'utf8');
+  const css = compile(source, { filename: 'ChristmasShelf.svelte', generate: 'server' }).css?.code ?? '';
+  expect(css).toMatch(/@keyframes[^}]+\{\s*from\s*\{\s*opacity:\s*\.35;?\s*\}\s*to\s*\{\s*opacity:\s*\.70/);
+  expect(css).toMatch(/prefers-reduced-motion:\s*reduce[^}]+animation:\s*none;\s*opacity:\s*\.5/);
+  expect(css).toContain('pointer-events: none');
+  expect(css).toMatch(/\.christmas-shelf[^}]*pointer-events:\s*none/);
+  expect(css).toMatch(/\.fairy-light[^}]*pointer-events:\s*none/);
+  expect(css).toMatch(/\.shelf-stage[^}]*width:\s*192px;\s*height:\s*83px/);
+  expect(css).toMatch(/\.presents[^}]*left:\s*68px;\s*top:\s*17px/);
+  expect(render(ChristmasShelf).body).not.toMatch(/tabindex|<button|<a\b/);
+});
+
+it('retains the shared desktop rail visibility boundaries', () => {
+  const shell = readFileSync(new URL('../../../styles/shell.css', import.meta.url), 'utf8');
+  expect(shell).toMatch(/@media\s*\(max-height:\s*640px\),\s*\(max-width:\s*760px\)\s*\{\s*\.shell \.rail \.theme-shelf\s*\{\s*display:\s*none/);
 });

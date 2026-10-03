@@ -1,0 +1,127 @@
+{
+  "source_sha256": "f7303d27bca1cae483f35e978aa101ae5996e40625bdecec36c8ba4b150f4dc7",
+  "commands": [
+    [
+      "magick",
+      "/Users/paul/.local/state/app.paulie.crew-assistant/projects/e7e4ad3aec8c876df82792f9/tasks/98b803c07f2aea1aa15d91a9/clone/design-docs/christmas/originals/christmas-shelf-generated-original.png",
+      "-crop",
+      "784x784+60+60",
+      "+repage",
+      "-colorspace",
+      "sRGB",
+      "-virtual-pixel",
+      "transparent",
+      "-filter",
+      "Triangle",
+      "-define",
+      "distort:viewport=176x166+0+0",
+      "+distort",
+      "AffineProjection",
+      "0.21173469387755103,0,0,0.21173469387755103,5,0",
+      "-depth",
+      "8",
+      "-strip",
+      "-define",
+      "png:color-type=6",
+      "/Users/paul/.local/state/app.paulie.crew-assistant/projects/e7e4ad3aec8c876df82792f9/tasks/98b803c07f2aea1aa15d91a9/clone/design-docs/christmas/.shelf-7fu9y0wr/tree.png"
+    ],
+    [
+      "cwebp",
+      "-lossless",
+      "-q",
+      "100",
+      "-m",
+      "6",
+      "-exact",
+      "-metadata",
+      "none",
+      "/Users/paul/.local/state/app.paulie.crew-assistant/projects/e7e4ad3aec8c876df82792f9/tasks/98b803c07f2aea1aa15d91a9/clone/design-docs/christmas/.shelf-7fu9y0wr/tree.png",
+      "-o",
+      "/Users/paul/.local/state/app.paulie.crew-assistant/projects/e7e4ad3aec8c876df82792f9/tasks/98b803c07f2aea1aa15d91a9/clone/design-docs/christmas/.shelf-7fu9y0wr/tree.webp"
+    ],
+    [
+      "magick",
+      "/Users/paul/.local/state/app.paulie.crew-assistant/projects/e7e4ad3aec8c876df82792f9/tasks/98b803c07f2aea1aa15d91a9/clone/design-docs/christmas/originals/christmas-shelf-generated-original.png",
+      "-crop",
+      "832x456+900+364",
+      "+repage",
+      "-colorspace",
+      "sRGB",
+      "-virtual-pixel",
+      "transparent",
+      "-filter",
+      "Triangle",
+      "-define",
+      "distort:viewport=248x132+0+0",
+      "+distort",
+      "AffineProjection",
+      "0.2894736842105263,0,0,0.2894736842105263,3.578947368421055,0",
+      "-depth",
+      "8",
+      "-strip",
+      "-define",
+      "png:color-type=6",
+      "/Users/paul/.local/state/app.paulie.crew-assistant/projects/e7e4ad3aec8c876df82792f9/tasks/98b803c07f2aea1aa15d91a9/clone/design-docs/christmas/.shelf-7fu9y0wr/presents.png"
+    ],
+    [
+      "cwebp",
+      "-lossless",
+      "-q",
+      "100",
+      "-m",
+      "6",
+      "-exact",
+      "-metadata",
+      "none",
+      "/Users/paul/.local/state/app.paulie.crew-assistant/projects/e7e4ad3aec8c876df82792f9/tasks/98b803c07f2aea1aa15d91a9/clone/design-docs/christmas/.shelf-7fu9y0wr/presents.png",
+      "-o",
+      "/Users/paul/.local/state/app.paulie.crew-assistant/projects/e7e4ad3aec8c876df82792f9/tasks/98b803c07f2aea1aa15d91a9/clone/design-docs/christmas/.shelf-7fu9y0wr/presents.webp"
+    ]
+  ],
+  "bulbs_native": [
+    [
+      54.85,
+      71.21
+    ],
+    [
+      79.47,
+      66.83
+    ],
+    [
+      102.54,
+      55.92
+    ],
+    [
+      68.32,
+      94.95
+    ],
+    [
+      101.25,
+      102.75
+    ],
+    [
+      127.55,
+      103.67
+    ],
+    [
+      79.79,
+      127.36
+    ]
+  ],
+  "anchors": {
+    "tree": [
+      88,
+      166
+    ],
+    "presents": [
+      124,
+      132
+    ]
+  },
+  "outputs": {
+    "tree.webp": "2ce89fb41a3736fff17c0500ffdeaf26f484a39be9abbfb38d4586d6cb15443a",
+    "presents.png": "b939f30be2ba2ce636ca1115387f7b5aad331cc63efc954e0762ff682cc68ba9",
+    "tree.png": "7ee9bd0d4e1666f9949ec2111dfc993d9dbf72785a10cea5d4b1e54f650a6652",
+    "presents.webp": "86474f16a3e99c3c9741c08873c5b6103255fc1c30ce101062dc8e2d4533b7e4"
+  }
+}

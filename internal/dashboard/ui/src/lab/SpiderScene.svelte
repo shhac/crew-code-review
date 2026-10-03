@@ -5,10 +5,12 @@
   // (a jump up), and one running past the bottom of the window (a way out).
   import ChristmasLayer from '../lib/theme/christmas/ChristmasLayer.svelte';
   import ChristmasShelf from '../lib/theme/christmas/ChristmasShelf.svelte';
+  import LegacyChristmasShelf from './LegacyChristmasShelf.svelte';
   import HalloweenShelf from '../lib/theme/halloween/HalloweenShelf.svelte';
   import ViewerChip from '../lib/ViewerChip.svelte';
   import { markTheme, resolveTheme } from '../lib/theme/theme';
   let theme = resolveTheme('halloween');
+  const legacyShelf = new URLSearchParams(location.search).get('shelf') === 'holly';
   let empty = false;
   let clicks = 0;
   // Lab-only deterministic simulation; no daemon or API is involved.
@@ -72,7 +74,7 @@
     {#if theme === 'halloween'}
       <HalloweenShelf />
     {:else if theme === 'christmas'}
-      <ChristmasShelf />
+      {#if legacyShelf}<LegacyChristmasShelf />{:else}<ChristmasShelf />{/if}
     {/if}
     <ViewerChip />
     <div class="feed"><span class="signal"></span><span>synthetic</span><small>no daemon connection</small></div>

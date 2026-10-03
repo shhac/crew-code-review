@@ -13,6 +13,10 @@ release
 .tmp
 .ai-cache
 
+# Python tooling byproducts
+__pycache__/
+*.pyc
+
 # runtime data (local DuckDB store)
 *.duckdb
 *.duckdb.wal

@@ -1,0 +1,33 @@
+# Christmas shelf implementation evidence, 2026-10-03
+
+As of this task branch, the supplied design 1 was implemented without new generation. Version pin: source and output SHA-256 values in `2026-10-03-shelf-manifest.json`; code-internal changes, no release version. No commit was created or read because this task prohibited touching `.git`. Juniper's actual generation prompt, failed first reference-path attempt and successful generation were preserved verbatim in `references/christmas-shelf-design-and-provenance.md`. The supplied original PNG was copied byte-for-byte into `originals/christmas-shelf-generated-original.png`.
+
+## Source and alignment
+
+The original hash was `f7303d27bca1cae483f35e978aa101ae5996e40625bdecec36c8ba4b150f4dc7`. ImageMagick identified 1774×887, sRGB, TrueColorAlpha, four 8-bit channels, gamma 0.454545, RGBA PNG color type 6. Decoding found genuine transparent and partial-alpha pixels. Nonzero alpha bounds were tree `(68,71)` through `(840,817)`, presents `(908,376)` through `(1726,808)` (inclusive). The provisional tree crop was rejected before encoding because it clipped nonzero alpha. No threshold was used to discard faint outlines.
+
+Executed `python3 design-docs/christmas/export-shelf.py`. The exporter used ImageMagick **7.1.2-32 Q16-HDRI** EWA Triangle affine distortion: alpha-weighted (premultiplied) filtering returning straight RGBA, matching CCR-4. The tree source square became `(60,60,784,784)`, uniformly scaled by `166/784`, translated by `(5,0)` onto 176×166. Presents used `(900,364,832,456)`, scaled by `132/456`, horizontally centered on 248×132. These larger source canvases retained antialiased outlines and transparent margins; they did not trim or redraw the artwork. Rendered cells remained 88×83 and 124×66, with presents at `(68,17)`, common cell baseline 83 and a 192×83 stage plus existing 22px padding.
+
+WebPs were encoded with **cwebp 1.6.0**, `-lossless -q 100 -m 6 -exact -metadata none`. Complete executed command arrays and canonical/runtime hashes were captured in the shelf manifest. Canonical PNGs and decoded WebPs matched byte-for-byte in sRGB RGBA, including RGB under zero alpha. No existing robin or holly output was regenerated. The tree WebP was 20,016 bytes; presents was 30,086 bytes.
+
+All three actual style-reference hashes matched Juniper's supplied record: candles `24095eae5200d772d22760625d2ac849788479143c11be499dd701641ee6c20b`, pumpkins `1203afec8b4510d8c4bef3bb8558a2eb3289d5b15581d716a4c3004e95c9f58b`, aligned robin-perch `c3c6207d945d149a9b9728c66bc16ac430bf527c732cc8b92bfea25811fc4e82`. Preserved provenance Markdown hash: `cd5f4ba18c045957061a3919c727cd03057d61b9d32ea6a5794fb358a9b6823b`; composition SVG hash: `1161d1c981c0453d669559968408924c4b7d4b29fcc20aec49fef585f1a898a3`.
+
+## Bulb measurements
+
+Canonical bright-core centroids were `(54.85,71.21)`, `(79.47,66.83)`, `(102.54,55.92)`, `(68.32,94.95)`, `(101.25,102.75)`, `(127.55,103.67)`, `(79.79,127.36)`. Measurement selected pixels within four native pixels of each transformed provisional center, with R>225, G>205, B>145 and A>240, then averaged their coordinates and rounded to two decimals. `test_shelf.py` reproduced those measurements. The light positions used half those coordinates at rendered size. Every 8px halo ended before the foreground presents cell's x=68 boundary.
+
+`2026-10-03-shelf-bulb-overlay.svg` referenced the actual canonical PNGs and marked each halo envelope. This was offline diagnostic evidence, **not browser or owner acceptance**. CSS animated opacity .35–.70 only with Juniper's seven beats/delays; reduced motion used no animation and opacity .5. No timers, persisted state, model changes or API calls were added.
+
+## Export failure and recovery
+
+Candidates were processed in unique repository-local staging directories. Wrong tool versions, source hash changes, clipping, invalid alpha, wrong dimensions and lossless mismatch stopped export before promotion. All candidates passed before any promotion. Individual files were copied then renamed; the pair and manifest were not a transaction. Interruption during promotion could leave mixed files, so rerunning the complete pair was required before building. The exporter checked promoted hashes before recording success. Concurrent writers remained unsupported. Offline tests injected an encoding interruption, verified the previous runtime tree survived, simulated a mixed promotion, and regenerated a coherent pair. Hash validation rejected altered/shifted assets.
+
+## Validation status
+
+Executed with Node **26.10.0**, Python **3.14.8**, Go **1.27.1** darwin/arm64, Vite **7.3.6** and Vitest **4.1.10**. `GOPROXY=off GOSUMDB=off go vet ./...` and `GOPROXY=off GOSUMDB=off go test ./...` passed. `npm run check` passed with zero errors and three existing accessibility warnings. Offline discovery ran 13 tests successfully, including all existing robin/holly tests. Initial full frontend run passed 362 tests; a subsequent added boundary test also passed its targeted run. Final results and repeated bundle hashes were recorded separately in `2026-10-03-shelf-validation.json`.
+
+Vite-only Playwright startup failed with `listen EPERM: operation not permitted 127.0.0.1:5179`. No browser tests ran, no browser version or screenshots were captured, and no visual acceptance was claimed. The existing scene retained production shelves and synthetic identity; the artwork fixture added production shelf comparisons at 1×/4× over dark, white and checkerboard backgrounds. Browser regressions were extended for geometry, identity rectangles, visibility boundaries, light animation, live reduced-motion changes, accessibility and pointer pass-through, with API request blocking. These assertions still required owner execution and screenshots against Vite after landing. The daemon and its API were never started or accessed.
+
+Owner visual acceptance remained **pending**. Run `cd internal/dashboard/ui && npm exec -- playwright test --config playwright.lab.config.ts` to execute only synthetic Vite labs. Inspect generated Christmas/Halloween comparisons and final bulb alignment; the default daemon-backed Playwright configuration must not be used.
+
+The identity comparison against theme-none was limited to roomy 900px-high desktop rails and narrow rails. On short desktop rails the existing shared `.theme-shelf + .viewer-chip` rule retained margin-top:0 even when the shelf was hidden, whereas theme-none used margin-top:auto. At 641px the visible 105px shelves could also exhaust spare rail space. Both seasonal themes were compared there; this task did not change shared rail CSS to fix those differences. The full plan's theme-none comparison at every viewport was therefore not claimed.

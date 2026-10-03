@@ -4,6 +4,8 @@
   import pumpkins from '../lib/theme/halloween/pumpkins.webp';
   import candles from '../lib/theme/halloween/candles.webp';
   import spider from '../lib/theme/halloween/spider-body.webp';
+  import ChristmasShelf from '../lib/theme/christmas/ChristmasShelf.svelte';
+  import HalloweenShelf from '../lib/theme/halloween/HalloweenShelf.svelte';
 
   const poses = ['perch', 'alert', 'flight'] as const;
   const backgrounds = ['dark', 'white', 'checker'] as const;
@@ -16,6 +18,10 @@
     {#each [1, 4] as zoom}
       <section class={background} aria-label="{background}, {zoom}×">
         <h2>{background}, {zoom}×</h2>
+        <div class="shelf-comparison" style="height: {105 * zoom}px; grid-template-columns: repeat(2, {192 * zoom}px)">
+          <div style="transform: scale({zoom}); transform-origin: 0 0"><ChristmasShelf /></div>
+          <div style="transform: scale({zoom}); transform-origin: 0 0"><HalloweenShelf /></div>
+        </div>
         <div class="comparison">
           <div>
             {#each poses as pose}
@@ -51,6 +57,8 @@
   section { padding: 12px; margin: 16px 0; overflow: auto; }
   h2, figcaption { color: inherit; }
   .comparison { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; min-width: 400px; }
+  .shelf-comparison { display: grid; gap: 24px; width: max-content; }
+  .shelf-comparison > div { width: 192px; }
   figure { margin: 12px 0; }
   figcaption { font: 12px monospace; margin-bottom: 8px; }
   .sample { position: relative; }

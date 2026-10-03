@@ -15,6 +15,8 @@ for (const width of [1440, 480]) {
       expect(image.src).toContain('.webp');
       if (/robin-/.test(image.src)) expect([image.w, image.h]).toEqual([128, 112]);
       if (/holly/.test(image.src)) expect([image.w, image.h]).toEqual([96, 64]);
+      if (/\/tree\./.test(image.src)) expect([image.w, image.h]).toEqual([176, 166]);
+      if (/\/presents\./.test(image.src)) expect([image.w, image.h]).toEqual([248, 132]);
     }
     for (const pose of ['perch', 'alert', 'flight']) {
       for (const direction of [1, -1]) {
