@@ -20,7 +20,9 @@ for (const width of [1440, 480]) {
       expect(box.y).toBeGreaterThanOrEqual(-9);
       expect(box.bottom).toBeCloseTo(0);
     }
-    expect(await page.locator('.robin').evaluate((el) => el.getBoundingClientRect().width)).toBeCloseTo(44.8, 1);
+    // Drawn at 0.35 of its 128px art cell (44.8px); browsers may snap it to a whole pixel.
+    const robinWidth = await page.locator('.robin').evaluate((el) => el.getBoundingClientRect().width);
+    expect(Math.abs(robinWidth - 44.8)).toBeLessThanOrEqual(1);
     await page.getByRole('button', { name: 'Click through 0' }).first().click();
     await expect(page.getByRole('button', { name: 'Click through 1' }).first()).toBeVisible();
     await page.screenshot({ path: info.outputPath(`christmas-${width}.png`) });
@@ -32,9 +34,10 @@ for (const width of [1440, 480]) {
     await page.setViewportSize({ width: width + 40, height: 900 });
     await expect(page.locator('.robin')).toHaveCount(1);
     for (let i = 0; i < 3; i++) {
-      await page.getByLabel('theme', { exact: true }).selectOption('none');
+      // The select sits inside its label, so its accessible name also carries its value.
+    await page.locator('label', { hasText: /^theme/ }).locator('select').selectOption('none');
       await expect(page.locator('[data-christmas]')).toHaveCount(0);
-      await page.getByLabel('theme', { exact: true }).selectOption('christmas');
+      await page.locator('label', { hasText: /^theme/ }).locator('select').selectOption('christmas');
       await expect(page.locator('.robin')).toHaveCount(1);
     }
     await page.getByLabel('empty', { exact: true }).check();
@@ -81,7 +84,7 @@ for (const theme of ['christmas', 'halloween']) {
     }
     await page.setViewportSize({ width: 761, height: 900 });
     await expect(shelf).toBeVisible();
-    await page.getByLabel('theme', { exact: true }).selectOption('none');
+    await page.locator('label', { hasText: /^theme/ }).locator('select').selectOption('none');
     await expect(shelf).toHaveCount(0);
     await expect(identity).toBeVisible();
     expect(api).toEqual([]);
