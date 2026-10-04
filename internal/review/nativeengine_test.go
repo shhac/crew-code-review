@@ -4,6 +4,7 @@ import (
 	"context"
 	"io"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/shhac/crew-code-review/internal/config"
@@ -82,6 +83,14 @@ func TestEachEngineRunsInItsWorkspace(t *testing.T) {
 				}
 				if got := calls[0].dir; got != workDir {
 					t.Errorf("process dir = %q, want the workspace %q", got, workDir)
+				}
+				args := strings.Join(calls[0].args, " ")
+				if session != "" {
+					if !strings.Contains(args, session) || !strings.Contains(args, "nudge") || strings.Contains(args, reportingInstruction) {
+						t.Errorf("recovered invocation = %v", calls[0].args)
+					}
+				} else if !strings.Contains(args, reportingInstruction) {
+					t.Error("fresh review omitted reporting instruction")
 				}
 			})
 		}

@@ -65,7 +65,7 @@ func TestCodexUsageTreatsInputAsCacheInclusive(t *testing.T) {
 	_, tr := transcodeCodex(t,
 		`{"type":"turn.completed","usage":{"input_tokens":18389,"cached_input_tokens":10496,"output_tokens":209,"reasoning_output_tokens":32}}`,
 	)
-	want := TokenUsage{Known: true, Input: 18389, Output: 209, CacheRead: 10496, Reasoning: 32, CacheKnown: true}
+	want := TokenUsage{Known: true, Input: 18389, Output: 209, CacheRead: 10496, Reasoning: 32, ReasoningKnown: true, CacheKnown: true}
 	if tr.Snapshot().Usage != want {
 		t.Errorf("usage = %+v, want %+v", tr.Snapshot().Usage, want)
 	}
@@ -91,7 +91,7 @@ func TestCodexUsageReplacesRatherThanSums(t *testing.T) {
 		`{"type":"turn.completed","usage":{"input_tokens":55862,"cached_input_tokens":36352,"output_tokens":230,"reasoning_output_tokens":32}}`,
 		`{"type":"turn.completed","usage":{"input_tokens":74619,"cached_input_tokens":54528,"output_tokens":251,"reasoning_output_tokens":32}}`,
 	)
-	want := TokenUsage{Known: true, Input: 74619, Output: 251, CacheRead: 54528, Reasoning: 32, CacheKnown: true}
+	want := TokenUsage{Known: true, Input: 74619, Output: 251, CacheRead: 54528, Reasoning: 32, ReasoningKnown: true, CacheKnown: true}
 	if tr.Snapshot().Usage != want {
 		t.Errorf("usage = %+v, want the LAST turn's cumulative figure %+v", tr.Snapshot().Usage, want)
 	}
