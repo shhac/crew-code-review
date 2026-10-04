@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { readFileSync } from 'node:fs';
-
+import { setSceneReducedMotion } from './scene-resume';
 const manifest = JSON.parse(readFileSync('src/lib/theme/christmas/robin-atlas/manifest.json', 'utf8'));
 async function useProductionRow(page: Page, available = true) {
   // Accepted tests use the shipped manifest unchanged. Only the unavailable
@@ -29,9 +29,9 @@ test('eight production cells, both facings, reduced motion and lifecycle resets'
   await page.addStyleTag({ content: '.robin { transform: scaleX(-1) !important; }' });
   await expect(page.locator('.robin')).toHaveCSS('transform', 'matrix(-1, 0, 0, 1, 0, 0)');
   await page.screenshot({ path: info.outputPath('left.png') });
-  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await setSceneReducedMotion(page, true);
   await clock.fill('50000'); await expect(frame).toHaveAttribute('data-atlas-frame', 'I0');
-  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  await setSceneReducedMotion(page, false);
   await expect(frame).toHaveAttribute('data-atlas-frame', 'I0');
   await clock.fill('51600'); await expect(frame).toHaveAttribute('data-atlas-frame', 'I1');
   await page.evaluate(() => {
@@ -42,6 +42,7 @@ test('eight production cells, both facings, reduced motion and lifecycle resets'
   await page.evaluate(() => {
     Object.defineProperty(document, 'hidden', { configurable: true, value: false });
     document.dispatchEvent(new Event('visibilitychange'));
+    return new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
   });
   await expect(frame).toHaveAttribute('data-atlas-frame', 'I0');
   await clock.fill('101600'); await expect(frame).toHaveAttribute('data-atlas-frame', 'I1');
