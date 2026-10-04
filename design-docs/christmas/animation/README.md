@@ -1,5 +1,10 @@
 # Robin idle and blink pipeline
 
+CCR-15 now ships the accepted generated eight-cell atlas idle. See
+[strip-pipeline.md](strip-pipeline.md) for its reproduction and acceptance record.
+The reference-rigged pipeline below remains the shipped asset-failure fallback;
+its original acceptance history does not govern atlas activation.
+
 The owner's final-round direction supersedes design 1's full 29-frame delivery
 for this task. Ship reference-rigged breathing and blink; preserve existing
 code-driven hop, flight and alert. Tilt rejects at the neck seam and is deferred.

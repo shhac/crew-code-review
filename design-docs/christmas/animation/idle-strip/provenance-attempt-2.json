@@ -1,0 +1,29 @@
+{
+  "attempt": 2,
+  "prompt": "Use case: identity-preserve. Production robin idle strip, attempt 2 (prior rejected attempt recorded). Use reference 1 as EXACT character artwork: preserve its delicate painterly edges, tiny short beak, fine toes, orange bib, ivory belly, layered brown folded wing and tail. Reference 2 specifies ONLY fixed registration and eight equal slots; discard borders, crosses and ghost appearance. Produce one extremely wide horizontal image with EXACT aspect ratio 1024:112, eight 128:112 slots side by side, optionally uniformly enlarged. Fill the entire background solid #00FF00. NO extra vertical padding, gutters, grid or text. Each bird must match reference 1's native size and position within its slot, virtual foot root (64,100), four pixel clear margins. Eight distinct poses left to right: neutral, chest inhale, peak inhale, exhale, eye half-close, eye fully closed, eye partly reopening, approaching neutral. Chest changes just 1–2 native pixels. Feet stay planted; all parts retain identity and ownership. Same tiny beak and fine toes in ALL frames. Do not add heavy outlines, thicken legs, elongate beak, duplicate wings or swap parts. No whole-body scaling, recentering, extra eye, scenery, shadow, blur or detached effects. Last pose differs subtly from first; do not duplicate endpoint. Playback durations 1600/450/450/650/60/80/90/1420 ms. Return ONE finished strip, never separate images. Exact strip aspect ratio is essential: 64:7.",
+  "generator": "image_gen.imagegen; model not exposed",
+  "settings": {
+    "transparent_background": false,
+    "referenced_image_paths": [
+      "internal/dashboard/ui/src/lib/theme/christmas/robin-perch.webp",
+      "design-docs/christmas/animation/idle-strip/guide.png"
+    ]
+  },
+  "references": [
+    {
+      "path": "internal/dashboard/ui/src/lib/theme/christmas/robin-perch.webp",
+      "sha256": "e9d871e3f720fe55bf70fc40991e8dcc82a67514889038785d67e53e9a79237a"
+    },
+    {
+      "path": "design-docs/christmas/animation/idle-strip/guide.png",
+      "sha256": "3eabe68b98ef587d540a62ad292a2d23af7b97f3e9ccaa2bd9b3fe792d223b01"
+    }
+  ],
+  "verdict": "REJECT",
+  "reasons": [
+    "Output 2115x744 violates uniform 1024:112 geometry; excessive vertical padding and incorrect virtual root. No per-cell fitting or cropping repair authorized.",
+    "All cells replace the canonical short delicate beak with a thicker projecting triangle, simplify and thicken toes, and add bold dark contour outlines.",
+    "Chest breathing is not convincingly distinct in cells 1–4 and 8; final seam distinction unproven."
+  ],
+  "acceptance": "Two recorded strip attempts rejected. Defer idle; retain shipped rigged idle/blink. No contact sheet or timed preview acceptance."
+}

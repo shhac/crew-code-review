@@ -1,0 +1,28 @@
+{
+  "status": "accepted",
+  "atlas_sha256": "2bf961189b8fd2c230f356847691cc18a8779b8df82c318a2f1596863a87bb65",
+  "designer_review": {
+    "designer": "Juniper",
+    "status": "static-identity-supported",
+    "atlas_sha256": "2bf961189b8fd2c230f356847691cc18a8779b8df82c318a2f1596863a87bb65",
+    "source": "CCR-15 design advice 4 and 5",
+    "historical_verdict": {
+      "status": "hold",
+      "designer": "Juniper",
+      "atlas_sha256": "2bf961189b8fd2c230f356847691cc18a8779b8df82c318a2f1596863a87bb65",
+      "source": "CCR-15 design advice 5, review-only verdict",
+      "verdict": "HOLD final acceptance: temporal review remains incomplete. Static identity review supports retaining attempt 2: consistent folded-wing ownership, two legs, toe arrangement, beak, eye location, tail and body scale across cells 1\u20138. Native and .35-scale views in both facings on light and dark backgrounds show no obvious green fringe, clipping, doubled parts or damaged feather edges. Cells 5/6/7 depict half-close, closed and reopening at the same eye position. Cells 2\u20134 show subtle contour changes compatible with breathing; cell 8 visibly differs from cell 1. These findings do not establish motion quality.",
+      "limitation": "The available image viewer renders a single GIF still and cannot play repeated wraps. Confirming eight delays is not temporal acceptance.",
+      "remaining_review": "Watch the existing preview at its intended timing for at least three complete loops in both facings on contrasting backgrounds. Distinguish chest expansion from whole-body wobble, check planted feet, follow 5\u21926\u21927 and watch repeated 8\u21921 joins. Keep idle unavailable until explicit temporal acceptance. No third generation or artwork changes.",
+      "execution_blocker": "Juniper obtained no temporal observations or successful browser result. Her read-only Codex seat could not start Vite: npm run dev -- --port 5179 --strictPort --configLoader runner failed opening node_modules/.vite/_svelte_metadata.json with EPERM. That seat exposes no hosted run_check or browser/team-delegation tools. HOLD is an execution blocker, not a motion rejection."
+    }
+  },
+  "owner_acceptance": {
+    "reviewer": "owner",
+    "status": "accepted",
+    "atlas_sha256": "2bf961189b8fd2c230f356847691cc18a8779b8df82c318a2f1596863a87bb65",
+    "source": "CCR-15 owner note 8 and explicit follow-up authorization",
+    "verdict": "Cells are consistent with each other, share one baseline and scale, chroma is cleanly removed, and breathing, half-close, close and reopen read clearly. Owner accepts atlas idle and resolves temporal acceptance; no further generation or review round is required.",
+    "browser_verification": "Draft 6 (93dc67f): npx playwright test -c playwright.lab.config.ts, Chromium on macOS 27; 27 passed in 23.2s, including robin-atlas.spec.ts and robin-idle.spec.ts."
+  }
+}

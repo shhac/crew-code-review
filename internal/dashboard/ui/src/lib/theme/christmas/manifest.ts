@@ -5,7 +5,8 @@ export type Frame = { sheet: string; x: number; y: number; width: number; height
 export type ManifestClip = Clip & { terminalFrame: string; restFrame: string };
 export type Manifest = {
   version: 1;
-  profile?: 'idle-blink';
+  profile?: 'idle-blink' | 'atlas-idle';
+  rows?: Record<string, { row: number; count: number; available: boolean; acceptance: 'accepted' | 'pending' }>;
   anchor: readonly [64, 100];
   scale: .35;
   sheets: Record<string, Sheet>;
@@ -45,6 +46,7 @@ export function validateManifest(value: unknown): Manifest {
 
 export const idleFrameIDs = ['I0', 'I1', 'I2', 'I3', 'B1', 'B2'] as const;
 export function validateIdleManifest(value: unknown): Manifest {
+  if (record(value) && value.profile === 'atlas-idle') return validateAtlasIdleManifest(value);
   if (!record(value) || value.profile !== 'idle-blink') throw new Error('Invalid robin idle profile');
   const manifest = validateInventory(value, idleFrameIDs, ['breathing', 'blink']);
   for (const [name, expected] of Object.entries({ breathing, blink })) {
@@ -55,6 +57,42 @@ export function validateIdleManifest(value: unknown): Manifest {
     }
   }
   return { ...manifest, profile: 'idle-blink' };
+}
+
+export const atlasIdleFrames = Array.from({ length: 8 }, (_, i) => `I${i}`);
+export const atlasIdleDurations = [1600, 450, 450, 650, 60, 80, 90, 1420];
+export function atlasIdleAvailable(manifest: Manifest): boolean {
+  return manifest.profile === 'atlas-idle' && manifest.rows?.idle?.available === true
+    && manifest.rows.idle.acceptance === 'accepted';
+}
+
+export function validateAtlasIdleManifest(value: unknown): Manifest {
+  if (!record(value) || value.profile !== 'atlas-idle' || !record(value.rows)) throw new Error('Invalid atlas idle profile');
+  const manifest = validateInventory(value, atlasIdleFrames, ['idle']);
+  if (Object.keys(manifest.sheets).length !== 1 || Object.values(manifest.sheets).some(s => s.width !== 1024 || s.height !== 672)) {
+    throw new Error('Invalid atlas geometry');
+  }
+  for (const [i, id] of atlasIdleFrames.entries()) {
+    const frame = manifest.frames[id];
+    if (frame.x !== i * 128 || frame.y !== 0) throw new Error('Invalid atlas cell index');
+  }
+  const clip = manifest.clips.idle;
+  if (JSON.stringify(clip.frames) !== JSON.stringify(atlasIdleFrames)
+    || JSON.stringify(clip.durations) !== JSON.stringify(atlasIdleDurations) || !clip.loop || clip.deadline !== undefined) {
+    throw new Error('Unsupported atlas idle timing');
+  }
+  const names = ['idle', 'flying', 'takeoff', 'landing', 'hop', 'alert'];
+  if (Object.keys(value.rows).length !== names.length) throw new Error('Invalid atlas rows');
+  const rows: NonNullable<Manifest['rows']> = {};
+  for (const [i, name] of names.entries()) {
+    const row = value.rows[name];
+    if (!record(row) || row.row !== i || row.count !== (i === 0 ? 8 : 0)
+      || typeof row.available !== 'boolean' || (row.acceptance !== 'accepted' && row.acceptance !== 'pending')
+      || row.available && row.acceptance !== 'accepted'
+      || i > 0 && (row.available || row.acceptance !== 'pending')) throw new Error('Invalid atlas row availability');
+    rows[name] = { row: i, count: i === 0 ? 8 : 0, available: row.available, acceptance: row.acceptance };
+  }
+  return { ...manifest, profile: 'atlas-idle', rows };
 }
 
 function validateInventory(value: unknown, requiredFrames: readonly string[], requiredClips: readonly string[]): Manifest {

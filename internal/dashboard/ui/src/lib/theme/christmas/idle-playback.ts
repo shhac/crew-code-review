@@ -1,5 +1,24 @@
 import { blink, breathing, clipDuration, playback, selectFrame, type Clip } from './animation';
 import type { Bird } from './robin';
+import { atlasIdleDurations, atlasIdleFrames } from './manifest';
+
+export function createAtlasIdlePlayback() {
+  const clip: Clip = { frames: atlasIdleFrames, durations: atlasIdleDurations, loop: true };
+  let start: number | null = null, last = -Infinity;
+  const reset = () => { start = null; last = -Infinity; };
+  return {
+    reset,
+    frame(bird: Bird, now: number, reduced = false): string {
+      if (!Number.isFinite(now)) throw new Error('Invalid animation clock');
+      if (now < last) reset();
+      last = now;
+      if (reduced || !bird.perch || bird.action || bird.alert) { reset(); return 'I0'; }
+      start ??= now;
+      // This row already contains its blink, with no second cosmetic overlay.
+      return selectFrame(clip, now - start).frame;
+    },
+  };
+}
 
 // This stream is independent of movement's Math.random/injected RNG.
 export function cosmeticStream(seed = Date.now()) {

@@ -5,10 +5,12 @@ import { readFileSync } from 'node:fs';
 import { compile } from 'svelte/compiler';
 import ChristmasShelf from './ChristmasShelf.svelte';
 import { ROBIN } from './snow';
+import { atlasFallbackUrl } from './atlas-inventory';
+const neutral = atlasFallbackUrl() ?? 'robin-perch.webp';
 
 it.each(['perch', 'alert', 'flight'] as const)('renders the %s raster pose with native aligned cells', (pose) => {
   const { body } = render(RobinArt, { props: { pose } });
-  expect(body).toContain(`robin-${pose}.webp`);
+  expect(body).toContain(pose === 'perch' ? neutral : `robin-${pose}.webp`);
   expect(body).not.toContain('<svg');
   const images = body.match(/<img\b[^>]*>/g) ?? [];
   expect(images).toHaveLength(pose === 'flight' ? 2 : 1);
@@ -35,13 +37,13 @@ it('scales the native stage once and rotates only the wing about its native pivo
 it('forces the independently packaged neutral under reduced motion even for a stale flight/blink', () => {
   const { body } = render(RobinArt, { props: { pose: 'flight', frame: 'B2', reduced: true } });
   expect(body).toContain('data-atlas-frame="I0"');
-  expect(body).toContain('robin-perch.webp');
+  expect(body).toContain(neutral);
   expect(body).not.toContain('raised-wing');
 });
 
 it('replaces every layer use while retaining the existing outer registration and shelf', () => {
   const layer = readFileSync(new URL('./ChristmasLayer.svelte', import.meta.url), 'utf8');
-  expect(layer).toContain('<RobinArt pose={drawing.pose} {frame} {reduced} />');
+  expect(layer).toContain('<RobinArt pose={drawing.pose} {frame} {atlasFrame} {reduced} />');
   expect(layer).not.toMatch(/\.svg|\{@html/);
   expect(layer).toContain('left: {drawing.x - ROBIN.anchorX}px; top: {drawing.y - ROBIN.anchorY}px');
   expect(layer).toContain('transform: scaleX({drawing.dir}); transform-origin: {ROBIN.anchorX}px {ROBIN.anchorY}px; --wing: {drawing.wing}deg');

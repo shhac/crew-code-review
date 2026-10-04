@@ -5,7 +5,10 @@
   export let sheet: string | null = null;
   export let rectangle: Frame | null = null;
   export let frame = 'I0';
+  export let fallback: string | undefined = undefined;
+  export let onFailure: () => void = () => {};
   let failed = false;
+  let failedFallback: string | undefined;
   $: if (sheet) failed = false;
   $: usable = !!sheet && !!rectangle && !failed;
 </script>
@@ -15,11 +18,12 @@
   <div class="art-cell">
     {#if sheet && rectangle && usable}
       <div class="frame-window">
-        <img class="bird-body atlas-sheet" src={sheet} alt="" on:error={() => failed = true}
+        <img class="bird-body atlas-sheet" src={sheet} alt="" on:error={() => { failed = true; onFailure(); }}
           style="left: {-rectangle.x}px; top: {-rectangle.y}px" />
       </div>
     {:else}
-      <img class="bird-body fallback" src={perch} alt="" width="128" height="112" />
+      <img class="bird-body fallback" src={fallback && fallback !== failedFallback ? fallback : perch}
+        on:error={() => { failedFallback = fallback; }} alt="" width="128" height="112" />
     {/if}
   </div>
 </div>

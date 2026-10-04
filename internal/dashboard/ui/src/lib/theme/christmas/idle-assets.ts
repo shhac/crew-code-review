@@ -1,4 +1,4 @@
-import { validateIdleManifest, validateSheetInventory, type Manifest, type Sheet } from './manifest';
+import { atlasIdleAvailable, validateIdleManifest, validateSheetInventory, type Manifest, type Sheet } from './manifest';
 
 export type AssetDependencies = {
   read: (url: string, signal?: AbortSignal) => Promise<ArrayBuffer>;
@@ -28,6 +28,7 @@ export type IdleAssets = { manifest: Manifest; urls: Record<string, string>; rel
 
 export async function loadIdleAssets(raw: string, urls: Record<string, string>, signal?: AbortSignal, deps = browser): Promise<IdleAssets> {
   const manifest = validateIdleManifest(JSON.parse(raw));
+  if (manifest.profile === 'atlas-idle' && !atlasIdleAvailable(manifest)) throw new Error('Atlas idle unavailable');
   const decoded: Record<string, Sheet> = {}, snapshots: Record<string, ArrayBuffer> = {};
   // Bytes verified here are the same bytes rendered via immutable blob URLs.
   await Promise.all([...Object.entries(manifest.sheets), [manifest.fallback.file, manifest.fallback] as const].map(async ([name]) => {
@@ -43,7 +44,11 @@ export async function loadIdleAssets(raw: string, urls: Record<string, string>, 
   let released = false;
   const release = () => { if (released) return; released = true; Object.values(rendered).forEach(deps.revoke); };
   try {
-    for (const [name, bytes] of Object.entries(snapshots)) rendered[name] = deps.createUrl(bytes);
+    for (const [name, bytes] of Object.entries(snapshots)) {
+      if (signal?.aborted) throw new Error('Cancelled robin asset load');
+      rendered[name] = deps.createUrl(bytes);
+    }
+    if (signal?.aborted) throw new Error('Cancelled robin asset load');
     return { manifest, urls: rendered, release };
   } catch (failure) { release(); throw failure; }
 }

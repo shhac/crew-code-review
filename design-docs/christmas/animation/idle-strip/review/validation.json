@@ -1,0 +1,83 @@
+{
+  "status": "pass",
+  "cells": 8,
+  "durations_ms": [
+    1600,
+    450,
+    450,
+    650,
+    60,
+    80,
+    90,
+    1420
+  ],
+  "disabled_rows_transparent": true,
+  "identity": "Juniper static identity supported; owner temporal acceptance recorded in identity.json",
+  "transform": {
+    "source_size": [
+      2115,
+      744
+    ],
+    "bird_band": [
+      266,
+      466
+    ],
+    "slot_width": 264.375,
+    "scale": 0.4720812182741117,
+    "source_anchor": [
+      119.5,
+      466.0
+    ],
+    "bounds": [
+      [
+        5.0,
+        270,
+        234.0,
+        466
+      ],
+      [
+        3.625,
+        267,
+        231.625,
+        466
+      ],
+      [
+        4.25,
+        266,
+        232.25,
+        466
+      ],
+      [
+        3.875,
+        268,
+        233.875,
+        466
+      ],
+      [
+        4.5,
+        270,
+        234.5,
+        466
+      ],
+      [
+        5.125,
+        270,
+        234.125,
+        466
+      ],
+      [
+        4.75,
+        269,
+        234.75,
+        466
+      ],
+      [
+        5.375,
+        268,
+        234.375,
+        466
+      ]
+    ],
+    "source_clipping": "pass (horizontal and vertical)"
+  }
+}

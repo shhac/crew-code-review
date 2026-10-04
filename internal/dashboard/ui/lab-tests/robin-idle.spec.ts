@@ -1,4 +1,8 @@
 import { expect, test } from '@playwright/test';
+import { readFileSync } from 'node:fs';
+
+const pending = JSON.parse(readFileSync('src/lib/theme/christmas/robin-atlas/manifest.json', 'utf8'));
+pending.rows.idle.available = false; pending.rows.idle.acceptance = 'pending';
 
 for (const dpr of [1, 2]) {
   test.describe(`production idle DPR ${dpr}`, () => {
@@ -7,6 +11,11 @@ for (const dpr of [1, 2]) {
       test(`idle/blink, layout, preference and teardown at ${width}px`, async ({ page }, info) => {
         let apiCalls = 0;
         await page.route('**/api/**', route => { apiCalls++; return route.abort(); });
+        // Keep this existing suite exercising the shipped rigged fallback,
+        // including after the production atlas receives designer acceptance.
+        await page.route('**/robin-atlas/manifest.json?*', route => route.fulfill({
+          contentType: 'application/javascript', body: `export default ${JSON.stringify(JSON.stringify(pending))};`,
+        }));
         await page.setViewportSize({ width, height: 900 });
         await page.goto('/lab/scene.html?theme=christmas&clock=manual');
         const art = page.locator('.robin [data-robin-assets]');
