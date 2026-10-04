@@ -20,6 +20,7 @@ for (const dpr of [1, 2]) {
         await page.goto('/lab/scene.html?theme=christmas&clock=manual');
         const art = page.locator('.robin [data-robin-assets]');
         await expect(art).toHaveAttribute('data-robin-assets', 'ready');
+        await expect(art).toHaveAttribute('data-robin-atlas', 'fallback');
         const frame = page.locator('.robin [data-atlas-frame]');
         const elapsed = page.getByLabel('Scene elapsed (ms)');
         const before = await page.locator('.robin').boundingBox();
@@ -32,6 +33,9 @@ for (const dpr of [1, 2]) {
         await expect(frame).toHaveAttribute('data-atlas-frame', 'I0');
         await elapsed.fill('50000'); await expect(frame).toHaveAttribute('data-atlas-frame', 'I0');
         await page.emulateMedia({ reducedMotion: 'no-preference' });
+        // I0 is already visible while reduced; let the resumed loop establish
+        // its epoch before advancing the manual clock.
+        await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
         await expect(frame).toHaveAttribute('data-atlas-frame', 'I0');
         await elapsed.fill('50200'); await expect(frame).toHaveAttribute('data-atlas-frame', 'I1');
         await page.evaluate(() => {
@@ -43,6 +47,7 @@ for (const dpr of [1, 2]) {
           Object.defineProperty(document, 'hidden', { configurable: true, value: false });
           document.dispatchEvent(new Event('visibilitychange'));
         });
+        await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
         await expect(frame).toHaveAttribute('data-atlas-frame', 'I0');
         await elapsed.fill('100200'); await expect(frame).toHaveAttribute('data-atlas-frame', 'I1');
         await page.setViewportSize({ width: width + 40, height: 900 });

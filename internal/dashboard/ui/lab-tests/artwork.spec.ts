@@ -7,13 +7,14 @@ for (const width of [1440, 480]) {
     await page.setViewportSize({ width, height: 900 });
     await page.goto('/lab/artwork.html');
     await expect.poll(() => page.locator('[data-robin-assets]').evaluateAll(els => els.every(el => el.getAttribute('data-robin-assets') === 'ready'))).toBe(true);
+    await expect.poll(() => page.locator('[data-robin-atlas]').evaluateAll(els => els.every(el => el.getAttribute('data-robin-atlas') === 'ready'))).toBe(true);
     const decoded = await page.locator('img').evaluateAll(async images => Promise.all(images.map(async image => {
       if (!(image instanceof HTMLImageElement)) throw new Error('expected image');
       await image.decode();
       return { src: image.src, w: image.naturalWidth, h: image.naturalHeight };
     })));
     for (const image of decoded) {
-      if (image.src.startsWith('blob:')) expect([image.w, image.h]).toEqual([780, 114]);
+      if (image.src.startsWith('blob:')) expect([image.w, image.h]).toEqual([1024, 672]);
       else expect(image.src).toContain('.webp');
       if (/robin-/.test(image.src)) expect([image.w, image.h]).toEqual([128, 112]);
       if (/holly/.test(image.src)) expect([image.w, image.h]).toEqual([96, 64]);
@@ -79,6 +80,7 @@ for (const width of [1440, 480]) {
       await page.locator('.controls').evaluate(el => { if (el instanceof HTMLElement) el.style.visibility = 'hidden'; });
       if (theme === 'christmas') {
         await expect(page.locator('.robin [data-robin-assets]')).toHaveAttribute('data-robin-assets', 'ready');
+        await expect(page.locator('.robin [data-robin-atlas]')).toHaveAttribute('data-robin-atlas', 'ready');
         const body = page.locator('.robin .bird-body.atlas-sheet');
         expect(await body.evaluate(async el => {
           if (!(el instanceof HTMLImageElement)) throw new Error('expected image');

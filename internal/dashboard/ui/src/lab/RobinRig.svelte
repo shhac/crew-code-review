@@ -1,19 +1,31 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import RobinArt from '../lib/theme/christmas/RobinArt.svelte';
+  import AtlasFrame from '../lib/theme/christmas/AtlasFrame.svelte';
+  import { loadIdleAssets, type IdleAssets } from '../lib/theme/christmas/idle-assets';
   import reference from '../lib/theme/christmas/robin-perch.webp';
   import { selectFrame, type Clip } from '../lib/theme/christmas/animation';
-  import { idleClips } from '../lib/theme/christmas/idle-inventory';
+  import { idleClips, idleManifestText, idleAssetUrls } from '../lib/theme/christmas/idle-inventory';
 
   const ids = ['I0', 'I1', 'I2', 'I3', 'B1', 'B2'];
   const clips: Record<string, Clip> = idleClips();
   let name = 'breathing', elapsed = 0, reduced = false, overlay = false, mirrored = false;
   let error = '';
   let files: Record<string, string> = {};
+  let assets: IdleAssets | null = null;
+  let status = 'loading';
   $: selected = reduced ? 'I0' : selectFrame(clips[name], elapsed).frame;
+  $: rectangle = assets?.manifest.frames[selected] ?? null;
+  $: sheet = rectangle ? assets?.urls[rectangle.sheet] ?? null : null;
+  const failedSheet = () => { assets?.release(); assets = null; status = 'fallback'; };
   const record = (value: unknown): value is Record<string, unknown> => !!value && typeof value === 'object' && !Array.isArray(value);
   onMount(() => {
     const abort = new AbortController();
+    let loaded: IdleAssets | null = null;
+    // This workbench controls reference-rig clips, independently of atlas acceptance.
+    void loadIdleAssets(idleManifestText, idleAssetUrls, abort.signal).then(result => {
+      if (abort.signal.aborted) { result.release(); return; }
+      loaded = result; assets = result; status = 'ready';
+    }).catch(() => { if (!abort.signal.aborted) status = 'fallback'; });
     async function load() {
       try {
         const response = await fetch('/lab/robin-rig-evidence/complete.json', { signal: abort.signal });
@@ -49,7 +61,7 @@
       }
     }
     void load();
-    return () => abort.abort();
+    return () => { abort.abort(); loaded?.release(); };
   });
 </script>
 
@@ -64,7 +76,7 @@
   <label><input type="checkbox" bind:checked={overlay} /> Reference overlay</label>
   <output data-rig-frame>{selected}</output>
   <div class="preview" style="transform: scaleX({mirrored ? -1 : 1})">
-    <div class="zoom"><RobinArt frame={selected} {reduced} />
+    <div class="zoom" data-robin-assets={status}><AtlasFrame {sheet} {rectangle} frame={selected} onFailure={failedSheet} />
       {#if overlay}<img class="reference" src={reference} alt="Reference overlay" width="128" height="112" />{/if}
     </div>
   </div>
