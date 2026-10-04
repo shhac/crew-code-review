@@ -11,6 +11,9 @@
   import RobinArt from './RobinArt.svelte';
   import { createAtlasIdlePlayback, createIdlePlayback, cosmeticStream } from './idle-playback';
   import { idleClips } from './idle-inventory';
+  import { flyingFrame } from './flying-playback';
+  import { atlasManifestText } from './atlas-inventory';
+  import { validateAtlasIdleManifest } from './manifest';
 
   // Injected by the synthetic lab; the dashboard uses real elapsed time.
   export let clock: () => number = () => performance.now();
@@ -18,6 +21,10 @@
   export let cosmeticRandom: () => number = cosmeticStream();
   const playback = createIdlePlayback(() => cosmeticRandom(), idleClips());
   const atlasPlayback = createAtlasIdlePlayback();
+  const flyingCount = (() => {
+    try { return validateAtlasIdleManifest(JSON.parse(atlasManifestText)).rows?.flying.count || 4; }
+    catch { return 4; }
+  })();
 
   const debug = new URLSearchParams(location.search).get('theme-debug') === '1';
   let floors: ReadonlyMap<number, Ledge> = new Map();
@@ -30,6 +37,7 @@
   $: drawing = birdPose(bird, scene, now);
   $: frame = playback.frame(bird, now, reduced);
   $: atlasFrame = atlasPlayback.frame(bird, now, reduced);
+  $: flightFrame = flyingFrame(bird, now, flyingCount, reduced);
   onMount(() => {
     const pointer = pointerTracker();
     let dirty = true, measuredAt = -Infinity, fresh = true;
@@ -83,7 +91,7 @@
   {#if drawing}
     <div class="robin" data-pose={drawing.pose}
       style="left: {drawing.x - ROBIN.anchorX}px; top: {drawing.y - ROBIN.anchorY}px; width: {ROBIN.width}px; height: {ROBIN.height}px; transform: scaleX({drawing.dir}); transform-origin: {ROBIN.anchorX}px {ROBIN.anchorY}px; --wing: {drawing.wing}deg">
-      <RobinArt pose={drawing.pose} {frame} {atlasFrame} {reduced} />
+      <RobinArt pose={drawing.pose} {frame} {atlasFrame} {flightFrame} {reduced} />
     </div>
   {/if}
 </div>

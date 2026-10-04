@@ -1,0 +1,197 @@
+{
+  "status": "pass",
+  "cells": 4,
+  "durations_ms": [
+    50.0,
+    50.0,
+    50.0,
+    50.0
+  ],
+  "disabled_rows_transparent": true,
+  "identity": "pending Juniper review",
+  "row": "flying",
+  "transform": {
+    "source_anchor": [
+      0,
+      0
+    ],
+    "scale": 0.28,
+    "reference": "../idle-strip/review/canonical.png",
+    "reference_sha256": "54f2b56c111d7caa852daa0391703f687f6d145db5df07306e6c281a977cdb99",
+    "basis": "One .28 uniform body scale from Juniper crown-to-belly comparison (.27\u2013.29); eye centres from corresponding source landmarks. Beak-base and breast-centre approximate visual corroboration. Canvas from complete union with bilinear support and four clear margins; no silhouette fitting. Corrected-pixel visual acceptance pending.",
+    "minimum_component_pixels": 100,
+    "canonical_eye": [
+      97.1,
+      26.7
+    ],
+    "landmarks": [
+      {
+        "eye": [
+          477.1,
+          346.2
+        ],
+        "beak_base": [
+          512.1,
+          354.2
+        ],
+        "breast_centre": [
+          469.1,
+          441.2
+        ]
+      },
+      {
+        "eye": [
+          989.6,
+          345.2
+        ],
+        "beak_base": [
+          1024.6,
+          353.2
+        ],
+        "breast_centre": [
+          981.6,
+          440.2
+        ]
+      },
+      {
+        "eye": [
+          1491,
+          347.2
+        ],
+        "beak_base": [
+          1526,
+          355.2
+        ],
+        "breast_centre": [
+          1483,
+          442.2
+        ]
+      },
+      {
+        "eye": [
+          2008.6,
+          346.2
+        ],
+        "beak_base": [
+          2043.6,
+          354.2
+        ],
+        "breast_centre": [
+          2000.6,
+          441.2
+        ]
+      }
+    ],
+    "canonical_landmarks": {
+      "eye": [
+        97.1,
+        26.7
+      ],
+      "beak_base": [
+        107,
+        29
+      ],
+      "breast_centre": [
+        96,
+        53
+      ],
+      "crown_y": 9,
+      "belly_underside_y": 84
+    },
+    "scale_measurement": {
+      "canonical_crown_to_belly": 75,
+      "source_crown_to_belly": 270,
+      "ratio": 0.2777777777777778,
+      "selected_scale": 0.28,
+      "authority": "Juniper design 7 body span comparison; points approximate, rendered acceptance pending"
+    },
+    "registration": "shared-transform",
+    "cell_size": [
+      142,
+      134
+    ],
+    "anchor": [
+      114,
+      62
+    ],
+    "canonical_anchor": [
+      97.1,
+      26.7
+    ],
+    "source_size": [
+      2149,
+      732
+    ],
+    "bird_band": [
+      141,
+      584
+    ],
+    "bounds": [
+      [
+        0,
+        141,
+        465,
+        583
+      ],
+      [
+        0,
+        278,
+        467,
+        583
+      ],
+      [
+        0,
+        281,
+        456,
+        583
+      ],
+      [
+        0,
+        209,
+        454,
+        584
+      ]
+    ],
+    "component_bounds": [
+      [
+        89,
+        141,
+        554,
+        583
+      ],
+      [
+        599,
+        278,
+        1066,
+        583
+      ],
+      [
+        1115,
+        281,
+        1571,
+        583
+      ],
+      [
+        1634,
+        209,
+        2088,
+        584
+      ]
+    ],
+    "component_origins": [
+      89,
+      599,
+      1115,
+      1634
+    ],
+    "source_clipping": "pass (horizontal and vertical)"
+  },
+  "comparison_durations_ms": [
+    140,
+    140,
+    140,
+    140
+  ],
+  "source_sha256": "00adbf7924f8b9ae60548c76717c88439ab743673a3a2cc3ba3f8d87a8851d5a",
+  "atlas_sha256": "200ee8966324de8042e267288b86015b6fb628485951b34ab94d799e12281ca3"
+}

@@ -2,6 +2,7 @@
   import { alertEntry, alertReturn, blink, breathing, flap, movementClip, selectFrame, tilt, type Clip } from '../lib/theme/christmas/animation';
   import { createPlayback } from '../lib/theme/christmas/playback';
   import { createBird, type Scene } from '../lib/theme/christmas/robin';
+  import RobinFlying from './RobinFlying.svelte';
 
   let clipName = 'breathing';
   let elapsed = 0;
@@ -23,6 +24,7 @@
 
 <main>
   <h1>Robin timing diagnostic</h1>
+  <RobinFlying />
   <p>Deferred full-articulation timing diagnostic: frame IDs only. Shipped idle and blink artwork is available in the robin-rig and scene labs.</p>
   <section>
     <h2>Discrete timeline</h2>

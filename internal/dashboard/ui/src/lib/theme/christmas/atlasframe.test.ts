@@ -24,3 +24,14 @@ it('uses the independent reference still for missing sheet or rectangle', () => 
     expect(render(AtlasFrame, { props }).body).toContain('robin-perch.webp');
   }
 });
+
+it('positions a larger flying window by the canonical eye without enlarging idle fallback', () => {
+  const rectangle = { sheet: 'flight.webp', x: 140, y: 0, width: 140, height: 136,
+    anchor: [112, 62] as [number, number], canonical_anchor: [97.1, 26.7] as [number, number] };
+  const body = render(AtlasFrame, { props: { sheet: '/flight.webp', rectangle, frame: 'W1' } }).body;
+  expect(body).toContain('width: 140px; height: 136px');
+  expect(body).toContain('left: -14.900000000000006px; top: -35.3px');
+  expect(body).toContain('left: -140px; top: 0px');
+  const fallback = render(AtlasFrame, { props: { rectangle, frame: 'W1' } }).body;
+  expect(fallback).toContain('width="128" height="112"');
+});

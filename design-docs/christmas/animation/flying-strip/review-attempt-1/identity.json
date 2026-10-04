@@ -1,0 +1,234 @@
+{
+  "status": "pending",
+  "source": "../source-revised-attempt-1.png",
+  "designer_review": {
+    "designer": "Juniper",
+    "record": "../provenance-revised-attempt-1.json",
+    "review": "Juniper design 6 hand-back, 2026-10-04",
+    "static_identity": "Satisfactory for continued lab review: canonical palette, painterly outlines, highlighted eye, short dark beak, orange breast, ivory belly and brown tail retained. Feet tucked; near wing attached on the same side; far wing visibility consistent with occlusion. No obvious swapped or doubled parts.",
+    "historical_content_rejection": "Withdrawn by Juniper: swept and folded poses are legitimate distinctions; similarity alone is not grounds for rejection.",
+    "canonical_registration": "Shared scale 0.21 and source anchor (252,590) retained provisionally. Contact shows no obvious per-frame body-size or root jump. Compact flying posture does not justify silhouette fitting; rendered idle/flight comparison remains pending.",
+    "extracted_loop": "UNOBSERVED: contact and GIF still inspected without timed playback. W3-to-W0 continuity and convincing wing beat pending owner lab review.",
+    "joins": "UNOBSERVED: idle-to-legacy departure, departure-to-W0, last loop cell-to-legacy arrival and arrival-to-idle pending at 450/750ms. Code inspection is not visual acceptance."
+  },
+  "owner_source_review": {
+    "status": "reviewed acceptable fallback",
+    "findings": "Owner accepts original identity, tucked feet and up/swept/folded/rising poses as a plausible small-bird flap. A folded frame is natural. This review is of the original, not the extracted timed loop or joins."
+  },
+  "implementer_review": {
+    "static": "Complete components at shared .28 body scale, eye registration and union-derived 142x134 canvas; numerical margins pass. No new art or anatomical edits.",
+    "motion": "Corrected pixels pending timed review. Owner draft-3 motion acceptance remains historical.",
+    "canonical_scale": "Geometry conflict resolved by owner-authorized larger flying-only canvas. .28 from Juniper body-span estimate, not silhouette fit. Rendered scale and registration acceptance pending.",
+    "joins": "Corrected joins pending visual observation at 450/750ms in both facings."
+  },
+  "attempt_ledger": {
+    "original_attempts": "Two historical attempts rejected; revised allowance supersedes their geometry rules. No new original-attempt art generated this round.",
+    "revised_attempt_1": "Original retained and reviewed by owner, not discarded.",
+    "revised_attempt_2": "Retained ../provenance-revised-attempt-2.json records generation and Juniper static rejection for extended legs/spread toes. Original absent from supplied archive and repository, so comparison is impossible. Not inferred from the earlier empty response.",
+    "further_generation": "Closed by latest owner instruction: select retained revised attempt 1. No further generation or attempt-2 comparison required. Future production hand-offs must attach every original raster."
+  },
+  "production": "Legacy flight retained. Corrected candidate unavailable; no loop, canonical-scale or join acceptance inferred from numerical validation.",
+  "owner_playback_review": {
+    "reviewer": "owner",
+    "record": "CCR-16 note 5 and draft-3 follow-up",
+    "reviewed_draft": "6b33c64 (draft 3)",
+    "motion": "accepted: flap reads well in both facings",
+    "canonical_scale": "rejected: flying robin reads at approximately 70\u201375% of idle neutral size",
+    "joins": "unobserved: owner deferred joins until extraction, scale and test fixes"
+  },
+  "current_candidate": {
+    "atlas_sha256": "200ee8966324de8042e267288b86015b6fb628485951b34ab94d799e12281ca3",
+    "geometry": {
+      "source_anchor": [
+        0,
+        0
+      ],
+      "scale": 0.28,
+      "reference": "../idle-strip/review/canonical.png",
+      "reference_sha256": "54f2b56c111d7caa852daa0391703f687f6d145db5df07306e6c281a977cdb99",
+      "basis": "One .28 uniform body scale from Juniper crown-to-belly comparison (.27\u2013.29); eye centres from corresponding source landmarks. Beak-base and breast-centre approximate visual corroboration. Canvas from complete union with bilinear support and four clear margins; no silhouette fitting. Corrected-pixel visual acceptance pending.",
+      "minimum_component_pixels": 100,
+      "canonical_eye": [
+        97.1,
+        26.7
+      ],
+      "landmarks": [
+        {
+          "eye": [
+            477.1,
+            346.2
+          ],
+          "beak_base": [
+            512.1,
+            354.2
+          ],
+          "breast_centre": [
+            469.1,
+            441.2
+          ]
+        },
+        {
+          "eye": [
+            989.6,
+            345.2
+          ],
+          "beak_base": [
+            1024.6,
+            353.2
+          ],
+          "breast_centre": [
+            981.6,
+            440.2
+          ]
+        },
+        {
+          "eye": [
+            1491,
+            347.2
+          ],
+          "beak_base": [
+            1526,
+            355.2
+          ],
+          "breast_centre": [
+            1483,
+            442.2
+          ]
+        },
+        {
+          "eye": [
+            2008.6,
+            346.2
+          ],
+          "beak_base": [
+            2043.6,
+            354.2
+          ],
+          "breast_centre": [
+            2000.6,
+            441.2
+          ]
+        }
+      ],
+      "canonical_landmarks": {
+        "eye": [
+          97.1,
+          26.7
+        ],
+        "beak_base": [
+          107,
+          29
+        ],
+        "breast_centre": [
+          96,
+          53
+        ],
+        "crown_y": 9,
+        "belly_underside_y": 84
+      },
+      "scale_measurement": {
+        "canonical_crown_to_belly": 75,
+        "source_crown_to_belly": 270,
+        "ratio": 0.2777777777777778,
+        "selected_scale": 0.28,
+        "authority": "Juniper design 7 body span comparison; points approximate, rendered acceptance pending"
+      },
+      "registration": "shared-transform",
+      "cell_size": [
+        142,
+        134
+      ],
+      "anchor": [
+        114,
+        62
+      ],
+      "canonical_anchor": [
+        97.1,
+        26.7
+      ],
+      "source_size": [
+        2149,
+        732
+      ],
+      "bird_band": [
+        141,
+        584
+      ],
+      "bounds": [
+        [
+          0,
+          141,
+          465,
+          583
+        ],
+        [
+          0,
+          278,
+          467,
+          583
+        ],
+        [
+          0,
+          281,
+          456,
+          583
+        ],
+        [
+          0,
+          209,
+          454,
+          584
+        ]
+      ],
+      "component_bounds": [
+        [
+          89,
+          141,
+          554,
+          583
+        ],
+        [
+          599,
+          278,
+          1066,
+          583
+        ],
+        [
+          1115,
+          281,
+          1571,
+          583
+        ],
+        [
+          1634,
+          209,
+          2088,
+          584
+        ]
+      ],
+      "component_origins": [
+        89,
+        599,
+        1115,
+        1634
+      ],
+      "source_clipping": "pass (horizontal and vertical)"
+    },
+    "loop": "pending corrected-pixel review",
+    "scale": "pending rendered acceptance",
+    "joins": "pending",
+    "designer_identity": "Juniper design 8: corrected-pixel static identity supported; owner scale/registration, timed loop and joins pending."
+  },
+  "corrected_designer_review": {
+    "designer": "Juniper",
+    "record": "CCR-16 design 8 hand-back",
+    "status": "static-identity-supported",
+    "atlas_sha256": "200ee8966324de8042e267288b86015b6fb628485951b34ab94d799e12281ca3",
+    "static_identity": "Corrected contact and atlas retain canonical orange breast, ivory belly, brown plumage, highlighted eye and short dark beak. Near wing remains attached on the same side; far-wing visibility consistent with occlusion. No obvious swapped/doubled wings, changed beak, extra legs, altered tail ownership or spread airborne toes; feet tucked. Swept/folded phases plausible.",
+    "canonical_scale_registration": "Shared .28 consistent with crown-to-belly 75/270 measurement. Body reads compatible with canonical; eyes and beak attachments appear stable without obvious horizontal jump. Supports rendered comparison; owner decision remains pending. Approximate corroborating landmarks do not independently prove identical anatomy.",
+    "complete_wings_margins": "W0 raised and W3 rising wings retained whole; no visible feather tip, tail or tucked foot clipped. Clear space on light/dark in both facings at native/.35 sizes. Exact four-pixel clearance is pipeline validation, not an independent designer measurement.",
+    "timed_loop": "UNOBSERVED: image viewer exposes GIF still; no browser-control tool. Exact 200ms, 140ms comparison and W3-to-W0 wrap not observed. Draft-3 acceptance does not cover corrected pixels.",
+    "legacy_joins": "UNOBSERVED at 450/750ms, both facings, sizes and backgrounds. Code inspection does not establish compatibility.",
+    "production": "Design advice, not production approval. Keep disabled pending owner corrected scale/registration, loop and join decisions and complete Vite suite."
+  }
+}

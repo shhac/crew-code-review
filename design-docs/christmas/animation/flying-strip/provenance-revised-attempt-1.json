@@ -1,0 +1,40 @@
+{
+  "asset": "robin-flying-strip-revised-attempt-1",
+  "prompt": "Generate ONE original production raster sprite strip containing exactly FOUR equal horizontal slots of the SAME right-facing flying robin, in order: high wing, mid-downstroke, low wing, mid-upstroke. Do not repeat the first pose at the end. Generate the complete cycle together.\nOrdered image references: 1 accepted canonical robin is the identity authority: match its warm outlined painterly style, rounded orange breast, ivory belly, brown feather palette, black eye with highlight, short dark pointed beak, tail and precise anatomical identity. 2 shipped flight body is flying-pose context only; retain canonical identity. 3 guide is registration context only: its EIGHT slots are superseded by FOUR; do NOT copy guide marks, planted feet or idle poses. 4 shipped detached wing is feather/flight context only, never render a detached wing.\nKeep the body level and the same size and position across the four frames; only wings move, with at most a slight natural body bob. Feet are tucked beneath the body in EVERY frame, never planted or dangling. Each near wing remains the near wing and each far wing remains the far wing throughout; far wing can be plausibly occluded, never swapped, doubled or detached. Preserve the same two legs and unchanged toes by consistent tuck/occlusion. Preserve eye, beak, head, breast, belly and tail across all frames. Near wing moves from raised high above back, through forward/downward diagonal, to low beside body, then an upward recovery diagonal; distinct coherent phases for a seamless four-frame wrap.\nOne facing only: RIGHT. Equal horizontal slots, no gutters, labels, text, borders, scenery, shadows, guide marks, motion blur or extra birds. Transparent background. Leave enough padding to contain the wings. Aspect ratio, padding and overall scale belong to subsequent extraction, not rejection: extraction finds the bird band, splits four equal slots and uses ONE shared canonical-derived uniform scale and registration to fixed 128x112 cells with virtual foot anchor (64,100). Do not normalize individual silhouettes or fit tucked feet. No added world-motion arc. This is revised attempt 1 only.",
+  "generator": "image_gen.imagegen (built-in; model not exposed)",
+  "settings": {
+    "transparent_background": true,
+    "referenced_image_paths": [
+      "design-docs/christmas/animation/idle-strip/review/canonical.png",
+      "internal/dashboard/ui/src/lib/theme/christmas/robin-flight.webp",
+      "design-docs/christmas/animation/flying-strip/guide.png",
+      "internal/dashboard/ui/src/lib/theme/christmas/robin-flight-wing.webp"
+    ],
+    "attempt": 1,
+    "revised_allowance": true
+  },
+  "verdict": {
+    "static_identity": "Provisional match: canonical palette, eye, beak, rounded body and tail; tucked feet in all four poses. Anatomical ownership not established across playback.",
+    "static_content": "REJECT: frames 2 and 3 have nearly identical folded-wing poses rather than distinct mid-down and low phases. Four-phase motion progression is insufficient.",
+    "motion": "UNOBSERVED: extracted contact sheet and exact 200ms browser preview unavailable.",
+    "joins": "UNOBSERVED; production remains legacy."
+  },
+  "references": [
+    {
+      "path": "design-docs/christmas/animation/idle-strip/review/canonical.png",
+      "sha256": "54f2b56c111d7caa852daa0391703f687f6d145db5df07306e6c281a977cdb99"
+    },
+    {
+      "path": "internal/dashboard/ui/src/lib/theme/christmas/robin-flight.webp",
+      "sha256": "62af46ccdaf7565beddd2fdf3a655d616b1bed7d0ab07fa5ee12242fda0b9826"
+    },
+    {
+      "path": "design-docs/christmas/animation/flying-strip/guide.png",
+      "sha256": "1848adebaf6726643425e5b3b09d7169d9c8fd54be45cf76017ffaefb0af1e85"
+    },
+    {
+      "path": "internal/dashboard/ui/src/lib/theme/christmas/robin-flight-wing.webp",
+      "sha256": "508b941eaf322255bc9d80d534c162da2b69658d76158b30f3ff78bcade597fa"
+    }
+  ]
+}

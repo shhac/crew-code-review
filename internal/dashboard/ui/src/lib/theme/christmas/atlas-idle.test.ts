@@ -130,3 +130,21 @@ it.each(['unavailable', 'missing', 'hash', 'dimensions', 'decode', 'cancelled', 
   await expect(loadIdleAssets(JSON.stringify(failure === 'unavailable' ? pending : accepted()), f.urls, abort.signal, f.deps)).rejects.toThrow();
   expect(f.revoked).toEqual(f.created);
 });
+
+it('validates flying row dimensions and anchors against actual sheet bounds', () => {
+  const value = accepted();
+  const manifest = validateAtlasIdleManifest(value);
+  expect(manifest.frames.W0.height).toBeGreaterThan(112);
+  expect(manifest.frames.W0.anchor).toEqual(manifest.rows!.flying.anchor);
+  expect(manifest.frames.W0.canonical_anchor).toEqual([97.1, 26.7]);
+  for (const mutate of [
+    (m: typeof value) => { m.frames.W1.x = 0; },
+    (m: typeof value) => { m.frames.W0.height += 2; },
+    (m: typeof value) => { m.frames.W0.anchor[0] += 1; },
+    (m: typeof value) => { m.frames.W3.x = 9999; },
+    (m: typeof value) => { m.frames.I0.width = 140; },
+  ]) {
+    const m = accepted(); mutate(m);
+    expect(() => validateAtlasIdleManifest(m)).toThrow();
+  }
+});

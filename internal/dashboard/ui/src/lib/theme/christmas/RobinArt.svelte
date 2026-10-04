@@ -7,11 +7,16 @@
   import { loadIdleAssets, type IdleAssets } from './idle-assets';
   import { idleManifestText, idleAssetUrls } from './idle-inventory';
   import { atlasManifestText, atlasAssetUrls, atlasFallbackUrl } from './atlas-inventory';
+  import { atlasFlyingAvailable } from './manifest';
 
   export let pose: 'perch' | 'alert' | 'flight' = 'perch';
   export let frame = 'I0';
   export let atlasFrame = 'I0';
   export let reduced = false;
+  export let flightFrame: string | null = null;
+  // Synthetic labs can inspect candidate joins without enabling production.
+  export let atlasSource = atlasManifestText;
+  export let atlasUrls = atlasAssetUrls;
   const stillFallback = atlasFallbackUrl();
   let assets: IdleAssets | null = null;
   let atlas: IdleAssets | null = null;
@@ -20,7 +25,8 @@
   let legacyFailed = false;
   $: if (pose) legacyFailed = false;
   $: active = atlas ?? assets;
-  $: selected = reduced ? 'I0' : atlas ? atlasFrame : frame;
+  $: flying = pose === 'flight' && !reduced && flightFrame !== null && atlas && atlasFlyingAvailable(atlas.manifest);
+  $: selected = reduced ? 'I0' : flying ? flightFrame! : atlas ? atlasFrame : frame;
   $: rectangle = active && Object.hasOwn(active.manifest.frames, selected) ? active.manifest.frames[selected] : null;
   $: sheet = rectangle ? active?.urls[rectangle.sheet] ?? null : null;
   const failedSheet = () => {
@@ -35,7 +41,7 @@
       if (abort.signal.aborted) { result.release(); return; }
       loaded = result; assets = result; status = 'ready';
     }).catch(() => { if (!abort.signal.aborted) status = 'fallback'; });
-    void loadIdleAssets(atlasManifestText, atlasAssetUrls, abort.signal).then(result => {
+    void loadIdleAssets(atlasSource, atlasUrls, abort.signal).then(result => {
       if (abort.signal.aborted) { result.release(); return; }
       loadedAtlas = result; atlas = result; atlasStatus = 'ready';
     }).catch(() => { if (!abort.signal.aborted) atlasStatus = 'fallback'; });
@@ -45,7 +51,9 @@
 
 <!-- Native art cells keep a shared foot anchor; the parent mirrors the assembly. -->
 <div class="robin-art" data-robin-assets={status} data-robin-atlas={atlasStatus}>
-  {#if pose !== 'perch' && !reduced && !legacyFailed}
+  {#if flying && sheet && rectangle}
+    <AtlasFrame {sheet} {rectangle} frame={selected} fallback={stillFallback} onFailure={failedSheet} />
+  {:else if pose !== 'perch' && !reduced && !legacyFailed}
     <div class="art-cell">
       <img class="bird-body" src={pose === 'flight' ? flight : alert} alt="" width="128" height="112" on:error={() => legacyFailed = true} />
       {#if pose === 'flight'}

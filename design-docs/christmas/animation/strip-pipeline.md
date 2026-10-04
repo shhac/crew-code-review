@@ -1,176 +1,180 @@
 # Generated idle strip
 
-CCR-15 follows Juniper's current design 1. The accepted eight-cell atlas idle is enabled in production; the existing rig
-remains the asset-failure fallback.
+## Flying generation preparation (CCR-16)
 
-## Source and licensing decision
+The flying guide uses accepted atlas I0, rather than the historical perch:
 
-Inspected `~/.codex/skills/hatch-pet/SKILL.md`, LICENSE.txt, references
-`animation-rows.md`, `qa-rubric.md`, `codex-pet-contract.md`, and the preparation,
-extraction, inspection, validation, composition, contact-sheet and preview
-scripts. LICENSE.txt is Apache-2.0. Section 4 requires distributing the license,
-retaining relevant notices, marking modifications, and including applicable
-NOTICE attribution when copying. No NOTICE file was found in that skill tree.
+```sh
+python3 design-docs/christmas/animation/strip_pipeline.py prepare \
+  --reference design-docs/christmas/animation/idle-strip/review/canonical.png \
+  --output design-docs/christmas/animation/flying-strip
+```
 
-Decision recorded before implementation: independently reimplement these
-responsibilities using the standard library and existing ImageMagick/cwebp
-tools; copy no skill code. Its silhouette fitting and stable-slot recentering
-would violate this robin's fixed registration. Repository licensing is unchanged.
+`flying-strip/guide.png` repeats the canonical at its existing registration and
+scale, without cropping its transparent padding. Ghosts and guide marks are
+registration aids only; idle wings and planted feet do not constrain flight.
+`guide-contract.json` records the reference, dimensions and native transform.
+For the original eight-slot guide-layout mode, S/128 = H/112.
+`extract(..., registration="canonical-layout")` records actual source dimensions,
+slot boundaries, uniform source-to-native scale and virtual anchor. Sampling uses
+pixel centres: source = (native + .5)/scale - .5. All slots share that mapping.
+Feet and wing bounds never determine flying registration. Source clipping is
+rejected before resampling; native four-pixel margins remain mandatory.
+Idle remains the default registration mode. Generated-row extraction now finds
+connected birds rather than cutting equal slots; the accepted shipped idle
+pixels and metadata are preserved when flying is published.
 
-## Production hand-off
+The owner's revised instructions supersede aspect-ratio rejection and the
+eight-phase generation requirement. Generate four to six phases, tucked feet,
+one facing and no closing duplicate. Ordered references are accepted canonical,
+shipped flight body (pose reference), guide (registration only), shipped wing
+(feather context). Geometry belongs to extraction; content and motion determine
+acceptance. Do not apply the idle silhouette-height/foot-baseline extraction to
+flight. Do not apply the old guide-layout ratio test to padded generated art.
 
-Run `python3 design-docs/christmas/animation/strip_pipeline.py prepare`.
-Attach unchanged `internal/dashboard/ui/src/lib/theme/christmas/robin-perch.webp`
-and `idle-strip/guide.png`. The guide is layout-only, not production artwork.
-It has eight native 128×112 slots with canonical-size ghost references,
-four-pixel safe insets and virtual roots at (64,100). No anatomical calibration
-or individually fitted silhouettes are involved.
+### Revised flying attempt 1
 
-Juniper generates ONE complete right-facing strip: neutral, inhale, peak inhale,
-exhale, half-close, closed, reopen, approaching neutral. Timings are
-1600/450/450/650/60/80/90/1420ms (4800ms total). All eight cells are distinct;
-the last approaches rather than duplicates the first. Chest expansion is only
-1–2 native pixels. Beak, eye position, wings, tail, legs and toes retain their
-identity and scale; parts must not swap or double. Include the two grounding
-images in every attempt. Return the original strip, exact prompt/provenance,
-rejected variants and a preliminary identity verdict. Maximum two attempts;
-processing reruns do not consume attempts.
+The original PNG and exact Juniper prompt/settings/reference hashes are retained
+as `flying-strip/source-revised-attempt-1.png` and
+`provenance-revised-attempt-1.json`. The historical rejection remains unchanged
+in provenance. The owner subsequently reviewed the original, accepted its
+identity and tucked feet, and judged its up/swept/folded/rising poses a plausible
+small-bird flap and acceptable fallback. That is source-content support, not
+an extracted-loop or production-join verdict.
 
-Extraction interface (owner's revised approach): eight equal source slots,
-no gutters or labels. The source need not have the final atlas aspect ratio.
-Find the bird band; use the neutral bird's height to compute one scale (93 native
-pixels), its horizontal bounds midpoint as the common horizontal registration,
-and the median source foot baseline for the whole strip. Map that common anchor
-to (64,100). Never resize/recenter individual birds, bottom-align them or snap
-feet. Use flat #00FF00, absent from the reference's
-visible palette, with no scenery, shadows, blur, effects or guide marks.
-Antialiased edges may blend into the key; cleanup must remove that matte before
-premultiplied resampling, preserve fractional alpha and zero invisible RGB.
+The latest owner instruction selects retained revised attempt 1 and closes
+generation. `provenance-revised-attempt-2.json` retains the exact prompt and
+Juniper's static rejection for extended legs/spread toes, but its original was
+not retained; comparison is
+impossible. The earlier empty hand-off alone is not evidence of rejection.
+No further asset request or comparison is required. Future production hand-offs
+must attach every original raster.
 
-## Attempt 2 review evidence
+Juniper's design 6 review finds static identity satisfactory for lab review:
+tucked feet, attached near wing, plausibly occluded far wing, no obvious swapped
+or doubled parts. She withdrew the rejection based solely on folded-pose
+similarity and retained the shared transform provisionally. Compact flying
+posture is not grounds for silhouette fitting. Her timed-motion and join verdicts
+remain historical UNOBSERVED observations: her viewer showed only a GIF still.
+The owner subsequently accepted draft-3 loop motion in both facings, rejected
+canonical scale at approximately 70–75% of idle neutral, and deferred join review
+until extraction, scale and two ambiguous lab selectors were fixed. These are
+separate verdicts; owner motion acceptance does not establish scale or joins.
+`review-attempt-1/identity.json` records these separately attributed findings.
 
-Two strips were generated by Juniper. The attached archive contains both; this
-repository retains attempt 2's original bytes as `idle-strip/source-attempt-2.png`
-and exact prompt/settings/reference hashes and preliminary verdict as
-`idle-strip/provenance-attempt-2.json`. The preliminary rejection was made under
-the earlier geometry and old-sprite matching requirements. The owner explicitly
-superseded those requirements: accept a new atlas canonical from neutral cell 1,
-judge continuity across cells, and repair geometry in extraction. No third
-generation was requested. The preliminary verdict remains intact as provenance;
-it is not a final verdict on the extracted cells under the revised requirements.
+Juniper's design 8 assessment now covers the corrected .28, 142×134 candidate
+(`200ee8966324de8042e267288b86015b6fb628485951b34ab94d799e12281ca3`).
+She supports its static identity, compatible body scale, stable eye/beak
+registration and complete wings with clear surrounding space. Exact alpha
+clearance remains a pipeline result. Her image viewer showed a GIF still, so
+corrected timed motion and legacy joins remain UNOBSERVED; this assessment is
+design advice, not production approval. The owner's separate corrected
+scale/registration, loop and join decisions remain pending. Historical reviews
+are retained rather than rewritten as observations of the corrected pixels.
 
-Rebuild review evidence with:
+Reproduce extraction without generating again:
 
 ```sh
 python3 design-docs/christmas/animation/strip_pipeline.py process \
-  --source design-docs/christmas/animation/idle-strip/source-attempt-2.png \
-  --output design-docs/christmas/animation/idle-strip/review
+  --row flying --count 4 \
+  --source design-docs/christmas/animation/flying-strip/source-revised-attempt-1.png \
+  --reference design-docs/christmas/animation/idle-strip/review/canonical.png \
+  --transform design-docs/christmas/animation/flying-strip/transform-revised-attempt-1.json \
+  --output design-docs/christmas/animation/flying-strip/review-attempt-1
 ```
 
-`review/contact.png`, `preview.gif`, `atlas.webp`, `canonical.png` and `validation.json` are
-review evidence, **not runtime assets**. `canonical.png` is neutral cell 1 for
-Juniper's review and subsequent rows; it is an evidence image, not a hand-edited
-replacement sprite. Extracted cells are temporary and deleted after processing.
-Canonical is regenerated from neutral cell 1 in that same processing run.
-The GIF uses the eight design durations, totaling 4800 ms, without a duplicate
-endpoint. The atlas is lossless 1024×672 WebP; rows 1–5 remain transparent.
+The pipeline finds eight-connected components of cleaned alpha, ignoring
+components below 100 source pixels and coverage below 2%. It requires exactly
+the expected bird count, orders them left to right and rejects touching source
+edges or overlapping horizontal bounds. This applies to idle and flying; the
+canonical-layout mode remains an exact-guide diagnostic. Opaque specks are
+removed by component size, not only by alpha. Each complete bird is sampled
+within its actual box, so uneven spacing or crossing a nominal slot boundary
+cannot cut a wing or import a neighbour. The transform report retains absolute
+component boxes and origins. No frame-specific scale is applied.
 
-Numerical validation passes on attempt 2. It checks nonempty distinct cells,
-four-pixel margins, key residue, obvious blue/magenta guide colours and zero RGB
-under zero alpha. Source clipping is checked independently, on all four source
-edges and both sides of every slot, before transformation. The local foreground
-colour estimate comes from nearby opaque material; coverage is a least-squares
-projection onto the foreground-to-green line. Flat-key noise (g≥220, r/b≤20)
-is removed; other edge coverage above 2% is retained and resampled in
-premultiplied space. Known composite fixtures cover red, fine dark toes and ivory
-feather edges at 25/50/80% coverage. Neutral-height
-scale is 0.4720812183, common source anchor (119.5,466), band y=266–466. No
-per-cell fitting or recentering is performed. Visual guide contamination,
-anatomy is supported by Juniper's static review; the owner accepted breathing
-and seam quality in note 8 and explicitly authorized activation.
+For the selected strip the boxes begin at x=89,599,1115,1634. W0 extends to
+x=554, crossing the obsolete x=537 slot cut. The owner's larger-canvas override
+now permits canonical body scale without cutting the raised wing. All four
+frames use .28, derived from Juniper's crown-to-belly comparison (.27–.29).
+Recorded eye centres register each complete component to one common anchor;
+beak-base and breast-centre landmarks corroborate the placements. These are
+approximate visual measurements, pending rendered acceptance, not silhouette
+fits or per-frame scales. Transparent artwork retains straight RGBA.
 
-The contact sheet alternates native and .35-scale rows: right light, right dark,
-left light, left dark. The timed preview shows those same four views together,
-with native panels above display-scale panels, and repeats the 8→1 wrap.
+The union in eye coordinates, including bilinear support and four clear pixels,
+produces even 142×134 flying cells. The row eye anchor is recorded in validation
+and manifest, corresponding to canonical eye (97.1,26.7). Idle stays 128×112
+with virtual foot anchor (64,100). AtlasFrame offsets the larger clipping window
+inside the same scene footprint at unchanged .35 scale; parent mirroring remains
+responsible for facing. No runtime enlargement or additional world arc is added.
 
-Processing holds an exclusive output lock and builds files privately before
-replacing evidence; extraction or export failure leaves the previous evidence
-intact. This command never touches the active runtime, so interruption cannot
-damage shipped art. If interrupted after evidence replacement starts, rerun
-processing; `validation.json` is removed before the first replacement and
-written last. Its absence marks an incomplete evidence set and prevents runtime
-publication. A leftover lock may be removed only after confirming its writer is
-gone.
+Evidence is the retained original and provenance, contact.png, preview.gif
+(140ms per cell), atlas.webp (flying-only sheet), unchanged canonical.png,
+validation.json and identity.json. Corrected pixels invalidate earlier extracted
+acceptance. Draft-3 owner motion acceptance and scale rejection remain historical;
+corrected scale, loop and legacy joins remain pending, never inferred from
+numerical validation. Production keeps complete legacy flight.
 
-## Runtime publication and acceptance
+Frames remain temporary. `/lab/robin-timing.html` adds the exact 200ms browser
+loop and the slower comparison, plus actual legacy departure/arrival angles,
+both facings, native/.35 sizes and light/dark backgrounds at 450–750ms durations.
+It labels its availability override as candidate inspection; production metadata
+is never changed by the lab. Use its manual clock for joins and its Play checkbox
+for repeated wraps. No temporal or join observation is claimed from the GIF's
+first frame or contact sheet.
 
-Acceptance is recorded in `review/identity.json`: Juniper's static identity
-findings and historical HOLD remain attributed to her; the owner's note 8 and
-explicit follow-up authorization provide temporal acceptance. Her HOLD was an
-execution limitation, not an anatomy or motion rejection. The owner reviewed
-the timed animation and accepted consistent cells, baseline, scale, clean chroma,
-breathing and the half-close/close/reopen sequence. No third generation or
-further browser/temporal review is required. Production idle is enabled.
+### Flying publication and playback
 
-The `publish` command verifies the complete report, atlas geometry, transparent
-unavailable rows, fixed cells and exact canonical-to-cell match. It holds an
-exclusive publication lock, stages exports privately, writes new artwork under
-immutable content-derived filenames, then atomically replaces `manifest.json`.
-Existing referenced artwork is never overwritten. Interruption before manifest
-replacement leaves the previous runtime active; rerunning completes the same
-publication without generation. Tests inject failure between artwork and
-manifest, plus concurrent writer exclusion and partial export failure.
+`publish --row flying` adds the logical flying row using a separate immutable sheet while holding
+the publication lock. It preserves current idle pixels, metadata, timing and
+independent neutral, checks the evidence canonical against that neutral, and
+leaves rows 2–5 transparent. New immutable artwork precedes atomic manifest
+replacement. Missing/stale reports, mismatched verdicts, concurrent writers,
+failed exports and interrupted manifest writes fail without replacing active
+metadata. Idle-only publication refuses to discard a populated flying row.
 
-Publication takes the processing lock while snapshotting the passing report,
-atlas bytes and canonical bytes. It decodes private copies and publishes those
-same atlas bytes, so concurrent processing cannot mix evidence generations.
-The renderer retries the bundled perch if the atlas neutral also fails after
-the atlas and legacy sheet are unavailable.
-
-Without `--verdict`, publication produces a disabled candidate:
+Without a verdict it publishes a disabled candidate, as currently shipped:
 
 ```sh
-python3 design-docs/christmas/animation/strip_pipeline.py publish \
-  --source design-docs/christmas/animation/idle-strip/review \
+python3 design-docs/christmas/animation/strip_pipeline.py publish --row flying \
+  --source design-docs/christmas/animation/flying-strip/review-attempt-1 \
   --output internal/dashboard/ui/src/lib/theme/christmas/robin-atlas
 ```
 
-Publication accepts either Juniper's full acceptance or owner acceptance
-alongside Juniper's supported static identity review. Both owner and designer
-records must identify the same atlas bytes. The retained historical HOLD is not
-rewritten as a designer temporal verdict. Publish the accepted row with:
+A flying verdict must identify the evidence atlas, name Juniper and accept the
+loop; production additionally requires `joins: "accepted"`. Loop acceptance
+alone leaves flying unavailable. Never turn these fields on to compensate for a
+missing review. Current production retains complete legacy flight.
 
-```sh
-python3 design-docs/christmas/animation/strip_pipeline.py publish \
-  --source design-docs/christmas/animation/idle-strip/review \
-  --output internal/dashboard/ui/src/lib/theme/christmas/robin-atlas \
-  --verdict design-docs/christmas/animation/idle-strip/review/identity.json
-make dashboard
-```
+Current checks: 27 pipeline tests and 426 Vitest tests pass; go vet and
+the daemon-hosted project check pass (Go tests, svelte-check: zero errors and
+three existing warnings). Dashboard assets are regenerated. Local Playwright
+still cannot start Vite: `listen EPERM 127.0.0.1:5179`. No browser-control tool
+is exposed in this seat; hosted run_check provides Go/Svelte checks only.
+The corrected revision still needs the complete Vite lab suite and separate
+owner scale/registration, loop and legacy-join acceptance at 450/750ms in both
+facings. Juniper's design 8 corrected static assessment is recorded separately
+in identity.json as corrected_designer_review for atlas
+200ee8966324de8042e267288b86015b6fb628485951b34ab94d799e12281ca3.
+It supports identity, body scale/registration and complete wings in static
+inspection; timed loop and legacy joins remain explicitly UNOBSERVED. Earlier
+design 6 advice and draft-3 owner observations remain historical and do not
+establish temporal acceptance of the corrected candidate.
 
-The digest binds acceptance to reviewed pixels, not an additional ceremony.
-The original preliminary rejection remains in provenance.
+Playback derives only articulation from the existing action clock. It preserves
+legacy flight before .20D and from .80D onward; the middle fits
+N=max(1,round(.60D/200)) complete cycles. Each cell lasts .60D/(count*N), without
+endpoint holds, a legacy wing overlay or another world-motion arc. Unavailable,
+corrupt or failed assets retain the old renderer. Reduced motion stays neutral;
+interruption and skipped ticks cannot extend an action deadline.
 
-The renderer loads legacy and atlas inventories independently and installs only
-accepted idle. Atlas bytes are verified before immutable blob URLs are created;
-failure, abortion, stale completion or partial allocation releases resources and
-keeps fallback visible. Accepted playback uses eight indices and the 4800ms loop
-with its built-in blink, neutral under reduced motion. Unavailable future rows
-keep their existing sprites. Movement, facing, placement and action deadlines
-are unchanged; atlas epochs reset with the existing lifecycle resets.
+No daemon or production data was accessed. To verify playback outside the
+local socket restriction, run from internal/dashboard/ui:
+`./node_modules/.bin/playwright test --config playwright.lab.config.ts`,
+then review /lab/robin-timing.html with the Vite dev server. This is acceptance
+of the corrected candidate, not authorization to generate again.
 
-Tests: `python3 -m unittest discover -s design-docs/christmas/animation -p
-test_strip_pipeline.py`, frontend Vitest, and Playwright's `playwright.lab.config.ts`
-against Vite synthetic pages only. Production manifest and loader regressions
-use shipped metadata without acceptance overrides. The unavailable-row lab test
-alone injects disabled metadata to exercise fallback.
-
-## Verification (2026-10-04)
-
-The owner ran draft 6 (93dc67f) outside the sandbox with Chromium on macOS 27:
-`npx playwright test -c playwright.lab.config.ts` passed all 27 tests in 23.2s,
-including robin-atlas.spec.ts and robin-idle.spec.ts. Owner note 8 supplies the
-timed GIF and strip, visual observations and acceptance; follow-up instructions
-explicitly resolve browser verification and temporal acceptance. Earlier local
-EPERM/browser startup failures are historical execution limitations, not remaining
-delivery blockers. Juniper is credited only with her static identity findings.
+A corrected flying acceptance record must match both atlas_sha256 and the
+complete validation transform as geometry, preventing earlier pixel or
+registration verdicts from enabling a changed row.

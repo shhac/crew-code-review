@@ -1,0 +1,92 @@
+{
+  "scale": 0.28,
+  "reference": "../idle-strip/review/canonical.png",
+  "reference_sha256": "54f2b56c111d7caa852daa0391703f687f6d145db5df07306e6c281a977cdb99",
+  "basis": "One .28 uniform body scale from Juniper crown-to-belly comparison (.27\u2013.29); eye centres from corresponding source landmarks. Beak-base and breast-centre approximate visual corroboration. Canvas from complete union with bilinear support and four clear margins; no silhouette fitting. Corrected-pixel visual acceptance pending.",
+  "minimum_component_pixels": 100,
+  "canonical_eye": [
+    97.1,
+    26.7
+  ],
+  "landmarks": [
+    {
+      "eye": [
+        477.1,
+        346.2
+      ],
+      "beak_base": [
+        512.1,
+        354.2
+      ],
+      "breast_centre": [
+        469.1,
+        441.2
+      ]
+    },
+    {
+      "eye": [
+        989.6,
+        345.2
+      ],
+      "beak_base": [
+        1024.6,
+        353.2
+      ],
+      "breast_centre": [
+        981.6,
+        440.2
+      ]
+    },
+    {
+      "eye": [
+        1491,
+        347.2
+      ],
+      "beak_base": [
+        1526,
+        355.2
+      ],
+      "breast_centre": [
+        1483,
+        442.2
+      ]
+    },
+    {
+      "eye": [
+        2008.6,
+        346.2
+      ],
+      "beak_base": [
+        2043.6,
+        354.2
+      ],
+      "breast_centre": [
+        2000.6,
+        441.2
+      ]
+    }
+  ],
+  "canonical_landmarks": {
+    "eye": [
+      97.1,
+      26.7
+    ],
+    "beak_base": [
+      107,
+      29
+    ],
+    "breast_centre": [
+      96,
+      53
+    ],
+    "crown_y": 9,
+    "belly_underside_y": 84
+  },
+  "scale_measurement": {
+    "canonical_crown_to_belly": 75,
+    "source_crown_to_belly": 270,
+    "ratio": 0.2777777777777778,
+    "selected_scale": 0.28,
+    "authority": "Juniper design 7 body span comparison; points approximate, rendered acceptance pending"
+  }
+}

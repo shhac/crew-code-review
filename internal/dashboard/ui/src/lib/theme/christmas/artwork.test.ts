@@ -43,7 +43,7 @@ it('forces the independently packaged neutral under reduced motion even for a st
 
 it('replaces every layer use while retaining the existing outer registration and shelf', () => {
   const layer = readFileSync(new URL('./ChristmasLayer.svelte', import.meta.url), 'utf8');
-  expect(layer).toContain('<RobinArt pose={drawing.pose} {frame} {atlasFrame} {reduced} />');
+  expect(layer).toContain('<RobinArt pose={drawing.pose} {frame} {atlasFrame} {flightFrame} {reduced} />');
   expect(layer).not.toMatch(/\.svg|\{@html/);
   expect(layer).toContain('left: {drawing.x - ROBIN.anchorX}px; top: {drawing.y - ROBIN.anchorY}px');
   expect(layer).toContain('transform: scaleX({drawing.dir}); transform-origin: {ROBIN.anchorX}px {ROBIN.anchorY}px; --wing: {drawing.wing}deg');

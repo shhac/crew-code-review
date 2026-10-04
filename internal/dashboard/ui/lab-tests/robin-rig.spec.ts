@@ -7,7 +7,7 @@ test('committed rig uses the production renderer, wraps discretely and exposes r
   await expect(page.locator('[data-robin-assets]')).toHaveAttribute('data-robin-assets', 'ready');
   await expect(page.locator('.frame-window img')).toHaveAttribute('src', /^blob:/);
   const frame = page.locator('[data-atlas-frame]');
-  const elapsed = page.getByLabel('Elapsed (ms)');
+  const elapsed = page.getByLabel('Elapsed (ms)', { exact: true });
   await elapsed.fill('400');
   await expect(page.locator('[data-rig-frame]')).toHaveText('I2');
   await expect(frame).toHaveAttribute('data-atlas-frame', 'I2');
@@ -24,7 +24,7 @@ test('committed rig uses the production renderer, wraps discretely and exposes r
   await page.getByRole('combobox', { name: 'Clip', exact: true }).selectOption('blink');
   await elapsed.fill('100'); await expect(page.locator('[data-rig-frame]')).toHaveText('B2');
   await expect(frame).toHaveAttribute('data-atlas-frame', 'B2');
-  await page.getByLabel('Reduced motion').check();
+  await page.getByLabel('Reduced motion', { exact: true }).check();
   await expect(page.locator('[data-rig-frame]')).toHaveText('I0');
   await expect(frame).toHaveAttribute('data-atlas-frame', 'I0');
   expect(apiCalls).toBe(0);

@@ -17,7 +17,7 @@
 <div class="robin-art" data-atlas-frame={usable ? frame : 'I0'}>
   <div class="art-cell">
     {#if sheet && rectangle && usable}
-      <div class="frame-window">
+      <div class="frame-window" style="width: {rectangle.width}px; height: {rectangle.height}px; left: {(rectangle.canonical_anchor?.[0] ?? 64) - (rectangle.anchor?.[0] ?? 64)}px; top: {(rectangle.canonical_anchor?.[1] ?? 100) - (rectangle.anchor?.[1] ?? 100)}px">
         <img class="bird-body atlas-sheet" src={sheet} alt="" on:error={() => { failed = true; onFailure(); }}
           style="left: {-rectangle.x}px; top: {-rectangle.y}px" />
       </div>

@@ -1,0 +1,44 @@
+{
+  "reference": "design-docs/christmas/animation/idle-strip/review/canonical.png",
+  "reference_sha256": "54f2b56c111d7caa852daa0391703f687f6d145db5df07306e6c281a977cdb99",
+  "guide_size": [
+    1024,
+    112
+  ],
+  "cell_size": [
+    128,
+    112
+  ],
+  "anchor": [
+    64,
+    100
+  ],
+  "clear_margin": 4,
+  "extraction": "canonical-layout",
+  "transform": {
+    "source_size": [
+      1024,
+      112
+    ],
+    "slot_width": 128.0,
+    "slot_boundaries": [
+      0.0,
+      128.0,
+      256.0,
+      384.0,
+      512.0,
+      640.0,
+      768.0,
+      896.0,
+      1024.0
+    ],
+    "scale": 1.0,
+    "source_anchor": [
+      64.0,
+      100.0
+    ],
+    "pixel_centres": "source=(native+0.5)/scale-0.5",
+    "registration": "canonical-layout"
+  },
+  "purpose": "Registration only; idle wings and planted feet do not constrain flight articulation"
+}
