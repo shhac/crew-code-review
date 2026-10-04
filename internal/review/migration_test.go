@@ -55,7 +55,7 @@ func TestNativeReasoningAcrossResumes(t *testing.T) {
 					if evidence == "zero" {
 						reasoning = 0
 					}
-					if evidence != "absent" && !(evidence == "second absent" && calls == 2) {
+					if evidence != "absent" && (evidence != "second absent" || calls != 2) {
 						switch engine {
 						case harness.Codex:
 							u["reasoning_output_tokens"] = reasoning
