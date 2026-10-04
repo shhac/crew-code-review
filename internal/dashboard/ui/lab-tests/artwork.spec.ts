@@ -6,13 +6,15 @@ for (const width of [1440, 480]) {
     await page.route('**/api/**', route => { api.push(route.request().url()); return route.abort(); });
     await page.setViewportSize({ width, height: 900 });
     await page.goto('/lab/artwork.html');
+    await expect.poll(() => page.locator('[data-robin-assets]').evaluateAll(els => els.every(el => el.getAttribute('data-robin-assets') === 'ready'))).toBe(true);
     const decoded = await page.locator('img').evaluateAll(async images => Promise.all(images.map(async image => {
       if (!(image instanceof HTMLImageElement)) throw new Error('expected image');
       await image.decode();
       return { src: image.src, w: image.naturalWidth, h: image.naturalHeight };
     })));
     for (const image of decoded) {
-      expect(image.src).toContain('.webp');
+      if (image.src.startsWith('blob:')) expect([image.w, image.h]).toEqual([780, 114]);
+      else expect(image.src).toContain('.webp');
       if (/robin-/.test(image.src)) expect([image.w, image.h]).toEqual([128, 112]);
       if (/holly/.test(image.src)) expect([image.w, image.h]).toEqual([96, 64]);
       if (/\/tree\./.test(image.src)) expect([image.w, image.h]).toEqual([176, 166]);
@@ -49,7 +51,8 @@ for (const width of [1440, 480]) {
           expect(rendered.foot).toBe('22.4px 35px');
           expect(rendered.mirror).toBe(`matrix(${direction}, 0, 0, 1, 0, 0)`);
           expect(rendered.bodyTransform).toBe('none');
-          expect(rendered.source).toContain(`robin-${pose}.webp`);
+          if (pose === 'perch') expect(rendered.source).toMatch(/^blob:/);
+          else expect(rendered.source).toContain(`robin-${pose}.webp`);
           expect(rendered.images).toBe(pose === 'flight' ? 2 : 1);
           if (pose === 'flight') {
             expect(rendered.wing?.origin).toBe('64px 57px');

@@ -1,0 +1,85 @@
+{
+  "alpha_bounds": [
+    2,
+    6,
+    105,
+    99
+  ],
+  "anchor_offset": [
+    0,
+    0
+  ],
+  "body_scale": [
+    1,
+    1
+  ],
+  "body_scale_drift_percent": [
+    0,
+    0
+  ],
+  "bounds_drift": [
+    0,
+    0,
+    0,
+    0
+  ],
+  "engineering_gates": {
+    "anchor_pixels": 0,
+    "palette_euclidean_rgb": {
+      "max": 24,
+      "median": 1,
+      "p95": 3
+    },
+    "torso_centre_pixels": 1.5,
+    "torso_dimensions_percent": 3
+  },
+  "filtered_envelope": "pass-both-facings",
+  "fixed_feet_exact": true,
+  "frame": "B1",
+  "frame_sha256": "0e46719d97162a026904b1d58cd277dbdfcf465ba1b11ff93099311d2472836f",
+  "gate_scope": "reference-rig invariants only, not generated-frame cleanup acceptance",
+  "identity_status": "reference-preserved",
+  "numerical_status": "pass",
+  "owner_visual_review": "pending",
+  "palette_distance_rgb": {
+    "max": 0.0,
+    "median": 0.0,
+    "metric": "nearest source material colour, Euclidean sRGB diagnostic (not CIEDE2000)",
+    "p95": 0.0
+  },
+  "palette_status": "source pixels and premultiplied interpolation; no chroma key or palette remapping required",
+  "reason": "Fixed anatomy, bounded eye overlay, source-derived body scale, exact feet and collision envelope validated",
+  "reference_alpha_bounds": [
+    2,
+    6,
+    105,
+    99
+  ],
+  "reference_torso_mask_bounds": [
+    27,
+    39,
+    100,
+    84
+  ],
+  "source": "owner-authorized reference rig, not new image generation",
+  "status": "pass",
+  "torso_centre_offset": [
+    0.0,
+    0.0
+  ],
+  "torso_dimensions_drift_percent": [
+    0.0,
+    0.0
+  ],
+  "torso_mask_bounds": [
+    27,
+    39,
+    100,
+    84
+  ],
+  "uncovered_opaque_pixels": 0,
+  "virtual_foot_anchor": [
+    64,
+    100
+  ]
+}

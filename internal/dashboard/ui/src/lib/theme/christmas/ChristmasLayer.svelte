@@ -9,10 +9,14 @@
   import { createBird, advanceBird, reconcileBird, birdPose, type Bird, type Scene } from './robin';
   import { reconcileSnow, wipeSnow, renderSnow, type Snow } from './wipe';
   import RobinArt from './RobinArt.svelte';
+  import { createIdlePlayback, cosmeticStream } from './idle-playback';
+  import { idleClips } from './idle-inventory';
 
   // Injected by the synthetic lab; the dashboard uses real elapsed time.
   export let clock: () => number = () => performance.now();
   export let random: () => number = Math.random;
+  export let cosmeticRandom: () => number = cosmeticStream();
+  const playback = createIdlePlayback(() => cosmeticRandom(), idleClips());
 
   const debug = new URLSearchParams(location.search).get('theme-debug') === '1';
   let floors: ReadonlyMap<number, Ledge> = new Map();
@@ -23,10 +27,11 @@
   let reduced = false;
   $: perch = bird.perch;
   $: drawing = birdPose(bird, scene, now);
+  $: frame = playback.frame(bird, now, reduced);
   onMount(() => {
     const pointer = pointerTracker();
     let dirty = true, measuredAt = -Infinity, fresh = true;
-    const reset = () => { pointer.reset(); dirty = true; };
+    const reset = () => { pointer.reset(); playback.reset(); dirty = true; };
     const measure = (time: number) => {
       floors = measureFloors();
       scene = { floors, obstacles: measureObstacles(), width: innerWidth, height: innerHeight };
@@ -57,7 +62,7 @@
       const obstacles = measureObstacles();
       if (JSON.stringify([...next]) !== JSON.stringify([...floors]) || JSON.stringify(obstacles) !== JSON.stringify(scene.obstacles)) changed();
     }, 1000);
-    return () => { loop.stop(); stopPointer(); stopObserving(); clearInterval(timer); };
+    return () => { playback.reset(); loop.stop(); stopPointer(); stopObserving(); clearInterval(timer); };
   });
 </script>
 
@@ -76,7 +81,7 @@
   {#if drawing}
     <div class="robin" data-pose={drawing.pose}
       style="left: {drawing.x - ROBIN.anchorX}px; top: {drawing.y - ROBIN.anchorY}px; width: {ROBIN.width}px; height: {ROBIN.height}px; transform: scaleX({drawing.dir}); transform-origin: {ROBIN.anchorX}px {ROBIN.anchorY}px; --wing: {drawing.wing}deg">
-      <RobinArt pose={drawing.pose} />
+      <RobinArt pose={drawing.pose} {frame} {reduced} />
     </div>
   {/if}
 </div>

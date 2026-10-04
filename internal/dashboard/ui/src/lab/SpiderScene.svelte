@@ -108,6 +108,7 @@
   <label><input type="checkbox" bind:checked={manual} /> manual clock</label>
   {#if manual}
     <output data-scene-time>{elapsed}</output>
+    <label>Scene elapsed (ms) <input type="number" min="0" bind:value={elapsed} /></label>
     <button on:click={() => elapsed += 1000}>Advance 1s</button>
     <button on:click={() => elapsed += 100}>Advance 100ms</button>
     <button on:click={() => elapsed += 16000}>Advance 16s</button>
@@ -124,7 +125,7 @@
 {#if theme === 'halloween'}
 <HalloweenLayer {timeScale} prefer={prefer || undefined} bind:world bind:floors />
 {:else if theme === 'christmas'}
-{#key manual}<ChristmasLayer clock={() => manual ? elapsed : performance.now()} random={manual ? () => randomValue : Math.random} />{/key}
+{#key manual}<ChristmasLayer clock={() => manual ? elapsed : performance.now()} random={manual ? () => randomValue : Math.random} cosmeticRandom={() => 0} />{/key}
 {/if}
 {#if debug && theme === 'halloween'}
   <svg class="debug" width="100%" height="100%" aria-hidden="true">

@@ -32,9 +32,16 @@ it('scales the native stage once and rotates only the wing about its native pivo
   expect(css).toMatch(/\.raised-wing[^}]*rotate\(var\(--wing, 0deg\)\)[^}]*transform-origin:\s*64px 57px[^}]*transform-box:\s*border-box/);
 });
 
+it('forces the independently packaged neutral under reduced motion even for a stale flight/blink', () => {
+  const { body } = render(RobinArt, { props: { pose: 'flight', frame: 'B2', reduced: true } });
+  expect(body).toContain('data-atlas-frame="I0"');
+  expect(body).toContain('robin-perch.webp');
+  expect(body).not.toContain('raised-wing');
+});
+
 it('replaces every layer use while retaining the existing outer registration and shelf', () => {
   const layer = readFileSync(new URL('./ChristmasLayer.svelte', import.meta.url), 'utf8');
-  expect(layer).toContain('<RobinArt pose={drawing.pose} />');
+  expect(layer).toContain('<RobinArt pose={drawing.pose} {frame} {reduced} />');
   expect(layer).not.toMatch(/\.svg|\{@html/);
   expect(layer).toContain('left: {drawing.x - ROBIN.anchorX}px; top: {drawing.y - ROBIN.anchorY}px');
   expect(layer).toContain('transform: scaleX({drawing.dir}); transform-origin: {ROBIN.anchorX}px {ROBIN.anchorY}px; --wing: {drawing.wing}deg');

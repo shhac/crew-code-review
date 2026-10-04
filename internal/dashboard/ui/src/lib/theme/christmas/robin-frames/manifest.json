@@ -1,0 +1,108 @@
+{
+  "anchor": [
+    64,
+    100
+  ],
+  "clips": {
+    "blink": {
+      "durations": [
+        60,
+        40,
+        70,
+        40,
+        90
+      ],
+      "frames": [
+        "I0",
+        "B1",
+        "B2",
+        "B1",
+        "I0"
+      ],
+      "loop": false,
+      "restFrame": "I0",
+      "terminalFrame": "I0"
+    },
+    "breathing": {
+      "durations": [
+        200,
+        200,
+        200,
+        200,
+        200,
+        200
+      ],
+      "frames": [
+        "I0",
+        "I1",
+        "I2",
+        "I3",
+        "I2",
+        "I1"
+      ],
+      "loop": true,
+      "restFrame": "I0",
+      "terminalFrame": "I1"
+    }
+  },
+  "fallback": {
+    "file": "robin-perch.webp",
+    "height": 112,
+    "sha256": "e9d871e3f720fe55bf70fc40991e8dcc82a67514889038785d67e53e9a79237a",
+    "width": 128
+  },
+  "frames": {
+    "B1": {
+      "height": 112,
+      "sheet": "e914bae01423f1550cbc56bccf13f661de900e816f19adb2d8db7c9d36443271-idle-sheet.webp",
+      "width": 128,
+      "x": 521,
+      "y": 1
+    },
+    "B2": {
+      "height": 112,
+      "sheet": "e914bae01423f1550cbc56bccf13f661de900e816f19adb2d8db7c9d36443271-idle-sheet.webp",
+      "width": 128,
+      "x": 651,
+      "y": 1
+    },
+    "I0": {
+      "height": 112,
+      "sheet": "e914bae01423f1550cbc56bccf13f661de900e816f19adb2d8db7c9d36443271-idle-sheet.webp",
+      "width": 128,
+      "x": 1,
+      "y": 1
+    },
+    "I1": {
+      "height": 112,
+      "sheet": "e914bae01423f1550cbc56bccf13f661de900e816f19adb2d8db7c9d36443271-idle-sheet.webp",
+      "width": 128,
+      "x": 131,
+      "y": 1
+    },
+    "I2": {
+      "height": 112,
+      "sheet": "e914bae01423f1550cbc56bccf13f661de900e816f19adb2d8db7c9d36443271-idle-sheet.webp",
+      "width": 128,
+      "x": 261,
+      "y": 1
+    },
+    "I3": {
+      "height": 112,
+      "sheet": "e914bae01423f1550cbc56bccf13f661de900e816f19adb2d8db7c9d36443271-idle-sheet.webp",
+      "width": 128,
+      "x": 391,
+      "y": 1
+    }
+  },
+  "profile": "idle-blink",
+  "scale": 0.35,
+  "sheets": {
+    "e914bae01423f1550cbc56bccf13f661de900e816f19adb2d8db7c9d36443271-idle-sheet.webp": {
+      "height": 114,
+      "sha256": "e914bae01423f1550cbc56bccf13f661de900e816f19adb2d8db7c9d36443271",
+      "width": 780
+    }
+  },
+  "version": 1
+}

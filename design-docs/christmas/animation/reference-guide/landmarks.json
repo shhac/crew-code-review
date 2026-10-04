@@ -1,0 +1,239 @@
+{
+  "alpha_bounds": [
+    2,
+    6,
+    105,
+    99
+  ],
+  "calibration_status": "measured reference features; generated pose tolerance calibration remains pending",
+  "cell": [
+    128,
+    112
+  ],
+  "collision_envelope_display": {
+    "x": [
+      -24,
+      24
+    ],
+    "y": [
+      -37,
+      0
+    ]
+  },
+  "collision_envelope_native": {
+    "x": [
+      -4.571428571428569,
+      132.57142857142856
+    ],
+    "y": [
+      -5.714285714285722,
+      100
+    ]
+  },
+  "finish_references": [
+    {
+      "file": "design-docs/halloween/pumpkins.png",
+      "sha256": "e2b446f481495b9b618bd3c4b067e28ca7dcac13a7116b9a382cc4fd6de7567a"
+    },
+    {
+      "file": "design-docs/halloween/candles.png",
+      "sha256": "51a6ce2ae518b24d97116f27456c9cfe088b1ac1509371b88f223d8863b5f771"
+    },
+    {
+      "file": "design-docs/halloween/spider-body-side.png",
+      "sha256": "16a39040c9dc5d5dd3445a80a12af2393cf52e5b93824405f214717b3102daf7"
+    }
+  ],
+  "ground_y": 100,
+  "guide_sha256": "d30a769fbb7d74bb13c0d5bd47488c2181e8eab170a98e382abbfc5f77bbd609",
+  "landmarks": {
+    "beak": {
+      "bounds": [
+        93,
+        25,
+        105,
+        39
+      ],
+      "centre": [
+        97.7,
+        32.8556
+      ],
+      "pixels": 90,
+      "tip": [
+        104.5,
+        33.0
+      ]
+    },
+    "breast": {
+      "bounds": [
+        69,
+        43,
+        98,
+        74
+      ],
+      "centre": [
+        84.8814,
+        55.859
+      ],
+      "pixels": 624
+    },
+    "eye": {
+      "bounds": [
+        82,
+        29,
+        88,
+        36
+      ],
+      "centre": [
+        84.881,
+        32.4524
+      ],
+      "pixels": 21
+    },
+    "head": {
+      "bounds": [
+        53,
+        14,
+        99,
+        44
+      ],
+      "centre": [
+        75.2286,
+        30.8656
+      ],
+      "pixels": 1135
+    },
+    "left_foot": {
+      "bounds": [
+        47,
+        88,
+        64,
+        99
+      ],
+      "centre": [
+        55.8398,
+        93.335
+      ],
+      "pixels": 103,
+      "toe_extrema": {
+        "left": [
+          47.5,
+          94.5
+        ],
+        "lowest": [
+          59.0,
+          98.5
+        ],
+        "right": [
+          63.5,
+          94.5
+        ]
+      }
+    },
+    "right_foot": {
+      "bounds": [
+        64,
+        88,
+        81,
+        97
+      ],
+      "centre": [
+        72.3351,
+        92.6134
+      ],
+      "pixels": 97,
+      "toe_extrema": {
+        "left": [
+          64.5,
+          93.5
+        ],
+        "lowest": [
+          75.0,
+          96.5
+        ],
+        "right": [
+          80.5,
+          93.5
+        ]
+      }
+    },
+    "torso": {
+      "bounds": [
+        24,
+        38,
+        99,
+        86
+      ],
+      "centre": [
+        63.0555,
+        60.5268
+      ],
+      "pixels": 2945
+    }
+  },
+  "measurement_rules": {
+    "alpha_bounds": "all nonzero alpha, including faint antialiasing",
+    "beak": "largest alpha>=16 component with RGB<=130,95,80 in beak region; tip is rightmost support centre",
+    "bounds": "half-open integer support bounds; centres are pixel centres",
+    "breast": "alpha>=128; R>=170,45<=G<=180,G<0.8R,B<=100; largest component",
+    "eye": "largest alpha>=128 component with RGB<=60,50,40 in eye region",
+    "feet": "alpha>=32,RGB<=170,120,100; largest component in each foot region",
+    "toe_extrema": "support extrema of foot-pad component, not an inferred number of anatomical toes",
+    "torso_head": "largest 8-connected alpha>=128 component in named anatomical search region"
+  },
+  "rasterizer": "Version: ImageMagick 7.1.2-32 Q16-HDRI aarch64 68f8d115a:20260926 https://imagemagick.org",
+  "reference": {
+    "file": "internal/dashboard/ui/src/lib/theme/christmas/robin-perch.webp",
+    "sha256": "e9d871e3f720fe55bf70fc40991e8dcc82a67514889038785d67e53e9a79237a"
+  },
+  "registration_note": "The virtual anchor is a layout contract, not the centroid or lowest painted toe. Preserve its reference-relative offset for every pose.",
+  "scale": 0.35,
+  "search_regions": {
+    "beak": [
+      93,
+      25,
+      108,
+      39
+    ],
+    "breast": [
+      68,
+      43,
+      99,
+      78
+    ],
+    "eye": [
+      78,
+      24,
+      92,
+      40
+    ],
+    "head": [
+      53,
+      12,
+      99,
+      44
+    ],
+    "left_foot": [
+      43,
+      88,
+      64,
+      100
+    ],
+    "right_foot": [
+      64,
+      88,
+      84,
+      100
+    ],
+    "torso": [
+      24,
+      38,
+      99,
+      86
+    ]
+  },
+  "virtual_foot_anchor": [
+    64,
+    100
+  ]
+}

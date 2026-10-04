@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "status": "tracing-draft",
+  "head_seam": [[50, 40], [99, 43]],
+  "head_pivot": [75, 42],
+  "torso_pivot": [64, 83],
+  "feet_start_y": 84,
+  "tail_end_x": 27,
+  "wing": [[27, 57], [34, 45], [47, 37], [60, 34], [69, 40], [70, 48], [60, 59], [44, 68], [27, 69]],
+  "blink_region": [81, 28, 89, 37],
+  "note": "Juniper design 8 tracing proposals. Review masks and neck seams in the Vite lab before identity acceptance; these are not certified anatomical masks."
+}

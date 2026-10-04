@@ -1,0 +1,90 @@
+{
+  "anchor": [
+    64,
+    100
+  ],
+  "background": "#00FFFF",
+  "cell": [
+    128,
+    112
+  ],
+  "ground_y": 100,
+  "guide_sha256": "d30a769fbb7d74bb13c0d5bd47488c2181e8eab170a98e382abbfc5f77bbd609",
+  "mask_sha256": "f18c56074e39a12a6c73592a94498ce7537ba3fbf23de4e45e2fd91a472c84ed",
+  "poses": {
+    "F1": {
+      "files": {
+        "8898a96239ec851db0333b50a3119a89c699475690708db35c6bb8668f7ca566-F1-target.png": "8898a96239ec851db0333b50a3119a89c699475690708db35c6bb8668f7ca566",
+        "96bae0a71108a88caaa0efd06b7ab870e6d3bb74c9f681619123b3b8d1066cca-F1-edit-region.png": "96bae0a71108a88caaa0efd06b7ab870e6d3bb74c9f681619123b3b8d1066cca"
+      },
+      "silhouette": [
+        [
+          57,
+          48
+        ],
+        [
+          63,
+          43
+        ],
+        [
+          39,
+          25
+        ],
+        [
+          25,
+          26
+        ],
+        [
+          23,
+          33
+        ],
+        [
+          39,
+          48
+        ]
+      ],
+      "source": "Juniper design 10 exact prompt landmarks; polygon connects the stated landmarks"
+    },
+    "F2": {
+      "files": {
+        "08d2145be527cda7755b42dc9cf41f168913d15bafc07041e866088c86271d08-F2-edit-region.png": "08d2145be527cda7755b42dc9cf41f168913d15bafc07041e866088c86271d08",
+        "dda49fe26d507d00e0a30dd14251718f7e05f080bca17723cdaefb8a1b068df3-F2-target.png": "dda49fe26d507d00e0a30dd14251718f7e05f080bca17723cdaefb8a1b068df3"
+      },
+      "silhouette": [
+        [
+          57,
+          48
+        ],
+        [
+          63,
+          43
+        ],
+        [
+          42,
+          12
+        ],
+        [
+          29,
+          8
+        ],
+        [
+          26,
+          17
+        ],
+        [
+          43,
+          35
+        ]
+      ],
+      "source": "Juniper design 10 exact prompt landmarks; polygon connects the stated landmarks"
+    }
+  },
+  "rasterizer": "ImageMagick 7.1.2-32 Q16-HDRI",
+  "reference_sha256": "e9d871e3f720fe55bf70fc40991e8dcc82a67514889038785d67e53e9a79237a",
+  "script_sha256": "8823871363f9891464d58245dc19e94b014e7ad1f96cec353b8371f785a9c7cb",
+  "shoulder_root": [
+    57,
+    48
+  ],
+  "status": "edit-scaffolds-not-artwork"
+}

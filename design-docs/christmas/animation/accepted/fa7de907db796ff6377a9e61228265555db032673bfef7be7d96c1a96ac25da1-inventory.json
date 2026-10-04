@@ -1,0 +1,103 @@
+{
+  "frames": {
+    "B1": {
+      "file": "0e46719d97162a026904b1d58cd277dbdfcf465ba1b11ff93099311d2472836f-B1.webp",
+      "report": "7d550f97a3ec42bd234fbb750acd18ade23ff211aea28a82b803f6b546573c45-B1.json",
+      "report_sha256": "7d550f97a3ec42bd234fbb750acd18ade23ff211aea28a82b803f6b546573c45",
+      "sha256": "0e46719d97162a026904b1d58cd277dbdfcf465ba1b11ff93099311d2472836f"
+    },
+    "B2": {
+      "file": "9856730c4003e790636a6e5caef9cd0606dc2277ccc3f43fe2bb756ec1a8e56c-B2.webp",
+      "report": "90d9256e26a85b0f3c2e33e9032f2140d1092ea41f4d27c69ce7a9bc2fc4a59f-B2.json",
+      "report_sha256": "90d9256e26a85b0f3c2e33e9032f2140d1092ea41f4d27c69ce7a9bc2fc4a59f",
+      "sha256": "9856730c4003e790636a6e5caef9cd0606dc2277ccc3f43fe2bb756ec1a8e56c"
+    },
+    "I0": {
+      "file": "e9d871e3f720fe55bf70fc40991e8dcc82a67514889038785d67e53e9a79237a-I0.webp",
+      "report": "c9c50e0bbfbb85fd3fa3de638e0b1957bfbcba3979a54eb9e2f980e0aa5c105c-I0.json",
+      "report_sha256": "c9c50e0bbfbb85fd3fa3de638e0b1957bfbcba3979a54eb9e2f980e0aa5c105c",
+      "sha256": "e9d871e3f720fe55bf70fc40991e8dcc82a67514889038785d67e53e9a79237a"
+    },
+    "I1": {
+      "file": "c5873b731520d51e5daade58cc0a5a3245e05def112973d88b65c9d5ebb4a4a1-I1.webp",
+      "report": "d8c5812aed45b9df2459bf416e8307caa50fb8d346db74536ac65d54ec37c9e6-I1.json",
+      "report_sha256": "d8c5812aed45b9df2459bf416e8307caa50fb8d346db74536ac65d54ec37c9e6",
+      "sha256": "c5873b731520d51e5daade58cc0a5a3245e05def112973d88b65c9d5ebb4a4a1"
+    },
+    "I2": {
+      "file": "f59d360bd9ed229ae1e61db6187e4a291e5d6f2dbbdd462bb91846901e52875f-I2.webp",
+      "report": "654c00b6003e2564521e84956dc1942ce9569dd3c7db2a3e38a96abf6d6f615f-I2.json",
+      "report_sha256": "654c00b6003e2564521e84956dc1942ce9569dd3c7db2a3e38a96abf6d6f615f",
+      "sha256": "f59d360bd9ed229ae1e61db6187e4a291e5d6f2dbbdd462bb91846901e52875f"
+    },
+    "I3": {
+      "file": "8880661ef8e8e00764efc7098f2447aa99724fa2c517e57b3bf1d25611a583f8-I3.webp",
+      "report": "6708fe22562e5fb2c3c2b6ebf41221fbf164d0150202e68e083ef386d8c4d815-I3.json",
+      "report_sha256": "6708fe22562e5fb2c3c2b6ebf41221fbf164d0150202e68e083ef386d8c4d815",
+      "sha256": "8880661ef8e8e00764efc7098f2447aa99724fa2c517e57b3bf1d25611a583f8"
+    }
+  },
+  "guide_sha256": "d30a769fbb7d74bb13c0d5bd47488c2181e8eab170a98e382abbfc5f77bbd609",
+  "manifest_sha256": "0fb1f6167b3df9d634dab748a0fdf67b6e34665036185a52af7142a67c806582",
+  "masks_sha256": "f18c56074e39a12a6c73592a94498ce7537ba3fbf23de4e45e2fd91a472c84ed",
+  "previews": {
+    "blink": {
+      "clip": {
+        "durations": [
+          60,
+          40,
+          70,
+          40,
+          90
+        ],
+        "frames": [
+          "I0",
+          "B1",
+          "B2",
+          "B1",
+          "I0"
+        ],
+        "loop": false,
+        "restFrame": "I0",
+        "terminalFrame": "I0"
+      },
+      "contact": "991754804932e974abad48ff302eb4aa38fecd01047b3c4b9b24bdad2d8aa38e-blink-contact.png",
+      "gif": "3b1df6d2dd47e99a9fdb6f151e04992e4a1882082b0627e781abd2115c419a6e-blink.gif"
+    },
+    "breathing": {
+      "clip": {
+        "durations": [
+          200,
+          200,
+          200,
+          200,
+          200,
+          200
+        ],
+        "frames": [
+          "I0",
+          "I1",
+          "I2",
+          "I3",
+          "I2",
+          "I1"
+        ],
+        "loop": true,
+        "restFrame": "I0",
+        "terminalFrame": "I1"
+      },
+      "contact": "782ed164563a797c299ad9eaf411692af6891c823afba603368e36594b538886-breathing-contact.png",
+      "gif": "03fba89238778b5d163ea281f5b8fea3ee11556d8f4cca2aa997d929c1103d03-breathing.gif"
+    }
+  },
+  "publisher_sha256": "c59d0eabd16867fe0fd472dcfd530cfddff03b5ba81639e1dc49c43071808016",
+  "reference_sha256": "e9d871e3f720fe55bf70fc40991e8dcc82a67514889038785d67e53e9a79237a",
+  "rig_script_sha256": "0cf2ee7061ddaebade39ce5f6a4c3c25a447feac4322a9a5f9516c73217a5362",
+  "scope": "idle-blink",
+  "tools": {
+    "cwebp": "1.6.0",
+    "export": "-lossless -q 100 -m 6 -exact -metadata none",
+    "magick": "7.1.2-32 Q16-HDRI"
+  },
+  "version": 1
+}
