@@ -8,14 +8,15 @@ test('committed rig uses the production renderer, wraps discretely and exposes r
   const elapsed = page.getByLabel('Elapsed (ms)');
   await elapsed.fill('400');
   await expect(page.locator('[data-rig-frame]')).toHaveText('I2');
-  await expect(page.locator('.frame-window img')).toHaveAttribute('style', 'left: -261px; top: -1px');
+  await expect(page.locator('.frame-window img')).toHaveCSS('left', '-261px');
+  await expect(page.locator('.frame-window img')).toHaveCSS('top', '-1px');
   await elapsed.fill('1199'); await expect(page.locator('[data-rig-frame]')).toHaveText('I1');
   await elapsed.fill('1200'); await expect(page.locator('[data-rig-frame]')).toHaveText('I0');
   await page.getByLabel('Reference overlay').check();
   await expect(page.getByAltText('Reference overlay')).toBeVisible();
   await page.getByLabel('Mirror', { exact: true }).check();
-  await expect(page.locator('.preview')).toHaveAttribute('style', 'transform: scaleX(-1)');
-  await page.getByLabel('Clip', { exact: true }).selectOption('blink');
+  await expect(page.locator('.preview')).toHaveCSS('transform', 'matrix(-1, 0, 0, 1, 0, 0)');
+  await page.getByRole('combobox', { name: 'Clip', exact: true }).selectOption('blink');
   await elapsed.fill('100'); await expect(page.locator('[data-rig-frame]')).toHaveText('B2');
   await page.getByLabel('Reduced motion').check();
   await expect(page.locator('[data-rig-frame]')).toHaveText('I0');

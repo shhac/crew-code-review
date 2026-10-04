@@ -7,7 +7,7 @@ test('Vite timing diagnostic selects exact wrap and route-deadline boundaries wi
   const elapsed = page.getByLabel('Elapsed (ms)');
   await elapsed.fill('1199'); await expect(page.locator('[data-timing-frame]')).toHaveText('I1');
   await elapsed.fill('1200'); await expect(page.locator('[data-timing-frame]')).toHaveText('I0');
-  await page.getByLabel('Clip', { exact: true }).selectOption('flight');
+  await page.getByRole('combobox', { name: 'Clip', exact: true }).selectOption('flight');
   await elapsed.fill('451');
   await expect(page.locator('[data-timing-frame]')).toHaveText('I0');
   await expect(page.locator('[data-timing-complete]')).toHaveText('complete');

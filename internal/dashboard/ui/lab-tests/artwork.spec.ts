@@ -78,9 +78,13 @@ for (const width of [1440, 480]) {
       else await expect(page.locator('.theme-shelf')).toBeHidden();
       await page.locator('.controls').evaluate(el => { if (el instanceof HTMLElement) el.style.visibility = 'hidden'; });
       if (theme === 'christmas') {
-        const body = page.locator('.robin .bird-body');
-        await expect(body).toHaveAttribute('src', /robin-perch\.webp/);
-        await body.evaluate(async el => { if (el instanceof HTMLImageElement) await el.decode(); });
+        await expect(page.locator('.robin [data-robin-assets]')).toHaveAttribute('data-robin-assets', 'ready');
+        const body = page.locator('.robin .bird-body.atlas-sheet');
+        expect(await body.evaluate(async el => {
+          if (!(el instanceof HTMLImageElement)) throw new Error('expected image');
+          await el.decode();
+          return el.complete && el.naturalWidth > 0 && el.naturalHeight > 0;
+        })).toBe(true);
       }
       await page.screenshot({ path: info.outputPath(`${theme}-comparison-${width}.png`) });
     }
