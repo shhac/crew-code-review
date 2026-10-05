@@ -1,0 +1,15 @@
+{
+  "tool": "built-in image_gen",
+  "references": [
+    "sources/body.png",
+    "assembled.png"
+  ],
+  "sources": [
+    {
+      "id": "body-peck",
+      "prompt": "Use case: precise-object-edit. Image 1 is the EDIT TARGET: the complete standalone torso of our layered right-facing robin, currently with an upright raised neck/back bump at the upper-right. Image 2 is the accepted assembled character for style only. Make a PECKING TORSO variant by changing ONLY the upper neck attachment contour: lower/remove the high upright neck hump at upper-right so the brown back runs in a low gently rounded slope into a short soft orange neck attachment at screen-right, suitable for a head reaching DOWN and FORWARD to peck the ground. Lower the top-right neck mound by about one fifth of the existing torso height. The orange neck attachment edge should be short, filled and feather-soft, with no dark contour at the overlap with the lowered head. Preserve the rest of the torso, its left rump, orange breast, ivory belly, lower belly outline, horizontal width and painterly feather artwork as closely as possible. Keep the lower belly in exactly the same location and at the same scale on the canvas. This is STILL only a BODY component; do NOT add head, eye, beak, wing, tail, legs, guide markers or shadow. Genuine transparent background. Preserve all of the existing lower two-thirds. One isolated complete torso, generous margin, no text, no atlas, no glow.",
+      "file": "sources/body-peck.png",
+      "generatedPath": "/Users/paul/.codex/generated_images/01a10b6e-12e3-7a53-be43-407e616fc798/exec-b9767006-3af7-4e1f-9559-fe65840450c2.png"
+    }
+  ]
+}

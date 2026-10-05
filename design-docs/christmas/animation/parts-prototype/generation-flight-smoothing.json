@@ -1,0 +1,96 @@
+{
+  "tool": "built-in image_gen",
+  "date": "2026-10-05",
+  "description": "Four additional intermediate profiles per wing, with a constant shoulder attachment",
+  "assets": [
+    {
+      "id": "wing-high-fall",
+      "prompt": "Use case: stylized-concept. Asset type: one transparent wing drawing for an eight-profile robin flight animation. Input 1 style reference: warm painterly brown/gold cartoon, dark clean outlines. Input 2 EXACT same wing at raised extreme. Input 3 EXACT same wing at lowered extreme. Preserve the wing's identity, rounded tiny shoulder joint, individual primary lengths, secondary feather sizes and warm golden/brown palette across this intermediate. Subject is a RIGHT-FACING bird. Output ONE wing only, transparent background, generous margins, no body, text or ground shadow. Compact brown feather attachment at root, not large oval cap or white fluff. Perspective-shaded upper arm and layered feathers give volume. Primary request: FOREGROUND NEAR wing: visible outer upper surface. Halfway between fully raised and horizontal in DOWNSTROKE. Shoulder root LOWER RIGHT. Curved leading edge reaches UP AND LEFT to longest primary tips UPPER LEFT. Trailing fan spreads LEFT and DOWN behind leading edge. Open articulated wing tilted diagonally up-left, broad fan. Same number, length and ordering of primary feathers as reference 2. No change to anatomical wing proportions.",
+      "refs": [
+        "/Users/paul/projects-personal/crew-code-review/design-docs/christmas/animation/parts-prototype/assembled.png",
+        "/Users/paul/projects-personal/crew-code-review/design-docs/christmas/animation/parts-prototype/sources/wing-up-anatomy.png",
+        "/Users/paul/projects-personal/crew-code-review/design-docs/christmas/animation/parts-prototype/sources/wing-down-anatomy.png"
+      ],
+      "generatedPath": "/Users/paul/.codex/generated_images/01a10b6e-12e3-7a53-be43-407e616fc798/exec-9f7e4aa1-e915-4440-a838-dd8aee2d2122.png"
+    },
+    {
+      "id": "wing-far-high-fall",
+      "prompt": "Use case: stylized-concept. Asset type: one transparent wing drawing for an eight-profile robin flight animation. Input 1 style reference: warm painterly brown/gold cartoon, dark clean outlines. Input 2 EXACT same wing at raised extreme. Input 3 EXACT same wing at lowered extreme. Preserve the wing's identity, rounded tiny shoulder joint, individual primary lengths, secondary feather sizes and warm golden/brown palette across this intermediate. Subject is a RIGHT-FACING bird. Output ONE wing only, transparent background, generous margins, no body, text or ground shadow. Compact brown feather attachment at root, not large oval cap or white fluff. Perspective-shaded upper arm and layered feathers give volume. Primary request: BACKGROUND FAR wing: narrower perspective and shadowed underside. Halfway between fully raised and horizontal in DOWNSTROKE. Shoulder root LOWER RIGHT. Curved leading edge reaches UP AND LEFT to longest primary tips UPPER LEFT. Trailing fan spreads LEFT and DOWN behind leading edge. Open articulated wing tilted diagonally up-left, broad fan. Same number, length and ordering of primary feathers as reference 2. No change to anatomical wing proportions.",
+      "refs": [
+        "/Users/paul/projects-personal/crew-code-review/design-docs/christmas/animation/parts-prototype/assembled.png",
+        "/Users/paul/projects-personal/crew-code-review/design-docs/christmas/animation/parts-prototype/sources/wing-up-anatomy.png",
+        "/Users/paul/projects-personal/crew-code-review/design-docs/christmas/animation/parts-prototype/sources/wing-down-anatomy.png"
+      ],
+      "generatedPath": "/Users/paul/.codex/generated_images/01a10b6e-12e3-7a53-be43-407e616fc798/exec-dd7c8b30-86eb-4488-af33-60cc6844e539.png"
+    },
+    {
+      "id": "wing-low-fall",
+      "prompt": "Use case: stylized-concept. Asset type: one transparent wing drawing for an eight-profile robin flight animation. Input 1 style reference: warm painterly brown/gold cartoon, dark clean outlines. Input 2 EXACT same wing at raised extreme. Input 3 EXACT same wing at lowered extreme. Preserve the wing's identity, rounded tiny shoulder joint, individual primary lengths, secondary feather sizes and warm golden/brown palette across this intermediate. Subject is a RIGHT-FACING bird. Output ONE wing only, transparent background, generous margins, no body, text or ground shadow. Compact brown feather attachment at root, not large oval cap or white fluff. Perspective-shaded upper arm and layered feathers give volume. Primary request: FOREGROUND NEAR wing: visible outer upper surface. Halfway between horizontal and fully lowered in DOWNSTROKE. Shoulder root UPPER RIGHT. Curved leading edge reaches DOWN AND LEFT to longest primary tips LOWER LEFT. Trailing fan spreads RIGHT and UP behind leading edge, from those longest tips back to shorter secondaries at shoulder. Open wing tilted diagonally down-left. Same feather count, length and ordering as references; do not draw backwards trailing fan on wrong side.",
+      "refs": [
+        "/Users/paul/projects-personal/crew-code-review/design-docs/christmas/animation/parts-prototype/assembled.png",
+        "/Users/paul/projects-personal/crew-code-review/design-docs/christmas/animation/parts-prototype/sources/wing-up-anatomy.png",
+        "/Users/paul/projects-personal/crew-code-review/design-docs/christmas/animation/parts-prototype/sources/wing-down-anatomy.png"
+      ],
+      "generatedPath": "/Users/paul/.codex/generated_images/01a10b6e-12e3-7a53-be43-407e616fc798/exec-89b6d37b-22a0-406b-af68-a9734ba6c500.png"
+    },
+    {
+      "id": "wing-far-low-fall",
+      "prompt": "Use case: stylized-concept. Asset type: one transparent wing drawing for an eight-profile robin flight animation. Input 1 style reference: warm painterly brown/gold cartoon, dark clean outlines. Input 2 EXACT same wing at raised extreme. Input 3 EXACT same wing at lowered extreme. Preserve the wing's identity, rounded tiny shoulder joint, individual primary lengths, secondary feather sizes and warm golden/brown palette across this intermediate. Subject is a RIGHT-FACING bird. Output ONE wing only, transparent background, generous margins, no body, text or ground shadow. Compact brown feather attachment at root, not large oval cap or white fluff. Perspective-shaded upper arm and layered feathers give volume. Primary request: BACKGROUND FAR wing: narrower perspective and shadowed underside. Halfway between horizontal and fully lowered in DOWNSTROKE. Shoulder root UPPER RIGHT. Curved leading edge reaches DOWN AND LEFT to longest primary tips LOWER LEFT. Trailing fan spreads RIGHT and UP behind leading edge, from those longest tips back to shorter secondaries at shoulder. Open wing tilted diagonally down-left. Same feather count, length and ordering as references; do not draw backwards trailing fan on wrong side.",
+      "refs": [
+        "/Users/paul/projects-personal/crew-code-review/design-docs/christmas/animation/parts-prototype/assembled.png",
+        "/Users/paul/projects-personal/crew-code-review/design-docs/christmas/animation/parts-prototype/sources/wing-up-anatomy.png",
+        "/Users/paul/projects-personal/crew-code-review/design-docs/christmas/animation/parts-prototype/sources/wing-down-anatomy.png"
+      ],
+      "generatedPath": "/Users/paul/.codex/generated_images/01a10b6e-12e3-7a53-be43-407e616fc798/exec-625a95da-bf9a-44b0-8a45-dce71908a6da.png"
+    },
+    {
+      "id": "wing-low-rise",
+      "prompt": "Use case: stylized-concept. Asset type: one transparent wing drawing for an eight-profile robin flight animation. Input 1 style reference: warm painterly brown/gold cartoon, dark clean outlines. Input 2 EXACT same wing at raised extreme. Input 3 EXACT same wing at lowered extreme. Preserve the wing's identity, rounded tiny shoulder joint, individual primary lengths, secondary feather sizes and warm golden/brown palette across this intermediate. Subject is a RIGHT-FACING bird. Output ONE wing only, transparent background, generous margins, no body, text or ground shadow. Compact brown feather attachment at root, not large oval cap or white fluff. Perspective-shaded upper arm and layered feathers give volume. Primary request: FOREGROUND NEAR wing: visible outer upper surface. Halfway between fully lowered and horizontal in recovery UPSTROKE. Shoulder root UPPER RIGHT. Elbow bends, wrist flexes; longest primaries point DOWN AND LEFT, bundled partially together, shorter secondaries closer to root to RIGHT. Compact slightly foreshortened arm and narrower fan than power stroke, but same bones, feather count and actual feather lengths as references.",
+      "refs": [
+        "/Users/paul/projects-personal/crew-code-review/design-docs/christmas/animation/parts-prototype/assembled.png",
+        "/Users/paul/projects-personal/crew-code-review/design-docs/christmas/animation/parts-prototype/sources/wing-up-anatomy.png",
+        "/Users/paul/projects-personal/crew-code-review/design-docs/christmas/animation/parts-prototype/sources/wing-down-anatomy.png"
+      ],
+      "generatedPath": "/Users/paul/.codex/generated_images/01a10b6e-12e3-7a53-be43-407e616fc798/exec-0cfd4588-f69c-474c-893a-0274dbff2aeb.png"
+    },
+    {
+      "id": "wing-far-low-rise",
+      "prompt": "Use case: stylized-concept. Asset type: one transparent wing drawing for an eight-profile robin flight animation. Input 1 style reference: warm painterly brown/gold cartoon, dark clean outlines. Input 2 EXACT same wing at raised extreme. Input 3 EXACT same wing at lowered extreme. Preserve the wing's identity, rounded tiny shoulder joint, individual primary lengths, secondary feather sizes and warm golden/brown palette across this intermediate. Subject is a RIGHT-FACING bird. Output ONE wing only, transparent background, generous margins, no body, text or ground shadow. Compact brown feather attachment at root, not large oval cap or white fluff. Perspective-shaded upper arm and layered feathers give volume. Primary request: BACKGROUND FAR wing: narrower perspective and shadowed underside. Halfway between fully lowered and horizontal in recovery UPSTROKE. Shoulder root UPPER RIGHT. Elbow bends, wrist flexes; longest primaries point DOWN AND LEFT, bundled partially together, shorter secondaries closer to root to RIGHT. Compact slightly foreshortened arm and narrower fan than power stroke, but same bones, feather count and actual feather lengths as references.",
+      "refs": [
+        "/Users/paul/projects-personal/crew-code-review/design-docs/christmas/animation/parts-prototype/assembled.png",
+        "/Users/paul/projects-personal/crew-code-review/design-docs/christmas/animation/parts-prototype/sources/wing-up-anatomy.png",
+        "/Users/paul/projects-personal/crew-code-review/design-docs/christmas/animation/parts-prototype/sources/wing-down-anatomy.png"
+      ],
+      "generatedPath": "/Users/paul/.codex/generated_images/01a10b6e-12e3-7a53-be43-407e616fc798/exec-5d9cbf95-14c6-44eb-874c-0a6cb7b9f7eb.png"
+    },
+    {
+      "id": "wing-high-rise",
+      "prompt": "Use case: stylized-concept. Asset type: one transparent wing drawing for an eight-profile robin flight animation. Input 1 style reference: warm painterly brown/gold cartoon, dark clean outlines. Input 2 EXACT same wing at raised extreme. Input 3 EXACT same wing at lowered extreme. Preserve the wing's identity, rounded tiny shoulder joint, individual primary lengths, secondary feather sizes and warm golden/brown palette across this intermediate. Subject is a RIGHT-FACING bird. Output ONE wing only, transparent background, generous margins, no body, text or ground shadow. Compact brown feather attachment at root, not large oval cap or white fluff. Perspective-shaded upper arm and layered feathers give volume. Primary request: FOREGROUND NEAR wing: visible outer upper surface. Halfway between horizontal and fully raised in recovery UPSTROKE. Shoulder root LOWER RIGHT. Elbow and wrist bent, longest primary tips point UP AND LEFT, secondaries trail LEFT BELOW leading edge. Partially tucked feather fan, perspective foreshortened, continuous articulated curve. Same wing bones and individual feather lengths as reference 2, not a smaller bird's wing.",
+      "refs": [
+        "/Users/paul/projects-personal/crew-code-review/design-docs/christmas/animation/parts-prototype/assembled.png",
+        "/Users/paul/projects-personal/crew-code-review/design-docs/christmas/animation/parts-prototype/sources/wing-up-anatomy.png",
+        "/Users/paul/projects-personal/crew-code-review/design-docs/christmas/animation/parts-prototype/sources/wing-down-anatomy.png"
+      ],
+      "generatedPath": "/Users/paul/.codex/generated_images/01a10b6e-12e3-7a53-be43-407e616fc798/exec-27a3a4c0-f097-40d4-b1fc-3a75ade5c5ef.png"
+    },
+    {
+      "id": "wing-far-high-rise",
+      "prompt": "Use case: stylized-concept. Asset type: one transparent wing drawing for an eight-profile robin flight animation. Input 1 style reference: warm painterly brown/gold cartoon, dark clean outlines. Input 2 EXACT same wing at raised extreme. Input 3 EXACT same wing at lowered extreme. Preserve the wing's identity, rounded tiny shoulder joint, individual primary lengths, secondary feather sizes and warm golden/brown palette across this intermediate. Subject is a RIGHT-FACING bird. Output ONE wing only, transparent background, generous margins, no body, text or ground shadow. Compact brown feather attachment at root, not large oval cap or white fluff. Perspective-shaded upper arm and layered feathers give volume. Primary request: BACKGROUND FAR wing: narrower perspective and shadowed underside. Halfway between horizontal and fully raised in recovery UPSTROKE. Shoulder root LOWER RIGHT. Elbow and wrist bent, longest primary tips point UP AND LEFT, secondaries trail LEFT BELOW leading edge. Partially tucked feather fan, perspective foreshortened, continuous articulated curve. Same wing bones and individual feather lengths as reference 2, not a smaller bird's wing.",
+      "refs": [
+        "/Users/paul/projects-personal/crew-code-review/design-docs/christmas/animation/parts-prototype/assembled.png",
+        "/Users/paul/projects-personal/crew-code-review/design-docs/christmas/animation/parts-prototype/sources/wing-up-anatomy.png",
+        "/Users/paul/projects-personal/crew-code-review/design-docs/christmas/animation/parts-prototype/sources/wing-down-anatomy.png"
+      ],
+      "generatedPath": "/Users/paul/.codex/generated_images/01a10b6e-12e3-7a53-be43-407e616fc798/exec-3af520aa-6371-4d64-8b90-d0e91cdee3d0.png"
+    },
+    {
+      "id": "wing-shoulder",
+      "refs": [
+        "/Users/paul/projects-personal/crew-code-review/design-docs/christmas/animation/parts-prototype/assembled.png",
+        "/Users/paul/projects-personal/crew-code-review/design-docs/christmas/animation/parts-prototype/sources/wing.png"
+      ],
+      "prompt": "Use case: stylized-concept. Generate ONE isolated compact rounded SHOULDER feather cover for a layered RIGHT-FACING robin wing. Image 1 accepted bird is style/identity reference; image 2 folded wing is exact feather style reference. Only the small rounded warm brown/golden proximal shoulder patch, no long flight feathers, no arm, torso, head or other parts. Oval rounded top convex surface softly shaded, three or four small overlapping brown covert feather tips at lower-left, clean dark brown outline on top/right with soft brown feather tips on attachment edges. No white feathers. Actual transparent background, generous margins. This constant attachment patch will cover the joint in all wing poses, so make it a simple solid filled slightly diagonal oval with a golden upper-left highlight.",
+      "generatedPath": "/Users/paul/.codex/generated_images/01a10b6e-12e3-7a53-be43-407e616fc798/exec-2dec35af-8d4c-4ac8-bafb-421416c09479.png"
+    }
+  ]
+}

@@ -1,0 +1,46 @@
+{
+  "tool": "built-in image_gen",
+  "references": [
+    "assembled.png",
+    "sources/wing.png",
+    "sources/leg-near.png"
+  ],
+  "sources": [
+    {
+      "id": "wing-up",
+      "prompt": "Use case: precise-object-edit. Image 1 is this robin's accepted assembled identity and proportions. Image 2 is the exact folded foreground wing artwork, a style and feather reference. Create ONE separate FOREGROUND WING raised at the top of a flight upstroke, for the SAME right-facing robin. Full open brown/golden wing, rounded shoulder root at lower-right, fanned long primary feathers reaching upper-left and upward, viewed from the visible near side. Root is broad and fully filled for overlapping the torso. Warm hand-painted cartoon brushwork, layered brown flight feathers, golden highlights, crisp dark-brown outside silhouette as in image 2. No body, head, tail, eye or legs. No duplicated wings or atlas. ONE isolated complete component on genuine transparent background with generous margin on every side; no text, shadow, glow, guides, other objects. Preserve matching feather identity; change only wing articulation. The wing should look naturally broad when spread, with an anatomical bend between shoulder and long primary feathers.",
+      "generatedPath": "/Users/paul/.codex/generated_images/01a10b6e-12e3-7a53-be43-407e616fc798/exec-995f224b-9430-47ad-8623-77850bfa9d30.png",
+      "file": "sources/wing-up.png"
+    },
+    {
+      "id": "wing-down",
+      "prompt": "Use case: precise-object-edit. Image 1 is this robin's accepted assembled identity and proportions. Image 2 is the exact folded foreground wing artwork, a style and feather reference. Create ONE separate FOREGROUND WING extended at the bottom of a flight downstroke, for the SAME right-facing robin. Full open brown/golden wing, rounded shoulder root at upper-right, primary feathers extend downward and towards lower-left in a broad natural fan, visible upper brown surface facing the viewer. Draw rounded upper coverts and a clear elbow/wrist transition, not a straight stick. Root is broad and fully filled for overlapping the torso. Warm hand-painted cartoon brushwork, layered brown flight feathers, golden highlights and dark-brown silhouette matching image 2. NO bird body, head, tail, eye, legs or second wing. ONE isolated complete component on true transparency with generous clear margin on every side; no text, shadow, glow, grid. Preserve feather identity, change only articulation.",
+      "generatedPath": "/Users/paul/.codex/generated_images/01a10b6e-12e3-7a53-be43-407e616fc798/exec-75ef42d4-255e-4011-ad5b-a77bd1b3506d.png",
+      "file": "sources/wing-down.png"
+    },
+    {
+      "id": "wing-far-up",
+      "prompt": "Use case: precise-object-edit. Image 1 is the accepted right-facing robin. Image 2 is its folded near wing for exact feather palette and painterly style. Generate ONE isolated far-side BACKGROUND WING at the top of its upstroke. Rounded filled shoulder root at lower-right, fanned primary feathers spread towards upper-left. Foreshortened compared with the near wing: somewhat narrower fan, darker russet brown, subdued golden highlights, viewed from the other side of this SAME bird. Complete shoulder artwork for concealment behind torso. Match warm painted feather details and dark brown silhouette. No body, head, eye, tail or legs, no second wing. ONE complete wing on actual transparent background, generous margin, no shadows/glow/text/atlas.",
+      "generatedPath": "/Users/paul/.codex/generated_images/01a10b6e-12e3-7a53-be43-407e616fc798/exec-c6a07fc4-bbeb-45d6-b4ba-79a66e136297.png",
+      "file": "sources/wing-far-up.png"
+    },
+    {
+      "id": "wing-far-down",
+      "prompt": "Use case: precise-object-edit. Image 1 is the accepted right-facing robin. Image 2 is its folded near wing for exact feather palette and painterly style. Generate ONE isolated far-side BACKGROUND WING at the bottom of its downstroke. Rounded filled shoulder root at upper-right, primary feathers spread towards lower-left and down in a natural fan. Foreshortened compared with the near wing: narrower fan, darker russet brown, subdued golden highlights, viewed from the other side of this SAME bird. Complete shoulder artwork for concealment behind torso. Match warm painted feather details and dark brown silhouette. No body, head, eye, tail or legs, no second wing. ONE complete wing on actual transparent background, generous margin, no shadows/glow/text/atlas.",
+      "generatedPath": "/Users/paul/.codex/generated_images/01a10b6e-12e3-7a53-be43-407e616fc798/exec-5a18307e-9af2-4f11-8c53-b2963d1605a1.png",
+      "file": "sources/wing-far-down.png"
+    },
+    {
+      "id": "leg-near-tucked",
+      "prompt": "Use case: precise-object-edit. Image 1 is the accepted right-facing robin and image 2 its foreground standing leg, with THREE front toes and one rear toe. Generate ONE separate foreground LEG AND FOOT in a compact tucked flight pose. Preserve the exact thin warm brown scaled leg and tiny dark claws, painterly style and toe anatomy. Short feather-coloured upper attachment at upper-left, shin bends sharply backwards left towards belly, ankle and toes held close together under the body rather than splayed on ground. Front toes point screen-right, naturally curled, rear toe folded close. Compact horizontal folded silhouette, not a long hanging leg. Complete filled top for overlap under belly feathers. NO other bird parts. Single isolated component on genuine transparency with generous margin, no text, shadow, glow or grid.",
+      "generatedPath": "/Users/paul/.codex/generated_images/01a10b6e-12e3-7a53-be43-407e616fc798/exec-11fd9594-cf15-4e8d-a22d-debf40b740a9.png",
+      "file": "sources/leg-near-tucked.png"
+    },
+    {
+      "id": "leg-far-tucked",
+      "prompt": "Use case: precise-object-edit. Image 1 is the accepted right-facing robin and image 2 its foreground standing leg for matched scaled-leg details. Generate ONE separate BACKGROUND LEG AND FOOT in a compact tucked flight pose. Preserve the thin brown scaled leg and tiny dark claws, painterly style, three curled forward toes and one rear toe. Slightly darker far leg, short feather-coloured upper attachment at upper-left, shin bends backwards left towards belly, ankle and toes held close under body, curled front toes point screen-right. Compact horizontal folded silhouette, not a long hanging leg. Complete upper leg for concealment. NO other bird parts, one isolated component on true transparency with generous margin, no shadow/glow/text/grid.",
+      "generatedPath": "/Users/paul/.codex/generated_images/01a10b6e-12e3-7a53-be43-407e616fc798/exec-e9d02baf-eef6-404e-a3e0-40f7dd29f239.png",
+      "file": "sources/leg-far-tucked.png"
+    }
+  ]
+}

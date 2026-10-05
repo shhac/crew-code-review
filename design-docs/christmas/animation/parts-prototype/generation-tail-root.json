@@ -1,0 +1,17 @@
+{
+  "tool": "built-in image_gen",
+  "editTarget": "sources/tail.png",
+  "selected": {
+    "file": "sources/tail-feather-root.png",
+    "generatedPath": "/Users/paul/.codex/generated_images/01a10b6e-12e3-7a53-be43-407e616fc798/exec-d4a8da22-ecb4-4761-a816-6ea4770a0ab5.png",
+    "prompt": "Use case: precise-object-edit. Asset type: transparent tail component for an existing layered robin animation rig. Image 1 is the edit target, the current standalone tail. Preserve its exact canvas framing, feather geometry, pose, size, brown/golden painterly brushwork and highlights. Change ONLY the rightmost rounded attachment root (the stub at screen-right that overlaps the robin's brown rump): REMOVE the dark brown/black outer contour along this root's right-hand curved perimeter, including the short adjoining upper/lower attachment ends. Replace that contour with adjacent warm brown feather colours and a few soft fine feather tips, so the filled root merges into a matching brown torso with no dark seam. The root stays solid and fully filled, with a softly feathered edge; no cutout or hole. Keep all dark outlines along the long exposed upper/lower tail feathers and left feather tips unchanged. Preserve internal feather separation lines away from the attachment. True transparent background outside the tail; NO surrounding brown glow, halo, drop shadow, text, whole bird or additional component. Keep the same composition and proportions as the target."
+  },
+  "discarded": [
+    {
+      "generatedPath": "/Users/paul/.codex/generated_images/01a10b6e-12e3-7a53-be43-407e616fc798/exec-ed3743d2-5a7a-4531-8de8-8a92447eeae2.png",
+      "prompt": "Use case: background-extraction. Edit target: image 1, the isolated robin tail. Preserve the painted feather artwork and the newly unoutlined, soft feather-tip attachment at the RIGHT root. Remove the broad diffuse brown glow/halo surrounding the entire tail, especially the wide fog around the right attachment. That surrounding haze is an unwanted SHADOW, not feather artwork. Outside the actual painted feathers, pixels must be fully transparent (alpha 0), with only ordinary tight edge antialiasing and individual short feather tips at the root. No blur/fog/soft shadow or ambient colour outside the silhouette. Do not add a dark contour at the right attachment. Keep dark outlines along the exposed upper/lower feather edges and left tips. Do not change the silhouette shape, pose, framing, proportions, highlights or internal feather lines. Same 1536x1024 canvas and placement. One isolated tail only, genuinely transparent background.",
+      "reason": "Extra extraction pass changed more of the internal brushwork; first root edit preserves accepted artwork more closely."
+    }
+  ],
+  "registration": "Original source-frame registration is retained; measured new alpha crop changes export bounds without moving or resizing the artwork."
+}

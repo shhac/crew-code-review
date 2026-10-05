@@ -1,0 +1,161 @@
+{
+  "tool": "built-in image_gen",
+  "date": "2026-10-05",
+  "description": "Fixed display scale, volume-preserving flight profiles and reference-guided anatomy revisions",
+  "assets": [
+    {
+      "id": "wing-down-v2",
+      "prompt": "Use case: stylized-concept. Asset type: one transparent raster component for layered robin animation. Input image 1 is reference only for illustration identity: preserve the warm painterly brown and golden feathers, dark brown clean outline, soft highlights, small cute robin proportions. Input image 2 is component style/anatomy reference only. Generate ONE isolated component, no bird torso, head, other wings or legs, no text, no shadow on ground. Genuine transparent background, entire component comfortably inside canvas with clear margins. Primary request: FOREGROUND wing at the bottom of a flight downstroke. A true articulated bird wing, not the folded wing rotated. Rounded shoulder at UPPER RIGHT, a strong curved leading edge running down the RIGHT into a bent wrist, long primary feathers taper toward LOWER LEFT, trailing secondary fan to LEFT. The upper arm has real thickness; feathers overlap with shaded depth. Darker underside visible, subtle golden edges, no giant flat radial fan. A right-facing robin's near wing sweeps DOWN and slightly BACK. Clear broad shoulder root for mounting.",
+      "refs": [
+        "/Users/paul/projects-personal/crew-code-review/design-docs/christmas/animation/parts-prototype/assembled.png",
+        "/Users/paul/projects-personal/crew-code-review/design-docs/christmas/animation/parts-prototype/sources/wing-up.png"
+      ],
+      "generatedPath": "/Users/paul/.codex/generated_images/01a10b6e-12e3-7a53-be43-407e616fc798/exec-efd435ca-de16-41e0-b6fa-92e0c63fd3c1.png",
+      "selected": false,
+      "reason": "Superseded by subsequent anatomy-reference generation"
+    },
+    {
+      "id": "wing-far-down-v2",
+      "prompt": "Use case: stylized-concept. Asset type: one transparent raster component for layered robin animation. Input image 1 is reference only for illustration identity: preserve the warm painterly brown and golden feathers, dark brown clean outline, soft highlights, small cute robin proportions. Input image 2 is component style/anatomy reference only. Generate ONE isolated component, no bird torso, head, other wings or legs, no text, no shadow on ground. Genuine transparent background, entire component comfortably inside canvas with clear margins. Primary request: BACKGROUND far wing at bottom of downstroke on a RIGHT-FACING robin. Rounded shoulder at UPPER RIGHT, curved leading edge descends RIGHT into bent wrist, tapered long primary feathers toward LOWER LEFT, trailing secondary fan LEFT. Slightly narrower than near wing, darker underside and shadowed overlapping feathers, volumetric shoulder. Anatomically articulated wing, not a flat radial fan.",
+      "refs": [
+        "/Users/paul/projects-personal/crew-code-review/design-docs/christmas/animation/parts-prototype/assembled.png",
+        "/Users/paul/projects-personal/crew-code-review/design-docs/christmas/animation/parts-prototype/sources/wing-up.png"
+      ],
+      "generatedPath": "/Users/paul/.codex/generated_images/01a10b6e-12e3-7a53-be43-407e616fc798/exec-290bee35-814d-451e-89b1-8638499c6f23.png",
+      "selected": false,
+      "reason": "Superseded by subsequent anatomy-reference generation"
+    },
+    {
+      "id": "wing-forward",
+      "prompt": "Use case: stylized-concept. Asset type: one transparent raster component for layered robin animation. Input image 1 is reference only for illustration identity: preserve the warm painterly brown and golden feathers, dark brown clean outline, soft highlights, small cute robin proportions. Input image 2 is component style/anatomy reference only. Generate ONE isolated component, no bird torso, head, other wings or legs, no text, no shadow on ground. Genuine transparent background, entire component comfortably inside canvas with clear margins. Primary request: FOREGROUND near wing halfway from raised to lowered during power DOWNSTROKE on RIGHT-FACING robin. Wing comes OUT TOWARDS VIEWER with perspective foreshortening. Rounded shoulder at RIGHT, thick upper arm curves LEFT to bent elbow/wrist; foreshortened primary fan extends LEFT and slightly DOWN, tips visibly overlap in depth. Broad curved shaded shoulder, convex leading edge on upper side, shadowed underside behind. Substantial thickness and depth, not a razor thin horizontal sheet. Entire wing horizontal-ish silhouette about 2:1 width:height. No complete bird.",
+      "refs": [
+        "/Users/paul/projects-personal/crew-code-review/design-docs/christmas/animation/parts-prototype/assembled.png",
+        "/Users/paul/projects-personal/crew-code-review/design-docs/christmas/animation/parts-prototype/sources/wing-up.png"
+      ],
+      "generatedPath": "/Users/paul/.codex/generated_images/01a10b6e-12e3-7a53-be43-407e616fc798/exec-c78b9499-ca88-4b21-aacf-f38a37ca2219.png",
+      "selected": true,
+      "reason": "Volume-preserving intermediate wing state"
+    },
+    {
+      "id": "wing-far-forward",
+      "prompt": "Use case: stylized-concept. Asset type: one transparent raster component for layered robin animation. Input image 1 is reference only for illustration identity: preserve the warm painterly brown and golden feathers, dark brown clean outline, soft highlights, small cute robin proportions. Input image 2 is component style/anatomy reference only. Generate ONE isolated component, no bird torso, head, other wings or legs, no text, no shadow on ground. Genuine transparent background, entire component comfortably inside canvas with clear margins. Primary request: BACKGROUND far wing halfway through power DOWNSTROKE on a RIGHT-FACING robin. Shoulder root at RIGHT, articulated arm extends LEFT away from viewer, foreshortened brown primary fan points LEFT and slightly DOWN. Shadowed underside, overlapping feather layers and rounded shoulder with volume. Horizontal-ish shape 2:1 width:height. Perspective slightly narrower/darker than near wing. Never a razor thin line.",
+      "refs": [
+        "/Users/paul/projects-personal/crew-code-review/design-docs/christmas/animation/parts-prototype/assembled.png",
+        "/Users/paul/projects-personal/crew-code-review/design-docs/christmas/animation/parts-prototype/sources/wing-up.png"
+      ],
+      "generatedPath": "/Users/paul/.codex/generated_images/01a10b6e-12e3-7a53-be43-407e616fc798/exec-85ec9930-ce24-48db-8008-4597fe48e62e.png",
+      "selected": true,
+      "reason": "Volume-preserving intermediate wing state"
+    },
+    {
+      "id": "wing-recovery",
+      "prompt": "Use case: stylized-concept. Asset type: one transparent raster component for layered robin animation. Input image 1 is reference only for illustration identity: preserve the warm painterly brown and golden feathers, dark brown clean outline, soft highlights, small cute robin proportions. Input image 2 is component style/anatomy reference only. Generate ONE isolated component, no bird torso, head, other wings or legs, no text, no shadow on ground. Genuine transparent background, entire component comfortably inside canvas with clear margins. Primary request: FOREGROUND near wing halfway through recovery UPSTROKE on a RIGHT-FACING robin. Shoulder root at RIGHT. Elbow and wrist flexed, wing partially folded, primary feathers tucked together to LEFT and slightly UP, shorter compact fan with curved tips and visible overlap. Upper arm visibly round with thickness, golden upper surface and dark underside. View from three-quarter side, foreshortened with depth rather than flat. Horizontal-ish 2:1 width:height. Not a fully folded resting wing.",
+      "refs": [
+        "/Users/paul/projects-personal/crew-code-review/design-docs/christmas/animation/parts-prototype/assembled.png",
+        "/Users/paul/projects-personal/crew-code-review/design-docs/christmas/animation/parts-prototype/sources/wing-up.png"
+      ],
+      "generatedPath": "/Users/paul/.codex/generated_images/01a10b6e-12e3-7a53-be43-407e616fc798/exec-c4964a0a-aa7e-4eb5-9d80-5c57f1e55418.png",
+      "selected": true,
+      "reason": "Volume-preserving intermediate wing state"
+    },
+    {
+      "id": "wing-far-recovery",
+      "prompt": "Use case: stylized-concept. Asset type: one transparent raster component for layered robin animation. Input image 1 is reference only for illustration identity: preserve the warm painterly brown and golden feathers, dark brown clean outline, soft highlights, small cute robin proportions. Input image 2 is component style/anatomy reference only. Generate ONE isolated component, no bird torso, head, other wings or legs, no text, no shadow on ground. Genuine transparent background, entire component comfortably inside canvas with clear margins. Primary request: BACKGROUND far wing halfway through recovery UPSTROKE on a RIGHT-FACING robin. Shoulder root at RIGHT. Elbow and wrist flexed, partially folded primary feathers tucked together extend LEFT and slightly UP. Short compact tapered fan, dark brown shaded underside, overlapping feather layers and rounded arm thickness. Foreshortened three-quarter perspective, 2:1 width:height. Not a razor thin silhouette and not a resting wing.",
+      "refs": [
+        "/Users/paul/projects-personal/crew-code-review/design-docs/christmas/animation/parts-prototype/assembled.png",
+        "/Users/paul/projects-personal/crew-code-review/design-docs/christmas/animation/parts-prototype/sources/wing-up.png"
+      ],
+      "generatedPath": "/Users/paul/.codex/generated_images/01a10b6e-12e3-7a53-be43-407e616fc798/exec-6fd88112-e9fa-423e-9a7a-383f9312cb29.png",
+      "selected": true,
+      "reason": "Volume-preserving intermediate wing state"
+    },
+    {
+      "id": "leg-near-flight",
+      "prompt": "Use case: stylized-concept. Asset type: one transparent raster component for layered robin animation. Input image 1 is reference only for illustration identity: preserve the warm painterly brown and golden feathers, dark brown clean outline, soft highlights, small cute robin proportions. Input image 2 is component style/anatomy reference only. Generate ONE isolated component, no bird torso, head, other wings or legs, no text, no shadow on ground. Genuine transparent background, entire component comfortably inside canvas with clear margins. Primary request: One isolated FOREGROUND flight leg and curled foot of RIGHT-FACING European robin. Small tan feathered attachment root at UPPER RIGHT, short bent brown scaly leg trails diagonally DOWN AND LEFT, ankle flexed, toes curled compactly BACK LEFT under the ankle. Toes are folded into a small relaxed hooked fist for flight, not stretched in a standing spread, not pointing forward/right. Leg tucked close to belly but foot hangs just below it. Delicate small passerine feet, dark tiny claws, no oversized fist. Attachment and ankle proportional to accepted robin's standing feet.",
+      "refs": [
+        "/Users/paul/projects-personal/crew-code-review/design-docs/christmas/animation/parts-prototype/assembled.png",
+        "/Users/paul/projects-personal/crew-code-review/design-docs/christmas/animation/parts-prototype/sources/leg-near-tucked.png"
+      ],
+      "generatedPath": "/Users/paul/.codex/generated_images/01a10b6e-12e3-7a53-be43-407e616fc798/exec-20a1d43e-2a84-40e5-a109-2a505a9b2679.png",
+      "selected": false,
+      "reason": "Superseded by subsequent anatomy-reference generation"
+    },
+    {
+      "id": "leg-far-flight",
+      "prompt": "Use case: stylized-concept. Asset type: one transparent raster component for layered robin animation. Input image 1 is reference only for illustration identity: preserve the warm painterly brown and golden feathers, dark brown clean outline, soft highlights, small cute robin proportions. Input image 2 is component style/anatomy reference only. Generate ONE isolated component, no bird torso, head, other wings or legs, no text, no shadow on ground. Genuine transparent background, entire component comfortably inside canvas with clear margins. Primary request: One isolated BACKGROUND flight leg and curled foot of RIGHT-FACING European robin. Feather attachment at UPPER RIGHT, short flexed brown scaly leg trails diagonally DOWN AND LEFT, ankle bent, tiny toes curled compactly BACK LEFT beneath ankle, hanging just below belly in flight. Delicate passerine foot, tiny dark hooked claws, no standing spread or forward/right-pointing toes. Slightly darker background leg, same anatomical size as foreground.",
+      "refs": [
+        "/Users/paul/projects-personal/crew-code-review/design-docs/christmas/animation/parts-prototype/assembled.png",
+        "/Users/paul/projects-personal/crew-code-review/design-docs/christmas/animation/parts-prototype/sources/leg-near-tucked.png"
+      ],
+      "generatedPath": "/Users/paul/.codex/generated_images/01a10b6e-12e3-7a53-be43-407e616fc798/exec-4e16f61a-570f-4e81-b444-7cf300376ec7.png",
+      "selected": false,
+      "reason": "Superseded by subsequent anatomy-reference generation"
+    },
+    {
+      "id": "wing-up-anatomy",
+      "desc": "Generate exactly ONE FOREGROUND wing, FULLY RAISED as in photo 2, but mirror the photo's anatomy for our RIGHT-FACING robin. Attachment shoulder at LOWER RIGHT. Narrow leading edge rises almost VERTICALLY from this lower-right root to the long TOP RIGHT primary tips; the wide feather fan spreads LEFT and DOWN behind that leading edge, with shorter secondary feathers reaching LOWER LEFT beside the root. Highest/longest tips toward TOP RIGHT, not TOP LEFT. Preserve the bent arm/wrist and broad layered fan of photo 2, clean silhouette, softly shaded layered volume. Root is compact rounded feathered attachment, not giant oval cap. Brown warm golden cartoon feather palette from image 1. Do not copy photorealism.",
+      "prompt": "Use case: stylized-concept. Asset type: one isolated transparent animation component. Image 1: accepted stylised robin, style/colour/identity reference ONLY. Image 2: real robin flight ANATOMY reference only, it faces LEFT and must be mentally mirrored to match our RIGHT-facing bird. Genuine transparent background. ONE component only, no torso, head, other limbs, text, labels or watermarks, generous clear canvas margins. Primary request: Generate exactly ONE FOREGROUND wing, FULLY RAISED as in photo 2, but mirror the photo's anatomy for our RIGHT-FACING robin. Attachment shoulder at LOWER RIGHT. Narrow leading edge rises almost VERTICALLY from this lower-right root to the long TOP RIGHT primary tips; the wide feather fan spreads LEFT and DOWN behind that leading edge, with shorter secondary feathers reaching LOWER LEFT beside the root. Highest/longest tips toward TOP RIGHT, not TOP LEFT. Preserve the bent arm/wrist and broad layered fan of photo 2, clean silhouette, softly shaded layered volume. Root is compact rounded feathered attachment, not giant oval cap. Brown warm golden cartoon feather palette from image 1. Do not copy photorealism.",
+      "refs": [
+        "/Users/paul/projects-personal/crew-code-review/design-docs/christmas/animation/parts-prototype/assembled.png",
+        "/var/folders/k8/pdqnbshd40v3tm8ftk91szf40000gn/T/clipboard-2026-10-05-134043-2E88A240.png"
+      ],
+      "generatedPath": "/Users/paul/.codex/generated_images/01a10b6e-12e3-7a53-be43-407e616fc798/exec-fc0ed998-1c2a-4f76-89d5-1fee9ac96ff3.png",
+      "selected": true
+    },
+    {
+      "id": "wing-far-up-anatomy",
+      "desc": "Generate exactly ONE BACKGROUND far wing, FULLY RAISED as in photo 2, mirrored for our RIGHT-FACING robin. Shoulder at LOWER RIGHT, narrow leading edge rises nearly VERTICALLY to TOP RIGHT long primary tips, broad feather fan spreads LEFT and DOWN behind leading edge, shorter secondaries LOWER LEFT. Same anatomy as visible photo wing, seen a little more narrowly and shadowed as the far wing. Compact attachment, bent wrist, layered brown feathers with shaded depth, cartoon style from image 1.",
+      "prompt": "Use case: stylized-concept. Asset type: one isolated transparent animation component. Image 1: accepted stylised robin, style/colour/identity reference ONLY. Image 2: real robin flight ANATOMY reference only, it faces LEFT and must be mentally mirrored to match our RIGHT-facing bird. Genuine transparent background. ONE component only, no torso, head, other limbs, text, labels or watermarks, generous clear canvas margins. Primary request: Generate exactly ONE BACKGROUND far wing, FULLY RAISED as in photo 2, mirrored for our RIGHT-FACING robin. Shoulder at LOWER RIGHT, narrow leading edge rises nearly VERTICALLY to TOP RIGHT long primary tips, broad feather fan spreads LEFT and DOWN behind leading edge, shorter secondaries LOWER LEFT. Same anatomy as visible photo wing, seen a little more narrowly and shadowed as the far wing. Compact attachment, bent wrist, layered brown feathers with shaded depth, cartoon style from image 1.",
+      "refs": [
+        "/Users/paul/projects-personal/crew-code-review/design-docs/christmas/animation/parts-prototype/assembled.png",
+        "/var/folders/k8/pdqnbshd40v3tm8ftk91szf40000gn/T/clipboard-2026-10-05-134043-2E88A240.png"
+      ],
+      "generatedPath": "/Users/paul/.codex/generated_images/01a10b6e-12e3-7a53-be43-407e616fc798/exec-0a345d70-87de-4b34-84fa-7ba1638902c4.png",
+      "selected": true
+    },
+    {
+      "id": "wing-down-anatomy",
+      "desc": "Generate exactly ONE FOREGROUND wing FULLY LOWERED in a flight DOWNSTROKE, for our RIGHT-FACING robin. Use photo 2 wing anatomy mirrored to face right then articulated down about shoulder: compact shoulder root at UPPER LEFT, curved leading edge descends on LEFT to longest primary tips at LOWER LEFT, broad trailing feather fan spreads RIGHT of the leading edge, shorter secondary feathers meet the root at UPPER RIGHT. Wing is almost vertical, the LONGEST PRIMARY tips at BOTTOM LEFT and progressively shorter feathers fan toward RIGHT and UP. Leading/trailing chirality must match a right-facing bird's near wing when lowered, not the backwards folded resting wing. Bent wrist, thick layered upper arm, underside shadows, no giant oval cap. Brown and golden painterly cartoon style of image 1.",
+      "prompt": "Use case: stylized-concept. Asset type: one isolated transparent animation component. Image 1: accepted stylised robin, style/colour/identity reference ONLY. Image 2: real robin flight ANATOMY reference only, it faces LEFT and must be mentally mirrored to match our RIGHT-facing bird. Genuine transparent background. ONE component only, no torso, head, other limbs, text, labels or watermarks, generous clear canvas margins. Primary request: Generate exactly ONE FOREGROUND wing FULLY LOWERED in a flight DOWNSTROKE, for our RIGHT-FACING robin. Use photo 2 wing anatomy mirrored to face right then articulated down about shoulder: compact shoulder root at UPPER LEFT, curved leading edge descends on LEFT to longest primary tips at LOWER LEFT, broad trailing feather fan spreads RIGHT of the leading edge, shorter secondary feathers meet the root at UPPER RIGHT. Wing is almost vertical, the LONGEST PRIMARY tips at BOTTOM LEFT and progressively shorter feathers fan toward RIGHT and UP. Leading/trailing chirality must match a right-facing bird's near wing when lowered, not the backwards folded resting wing. Bent wrist, thick layered upper arm, underside shadows, no giant oval cap. Brown and golden painterly cartoon style of image 1.",
+      "refs": [
+        "/Users/paul/projects-personal/crew-code-review/design-docs/christmas/animation/parts-prototype/assembled.png",
+        "/var/folders/k8/pdqnbshd40v3tm8ftk91szf40000gn/T/clipboard-2026-10-05-134043-2E88A240.png"
+      ],
+      "generatedPath": "/Users/paul/.codex/generated_images/01a10b6e-12e3-7a53-be43-407e616fc798/exec-4e1ebd53-eaae-4d40-886d-3e990382db49.png",
+      "selected": true
+    },
+    {
+      "id": "wing-far-down-anatomy",
+      "desc": "Generate exactly ONE BACKGROUND wing FULLY LOWERED in DOWNSTROKE, RIGHT-FACING robin. Compact shoulder root at UPPER LEFT, leading edge descends LEFT to longest primary tips LOWER LEFT, broad trailing feather fan spreads RIGHT, shorter secondaries meet root UPPER RIGHT. Longest tips at BOTTOM LEFT, shorter feathers fan RIGHT and UP. Match photo 2 anatomical topology articulated down and mirrored for right-facing bird. Narrower shadowed far wing, compact rounded attachment, bent wrist, brown golden painterly cartoon feathers, no giant cap.",
+      "prompt": "Use case: stylized-concept. Asset type: one isolated transparent animation component. Image 1: accepted stylised robin, style/colour/identity reference ONLY. Image 2: real robin flight ANATOMY reference only, it faces LEFT and must be mentally mirrored to match our RIGHT-facing bird. Genuine transparent background. ONE component only, no torso, head, other limbs, text, labels or watermarks, generous clear canvas margins. Primary request: Generate exactly ONE BACKGROUND wing FULLY LOWERED in DOWNSTROKE, RIGHT-FACING robin. Compact shoulder root at UPPER LEFT, leading edge descends LEFT to longest primary tips LOWER LEFT, broad trailing feather fan spreads RIGHT, shorter secondaries meet root UPPER RIGHT. Longest tips at BOTTOM LEFT, shorter feathers fan RIGHT and UP. Match photo 2 anatomical topology articulated down and mirrored for right-facing bird. Narrower shadowed far wing, compact rounded attachment, bent wrist, brown golden painterly cartoon feathers, no giant cap.",
+      "refs": [
+        "/Users/paul/projects-personal/crew-code-review/design-docs/christmas/animation/parts-prototype/assembled.png",
+        "/var/folders/k8/pdqnbshd40v3tm8ftk91szf40000gn/T/clipboard-2026-10-05-134043-2E88A240.png"
+      ],
+      "generatedPath": "/Users/paul/.codex/generated_images/01a10b6e-12e3-7a53-be43-407e616fc798/exec-e59336a6-f983-4b94-be71-21fcc3d4e207.png",
+      "selected": true
+    },
+    {
+      "id": "leg-near-flight-anatomy",
+      "desc": "Generate exactly ONE isolated FOREGROUND robin leg in flight. Follow the FOLDED ANKLE AND HANGING TOES in photo 2, mirror for RIGHT-FACING bird. Small feathered hip attachment UPPER LEFT, slender short folded brown leg angles RIGHT along belly, ankle then bends DOWN, three small toes hang DOWN and slightly RIGHT curled gently with tiny dark claws; rear toe folds back LEFT. Foot below ankle, not spread horizontally as standing, not a fist. Preserve recognizable delicate passerine foot and photo flight silhouette, brown cartoon scaly detail from image 1. Single foot, no torso.",
+      "prompt": "Use case: stylized-concept. Asset type: one isolated transparent animation component. Image 1: accepted stylised robin, style/colour/identity reference ONLY. Image 2: real robin flight ANATOMY reference only, it faces LEFT and must be mentally mirrored to match our RIGHT-facing bird. Genuine transparent background. ONE component only, no torso, head, other limbs, text, labels or watermarks, generous clear canvas margins. Primary request: Generate exactly ONE isolated FOREGROUND robin leg in flight. Follow the FOLDED ANKLE AND HANGING TOES in photo 2, mirror for RIGHT-FACING bird. Small feathered hip attachment UPPER LEFT, slender short folded brown leg angles RIGHT along belly, ankle then bends DOWN, three small toes hang DOWN and slightly RIGHT curled gently with tiny dark claws; rear toe folds back LEFT. Foot below ankle, not spread horizontally as standing, not a fist. Preserve recognizable delicate passerine foot and photo flight silhouette, brown cartoon scaly detail from image 1. Single foot, no torso.",
+      "refs": [
+        "/Users/paul/projects-personal/crew-code-review/design-docs/christmas/animation/parts-prototype/assembled.png",
+        "/var/folders/k8/pdqnbshd40v3tm8ftk91szf40000gn/T/clipboard-2026-10-05-134043-2E88A240.png"
+      ],
+      "generatedPath": "/Users/paul/.codex/generated_images/01a10b6e-12e3-7a53-be43-407e616fc798/exec-4305ec80-3706-457c-b785-d58e1f269621.png",
+      "selected": true
+    },
+    {
+      "id": "leg-far-flight-anatomy",
+      "desc": "Generate exactly ONE isolated BACKGROUND robin leg in flight, same size anatomy as near leg. Follow photo 2 folded ankle and hanging toes, mirror for RIGHT-FACING bird: small feathered hip UPPER LEFT, slender short brown leg folds RIGHT along belly, ankle bends DOWN, three tiny toes hang DOWN slightly RIGHT gently curled, rear toe tucks LEFT. Foot below ankle, no standing spread, no fist. Darker background brown, delicate passerine anatomy in painterly cartoon style of image 1. No body.",
+      "prompt": "Use case: stylized-concept. Asset type: one isolated transparent animation component. Image 1: accepted stylised robin, style/colour/identity reference ONLY. Image 2: real robin flight ANATOMY reference only, it faces LEFT and must be mentally mirrored to match our RIGHT-facing bird. Genuine transparent background. ONE component only, no torso, head, other limbs, text, labels or watermarks, generous clear canvas margins. Primary request: Generate exactly ONE isolated BACKGROUND robin leg in flight, same size anatomy as near leg. Follow photo 2 folded ankle and hanging toes, mirror for RIGHT-FACING bird: small feathered hip UPPER LEFT, slender short brown leg folds RIGHT along belly, ankle bends DOWN, three tiny toes hang DOWN slightly RIGHT gently curled, rear toe tucks LEFT. Foot below ankle, no standing spread, no fist. Darker background brown, delicate passerine anatomy in painterly cartoon style of image 1. No body.",
+      "refs": [
+        "/Users/paul/projects-personal/crew-code-review/design-docs/christmas/animation/parts-prototype/assembled.png",
+        "/var/folders/k8/pdqnbshd40v3tm8ftk91szf40000gn/T/clipboard-2026-10-05-134043-2E88A240.png"
+      ],
+      "generatedPath": "/Users/paul/.codex/generated_images/01a10b6e-12e3-7a53-be43-407e616fc798/exec-ebaf46c7-5f03-4c5c-ad67-69b71c00dde1.png",
+      "selected": true
+    }
+  ]
+}

@@ -1,0 +1,52 @@
+<script lang="ts">
+  import manifest from './robin-parts/manifest.json';
+  import { partsPose, partsLayers, partsViewport } from './robin-parts-pose';
+
+  export let elapsed = 0;
+  export let mode = 'alive';
+  export let reduced = false;
+  export let mirrored = false;
+  export let exploded = false;
+  export let showNeck = true;
+  export let guides = false;
+  export let hidden: string[] = [];
+  const assets = import.meta.glob<string>('./robin-parts/*.webp', { eager: true, query: '?url', import: 'default' });
+  const urls = Object.fromEntries(Object.entries(manifest.parts).map(([id, p]) => [id, assets['./robin-parts/' + p.file]]));
+  const parts = manifest.parts;
+  $: pose = partsPose(elapsed, mode, reduced);
+  $: layers = partsLayers(pose, exploded, showNeck);
+  $: viewport = partsViewport(mode, reduced);
+</script>
+
+{#snippet part(id: keyof typeof parts)}
+  {#if !hidden.includes(id)}
+    <image data-part={id} href={urls[id]} x={parts[id].x} y={parts[id].y} width={parts[id].width} height={parts[id].height} />
+  {/if}
+{/snippet}
+
+<svg viewBox={viewport.join(' ')} role="img" aria-label="Generated layered robin prototype" data-closed={pose.closed} data-head-angle={pose.headAngle} data-mode={mode}>
+  <g transform={mirrored ? 'translate(128 0) scale(-1 1)' : ''}>
+    {#each layers as layer}
+      <g transform={layer.transform}>
+        {#if layer.nextId && layer.blend && !hidden.includes(layer.id) && !hidden.includes(layer.nextId)}
+          <g style="isolation: isolate">
+            <g opacity={1 - layer.blend} style="mix-blend-mode: plus-lighter">{@render part(layer.id)}</g>
+            <g transform={layer.nextAdjustment} opacity={layer.blend} style="mix-blend-mode: plus-lighter">{@render part(layer.nextId)}</g>
+          </g>
+        {:else}
+          {@render part(layer.id)}
+        {/if}
+      </g>
+    {/each}
+    {#if guides}
+      <path d="M0 100H128" stroke="#41acb4" stroke-width=".4" />
+      {#each Object.entries(parts) as [id, p]}
+        <circle cx={p.pivot[0]} cy={p.pivot[1]} r="1" fill="#d32a93"><title>{id} pivot</title></circle>
+      {/each}
+    {/if}
+  </g>
+</svg>
+
+<style>
+  svg { display: block; width: 100%; height: 100%; overflow: visible; }
+</style>

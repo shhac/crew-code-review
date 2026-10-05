@@ -1,0 +1,732 @@
+{
+  "version": 1,
+  "status": "prototype",
+  "canvas": [
+    128,
+    112
+  ],
+  "scale": 0.35,
+  "anchor": [
+    64,
+    100
+  ],
+  "parts": {
+    "body": {
+      "x": 35,
+      "y": 25,
+      "width": 75,
+      "pivot": [
+        64,
+        83
+      ],
+      "sourceFile": "body.png",
+      "height": 65.22662889518413,
+      "file": "body.webp",
+      "sourceBounds": [
+        218,
+        116,
+        1059,
+        921
+      ],
+      "sourceSha256": "a24b17c365d72554672b5d399cba9f2e4c73c0ef7d919b3aeadfba9c00d7eafc",
+      "sha256": "31c60ce78ad5cc4e7a54e3eacdd32f37be42be396c40b88c83959e7cf0615337"
+    },
+    "body-peck": {
+      "x": 35,
+      "y": 30.997657,
+      "width": 75,
+      "pivot": [
+        64,
+        83
+      ],
+      "sourceFile": "body-peck.png",
+      "height": 59.228971962616825,
+      "file": "body-peck.webp",
+      "sourceBounds": [
+        216,
+        196,
+        1070,
+        845
+      ],
+      "sourceSha256": "c8cb1cdfa58e8c7dc23723fdb7be383868969c83fd18d033229105250d883c38",
+      "sha256": "26610957a3aff65aaf7474b44e6fc3ae8a51c5dadd807027ceb2f67cb0bdf3a3"
+    },
+    "head": {
+      "x": 66,
+      "y": 8,
+      "width": 49,
+      "pivot": [
+        82,
+        42
+      ],
+      "sourceFile": "head.png",
+      "height": 44.569148936170215,
+      "file": "head.webp",
+      "sourceBounds": [
+        291,
+        113,
+        940,
+        855
+      ],
+      "sourceSha256": "896469e9b347e00316b787fe8b41cd4dcc8672a3073c6a8447664161078b0753",
+      "sha256": "61306524b8bca95f4cce15b1809b61aa0013f5e3004240398fc525fc9fbf9fb8"
+    },
+    "neck": {
+      "x": 68,
+      "y": 34,
+      "width": 37,
+      "pivot": [
+        82,
+        42
+      ],
+      "sourceFile": "neck.png",
+      "height": 25.604344453064392,
+      "file": "neck.webp",
+      "sourceBounds": [
+        45,
+        95,
+        1289,
+        892
+      ],
+      "sourceSha256": "32b4a4a9090af76bdce6ed68dfd6e8fd5d2ca875411da280d28b86b9af6e71a7",
+      "sha256": "bfb62dff76ef4253a1306f6b21871b127670cf80e9ef086b8e4593b71ac0e7d3"
+    },
+    "wing": {
+      "x": 29,
+      "y": 32,
+      "width": 59,
+      "pivot": [
+        79,
+        43
+      ],
+      "sourceFile": "wing.png",
+      "height": 39.0068359375,
+      "file": "wing.webp",
+      "sourceBounds": [
+        202,
+        238,
+        1024,
+        677
+      ],
+      "sourceSha256": "9fa68a2e176cb6350c659c529d1aa1c0dbf18e41bb5eb78aaa5f5ead923a93e8",
+      "sha256": "0560b6de74d4761d9c0469d665c8eaa2df7e229aad876e76052bd41ec728c854"
+    },
+    "tail": {
+      "source": "tail-feather-root.png",
+      "x": 8.122944960686205,
+      "y": 58.43030736240171,
+      "width": 43.092208720514655,
+      "pivot": [
+        46,
+        65
+      ],
+      "registrationBounds": [
+        97,
+        174,
+        1399,
+        691
+      ],
+      "sourceFile": "tail-feather-root.png",
+      "height": 20.746962115796997,
+      "file": "tail.webp",
+      "sourceBounds": [
+        101,
+        188,
+        1402,
+        675
+      ],
+      "sourceSha256": "41f1ebae03a974270b668a8e64391ac6033fd8a5970cbd19b75083f91e5f7bad",
+      "sha256": "f4eaa4e7ebdeb3f6e64ec0a9881cbc494a2de2141aaf92b9e000b97de09554b5"
+    },
+    "leg-near": {
+      "x": 57,
+      "y": 85,
+      "width": 15.2,
+      "pivot": [
+        64,
+        99.1
+      ],
+      "sourceFile": "leg-near.png",
+      "height": 17.09679595278246,
+      "file": "leg-near.webp",
+      "sourceBounds": [
+        446,
+        289,
+        593,
+        667
+      ],
+      "sourceSha256": "406da2f5aaeb5123109da340e479ac52e28ecea7ff86c87b649170a5514f9bec",
+      "sha256": "869373b3f36f9db9a3093c2fb340a9dd0b5f36698bd2f5e5825eacef22a57517"
+    },
+    "leg-far": {
+      "x": 70,
+      "y": 78.8,
+      "width": 14.5,
+      "pivot": [
+        78,
+        98
+      ],
+      "sourceFile": "leg-far.png",
+      "height": 22.223618090452263,
+      "file": "leg-far.webp",
+      "sourceBounds": [
+        531,
+        290,
+        398,
+        610
+      ],
+      "sourceSha256": "5f0a797c92c877fa814e9f6780eb620bf8961aa007c9e52f96d8aef73b9d8996",
+      "sha256": "8a34fcefc86e1012a302893033c083ce72fab0b3d25d4fabb1efbba10be2a8eb"
+    },
+    "eyelid": {
+      "x": 89,
+      "y": 17.7,
+      "width": 14,
+      "pivot": [
+        98.1,
+        24
+      ],
+      "sourceFile": "eyelid.png",
+      "height": 11.733041575492342,
+      "file": "eyelid.webp",
+      "sourceBounds": [
+        281,
+        119,
+        914,
+        766
+      ],
+      "sourceSha256": "c22bd41bfe416a35c3ecfb75283341fa7b5cca6b4490e0490b36aead99bc8269",
+      "sha256": "72904458111c4b350cc448d08008fff535bbe178e274feac4b94ef25db9db461"
+    },
+    "wing-up": {
+      "source": "wing-up-anatomy.png",
+      "rootSource": [
+        1100,
+        1030
+      ],
+      "tipSource": [
+        916,
+        41
+      ],
+      "projectedSpan": 82,
+      "pivot": [
+        79,
+        43
+      ],
+      "sourceFile": "wing-up-anatomy.png",
+      "x": 22.755815773729815,
+      "y": -38.594823783328195,
+      "width": 61.78708933842435,
+      "height": 95.94116642655074,
+      "file": "wing-up.webp",
+      "sourceBounds": [
+        410,
+        29,
+        758,
+        1177
+      ],
+      "sourceSha256": "7cdb3291620cce42c0186830771972a38fa8b3787dc17ccd28cf1b7ad9f086ee",
+      "sha256": "4e72f476edf365265099b8f5ff0922854bde6673fa896d164fa25aa2b5a4640e"
+    },
+    "wing-down": {
+      "source": "wing-down-anatomy.png",
+      "rootSource": [
+        460,
+        200
+      ],
+      "tipSource": [
+        130,
+        1180
+      ],
+      "projectedSpan": 82,
+      "pivot": [
+        79,
+        43
+      ],
+      "sourceFile": "wing-down-anatomy.png",
+      "x": 49.42172102516672,
+      "y": 33.2463047884598,
+      "width": 80.96360008928896,
+      "height": 91.66887532146723,
+      "file": "wing-down.webp",
+      "sourceBounds": [
+        87,
+        77,
+        1021,
+        1156
+      ],
+      "sourceSha256": "7c128ed95470049595436a5e4c49d21108b6de14dfec8f4451842a024b1fd1e2",
+      "sha256": "4ab17128301d3cc6b9670a016e6493b788dab5e41ed4f8f627cf4c2d16764959"
+    },
+    "wing-far-up": {
+      "source": "wing-far-up-anatomy.png",
+      "rootSource": [
+        1040,
+        980
+      ],
+      "tipSource": [
+        850,
+        67
+      ],
+      "projectedSpan": 74,
+      "pivot": [
+        90,
+        42
+      ],
+      "sourceFile": "wing-far-up-anatomy.png",
+      "x": 37.15195159848226,
+      "y": -31.95552719251431,
+      "width": 58.79940520349045,
+      "height": 86.73110646074907,
+      "file": "wing-far-up.webp",
+      "sourceBounds": [
+        374,
+        48,
+        741,
+        1093
+      ],
+      "sourceSha256": "2a5e20ad024ebdb3cc3e0728870c8588cf48f6bc991e929669edadb6b8b043fa",
+      "sha256": "37d62dcf7c7732cc3053ebb689cc8d83db8422e68691858ee488443dbf804da5"
+    },
+    "wing-far-down": {
+      "source": "wing-far-down-anatomy.png",
+      "rootSource": [
+        890,
+        210
+      ],
+      "tipSource": [
+        263,
+        1013
+      ],
+      "projectedSpan": 74,
+      "pivot": [
+        90,
+        42
+      ],
+      "sourceFile": "wing-far-down-anatomy.png",
+      "x": 35.23320082521046,
+      "y": 32.41217839380342,
+      "width": 80.26168844581225,
+      "height": 69.94751671793412,
+      "file": "wing-far-down.webp",
+      "sourceBounds": [
+        136,
+        78,
+        1105,
+        963
+      ],
+      "sourceSha256": "0f3d01988c9d056a673333403eb1d204443f47145245002c4b9a32dac6dbe1c7",
+      "sha256": "42ce729d65c5a6ea370f5a682b8cbd900f69d334cf81057811cb2cb4fd12f584"
+    },
+    "wing-forward": {
+      "rootSource": [
+        1490,
+        280
+      ],
+      "tipSource": [
+        185,
+        435
+      ],
+      "projectedSpan": 68,
+      "pivot": [
+        79,
+        43
+      ],
+      "sourceFile": "wing-forward.png",
+      "x": 10.905451215334452,
+      "y": 33.375694472684046,
+      "width": 73.83808595419282,
+      "height": 36.686196875629086,
+      "file": "wing-forward.webp",
+      "sourceBounds": [
+        174,
+        94,
+        1427,
+        709
+      ],
+      "sourceSha256": "9b7542e16533fd8cc766802fc88a1bf557139a1ca81f04ec1bc17a0a3b7753ca",
+      "sha256": "4fed4eb320a20366578df5dab3617ecd16ef6f28e1f3385f5a4cdf9df92f5a3b"
+    },
+    "wing-far-forward": {
+      "rootSource": [
+        1500,
+        280
+      ],
+      "tipSource": [
+        232,
+        473
+      ],
+      "projectedSpan": 60,
+      "pivot": [
+        90,
+        42
+      ],
+      "sourceFile": "wing-far-forward.png",
+      "x": 29.93469497411951,
+      "y": 34.28132762517891,
+      "width": 65.39820593939325,
+      "height": 29.2373953591708,
+      "file": "wing-far-forward.webp",
+      "sourceBounds": [
+        216,
+        115,
+        1398,
+        625
+      ],
+      "sourceSha256": "c55c50a8c3c107d5be201d1c7209bb9d132dfc765e532cdc51ddd3e6b8a580ca",
+      "sha256": "9fcef29a152b7b2f99336c9bca327cf4ca7bb6a95ed12e18fe435b95b11fa796"
+    },
+    "wing-recovery": {
+      "rootSource": [
+        1390,
+        530
+      ],
+      "tipSource": [
+        380,
+        110
+      ],
+      "projectedSpan": 60,
+      "pivot": [
+        79,
+        43
+      ],
+      "sourceFile": "wing-recovery.png",
+      "x": 17.181449885005392,
+      "y": 18.426166413915187,
+      "width": 68.45567927552197,
+      "height": 39.87762727027602,
+      "file": "wing-recovery.webp",
+      "sourceBounds": [
+        263,
+        82,
+        1248,
+        727
+      ],
+      "sourceSha256": "647a7979b27a97d7e6175ba5b059a48a27b72d6d0fd9d3008ba436d45d066205",
+      "sha256": "1c98950baae279f3eb65a2655506ffbadd6e59b68d0c18d2dff958eea76b8cf8"
+    },
+    "wing-far-recovery": {
+      "rootSource": [
+        1360,
+        610
+      ],
+      "tipSource": [
+        401,
+        73
+      ],
+      "projectedSpan": 54,
+      "pivot": [
+        90,
+        42
+      ],
+      "sourceFile": "wing-far-recovery.png",
+      "x": 37.03730624131047,
+      "y": 14.437781819457488,
+      "width": 58.46531129205987,
+      "height": 38.02701759668432,
+      "file": "wing-far-recovery.webp",
+      "sourceBounds": [
+        282,
+        49,
+        1190,
+        774
+      ],
+      "sourceSha256": "142e12f86d9c3166fdd0421f42adcfeaefab5b2f7c6f67a739cd1b5454094756",
+      "sha256": "3e3bd401594b5641e5d48946bdb782d65409f22b39205dd6f9362b27c552a741"
+    },
+    "wing-high-fall": {
+      "rootSource": [
+        1060,
+        1020
+      ],
+      "tipSource": [
+        292,
+        86
+      ],
+      "projectedSpan": 78,
+      "pivot": [
+        79,
+        43
+      ],
+      "sourceFile": "wing-high-fall.png",
+      "x": 18.816723653191673,
+      "y": -18.215358256292717,
+      "width": 65.53720125225858,
+      "height": 75.14846403433194,
+      "file": "wing-high-fall.webp",
+      "sourceBounds": [
+        127,
+        71,
+        1016,
+        1165
+      ],
+      "sourceSha256": "0167a2314066a9ff6edfb4217dde01856f7c67721551c215af15aaef889262c1",
+      "sha256": "7e698bd7a8f3ee26d8270da240ad7ecc125fe15f457fee8dfaa9341d65bcff54"
+    },
+    "wing-far-high-fall": {
+      "rootSource": [
+        1060,
+        1000
+      ],
+      "tipSource": [
+        209,
+        66
+      ],
+      "projectedSpan": 70,
+      "pivot": [
+        90,
+        42
+      ],
+      "sourceFile": "wing-far-high-fall.png",
+      "x": 37.702874312073696,
+      "y": -10.518723678129376,
+      "width": 57.283080467495544,
+      "height": 65.8700025878648,
+      "file": "wing-far-high-fall.webp",
+      "sourceBounds": [
+        116,
+        52,
+        1034,
+        1189
+      ],
+      "sourceSha256": "eabdff3422cfd9d7fbc0eb880c867a6205b2491b8f5f88b44d8c2fcb890b569a",
+      "sha256": "000258249affdff5dbd4a0c1261c76378b2e603a20d92834ff2b9936ab8f6629"
+    },
+    "wing-low-fall": {
+      "rootSource": [
+        845,
+        220
+      ],
+      "tipSource": [
+        65,
+        1100
+      ],
+      "projectedSpan": 78,
+      "pivot": [
+        79,
+        43
+      ],
+      "sourceFile": "wing-low-fall.png",
+      "x": 25.33842209184759,
+      "y": 35.3719635853677,
+      "width": 76.0813718920282,
+      "height": 74.09144934908065,
+      "file": "wing-low-fall.webp",
+      "sourceBounds": [
+        36,
+        105,
+        1147,
+        1117
+      ],
+      "sourceSha256": "9aef74df10b1debe54a6b318da1ffcd52584de62f70c2ca7a653226a38c135a0",
+      "sha256": "f34223e0c00e366a9792caa0d24e15233a356f6eddcc22682a80ce394638210f"
+    },
+    "wing-far-low-fall": {
+      "rootSource": [
+        890,
+        190
+      ],
+      "tipSource": [
+        107,
+        1170
+      ],
+      "projectedSpan": 70,
+      "pivot": [
+        90,
+        42
+      ],
+      "sourceFile": "wing-far-low-fall.png",
+      "x": 44.408042307623,
+      "y": 35.136094496741286,
+      "width": 62.27738651737177,
+      "height": 64.0073139206321,
+      "file": "wing-far-low-fall.webp",
+      "sourceBounds": [
+        73,
+        67,
+        1116,
+        1147
+      ],
+      "sourceSha256": "1e80489160d413f0c467bc7a99f807ea4ddd0465d49e790cf2c6d2daf726a5fa",
+      "sha256": "fcab1e26767bc66c89659cd308d847866bc5d3bdf8ad5e4a237977d21906a1d9"
+    },
+    "wing-low-rise": {
+      "rootSource": [
+        960,
+        220
+      ],
+      "tipSource": [
+        175,
+        1130
+      ],
+      "projectedSpan": 74,
+      "pivot": [
+        79,
+        43
+      ],
+      "sourceFile": "wing-low-rise.png",
+      "x": 28.87854609807843,
+      "y": 34.07173118454714,
+      "width": 62.31315890509168,
+      "height": 72.10346746824344,
+      "file": "wing-low-rise.webp",
+      "sourceBounds": [
+        146,
+        75,
+        1012,
+        1171
+      ],
+      "sourceSha256": "27d7d9a09d21a8cb804cae7be04fdce1be8c7aa9c2f198e52c637b4cd594997e",
+      "sha256": "f01d1b1e2ea5df915218570150145172c6c3c4f9cdd06d3f273c7895d072633e"
+    },
+    "wing-far-low-rise": {
+      "rootSource": [
+        950,
+        240
+      ],
+      "tipSource": [
+        231,
+        1150
+      ],
+      "projectedSpan": 66,
+      "pivot": [
+        90,
+        42
+      ],
+      "sourceFile": "wing-far-low-rise.png",
+      "x": 47.37594505545609,
+      "y": 35.7401254420563,
+      "width": 52.582946286727065,
+      "height": 59.41190034993837,
+      "file": "wing-far-low-rise.webp",
+      "sourceBounds": [
+        201,
+        130,
+        924,
+        1044
+      ],
+      "sourceSha256": "e348fbb978e14fabd3b675a09ad61f6d2798bab9e139bed81aaf2b4df378d614",
+      "sha256": "33efc79ba4c0baf61d517ba6eb1171a15837bc1b0cb38154be4a4be78f6893b9"
+    },
+    "wing-high-rise": {
+      "rootSource": [
+        1000,
+        1050
+      ],
+      "tipSource": [
+        335,
+        73
+      ],
+      "projectedSpan": 72,
+      "pivot": [
+        79,
+        43
+      ],
+      "sourceFile": "wing-high-rise.png",
+      "x": 28.73953721981377,
+      "y": -17.495320655424152,
+      "width": 56.84001427141061,
+      "height": 71.76584867279925,
+      "file": "wing-high-rise.webp",
+      "sourceBounds": [
+        175,
+        57,
+        933,
+        1178
+      ],
+      "sourceSha256": "636608d3809ba7ac2a13e3d316dd53c69f2eb0c684c2485f1f8d89d37d933c2b",
+      "sha256": "d18ff193ff9605dac52fe2a53fec57b1ecfdf21a6b7b6b1b1ebdcb1dffcf391c"
+    },
+    "wing-far-high-rise": {
+      "rootSource": [
+        1060,
+        1020
+      ],
+      "tipSource": [
+        240,
+        86
+      ],
+      "projectedSpan": 64,
+      "pivot": [
+        90,
+        42
+      ],
+      "sourceFile": "wing-far-high-rise.png",
+      "x": 46.12777874024862,
+      "y": -7.124529438735692,
+      "width": 48.764076916648534,
+      "height": 56.28208666303785,
+      "file": "wing-far-high-rise.webp",
+      "sourceBounds": [
+        208,
+        66,
+        947,
+        1093
+      ],
+      "sourceSha256": "5270f7dd5d747e0be54df5d30cc8d04739f3457d7603e50a3c3ebeff7c245e37",
+      "sha256": "06ce5b30d3628a6aa097c8ccf4ff7749cfcfc0e6f60700c86fbed592d232cd3d"
+    },
+    "wing-shoulder": {
+      "x": 58.8,
+      "y": 35.71,
+      "width": 28,
+      "pivot": [
+        79,
+        43
+      ],
+      "sourceFile": "wing-shoulder.png",
+      "height": 21.117845117845118,
+      "file": "wing-shoulder.webp",
+      "sourceBounds": [
+        248,
+        268,
+        891,
+        672
+      ],
+      "sourceSha256": "93357364232b7ed8c5879db6f4e31fa816267ee7c32a5e39b0210dd9e8b9622a",
+      "sha256": "63fc2afdf47371bde8289d15d8c323ff875ba39d5c0df2ae45015bc1e6e7f374"
+    },
+    "leg-near-tucked": {
+      "source": "leg-near-flight-anatomy.png",
+      "x": 63.11,
+      "y": 85.14,
+      "width": 16.5,
+      "pivot": [
+        65.85,
+        88.61
+      ],
+      "sourceFile": "leg-near-flight-anatomy.png",
+      "height": 18.42798913043478,
+      "file": "leg-near-tucked.webp",
+      "sourceBounds": [
+        318,
+        135,
+        736,
+        822
+      ],
+      "sourceSha256": "cc7ddca6bdb0ab01cfeea263ceb72c54d0f50d43da263852b600502d962c037d",
+      "sha256": "17014426bebe00e325f714dcd6d9e5fdf9ae64ff310a28503631a33e62a83953"
+    },
+    "leg-far-tucked": {
+      "source": "leg-far-flight-anatomy.png",
+      "x": 75.61,
+      "y": 78.1,
+      "width": 15,
+      "pivot": [
+        77.71,
+        81.75
+      ],
+      "sourceFile": "leg-far-flight-anatomy.png",
+      "height": 17.86549707602339,
+      "file": "leg-far-tucked.webp",
+      "sourceBounds": [
+        408,
+        280,
+        513,
+        611
+      ],
+      "sourceSha256": "aacc5a98b7e779b9448f6c370b42705d31ffa5bf469011f51f1ddaf5b9a33c20",
+      "sha256": "da9bae058801e965efa652029af7e21d36bf74b57aff345b19ca628dbaa7a144"
+    }
+  }
+}

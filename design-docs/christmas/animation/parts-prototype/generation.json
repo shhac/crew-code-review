@@ -1,0 +1,59 @@
+{
+  "tool": "built-in image_gen",
+  "canonical": "../idle-strip/review/canonical.png",
+  "prompts": {
+    "body": "Use case: precise-object-edit. Reference image is the canonical right-facing robin; preserve its warm painterly cartoon feather style, dark brown outline, orange breast, ivory belly, brown back and proportions. Create ONE standalone BODY/TORSO component for a layered animation rig, on true transparency. Draw the complete plump oval torso from neck base through belly and rump, including the brown shoulder/back that the folded wing normally hides. Orange breast at screen right, ivory lower belly, brown back at screen left. NO head, face, eye, beak, wing, tail, feet or legs. Fill the whole torso smoothly with feather artwork; the neck attachment surface must be complete and rounded, never a hollow cutout. One large isolated component with generous transparent margin, no shadow, no text, no grid. This is component artwork to reassemble into exactly the reference robin.",
+    "head": "Use case: precise-object-edit. Reference image is the canonical right-facing robin. Create ONE standalone HEAD component for a layered animation rig on true transparency. Match exactly the reference's warm painterly cartoon style, dark brown feather outline, brown crown with golden highlight, russet orange cheek, one round black highlighted eye and short dark beak facing right. Preserve head shape and expression. Draw a complete rounded head including a short orange feathered lower neck overlap extending below the cheek; a smooth filled base, no hollow cutout. NO body, breast/belly, wings, tail or legs. One large isolated head with generous transparent margin, no shadows, text or grid.",
+    "neck": "Use case: precise-object-edit. Reference image is the canonical right-facing robin. Create ONE standalone NECK TRANSITION feather patch for a layered animation rig on true transparency. This piece connects the head's lower orange cheek to the body's orange breast: a short broad softly rounded oval collar, brown/russet feathers along screen-left/back, warm orange feathers across centre and screen-right/front. Preserve reference painterly brushwork and palette. Entire patch filled, softly feathered perimeter; no dark outline across the upper or lower attachment edges because these overlap under the head and over the torso. NO head, eyes, beak, body, wings, legs or tail. One large isolated feather patch, transparent margin, no shadow/text/grid.",
+    "wing": "Use case: precise-object-edit. Using the canonical robin reference, create ONE complete standalone foreground FOLDED WING component, facing right, for this robin's layered animation rig. Match its exact brown painterly cartoon feather style, warm golden feather highlights and dark brown silhouette outline. Wing is compact, rounded upper-right shoulder, layered overlapping flight feathers tapering to a lower-left tip, same angle and shape as the wing on the reference. Complete filled wing root concealed under shoulder feathers when assembled. NO torso, head, eyes, beak, feet, legs or tail. A single large isolated wing on genuine transparency with generous margin. No shadows, text, grid or other objects.",
+    "tail": "Use case: precise-object-edit. Using the canonical robin reference, create ONE complete standalone TAIL component for this robin's layered animation rig. Match exact warm brown painterly cartoon feather style, golden highlights and dark brown outline. Two or three narrow overlapping tail feathers extend toward screen-left from a rounded attachment root at screen-right, slight rising angle toward root, matching the reference perched tail. Complete filled attachment root for overlap. NO bird body, head, wing, leg or feet. One large isolated tail on true transparency, generous margin, no shadows/text/grid.",
+    "leg-near": "Use case: precise-object-edit. Using the canonical robin reference, create ONE complete standalone FOREGROUND LEG AND FOOT component for a standing right-facing robin. Match reference painterly cartoon style and dark brown delicate bird leg. Short slim shin angled down slightly to the right, attached to a small ankle and exactly three slender front toes extending toward screen-right and one short rear toe extending left, tiny dark claws. Draw complete upper shin for concealment under belly feathers. Keep the compact natural planted stance, no human leg or webbing. NO other bird parts. One isolated leg and foot on true transparency with generous padding, no shadow/text/grid.",
+    "leg-far": "Use case: precise-object-edit. Using the canonical robin reference, create ONE complete standalone BACKGROUND LEG AND FOOT component for a standing right-facing robin. Match reference warm painterly cartoon style. Short slim dark brown shin angled down slightly to the left, a small ankle and compact three slender front toes extending toward screen-right plus one short rear toe extending left, tiny claws. Slightly darker than the foreground leg, compact natural planted stance. Draw complete upper shin for concealment under belly feathers. NO body or other bird parts, no human leg or webbing. One isolated leg and foot on true transparency with generous padding, no shadow/text/grid.",
+    "eyelid": "Use case: precise-object-edit. Image 1 is the canonical robin and image 2 is its generated head component, with open black highlighted eye. Create ONE standalone CLOSED-EYE OVERLAY PATCH for that generated head: an orange/russet feather-coloured oval cheek patch large enough to completely cover the round open eye and its dark rim; a thin dark brown gently curved closed-eyelid stroke across its centre. Surround the stroke with filled orange feather artwork matching image 2's eye surroundings. No black eyeball and no white highlight. Feathered orange perimeter to merge into orange cheek, no outer dark outline. NO whole head, beak, body or other components. One isolated small painted eyelid patch enlarged for delivery on true transparency, no shadow/text/grid.",
+    "tail-repair": "Edit this standalone robin tail component. Preserve exactly the tail feather shape, brown/gold painterly artwork and dark outline. REMOVE ALL surrounding brown glow, halo and shadow, leaving genuine fully transparent empty space outside the feather silhouette. No shadow of any kind. The tail itself is unchanged, one isolated component.",
+    "leg-near-repair": "Edit this standalone robin leg/foot component. Preserve shin, ankle, painterly brown style, transparency and compact standing pose. Correct only the toe anatomy: exactly THREE distinct slender front toes extending toward screen-right, plus ONE short rear toe extending screen-left, with small dark claws. Current image only has two visible front toes; add the missing third front toe visibly between/behind the others. One isolated foot, no shadows.",
+    "head-repair": "Use case: precise-object-edit. Edit image 1, the standalone right-facing robin HEAD component, for overlapping animation joints. Image 2 is canonical style reference. Keep crown, face, eye, beak, all proportions and internal feather artwork unchanged. Change ONLY the lower attachment edge across the orange chin/lower neck and brown lower back of the head: REMOVE the dark brown/black contour line from the bottom third of the perimeter. Replace that attachment edge with soft fine feather tips in the immediately adjacent orange or brown feather colour, so the head can overlap a matching neck/body without looking like an outlined separate medallion. Preserve the dark outline on the crown, upper back, forehead and beak silhouette. The lower feather extension remains fully filled, not a hollow cutout. True transparent background, NO shadow, glow or halo."
+  },
+  "sources": [
+    {
+      "id": "body",
+      "file": "sources/body.png",
+      "generatedPath": "/Users/paul/.codex/generated_images/01a10b6e-12e3-7a53-be43-407e616fc798/exec-ec721173-6ef3-4598-af27-dbc1df6fb403.png"
+    },
+    {
+      "id": "head",
+      "file": "sources/head.png",
+      "generatedPath": "/Users/paul/.codex/generated_images/01a10b6e-12e3-7a53-be43-407e616fc798/exec-c0692d40-102c-4635-a7b1-b15fd48e6ff2.png"
+    },
+    {
+      "id": "neck",
+      "file": "sources/neck.png",
+      "generatedPath": "/Users/paul/.codex/generated_images/01a10b6e-12e3-7a53-be43-407e616fc798/exec-eb194212-b7b8-451d-9a34-24efad639df2.png"
+    },
+    {
+      "id": "wing",
+      "file": "sources/wing.png",
+      "generatedPath": "/Users/paul/.codex/generated_images/01a10b6e-12e3-7a53-be43-407e616fc798/exec-e04b61a0-710b-418c-8e22-5a806873e285.png"
+    },
+    {
+      "id": "tail",
+      "file": "sources/tail.png",
+      "generatedPath": "/Users/paul/.codex/generated_images/01a10b6e-12e3-7a53-be43-407e616fc798/exec-f927a9ff-b8e7-4344-b2c8-84fbee865bfa.png"
+    },
+    {
+      "id": "leg-near",
+      "file": "sources/leg-near.png",
+      "generatedPath": "/Users/paul/.codex/generated_images/01a10b6e-12e3-7a53-be43-407e616fc798/exec-5ac46876-8063-4d0b-87b9-f9e45f16ea0e.png"
+    },
+    {
+      "id": "leg-far",
+      "file": "sources/leg-far.png",
+      "generatedPath": "/Users/paul/.codex/generated_images/01a10b6e-12e3-7a53-be43-407e616fc798/exec-750d0aa4-82ea-44b0-88dc-95b79a8d06e2.png"
+    },
+    {
+      "id": "eyelid",
+      "file": "sources/eyelid.png",
+      "generatedPath": "/Users/paul/.codex/generated_images/01a10b6e-12e3-7a53-be43-407e616fc798/exec-fc123390-df08-470e-97ce-a3fd4b31c0fb.png"
+    }
+  ]
+}
