@@ -9,7 +9,7 @@ const standing = () => partsPose(0, 'still');
 
 // The scene owns travel and randomness. This player only articulates the bird
 // at that position, using the same drawings and joint model as the art lab.
-export function createRobinPlayback() {
+export function createRobinPlayback(phaseOffset = 0) {
   let epoch: number | null = null, lastTime = -Infinity, key = '', changedAt = 0;
   let previous = standing(), transition = previous;
   const reset = () => {
@@ -24,7 +24,7 @@ export function createRobinPlayback() {
       if (now < lastTime) reset();
       lastTime = now;
       epoch ??= now;
-      const elapsed = now - epoch, action = bird.action;
+      const elapsed = now - epoch + phaseOffset, action = bird.action;
       let target: PartsPose, nextKey: string;
       if (action) {
         const age = Math.max(0, now - action.start);

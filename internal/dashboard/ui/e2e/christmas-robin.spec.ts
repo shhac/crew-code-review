@@ -5,7 +5,8 @@ for (const width of [1440, 390]) {
     await page.setViewportSize({ width, height: 900 });
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await page.goto('/logs?theme=christmas&theme-debug=1');
-    const bird = page.locator('.robin');
+    await expect(page.locator('.robin')).toHaveCount(2);
+    const bird = page.locator('[data-robin="0"]');
     await expect(bird).toBeVisible();
     await expect(bird.locator('[data-layered-robin]')).toHaveAttribute('data-flight-weight', '0');
     const rendered = await bird.evaluate(async el => {
@@ -47,7 +48,8 @@ test('live data updates preserve breathing and resting pecks in the shipped rend
   });
   await page.emulateMedia({ reducedMotion: 'no-preference' });
   await page.goto('/logs?theme=christmas');
-  const rig = page.locator('.robin [data-layered-robin]');
+  await expect(page.locator('.robin')).toHaveCount(2);
+  const rig = page.locator('[data-robin="0"] [data-layered-robin]');
   await expect(rig).toBeVisible();
   const advance = async (time: number) => {
     await page.evaluate(time => Reflect.set(window, 'robinTime', time), time);

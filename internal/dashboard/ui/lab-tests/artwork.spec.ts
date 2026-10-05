@@ -58,7 +58,7 @@ for (const width of [1440, 480]) {
       else await expect(page.locator('.theme-shelf')).toBeHidden();
       await page.locator('.controls').evaluate(el => { if (el instanceof HTMLElement) el.style.visibility = 'hidden'; });
       if (theme === 'christmas') {
-        await expect(page.locator('.robin [data-layered-robin]')).toHaveAttribute('data-flight-weight', '0');
+        await expect(page.locator('[data-robin="0"] [data-layered-robin]')).toHaveAttribute('data-flight-weight', '0');
         await decodeParts(page);
       }
       await page.screenshot({ path: info.outputPath(`${theme}-comparison-${width}.png`) });

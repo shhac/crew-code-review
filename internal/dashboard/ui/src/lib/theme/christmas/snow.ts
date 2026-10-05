@@ -2,6 +2,11 @@ import type { Ledge } from '../floors';
 
 export type Perch = { floor: number; x: number; dir: 1 | -1 };
 export type Sample = { x: number; depth: number };
+export function footClearance(x: number, feet?: number | readonly number[]): number {
+  const offsets = feet === undefined ? [] : typeof feet === 'number' ? [feet] : feet;
+  const distance = Math.min(...offsets.map(foot => Math.abs(x - foot)));
+  return Math.max(0, Math.min(1, (distance - 10) / 4));
+}
 
 // The bird model checks local text/control clearance before choosing or
 // traversing a perch. Whole-ledge room is only used to limit the snow height.
@@ -26,7 +31,7 @@ export function choosePerch(floors: ReadonlyMap<number, Ledge>, width: number, h
 }
 
 // Local sampling keeps the seeded shape fixed when a ledge scrolls or resizes.
-export function snowProfile(id: number, floor: Ledge, foot?: number): Sample[] {
+export function snowProfile(id: number, floor: Ledge, foot?: number | readonly number[]): Sample[] {
   if (![floor.left, floor.right, floor.y].every(Number.isFinite) || Number.isNaN(floor.room)) return [];
   const end = floor.right - floor.left - 8;
   const cap = Math.min(floor.kind === 'heading' ? 3 : 7, 9, floor.room - 4);
@@ -39,7 +44,7 @@ export function snowProfile(id: number, floor: Ledge, foot?: number): Sample[] {
     const wave = Math.sin(x / 39 + phase) + .35 * Math.sin(x / 17 + phase);
     const gap = Math.max(0, Math.min(1, (wave + .45) * 3));
     const taper = Math.min(1, (x - 8) / 12, (end - x) / 12);
-    const patch = foot === undefined ? 1 : Math.max(0, Math.min(1, (Math.abs(x - foot) - 10) / 4));
+    const patch = footClearance(x, foot);
     const depth = Math.min(cap, 3 + 4 * (.5 + .5 * Math.sin(x / 27 + phase))) * gap * taper * patch;
     return { x, depth };
   });

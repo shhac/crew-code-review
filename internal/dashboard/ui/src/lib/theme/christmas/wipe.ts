@@ -1,6 +1,6 @@
 import type { Ledge } from '../floors';
 import type { Point, Segment } from '../pointer';
-import { snowProfile, type Sample } from './snow';
+import { footClearance, snowProfile, type Sample } from './snow';
 export type Snow = Sample & { seed: number; wiped: number; at: number };
 export function distance(p: Point, a: Point, b: Point): number {
   const dx = b.x - a.x, dy = b.y - a.y;
@@ -30,6 +30,6 @@ export function wipeSnow(snow: ReadonlyMap<number, Snow[]>, floors: ReadonlyMap<
     })];
   }));
 }
-export function renderSnow(samples: readonly Snow[], now: number, foot?: number): Sample[] {
-  return samples.map((s) => ({ x: s.x, depth: depth(s, now) * (foot === undefined ? 1 : Math.max(0, Math.min(1, (Math.abs(s.x - foot) - 10) / 4))) }));
+export function renderSnow(samples: readonly Snow[], now: number, foot?: number | readonly number[]): Sample[] {
+  return samples.map((s) => ({ x: s.x, depth: depth(s, now) * footClearance(s.x, foot) }));
 }

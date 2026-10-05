@@ -23,3 +23,10 @@ standing pose at a consistent dashboard size. The rotating shoulder and
 feathered tail attachment stay connected to the body. Superseded robin atlas
 playback and runtime artwork have been removed; the parts lab remains available
 for development. Reduced motion keeps a still perched robin.
+
+Two robins now share the Christmas scene with independent, staggered behavior,
+separate perches and reserved flight paths. Flights prefer another ledge and
+can travel around card walls to reach a different height. Idle periods allow
+pecks to finish, and flights last long enough to use every wing profile.
+Crowded layouts still hide birds that have no clear perch; reduced motion keeps
+both still.

@@ -12,7 +12,7 @@ async function captureScene(page: Page, path: string) {
   });
   try {
     await expect(controls).toBeHidden();
-    await expect(page.locator(".robin")).toBeVisible();
+    await expect(page.locator(".robin").first()).toBeVisible();
     await page.screenshot({ path });
   } finally {
     await controls.evaluate((el, value) => {
@@ -59,7 +59,7 @@ for (const width of [1440, 480]) {
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await page.goto('/lab/scene.html?theme=christmas');
     await expect(page.locator('[data-christmas]')).toHaveCount(1);
-    await expect(page.locator('.robin')).toHaveCount(1);
+    await expect(page.locator('.robin')).toHaveCount(2);
     await expect(page.locator('.christmas-shelf img')).toHaveCount(2);
     if (width > 760) await expect(page.locator('.christmas-shelf')).toBeVisible();
     else await expect(page.locator('.christmas-shelf')).toBeHidden();
@@ -73,30 +73,76 @@ for (const width of [1440, 480]) {
       expect(box.bottom).toBeCloseTo(0);
     }
     // Drawn at 0.35 of its 128px art cell (44.8px); browsers may snap it to a whole pixel.
-    const robinWidth = await page.locator('.robin').evaluate((el) => el.getBoundingClientRect().width);
+    const robinWidth = await page.locator('.robin').first().evaluate((el) => el.getBoundingClientRect().width);
     expect(Math.abs(robinWidth - 44.8)).toBeLessThanOrEqual(1);
     await page.getByRole('button', { name: 'Click through 0' }).first().click();
     await expect(page.getByRole('button', { name: 'Click through 1' }).first()).toBeVisible();
     await captureScene(page, info.outputPath(`christmas-${width}.png`));
-    const before = await page.locator('.robin').boundingBox();
+    const before = await page.locator('.robin').first().boundingBox();
     await page.evaluate(() => window.scrollTo(0, 50));
-    await expect.poll(async () => (await page.locator('.robin').boundingBox())?.y).toBeCloseTo((before?.y ?? 0) - 50, 0);
+    await expect.poll(async () => (await page.locator('.robin').first().boundingBox())?.y).toBeCloseTo((before?.y ?? 0) - 50, 0);
     await page.emulateMedia({ reducedMotion: 'reduce' });
-    await expect(page.locator('.robin')).toHaveCount(1);
+    await expect(page.locator('.robin')).toHaveCount(2);
     await page.setViewportSize({ width: width + 40, height: 900 });
-    await expect(page.locator('.robin')).toHaveCount(1);
+    await expect(page.locator('.robin')).toHaveCount(2);
     for (let i = 0; i < 3; i++) {
       // The select sits inside its label, so its accessible name also carries its value.
     await page.locator('label', { hasText: /^theme/ }).locator('select').selectOption('none');
       await expect(page.locator('[data-christmas]')).toHaveCount(0);
       await page.locator('label', { hasText: /^theme/ }).locator('select').selectOption('christmas');
-      await expect(page.locator('.robin')).toHaveCount(1);
+      await expect(page.locator('.robin')).toHaveCount(2);
     }
     await page.getByLabel('empty', { exact: true }).check();
     await expect(page.locator('.robin')).toHaveCount(0);
     expect(api).toEqual([]);
   });
 }
+
+test('both live robins use idle, peck, hop and all eight wing profiles, and change floors', async ({ page }, info) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/lab/scene.html?theme=christmas&clock=manual');
+  await expect(page.locator('.robin')).toHaveCount(2);
+  const clock = page.getByLabel('Scene elapsed (ms)', { exact: true });
+  const first = page.locator('[data-robin="0"]');
+  const second = page.locator('[data-robin="1"]');
+  const rig = first.locator('[data-layered-robin]');
+  const advance = async (time: number) => {
+    await clock.fill(String(time));
+    await first.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+  };
+  await advance(3000);
+  expect(await rig.getAttribute('data-head-angle')).not.toBe('0');
+  expect(await rig.getAttribute('data-head-angle')).not.toBe(await second.locator('[data-layered-robin]').getAttribute('data-head-angle'));
+  await advance(4350);
+  await expect(rig).toHaveAttribute('data-closed', 'true');
+  await advance(5900);
+  const tail = await rig.locator('[data-part="tail"]').evaluate(el => el.parentElement!.getAttribute('transform'));
+  expect(tail).not.toContain('rotate(0 46 65)');
+  await advance(6000); await advance(6420);
+  await expect(rig).toHaveAttribute('data-peck-weight', '1');
+  await advance(11000);
+  await expect(first).toHaveAttribute('data-action', 'hop');
+  await advance(11135);
+  await expect(rig.locator('[data-part="leg-near"]')).toBeAttached();
+  await advance(11300);
+  const origin = await first.getAttribute('data-floor');
+  await advance(22300);
+  await expect(first).toHaveAttribute('data-action', 'flight');
+  const wingProfiles = new Set<string>();
+  for (let time = 22500; time < 23300; time += 25) {
+    await advance(time);
+    for (const id of await rig.locator('[data-part^="wing-"]').evaluateAll(els => els.map(el => el.getAttribute('data-part')!))) wingProfiles.add(id);
+  }
+  for (const state of ['up', 'high-fall', 'forward', 'low-fall', 'down', 'low-rise', 'recovery', 'high-rise']) expect(wingProfiles.has('wing-' + state)).toBe(true);
+  await captureScene(page, info.outputPath('two-robins-flight.png'));
+  // Large clock advances settle the current action rather than starting a new one.
+  await advance(30000);
+  await expect(first).toHaveAttribute('data-action', 'idle');
+  expect(await first.getAttribute('data-floor')).not.toBe(origin);
+  await expect(second).toBeVisible();
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  for (const bird of [first, second]) await expect(bird.locator('[data-layered-robin]')).toHaveAttribute('data-flight-weight', '0');
+});
 
 for (const width of [1440, 480]) {
 test(`Christmas fast strokes, recovery, rejection and teardown at ${width}px`, async ({ page }, info) => {
@@ -154,7 +200,7 @@ test(`Christmas fast strokes, recovery, rejection and teardown at ${width}px`, a
   await expect(snow).toHaveAttribute('d', original!);
   await page.emulateMedia({ reducedMotion: 'no-preference' });
   await page.waitForTimeout(50);
-  const bird = page.locator('.robin');
+  const bird = page.locator('[data-robin="0"]');
   const box = (await bird.boundingBox())!;
   await page.mouse.move(box.x + 80, box.y + 35);
   await page.mouse.move(box.x + 79, box.y + 35);
@@ -177,20 +223,35 @@ test(`Christmas fast strokes, recovery, rejection and teardown at ${width}px`, a
 }
 
 for (const width of [1440, 480]) {
-  test(`blocked swept routes stay perched at ${width}px`, async ({ page }) => {
+  test(`chart blockers never intersect a travelling robin at ${width}px`, async ({ page }) => {
     const api: string[] = [];
     await page.route('**/api/**', (route) => { api.push(route.request().url()); return route.abort(); });
     await page.setViewportSize({ width, height: 900 });
     await page.goto('/lab/scene.html?theme=christmas&clock=manual');
-    const bird = page.locator('.robin');
+    const bird = page.locator('[data-robin="0"]');
     await expect(bird).toHaveCount(1);
     await page.getByLabel('blocked routes', { exact: true }).check();
     await page.waitForTimeout(50);
-    const before = await bird.boundingBox();
     await page.getByLabel('random', { exact: true }).fill('0');
     await page.getByRole('button', { name: 'Advance 16s', exact: true }).click();
-    await expect(bird).toHaveAttribute('data-pose', 'perch');
-    expect(await bird.boundingBox()).toEqual(before);
+    // The new planner may safely go around a chart. Sample the rendered path,
+    // rather than assuming one blocker makes every destination unreachable.
+    for (let step = 0; step < 20; step++) {
+      const clear = await bird.evaluate(async el => {
+        const floorsModule = '/src/lib/theme/floors.ts';
+        const { measureObstacles } = await import(floorsModule);
+        const robinModule = '/src/lib/theme/christmas/robin.ts';
+        const { safeRoute } = await import(robinModule);
+        const snowModule = '/src/lib/theme/christmas/snow.ts';
+        const { ROBIN } = await import(snowModule);
+        const p = { x: Number.parseFloat((el as HTMLElement).style.left) + ROBIN.anchorX,
+          y: Number.parseFloat((el as HTMLElement).style.top) + ROBIN.anchorY - .01 }; // Allow CSS coordinate rounding at a ledge.
+        return safeRoute(p, p, 0, { floors: new Map(), obstacles: measureObstacles(), width: innerWidth, height: innerHeight },
+          el.getAttribute('data-pose') === 'flight' ? 'flight' : 'perch');
+      });
+      expect(clear).toBe(true);
+      await page.getByRole('button', { name: 'Advance 100ms', exact: true }).click();
+    }
     expect(api).toEqual([]);
   });
   test(`supplied flight pose and interrupted layout at ${width}px`, async ({ page }, info) => {
@@ -198,7 +259,7 @@ for (const width of [1440, 480]) {
     await page.route('**/api/**', (route) => { api.push(route.request().url()); return route.abort(); });
     await page.setViewportSize({ width, height: 900 });
     await page.goto('/lab/scene.html?theme=christmas&clock=manual');
-    const bird = page.locator('.robin');
+    const bird = page.locator('[data-robin="0"]');
     await expect(bird).toHaveAttribute('data-pose', 'perch');
     await page.getByLabel('random', { exact: true }).fill('0');
     await page.getByRole('button', { name: 'Advance 16s', exact: true }).click();

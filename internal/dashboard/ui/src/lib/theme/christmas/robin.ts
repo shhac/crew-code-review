@@ -1,66 +1,69 @@
 import type { Ledge, Obstacle } from '../floors';
 import type { Point, Segment } from '../pointer';
 import { choosePerch, type Perch } from './snow';
+import { clearArc, clearFlight, flightRoute, routeLength, routePoint, type FlightLeg } from './flight-route';
 export type Scene = { floors: ReadonlyMap<number, Ledge>; obstacles: readonly Obstacle[]; width: number; height: number };
-type Action = { from: Point; to: Point; target: Perch; start: number; duration: number; rise: number; kind: 'hop' | 'flight' };
+type Action = { from: Point; to: Point; target: Perch; start: number; duration: number; rise: number; kind: 'hop' | 'flight'; route?: FlightLeg[] };
 export type Bird = { perch: Perch | null; action: Action | null; restUntil: number; flightAt: number; cooldown: number; nearAt: number; alert: boolean };
 const range = (rand: () => number, min: number, max: number) => min + Math.max(0, Math.min(1, rand())) * (max - min);
 export const position = (p: Perch, scene: Scene): Point => ({ x: scene.floors.get(p.floor)!.left + p.x, y: scene.floors.get(p.floor)!.y });
-export function safePerch(s: Scene, previous: Perch | null = null): Perch | null {
-  const valid = (p: Perch) => choosePerch(s.floors, s.width, s.height, p) === p
-    && safeRoute(position(p, s), position(p, s), 0, s, 'perch');
-  if (previous && valid(previous)) return previous;
+export function perchCandidates(s: Scene): Perch[] {
+  const candidates: Perch[] = [];
   for (const [floor, f] of s.floors) {
     if (![f.left, f.right].every(Number.isFinite)) continue;
-    const left = Math.max(30, 30 - f.left), right = Math.min(f.right - f.left - 30, s.width - 30 - f.left);
-    // Test the ends first, then clear pockets beside heading text or controls.
+    const left = Math.max(35, 35 - f.left), right = Math.min(f.right - f.left - 35, s.width - 35 - f.left);
     const offsets = [left, right];
-    for (let x = left + 30; x < right; x += 30) offsets.push(x);
-    for (const x of offsets) {
-      for (const dir of [1, -1] as const) {
-        const p = { floor, x, dir };
-        if (valid(p)) return p;
+    // Include exact pocket boundaries: a coarse grid can miss the only spot
+    // beside heading text or the other robin on a narrow mobile ledge.
+    for (const obstacle of s.obstacles) {
+      if (obstacle.top >= f.y || obstacle.bottom <= f.y - 37) continue;
+      for (const x of [obstacle.left - 30 - f.left, obstacle.right + 30 - f.left]) {
+        if (x >= left && x <= right) offsets.push(x);
       }
     }
+    for (let x = left + 30; x < right; x += 30) offsets.push(x);
+    for (const x of offsets) {
+      const p: Perch = { floor, x, dir: x <= (left + right) / 2 ? 1 : -1 };
+      if (choosePerch(s.floors, s.width, s.height, p) === p
+        && safeRoute(position(p, s), position(p, s), 0, s, 'perch')) candidates.push(p);
+    }
   }
-  return null;
+  return candidates;
+}
+export function safePerch(s: Scene, previous: Perch | null = null): Perch | null {
+  if (previous && choosePerch(s.floors, s.width, s.height, previous) === previous
+    && safeRoute(position(previous, s), position(previous, s), 0, s, 'perch')) return previous;
+  return perchCandidates(s)[0] ?? null;
 }
 export function createBird(scene: Scene, now: number, rand: () => number): Bird {
-  return { perch: safePerch(scene), action: null, restUntil: now + range(rand, 6000, 12000), flightAt: now + range(rand, 12000, 20000), cooldown: -Infinity, nearAt: -Infinity, alert: false };
+  // Leave enough time for the resting peck to finish before ordinary movement.
+  return { perch: safePerch(scene), action: null, restUntil: now + range(rand, 9000, 13000), flightAt: now + range(rand, 12000, 20000), cooldown: -Infinity, nearAt: -Infinity, alert: false };
 }
 export function birdPose(b: Bird, scene: Scene, now: number): (Point & { dir: 1 | -1; pose: 'perch' | 'alert' | 'flight' }) | null {
   if (!b.perch || !scene.floors.has(b.perch.floor)) return null;
   const a = b.action;
   const t = a ? Math.max(0, Math.min(1, (now - a.start) / a.duration)) : 0;
-  const p = a ? { x: a.from.x + (a.to.x - a.from.x) * t, y: a.from.y + (a.to.y - a.from.y) * t - 4 * a.rise * t * (1 - t) } : position(b.perch, scene);
+  const p = a ? routePoint(a.route ?? [a], t) : position(b.perch, scene);
   return { ...p, dir: b.perch.dir, pose: a?.kind === 'flight' ? 'flight' : b.alert && !a ? 'alert' : 'perch' };
 }
-// Conservative continuous envelope, including the rotated wing. A rejected
-// route leaves the bird perched rather than obscuring content between samples.
 export function safeRoute(from: Point, to: Point, rise: number, s: Scene, kind: 'perch' | 'hop' | 'flight' = 'flight'): boolean {
   // Pecking extends the head past the standing cell; flight adds wing clearance.
-  const side = kind === 'flight' ? 35 : 30, height = kind === 'flight' ? 59 : 37;
-  const box = { left: Math.min(from.x, to.x) - side, right: Math.max(from.x, to.x) + side,
-    top: Math.min(from.y, to.y) - rise - height, bottom: Math.max(from.y, to.y) };
-  return [box.left, box.right, box.top, box.bottom].every(Number.isFinite)
-    && box.left >= 0 && box.right <= s.width && box.top >= 0 && box.bottom <= s.height
-    && !s.obstacles.some((o) => ![o.left, o.right, o.top, o.bottom].every(Number.isFinite)
-      || box.left < o.right && box.right > o.left && box.top < o.bottom && box.bottom > o.top);
+  return clearArc({ from, to, rise }, s, kind === 'flight' ? 35 : 30, kind === 'flight' ? 59 : 37);
 }
 export function reconcileBird(b: Bird, s: Scene, now: number, rand: () => number): Bird {
-  return { ...b, perch: safePerch(s, b.perch), action: null, alert: false, nearAt: -Infinity, restUntil: now + range(rand, 6000, 12000) };
+  return { ...b, perch: safePerch(s, b.perch), action: null, alert: false, nearAt: -Infinity, restUntil: now + range(rand, 9000, 13000) };
 }
-export function advanceBird(b: Bird, s: Scene, now: number, rand: () => number, cursor: Segment | null = null): Bird {
+export function advanceBird(b: Bird, s: Scene, now: number, rand: () => number, cursor: Segment | null = null, flightAllowed = true): Bird {
   if (!b.perch) return b;
   if (!s.floors.has(b.perch.floor)) return reconcileBird(b, s, now, rand);
   if (b.action) {
     const a = b.action;
     if (!s.floors.has(a.target.floor) || choosePerch(s.floors, s.width, s.height, a.target) !== a.target
-      || !safeRoute(a.from, a.to, a.rise, s, a.kind)) return reconcileBird(b, s, now, rand);
+      || !(a.route ? clearFlight(a.route, s) : safeRoute(a.from, a.to, a.rise, s, a.kind))) return reconcileBird(b, s, now, rand);
     const from = position(b.perch, s), to = position(a.target, s);
     if (from.x !== a.from.x || from.y !== a.from.y || to.x !== a.to.x || to.y !== a.to.y) return reconcileBird(b, s, now, rand);
     if (now < b.action.start + b.action.duration) return b;
-    return { ...b, perch: b.action.target, action: null, restUntil: now + range(rand, 6000, 12000) };
+    return { ...b, perch: b.action.target, action: null, restUntil: now + range(rand, 9000, 13000) };
   }
   const here = position(b.perch, s);
   const d = cursor ? Math.hypot(cursor.to.x - here.x, cursor.to.y - here.y) : Infinity;
@@ -74,19 +77,25 @@ export function advanceBird(b: Bird, s: Scene, now: number, rand: () => number, 
   const held = choosePerch(s.floors, s.width, s.height, target);
   let action: Action | null = held === target && safeRoute(here, position(target, s), rise, s, 'hop')
     ? { from: here, to: position(target, s), target, rise, start: now, duration: range(rand, 220, 320), kind: 'hop' } : null;
-  if ((!action || !escape && rand() < .25) && now >= b.flightAt) {
-    for (const [floor, f] of s.floors) {
-      for (const x of [35, f.right - f.left - 35]) {
-        const p: Perch = { floor, x, dir };
-        if (choosePerch(s.floors, s.width, s.height, p) !== p) continue;
-        const to = position(p, s);
-        if (Math.hypot(to.x - here.x, to.y - here.y) < 32 || escape && Math.hypot(to.x - cursor!.to.x, to.y - cursor!.to.y) <= d) continue;
-        if (safeRoute(here, to, 24, s)) { action = { from: here, to, target: p, rise: 24, start: now, duration: range(rand, 450, 750), kind: 'flight' }; break; }
-      }
-      if (action?.kind === 'flight') break;
+  if (flightAllowed && now >= b.flightAt && (!escape || !action)) {
+    const candidates = perchCandidates(s);
+    // Rotate the choices, but always try a different ledge before this one.
+    const offset = Math.max(0, Math.min(candidates.length - 1, Math.floor(range(rand, 0, candidates.length))));
+    const rotated = [...candidates.slice(offset), ...candidates.slice(0, offset)];
+    const ordered = [...rotated.filter(p => p.floor !== b.perch!.floor), ...rotated.filter(p => p.floor === b.perch!.floor)];
+    for (const candidate of ordered) {
+      const to = position(candidate, s);
+      if (Math.hypot(to.x - here.x, to.y - here.y) < 60
+        || escape && Math.hypot(to.x - cursor!.to.x, to.y - cursor!.to.y) <= d) continue;
+      const route = flightRoute(here, to, s);
+      if (!route) continue;
+      const p: Perch = { ...candidate, dir: to.x >= here.x ? 1 : -1 };
+      action = { from: here, to, target: p, route, rise: route[0].rise, start: now,
+        duration: Math.max(range(rand, 900, 1200), routeLength(route) / range(rand, 220, 280) * 1000), kind: 'flight' };
+      break;
     }
   }
-  if (!action) return { ...next, restUntil: now + range(rand, 6000, 12000) };
+  if (!action) return { ...next, restUntil: now + range(rand, 9000, 13000) };
   return { ...next, perch: { ...b.perch, dir }, action, alert: false,
     cooldown: escape ? now + action.duration + 2000 : b.cooldown,
     flightAt: action.kind === 'flight' ? now + range(rand, 12000, 20000) : b.flightAt };
