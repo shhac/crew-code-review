@@ -33,9 +33,12 @@ export function createRobinPlayback(phaseOffset = 0) {
           const join = Math.min(120, action.duration * .2);
           // Enter with the wing extended back; fold again before the feet land.
           const flying = partsPose(age + 150, 'flight');
+          const landing = smooth((age - action.duration + 300) / 180);
+          flying.headAngle -= 10 * landing;
+          const lookingUp = { ...standing(), headAngle: -12 };
           target = age < join
             ? mixPartsPose(nextKey === key ? transition : previous, flying, smooth(age / join))
-            : mixPartsPose(standing(), flying, smooth((action.duration - age) / join));
+            : mixPartsPose(lookingUp, flying, smooth((action.duration - age) / join));
         } else {
           const progress = Math.min(1, age / action.duration);
           const time = progress < .5 ? 700 + progress * 1100 : 1250 + (progress - .5) * 1340;

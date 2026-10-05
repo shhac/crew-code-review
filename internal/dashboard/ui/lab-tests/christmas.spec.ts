@@ -129,11 +129,24 @@ test('both live robins use idle, peck, hop and all eight wing profiles, and chan
   await advance(22300);
   await expect(first).toHaveAttribute('data-action', 'flight');
   const wingProfiles = new Set<string>();
+  const flightFrames: { x: number; y: number; facing: number; rotation: number }[] = [];
   for (let time = 22500; time < 23300; time += 25) {
     await advance(time);
+    flightFrames.push(await first.evaluate(el => {
+      if (!(el instanceof HTMLElement)) throw new Error('missing robin');
+      return { x: parseFloat(el.style.left), y: parseFloat(el.style.top),
+        facing: Number(el.dataset.facing), rotation: Number(el.dataset.rotation) };
+    }));
     for (const id of await rig.locator('[data-part^="wing-"]').evaluateAll(els => els.map(el => el.getAttribute('data-part')!))) wingProfiles.add(id);
   }
   for (const state of ['up', 'high-fall', 'forward', 'low-fall', 'down', 'low-rise', 'recovery', 'high-rise']) expect(wingProfiles.has('wing-' + state)).toBe(true);
+  for (let i = 1; i < flightFrames.length - 1; i++) {
+    const before = flightFrames[i - 1], frame = flightFrames[i], after = flightFrames[i + 1];
+    expect(Math.abs(frame.rotation)).toBeLessThanOrEqual(20);
+    if (before.facing === frame.facing && after.facing === frame.facing && Math.abs(after.x - before.x) > .01)
+      expect(frame.facing).toBe(after.x > before.x ? 1 : -1);
+  }
+  expect(flightFrames.some(frame => Math.abs(frame.rotation) > 1)).toBe(true);
   await captureScene(page, info.outputPath('two-robins-flight.png'));
   // Large clock advances settle the current action rather than starting a new one.
   await advance(30000);
@@ -142,6 +155,47 @@ test('both live robins use idle, peck, hop and all eight wing profiles, and chan
   await expect(second).toBeVisible();
   await page.emulateMedia({ reducedMotion: 'reduce' });
   for (const bird of [first, second]) await expect(bird.locator('[data-layered-robin]')).toHaveAttribute('data-flight-weight', '0');
+});
+
+test('a cursor chasing a rendered robin triggers flight after two hops', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/lab/scene.html?theme=none&clock=manual');
+  await page.locator('main').evaluate(main => {
+    const cards = [200, 450].map(top => {
+      const card = document.createElement('section');
+      card.className = 'surface';
+      card.style.cssText = `position:fixed;left:200px;top:${top}px;width:600px;height:100px`;
+      return card;
+    });
+    main.replaceChildren(...cards);
+  });
+  await page.locator('label', { hasText: /^theme/ }).locator('select').selectOption('christmas');
+  await expect(page.locator('.robin')).toHaveCount(2);
+  const bird = page.locator('[data-robin="0"]');
+  const clock = page.getByLabel('Scene elapsed (ms)', { exact: true });
+  const advance = async (time: number) => {
+    await clock.fill(String(time));
+    await bird.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+  };
+  const chase = async () => {
+    const position = await bird.evaluate(el => {
+      if (!(el instanceof HTMLElement)) throw new Error('missing robin');
+      return { x: parseFloat(el.style.left) + 22.4, y: parseFloat(el.style.top) + 35.735 };
+    });
+    await page.mouse.move(position.x - 10, position.y);
+    await page.mouse.move(position.x - 9, position.y);
+  };
+  await advance(100);
+  await chase();
+  await expect(bird).toHaveAttribute('data-action', 'hop');
+  await advance(400);
+  await advance(2400);
+  await chase();
+  await expect(bird).toHaveAttribute('data-action', 'hop');
+  await advance(2700);
+  await advance(4700);
+  await chase();
+  await expect(bird).toHaveAttribute('data-action', 'flight');
 });
 
 for (const width of [1440, 480]) {

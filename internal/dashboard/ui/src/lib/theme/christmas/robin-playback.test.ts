@@ -30,8 +30,10 @@ it.each([450, 600, 750])('joins standing and flight without a body jump over a %
   const closing = player.pose(b, 1000 + duration - 1);
   expect(closing.flightMix).toBeLessThan(.001);
   expect(Math.abs(closing.lean)).toBeLessThan(.02);
-  expect(player.pose(b, 1000 + duration)).toEqual(partsPose(0, 'still'));
-  expect(player.pose(bird(), 1000 + duration)).toEqual(partsPose(0, 'still'));
+  const landed = { ...partsPose(0, 'still'), headAngle: -12 };
+  expect(player.pose(b, 1000 + duration)).toEqual(landed);
+  expect(player.pose(bird(), 1000 + duration)).toEqual(landed);
+  expect(player.pose(bird(), 1120 + duration).flightMix).toBe(0);
   const fresh = createRobinPlayback(); fresh.pose(bird(), 0);
   for (let age = 0; age < duration; age += 5) {
     const pose = fresh.pose(b, 1000 + age), layers = partsLayers(pose);
@@ -44,6 +46,19 @@ it.each([450, 600, 750])('joins standing and flight without a body jump over a %
       expect(standingLeg.opacity! + tuckedLeg.opacity!).toBeCloseTo(1);
     }
   }
+});
+
+it('looks up during approach, holds that pose at touchdown, then relaxes smoothly', () => {
+  const player = createRobinPlayback(), b = moving('flight', 1200);
+  player.pose(bird(), 0); player.pose(b, 1000);
+  expect(player.pose(b, 1800).headAngle).toBe(-20);
+  expect(player.pose(b, 2050).headAngle).toBeLessThan(-28);
+  expect(player.pose(b, 2200).headAngle).toBe(-12);
+  expect(player.pose(bird(), 2200).headAngle).toBe(-12);
+  const relaxing = player.pose(bird(), 2260).headAngle;
+  expect(relaxing).toBeGreaterThan(-12);
+  expect(relaxing).toBeLessThan(0);
+  expect(player.pose(bird(), 2320).headAngle).toBeCloseTo(partsPose(2320, 'alive').headAngle, 8);
 });
 
 it('articulates a hop without adding a second lift to the scene trajectory', () => {

@@ -125,7 +125,11 @@
 {#if theme === 'halloween'}
 <HalloweenLayer {timeScale} prefer={prefer || undefined} bind:world bind:floors />
 {:else if theme === 'christmas'}
-{#key manual}<ChristmasLayer clock={() => manual ? elapsed : performance.now()} random={manual ? () => randomValue : Math.random} />{/key}
+{#if manual}
+  <ChristmasLayer clock={() => elapsed} random={() => randomValue} />
+{:else}
+  <ChristmasLayer />
+{/if}
 {/if}
 {#if debug && theme === 'halloween'}
   <svg class="debug" width="100%" height="100%" aria-hidden="true">

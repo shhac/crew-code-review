@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest';
-import { advanceBird, birdPose, createBird, reconcileBird, safePerch, safeRoute, type Scene } from './robin';
+import { advanceBird, birdPose, createBird, reconcileBird, safePerch, safeRoute, type Bird, type Scene } from './robin';
 const scene: Scene = { floors: new Map([[1, { left: 100, right: 500, y: 200, base: 300, room: 100 }]]), obstacles: [{ left: 100, right: 500, top: 200, bottom: 300 }], width: 800, height: 600 };
 const rand = () => .5;
 const cursor = (x: number, y = 200) => ({ from: { x: x - 1, y }, to: { x, y }, at: 0 });
@@ -109,4 +109,25 @@ it('uses locally clear heading pockets without covering text or controls', () =>
   expect(perch.x).toBeGreaterThanOrEqual(190);
   expect(perch.x).toBeLessThanOrEqual(300);
   expect(safePerch({ ...heading, obstacles: [{ left: 100, right: 500, top: 100, bottom: 195 }] })).toBeNull();
+});
+
+it('escalates a continuing chase from two evasive hops to flight before the idle flight timer', () => {
+  let bird: Bird = { ...createBird(scene, 0, rand), perch: { floor: 1, x: 150, dir: 1 } };
+  for (const time of [100, 2370]) {
+    const here = birdPose(bird, scene, time)!;
+    bird = advanceBird(bird, scene, time, rand, cursor(here.x + 10));
+    expect(bird.action?.kind).toBe('hop');
+    bird = advanceBird(bird, scene, time + bird.action!.duration, rand);
+  }
+  expect(bird.escapeHops).toBe(2);
+  const here = birdPose(bird, scene, 4640)!;
+  const flying = advanceBird(bird, scene, 4640, rand, cursor(here.x + 10));
+  expect(4640).toBeLessThan(bird.flightAt);
+  expect(flying.action?.kind).toBe('flight');
+  expect(flying.action!.to.x).toBeLessThan(here.x);
+  expect(flying.escapeHops).toBe(0);
+  expect(advanceBird(bird, scene, 8000, rand).escapeHops).toBe(0);
+  // One robin already flying can temporarily block escalation without losing
+  // the chase count or making this robin pass through its route.
+  expect(advanceBird(bird, scene, 4640, rand, cursor(here.x + 10), false).action?.kind).toBe('hop');
 });

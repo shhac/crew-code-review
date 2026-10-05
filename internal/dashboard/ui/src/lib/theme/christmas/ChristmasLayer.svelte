@@ -3,12 +3,13 @@
   import { measureFloors, measureObstacles, type Ledge } from '../floors';
   import Geometry from '../Geometry.svelte';
   import { observeLayout } from '../layout';
-  import { ROBIN, snowPath, snowProfile } from './snow';
+  import { ROBIN } from './snow';
   import { pointerTracker, observePointer } from '../pointer';
   import { sceneLoop } from '../lifecycle';
   import { birdPose, type Bird, type Scene } from './robin';
   import { createFlock, advanceFlock, reconcileFlock } from './flock';
-  import { reconcileSnow, wipeSnow, renderSnow, type Snow } from './wipe';
+  import { reconcileSnow, wipeSnow, type Snow } from './wipe';
+  import SnowCap from './SnowCap.svelte';
   import RobinArt from './RobinArt.svelte';
   import { createRobinPlayback } from './robin-playback';
 
@@ -22,6 +23,7 @@
   let scene: Scene = { floors, obstacles: [], width: 0, height: 0 };
   let birds: Bird[] = createFlock(scene, 0, random);
   let snow: ReadonlyMap<number, Snow[]> = new Map();
+  const emptySnow: Snow[] = [];
   let now = 0;
   let reduced = false;
   $: drawings = birds.map((bird, index) => ({ bird, drawing: birdPose(bird, scene, now), articulation: players[index].pose(bird, now, reduced) }));
@@ -85,17 +87,15 @@
   <svg width="100%" height="100%">
     {#each [...floors] as [id, f] (id)}
       {@const feet = birds.flatMap(bird => !bird.action && bird.perch?.floor === id ? [bird.perch.x] : [])}
-      {@const samples = reduced ? snowProfile(id, f, feet) : renderSnow(snow.get(id) ?? [], now, feet)}
       <g transform="translate({f.left} {f.y})">
-        <path data-snow={id} d={snowPath(samples)} />
-        <path class="shadow" d={snowPath(samples.map((s) => ({ ...s, depth: Math.min(.65, s.depth) })))} />
+        <SnowCap {id} samples={snow.get(id) ?? emptySnow} {feet} {now} {reduced} />
       </g>
     {/each}
   </svg>
   {#each drawings as { bird, drawing, articulation }, index (index)}
     {#if drawing}
-      <div class="robin" data-robin={index} data-floor={bird.perch?.floor} data-action={bird.action?.kind ?? 'idle'} data-pose={drawing.pose}
-        style="left: {drawing.x - ROBIN.anchorX}px; top: {drawing.y - ROBIN.anchorY}px; width: {ROBIN.width}px; height: {ROBIN.height}px; transform: scaleX({drawing.dir}); transform-origin: {ROBIN.anchorX}px {ROBIN.anchorY}px">
+      <div class="robin" data-robin={index} data-floor={bird.perch?.floor} data-action={bird.action?.kind ?? 'idle'} data-pose={drawing.pose} data-facing={drawing.dir} data-rotation={drawing.rotation}
+        style="left: {drawing.x - ROBIN.anchorX}px; top: {drawing.y - ROBIN.anchorY}px; width: {ROBIN.width}px; height: {ROBIN.height}px; transform: rotate({drawing.rotation}deg) scaleX({drawing.dir}); transform-origin: {ROBIN.anchorX}px {ROBIN.anchorY}px">
         <RobinArt pose={drawing.pose} {articulation} {reduced} />
       </div>
     {/if}
@@ -104,7 +104,5 @@
 
 <style>
   svg { position: absolute; inset: 0; }
-  path { fill: #eaf0ec; }
-  .shadow { fill: #b9cbd0; }
   .robin { position: absolute; max-width: none; }
 </style>

@@ -1,5 +1,6 @@
 import type { Segment } from '../pointer';
 import { advanceBird, createBird, position, reconcileBird, type Bird, type Scene } from './robin';
+import { curveBounds } from './flight-route';
 
 function reservedScene(scene: Scene, others: readonly Bird[]): Scene {
   const obstacles = [...scene.obstacles];
@@ -10,11 +11,11 @@ function reservedScene(scene: Scene, others: readonly Bird[]): Scene {
       obstacles.push({ left: p.x - 30, right: p.x + 30, top: p.y - 37, bottom: p.y + 1 });
     }
     if (bird.action) {
-      const flying = bird.action.kind === 'flight';
-      for (const leg of bird.action.route ?? [bird.action]) {
-        obstacles.push({ left: Math.min(leg.from.x, leg.to.x) - (flying ? 35 : 30),
-          right: Math.max(leg.from.x, leg.to.x) + (flying ? 35 : 30),
-          top: Math.min(leg.from.y, leg.to.y) - leg.rise - (flying ? 59 : 37), bottom: Math.max(leg.from.y, leg.to.y) });
+      if (bird.action.route) obstacles.push(...bird.action.route.map(curveBounds));
+      else {
+        const a = bird.action;
+        obstacles.push({ left: Math.min(a.from.x, a.to.x) - 30, right: Math.max(a.from.x, a.to.x) + 30,
+          top: Math.min(a.from.y, a.to.y) - a.rise - 37, bottom: Math.max(a.from.y, a.to.y) });
       }
     }
   }

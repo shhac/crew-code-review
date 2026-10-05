@@ -30,3 +30,13 @@ can travel around card walls to reach a different height. Idle periods allow
 pecks to finish, and flights last long enough to use every wing profile.
 Crowded layouts still hide birds that have no clear perch; reduced motion keeps
 both still.
+
+Robins now face their direction of travel along smooth, connected flight
+curves, with body tilt limited to 20 degrees and a raised head on landing.
+Continuing to chase one with the cursor triggers flight after two evasive
+hops when a clear route is available. Stationary snow paths are cached;
+wiped snow recovers at 10 Hz to reduce animation allocations. The lab's
+manual-clock wrapper no longer retains subscriptions across theme changes.
+Headless memory checks cover sustained animation, navigation and repeated
+theme mounts; see [memory investigation](../design-docs/2026-10-robin-memory.md)
+for measurements and limits.
