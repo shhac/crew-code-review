@@ -91,3 +91,22 @@ it('safe perches reject overlapping content, malformed geometry and vanished des
   const scrolled = { ...scene, floors: new Map([[1, { ...scene.floors.get(1)!, y: 190 }]]) };
   expect(advanceBird(hop, scrolled, 9100, rand).action).toBeNull();
 });
+
+it('allows ground motion beneath content that an extended flight wing would hit', () => {
+  const from = { x: 130, y: 200 }, to = { x: 160, y: 200 };
+  const overhead = { ...scene, obstacles: [...scene.obstacles, { left: 120, right: 170, top: 132, bottom: 140 }] };
+  expect(safeRoute(from, to, 8, overhead, 'hop')).toBe(true);
+  expect(safeRoute(from, to, 24, overhead, 'flight')).toBe(false);
+  const headRoom = { ...scene, obstacles: [{ left: 156, right: 159, top: 180, bottom: 199 }] };
+  expect(safeRoute(from, from, 0, headRoom, 'perch')).toBe(false);
+});
+
+it('uses locally clear heading pockets without covering text or controls', () => {
+  const heading = { ...scene, floors: new Map([[1, { left: 100, right: 500, y: 200, base: 200, room: 24, kind: 'heading' as const }]]),
+    obstacles: [{ left: 100, right: 260, top: 100, bottom: 185 }, { left: 430, right: 500, top: 100, bottom: 195 }] };
+  const perch = safePerch(heading)!;
+  expect(perch).not.toBeNull();
+  expect(perch.x).toBeGreaterThanOrEqual(190);
+  expect(perch.x).toBeLessThanOrEqual(300);
+  expect(safePerch({ ...heading, obstacles: [{ left: 100, right: 500, top: 100, bottom: 195 }] })).toBeNull();
+});

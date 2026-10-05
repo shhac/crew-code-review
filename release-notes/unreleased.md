@@ -15,3 +15,11 @@ external toolchains and runtimes. No API review engine is added.
 
 Migration sources, release dispositions, fake-engine coverage and offline
 verification: [harness migration](../design-docs/2026-10-harness-migration.md).
+
+The Christmas theme now uses the accepted layered robin: independent breathing,
+head gestures and blinks, occasional pecks, articulated hopping legs, and
+eight calibrated flight profiles per wing. Takeoff and landing blend into the
+standing pose at a consistent dashboard size. The rotating shoulder and
+feathered tail attachment stay connected to the body. Superseded robin atlas
+playback and runtime artwork have been removed; the parts lab remains available
+for development. Reduced motion keeps a still perched robin.

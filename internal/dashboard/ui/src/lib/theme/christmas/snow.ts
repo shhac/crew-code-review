@@ -3,10 +3,12 @@ import type { Ledge } from '../floors';
 export type Perch = { floor: number; x: number; dir: 1 | -1 };
 export type Sample = { x: number; depth: number };
 
+// The bird model checks local text/control clearance before choosing or
+// traversing a perch. Whole-ledge room is only used to limit the snow height.
 function eligible(f: Ledge, width: number, height: number, x: number): boolean {
   const px = f.left + x;
   return [f.left, f.right, f.y, width, height, x].every(Number.isFinite)
-    && f.walkable !== false && f.room >= 42 && f.y >= 42 && f.y <= height - 12
+    && f.walkable !== false && f.y >= 42 && f.y <= height - 12
     && x >= 24 && x <= f.right - f.left - 24 && px >= 24 && px <= width - 24;
 }
 
@@ -48,4 +50,4 @@ export function snowPath(samples: readonly Sample[]): string {
   return 'M' + samples.map((s) => `${s.x} ${-s.depth}`).join(' L') + ` L${samples[samples.length - 1].x} 0 L${samples[0].x} 0 Z`;
 }
 
-export const ROBIN = { width: 128 * .35, height: 112 * .35, anchorX: 64 * .35, anchorY: 100 * .35 };
+export const ROBIN = { width: 128 * .35, height: 112 * .35, anchorX: 64 * .35, anchorY: 102.1 * .35 };

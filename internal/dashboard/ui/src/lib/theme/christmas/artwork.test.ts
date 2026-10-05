@@ -5,52 +5,39 @@ import { readFileSync } from 'node:fs';
 import { compile } from 'svelte/compiler';
 import ChristmasShelf from './ChristmasShelf.svelte';
 import { ROBIN } from './snow';
-import { atlasFallbackUrl } from './atlas-inventory';
-const neutral = atlasFallbackUrl() ?? 'robin-perch.webp';
+import { partsPose } from './parts-pose';
 
-it.each(['perch', 'alert', 'flight'] as const)('renders the %s raster pose with native aligned cells', (pose) => {
+it.each(['perch', 'alert', 'flight'] as const)('renders the %s pose using layered component artwork', pose => {
   const { body } = render(RobinArt, { props: { pose } });
-  expect(body).toContain(pose === 'perch' ? neutral : `robin-${pose}.webp`);
-  expect(body).not.toContain('<svg');
-  const images = body.match(/<img\b[^>]*>/g) ?? [];
-  expect(images).toHaveLength(pose === 'flight' ? 2 : 1);
-  for (const image of images) {
-    expect(image).toContain('width="128"');
-    expect(image).toContain('height="112"');
-    expect(image).toContain('alt=""');
-  }
+  expect(body).toContain('data-robin-art="layered"');
+  expect(body).toContain('viewBox="0 0 128 112"');
+  expect(body).toContain('data-part="body"');
+  expect(body).toContain('data-part="tail"');
+  expect(body).toContain('data-part="head"');
+  expect(body).not.toMatch(/blob:|atlas-sheet|raised-wing/);
   if (pose === 'flight') {
-    expect(images[0]).toContain('robin-flight.webp');
-    expect(images[1]).toContain('robin-flight-wing.webp');
-    expect(images[1]).toContain('raised-wing');
-  }
+    expect(body).toContain('data-part="wing-up"');
+    expect(body).toContain('data-part="leg-near-tucked"');
+    expect(body).not.toContain('data-part="leg-near"');
+  } else expect(body).toContain('data-part="leg-near"');
 });
 
-it('scales the native stage once and rotates only the wing about its native pivot', () => {
-  const source = readFileSync(new URL('./RobinArt.svelte', import.meta.url), 'utf8');
-  const css = compile(source, { filename: 'RobinArt.svelte', generate: 'server' }).css?.code ?? '';
-  expect(css).toMatch(/\.art-cell[^}]*width:\s*128px[^}]*height:\s*112px[^}]*transform:\s*scale\(\.35\)[^}]*transform-origin:\s*0 0/);
-  expect(css.match(/scale\(/g)).toHaveLength(1);
-  expect(css).toMatch(/\.raised-wing[^}]*rotate\(var\(--wing, 0deg\)\)[^}]*transform-origin:\s*64px 57px[^}]*transform-box:\s*border-box/);
+it('holds the standing geometry under reduced motion, even with stale flight articulation', () => {
+  const { body } = render(RobinArt, { props: { pose: 'flight', articulation: partsPose(300, 'flight'), reduced: true } });
+  expect(body).toContain('data-flight-weight="0"');
+  expect(body).toContain('data-head-angle="0"');
+  expect(body).toContain('data-part="leg-near"');
+  expect(body).not.toContain('data-part="wing-down"');
 });
 
-it('forces the independently packaged neutral under reduced motion even for a stale flight/blink', () => {
-  const { body } = render(RobinArt, { props: { pose: 'flight', frame: 'B2', reduced: true } });
-  expect(body).toContain('data-atlas-frame="I0"');
-  expect(body).toContain(neutral);
-  expect(body).not.toContain('raised-wing');
-});
-
-it('replaces every layer use while retaining the existing outer registration and shelf', () => {
+it('uses a single shared renderer at the dashboard foot anchor and preserves the shelf', () => {
   const layer = readFileSync(new URL('./ChristmasLayer.svelte', import.meta.url), 'utf8');
-  expect(layer).toContain('<RobinArt pose={drawing.pose} {frame} {atlasFrame} {flightFrame} {reduced} />');
-  expect(layer).not.toMatch(/\.svg|\{@html/);
-  expect(layer).toContain('left: {drawing.x - ROBIN.anchorX}px; top: {drawing.y - ROBIN.anchorY}px');
-  expect(layer).toContain('transform: scaleX({drawing.dir}); transform-origin: {ROBIN.anchorX}px {ROBIN.anchorY}px; --wing: {drawing.wing}deg');
+  expect(layer).toContain('<RobinArt pose={drawing.pose} {articulation} {reduced} />');
+  expect(layer).not.toMatch(/atlas|flightFrame|--wing/);
   expect(ROBIN.width).toBeCloseTo(44.8);
   expect(ROBIN.height).toBeCloseTo(39.2);
   expect(ROBIN.anchorX).toBeCloseTo(22.4);
-  expect(ROBIN.anchorY).toBe(35);
+  expect(ROBIN.anchorY).toBeCloseTo(35.735);
   const { body } = render(ChristmasShelf);
   expect(body).toContain('tree.webp');
   expect(body).toContain('presents.webp');

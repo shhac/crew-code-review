@@ -13,7 +13,7 @@
 
 <main>
   <h1>Christmas / Halloween artwork</h1>
-  <p>Static time 0. Production robin cells, both directions and −5° / 0° / +5° wings. Each pair uses the same background and magnification.</p>
+  <p>Production layered robin, both directions and three flight stages. Each pair uses the same background and magnification.</p>
   {#each backgrounds as background}
     {#each [1, 4] as zoom}
       <section class={background} aria-label="{background}, {zoom}×">
@@ -26,13 +26,13 @@
           <div>
             {#each poses as pose}
               {#each [1, -1] as direction}
-                {#each pose === 'flight' ? [-5, 0, 5] : [0] as angle}
+                {#each pose === 'flight' ? [0, 150, 300] : [0] as elapsed}
                   <figure>
-                    <figcaption>{pose}, {direction}, {angle}°</figcaption>
+                    <figcaption>{pose}, {direction}, {elapsed}ms</figcaption>
                     <div class="sample" style="width: {44.8 * zoom}px; height: {39.2 * zoom}px">
-                      <div class="bird" data-art-pose={pose} data-direction={direction} data-angle={angle} data-zoom={zoom}
-                        style="transform: scale({zoom}); transform-origin: 0 0; --wing: {angle}deg">
-                        <div class="facing" style="transform: scaleX({direction}); transform-origin: 22.4px 35px"><RobinArt {pose} /></div>
+                      <div class="bird" data-art-pose={pose} data-direction={direction} data-elapsed={elapsed} data-zoom={zoom}
+                        style="transform: scale({zoom}); transform-origin: 0 0">
+                        <div class="facing" style="transform: scaleX({direction}); transform-origin: 22.4px 35.735px"><RobinArt {pose} {elapsed} /></div>
                       </div>
                     </div>
                   </figure>

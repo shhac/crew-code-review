@@ -1,8 +1,8 @@
 # Layered robin animation lab
 
 The prototype generates complete components separately from the accepted canonical
-robin, including concealed attachment artwork. It is a Vite-only lab; it does
-not replace the production animation.
+robin, including concealed attachment artwork. The accepted assembly now powers the production Christmas theme. The Vite-only
+lab reviews the same renderer and pose model without shipping its controls.
 
 Open `/lab/robin-parts.html` after `npm --prefix internal/dashboard/ui run dev`.
 Playback combines breathing, delayed head response, two blinks, two head gestures
@@ -140,9 +140,10 @@ without shrinking the bird: enlarged, native and dashboard previews keep
 3, 1 and 0.35 pixels per native unit, respectively, in every pose. The mobile
 enlarged view uses 2.25 in every pose. Exports retain 3 pixels per native unit.
 Standing registration is retained.
-Reduced motion holds the accepted standing pose in every mode. These are
-isolated loop studies; transitions between standing and flight are a later
-integration step.
+Reduced motion holds the accepted standing pose in every mode. The lab isolates movement loops. Production keeps a fixed 128×112 stage at
+0.35 pixels per native unit, blends takeoff and landing over up to 120ms,
+and uses the scene’s hop trajectory without adding the lab’s vertical lift.
+Occasional resting pecks keep both feet planted; alerts interrupt them smoothly.
 
 ## Verification and remaining review
 
@@ -156,8 +157,33 @@ source-pixel shoulder/tip registration, preserved wing
 volume, coincident primary tips during blending, and flight layer order. Full frontend tests and the production dashboard
 build pass; the lab remains outside the shipped bundle.
 
-This is an anatomy/motion experiment, not accepted production artwork. The
-assembled bird's proportions differ from the canonical. The standing
-identity, rhythm and joints were accepted in the lab, and the flight motion was
-reviewed with the owner. Standing-to-motion transitions and production integration
-remain separate work.
+The standing identity, rhythm, joints and flight motion were reviewed with the
+owner. The Christmas theme uses these accepted parts, with clearance for
+extended wings and the pecking head. Superseded atlas playback, runtime artwork
+and their isolated labs have been removed; the canonical comparison image stays
+in this lab only. Sources and generation provenance remain here.
+
+## Production integration checks
+
+The Christmas theme and parts lab share `LayeredRobin.svelte` and `parts-pose.ts`.
+The production playback controller joins standing, peck, hop and flight poses;
+the scene retains responsibility for travel, random schedules and collision
+checks. Local content clearance finds empty pockets beside heading text. Live
+data updates at an unchanged safe perch preserve the animation epoch and rest
+schedule; visibility, reduced motion, relocation and interrupted travel reset.
+
+The focused browser suites cover artwork registration, both flight directions,
+responsive shelves, snow wiping/recovery, blocked routes, layout interruption,
+and the embedded dashboard at desktop/mobile sizes. The dashboard test also
+checks breathing and pecking through live content updates. Both Playwright
+configurations use the bundled headless shell with temporary profiles; they
+must not launch the installed desktop browser.
+
+`production-evidence/` holds screenshots of the shared renderer in the synthetic
+scene and the built dashboard. Run the checks with:
+
+```sh
+cd internal/dashboard/ui
+npx playwright test --config playwright.lab.config.ts artwork.spec.ts christmas.spec.ts shelf.spec.ts
+npx playwright test e2e/christmas-robin.spec.ts
+```

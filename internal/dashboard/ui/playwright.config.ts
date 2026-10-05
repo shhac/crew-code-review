@@ -16,6 +16,8 @@ export default defineConfig({
   reporter: process.env.CI ? [['github'], ['list']] : [['list']],
   use: {
     baseURL: `http://127.0.0.1:${PROXY_PORT}`,
+    // Use Playwright's dedicated headless shell, never the user's desktop browser.
+    headless: true,
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
   },

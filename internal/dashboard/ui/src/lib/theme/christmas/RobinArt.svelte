@@ -1,73 +1,20 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
-  import alert from './robin-alert.webp';
-  import flight from './robin-flight.webp';
-  import wing from './robin-flight-wing.webp';
-  import AtlasFrame from './AtlasFrame.svelte';
-  import { loadIdleAssets, type IdleAssets } from './idle-assets';
-  import { idleManifestText, idleAssetUrls } from './idle-inventory';
-  import { atlasManifestText, atlasAssetUrls, atlasFallbackUrl } from './atlas-inventory';
-  import { atlasFlyingAvailable } from './manifest';
+  import LayeredRobin from './LayeredRobin.svelte';
+  import { partsPose, type PartsPose } from './parts-pose';
 
   export let pose: 'perch' | 'alert' | 'flight' = 'perch';
-  export let frame = 'I0';
-  export let atlasFrame = 'I0';
+  export let elapsed = 0;
   export let reduced = false;
-  export let flightFrame: string | null = null;
-  // Synthetic labs can inspect candidate joins without enabling production.
-  export let atlasSource = atlasManifestText;
-  export let atlasUrls = atlasAssetUrls;
-  const stillFallback = atlasFallbackUrl();
-  let assets: IdleAssets | null = null;
-  let atlas: IdleAssets | null = null;
-  let atlasStatus = 'loading';
-  let status = 'loading';
-  let legacyFailed = false;
-  $: if (pose) legacyFailed = false;
-  $: active = atlas ?? assets;
-  $: flying = pose === 'flight' && !reduced && flightFrame !== null && atlas && atlasFlyingAvailable(atlas.manifest);
-  $: selected = reduced ? 'I0' : flying ? flightFrame! : atlas ? atlasFrame : frame;
-  $: rectangle = active && Object.hasOwn(active.manifest.frames, selected) ? active.manifest.frames[selected] : null;
-  $: sheet = rectangle ? active?.urls[rectangle.sheet] ?? null : null;
-  const failedSheet = () => {
-    if (atlas) { atlas.release(); atlas = null; atlasStatus = 'fallback'; }
-    else if (assets) { assets.release(); assets = null; status = 'fallback'; }
-  };
-  onMount(() => {
-    const abort = new AbortController();
-    let loaded: IdleAssets | null = null;
-    let loadedAtlas: IdleAssets | null = null;
-    void loadIdleAssets(idleManifestText, idleAssetUrls, abort.signal).then(result => {
-      if (abort.signal.aborted) { result.release(); return; }
-      loaded = result; assets = result; status = 'ready';
-    }).catch(() => { if (!abort.signal.aborted) status = 'fallback'; });
-    void loadIdleAssets(atlasSource, atlasUrls, abort.signal).then(result => {
-      if (abort.signal.aborted) { result.release(); return; }
-      loadedAtlas = result; atlas = result; atlasStatus = 'ready';
-    }).catch(() => { if (!abort.signal.aborted) atlasStatus = 'fallback'; });
-    return () => { abort.abort(); loaded?.release(); loadedAtlas?.release(); };
-  });
+  export let articulation: PartsPose | null = null;
+  $: drawing = articulation ?? (pose === 'alert' ? { ...partsPose(0, 'still'), headAngle: -7 }
+    : partsPose(elapsed, pose === 'flight' ? 'flight' : 'alive'));
 </script>
 
-<!-- Native art cells keep a shared foot anchor; the parent mirrors the assembly. -->
-<div class="robin-art" data-robin-assets={status} data-robin-atlas={atlasStatus}>
-  {#if flying && sheet && rectangle}
-    <AtlasFrame {sheet} {rectangle} frame={selected} fallback={stillFallback} onFailure={failedSheet} />
-  {:else if pose !== 'perch' && !reduced && !legacyFailed}
-    <div class="art-cell">
-      <img class="bird-body" src={pose === 'flight' ? flight : alert} alt="" width="128" height="112" on:error={() => legacyFailed = true} />
-      {#if pose === 'flight'}
-        <img class="raised-wing" src={wing} alt="" width="128" height="112" on:error={() => legacyFailed = true} />
-      {/if}
-    </div>
-  {:else}
-    <AtlasFrame {sheet} {rectangle} frame={selected} fallback={stillFallback} onFailure={failedSheet} />
-  {/if}
+<!-- A fixed native cell preserves dashboard scale while wings overflow it. -->
+<div class="robin-art" data-robin-art="layered">
+  <LayeredRobin {reduced} poseOverride={drawing} fitted={false} />
 </div>
 
 <style>
-  .robin-art { position: relative; width: 44.8px; height: 39.2px; }
-  .art-cell { position: absolute; width: 128px; height: 112px; transform: scale(.35); transform-origin: 0 0; }
-  img { position: absolute; inset: 0; display: block; width: 128px; height: 112px; max-width: none; }
-  .raised-wing { transform: rotate(var(--wing, 0deg)); transform-origin: 64px 57px; transform-box: border-box; }
+  .robin-art { position: relative; width: 44.8px; height: 39.2px; pointer-events: none; }
 </style>

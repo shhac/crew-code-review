@@ -5,7 +5,7 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const here = dirname(fileURLToPath(import.meta.url));
-const output = resolve(here, '../../../../internal/dashboard/ui/src/lab/robin-parts');
+const output = resolve(here, '../../../../internal/dashboard/ui/src/lib/theme/christmas/robin-parts');
 mkdirSync(output, { recursive: true });
 const magick = (...args) => execFileSync('magick', args, { encoding: 'utf8' }).trim();
 const hash = file => createHash('sha256').update(readFileSync(file)).digest('hex');

@@ -9,22 +9,12 @@
   import { createBird, advanceBird, reconcileBird, birdPose, type Bird, type Scene } from './robin';
   import { reconcileSnow, wipeSnow, renderSnow, type Snow } from './wipe';
   import RobinArt from './RobinArt.svelte';
-  import { createAtlasIdlePlayback, createIdlePlayback, cosmeticStream } from './idle-playback';
-  import { idleClips } from './idle-inventory';
-  import { flyingFrame } from './flying-playback';
-  import { atlasManifestText } from './atlas-inventory';
-  import { validateAtlasIdleManifest } from './manifest';
+  import { createRobinPlayback } from './robin-playback';
 
   // Injected by the synthetic lab; the dashboard uses real elapsed time.
   export let clock: () => number = () => performance.now();
   export let random: () => number = Math.random;
-  export let cosmeticRandom: () => number = cosmeticStream();
-  const playback = createIdlePlayback(() => cosmeticRandom(), idleClips());
-  const atlasPlayback = createAtlasIdlePlayback();
-  const flyingCount = (() => {
-    try { return validateAtlasIdleManifest(JSON.parse(atlasManifestText)).rows?.flying.count || 4; }
-    catch { return 4; }
-  })();
+  const playback = createRobinPlayback();
 
   const debug = new URLSearchParams(location.search).get('theme-debug') === '1';
   let floors: ReadonlyMap<number, Ledge> = new Map();
@@ -35,19 +25,31 @@
   let reduced = false;
   $: perch = bird.perch;
   $: drawing = birdPose(bird, scene, now);
-  $: frame = playback.frame(bird, now, reduced);
-  $: atlasFrame = atlasPlayback.frame(bird, now, reduced);
-  $: flightFrame = flyingFrame(bird, now, flyingCount, reduced);
+  $: articulation = playback.pose(bird, now, reduced);
   onMount(() => {
     const pointer = pointerTracker();
-    let dirty = true, measuredAt = -Infinity, fresh = true;
-    const reset = () => { pointer.reset(); playback.reset(); atlasPlayback.reset(); dirty = true; };
+    let dirty = true, measuredAt = -Infinity, fresh = true, restarting = true;
+    const reset = () => { pointer.reset(); playback.reset(); dirty = true; restarting = true; };
     const measure = (time: number) => {
+      const previousScene = scene;
       floors = measureFloors();
       scene = { floors, obstacles: measureObstacles(), width: innerWidth, height: innerHeight };
       snow = reconcileSnow(floors, snow);
-      bird = fresh ? createBird(scene, time, random) : reconcileBird(bird, scene, time, random);
-      fresh = false; dirty = false; measuredAt = performance.now();
+      const sameGeometry = JSON.stringify([...floors]) === JSON.stringify([...previousScene.floors])
+        && JSON.stringify(scene.obstacles) === JSON.stringify(previousScene.obstacles)
+        && scene.width === previousScene.width && scene.height === previousScene.height;
+      if (fresh) bird = createBird(scene, time, random);
+      else if (restarting || !sameGeometry) {
+        const checked = reconcileBird(bird, scene, time, random);
+        const before = bird.perch && previousScene.floors.get(bird.perch.floor);
+        const after = bird.perch && scene.floors.get(bird.perch.floor);
+        // Live data updates below a safe perch must not restart every breath
+        // or postpone hopping forever. Actual movement/layout interruptions reset.
+        const idleUnmoved = !bird.action && !bird.alert && checked.perch === bird.perch
+          && before && after && before.left === after.left && before.y === after.y;
+        if (restarting || !idleUnmoved) { bird = checked; playback.reset(); }
+      }
+      fresh = false; restarting = false; dirty = false; measuredAt = performance.now();
     };
     const loop = sceneLoop((_time, still) => {
       now = clock();
@@ -55,7 +57,7 @@
       if (dirty) measure(now);
       bird = still ? { ...bird, action: null, alert: false } : advanceBird(bird, scene, now, random);
     }, reset);
-    const changed = () => { reset(); loop.invalidate(); };
+    const changed = () => { pointer.reset(); dirty = true; loop.invalidate(); };
     const stopObserving = observeLayout(changed);
     const stopPointer = observePointer((e) => {
       if (reduced || dirty || document.hidden) { pointer.reset(); return; }
@@ -72,7 +74,7 @@
       const obstacles = measureObstacles();
       if (JSON.stringify([...next]) !== JSON.stringify([...floors]) || JSON.stringify(obstacles) !== JSON.stringify(scene.obstacles)) changed();
     }, 1000);
-    return () => { playback.reset(); atlasPlayback.reset(); loop.stop(); stopPointer(); stopObserving(); clearInterval(timer); };
+    return () => { playback.reset(); loop.stop(); stopPointer(); stopObserving(); clearInterval(timer); };
   });
 </script>
 
@@ -90,8 +92,8 @@
   </svg>
   {#if drawing}
     <div class="robin" data-pose={drawing.pose}
-      style="left: {drawing.x - ROBIN.anchorX}px; top: {drawing.y - ROBIN.anchorY}px; width: {ROBIN.width}px; height: {ROBIN.height}px; transform: scaleX({drawing.dir}); transform-origin: {ROBIN.anchorX}px {ROBIN.anchorY}px; --wing: {drawing.wing}deg">
-      <RobinArt pose={drawing.pose} {frame} {atlasFrame} {flightFrame} {reduced} />
+      style="left: {drawing.x - ROBIN.anchorX}px; top: {drawing.y - ROBIN.anchorY}px; width: {ROBIN.width}px; height: {ROBIN.height}px; transform: scaleX({drawing.dir}); transform-origin: {ROBIN.anchorX}px {ROBIN.anchorY}px">
+      <RobinArt pose={drawing.pose} {articulation} {reduced} />
     </div>
   {/if}
 </div>

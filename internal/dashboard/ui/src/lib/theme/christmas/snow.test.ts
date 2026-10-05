@@ -33,7 +33,8 @@ describe('still Christmas geometry', () => {
     expect(perch).toEqual({ floor: 1, x: 24, dir: 1 });
     expect(choosePerch(new Map([[1, { ...ledge, y: 80 }]]), 800, 600, perch)).toEqual(perch);
     expect(choosePerch(new Map([[2, ledge]]), 800, 600, perch)?.floor).toBe(2);
-    for (const f of [{ ...ledge, room: 41 }, { ...ledge, walkable: false }, { ...ledge, y: 30 }, { ...ledge, left: 900, right: 1200 }]) {
+    expect(choosePerch(new Map([[1, { ...ledge, room: 24 }]]), 800, 600, perch)).toBe(perch);
+    for (const f of [{ ...ledge, walkable: false }, { ...ledge, y: 30 }, { ...ledge, left: 900, right: 1200 }]) {
       expect(choosePerch(new Map([[1, f]]), 800, 600)).toBeNull();
     }
     expect(choosePerch(new Map(), 800, 600, perch)).toBeNull();
@@ -42,7 +43,7 @@ describe('still Christmas geometry', () => {
     expect(ROBIN.width).toBeCloseTo(44.8);
     expect(ROBIN.height).toBeCloseTo(39.2);
     expect(ROBIN.anchorX).toBeCloseTo(22.4);
-    expect(ROBIN.anchorY).toBe(35);
+    expect(ROBIN.anchorY).toBeCloseTo(35.735);
     expect(ROBIN.width - ROBIN.anchorX).toBe(ROBIN.anchorX);
   });
 });

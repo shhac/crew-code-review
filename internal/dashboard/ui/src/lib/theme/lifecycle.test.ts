@@ -1,6 +1,6 @@
 import { afterEach, expect, it, vi } from 'vitest';
 import { sceneLoop } from './lifecycle';
-import { createAtlasIdlePlayback } from './christmas/idle-playback';
+import { createRobinPlayback } from './christmas/robin-playback';
 import { createBird, type Scene } from './christmas/robin';
 afterEach(() => vi.unstubAllGlobals());
 it('keeps one loop through invalidation, reduced motion, backgrounding and teardown', () => {
@@ -32,41 +32,27 @@ it('keeps one loop through invalidation, reduced motion, backgrounding and teard
   expect(removeMedia).toHaveBeenCalledOnce(); expect(removeVisibility).toHaveBeenCalledOnce();
 });
 
-it.each([false, true])('starts the idle epoch on the resumed sample (advance first: %s)', advanceFirst => {
+it('resumes articulation from a new neutral epoch after reduced motion', () => {
   const callbacks = new Map<number, FrameRequestCallback>();
-  let id = 0, preference = () => {}, now = 50000, rendered = 'I0';
+  let id = 0, preference = () => {}, now = 50000;
   const media = { matches: true, addEventListener: (_: string, f: () => void) => { preference = f; }, removeEventListener: () => {} };
   vi.stubGlobal('matchMedia', () => media);
   vi.stubGlobal('document', { hidden: false, addEventListener: () => {}, removeEventListener: () => {} });
   vi.stubGlobal('requestAnimationFrame', (f: FrameRequestCallback) => { callbacks.set(++id, f); return id; });
   vi.stubGlobal('cancelAnimationFrame', (i: number) => callbacks.delete(i));
   const scene: Scene = { floors: new Map([[1, { left: 100, right: 500, y: 200, base: 300, room: 100 }]]), obstacles: [], width: 800, height: 600 };
-  const bird = createBird(scene, 0, () => .5), player = createAtlasIdlePlayback();
-  const samples: { now: number; reduced: boolean; frame: string }[] = [];
-  const loop = sceneLoop((_time, reduced) => {
-    rendered = player.frame(bird, now, reduced);
-    samples.push({ now, reduced, frame: rendered });
-  }, player.reset);
+  const bird = createBird(scene, 0, () => .5), player = createRobinPlayback();
+  let rendered = player.pose(bird, now, true);
+  const loop = sceneLoop((_time, reduced) => { rendered = player.pose(bird, now, reduced); }, player.reset);
   const draw = () => {
-    const [key, callback] = [...callbacks][0];
-    callbacks.delete(key); callback(now);
+    const [key, callback] = [...callbacks][0]; callbacks.delete(key); callback(now);
   };
-  draw();
+  draw(); expect(rendered.breathing).toBe(0);
   media.matches = false; preference(); preference();
   expect(callbacks.size).toBe(1);
-  // I0 is still visible before any resumed sample establishes an epoch.
-  expect(rendered).toBe('I0');
-  expect(samples).toEqual([{ now: 50000, reduced: true, frame: 'I0' }]);
-  if (advanceFirst) now = 51600;
-  draw();
-  const epoch = now;
-  expect(samples.at(-1)).toEqual({ now: epoch, reduced: false, frame: 'I0' });
-  now = 51600; draw();
-  expect(rendered).toBe(advanceFirst ? 'I0' : 'I1');
-  // Elapsed production time and the injected clock obey the same boundaries.
-  now = epoch + 1600; draw(); expect(rendered).toBe('I1');
-  now = epoch + 4800; draw(); expect(rendered).toBe('I0');
-  const stale = [...callbacks.values()][0];
-  loop.stop(); stale(now + 1);
+  now = 100000; draw(); expect(rendered.breathing).toBe(0);
+  now += 1600; draw(); expect(rendered.breathing).toBeGreaterThan(.9);
+  media.matches = true; preference(); draw(); expect(rendered.breathing).toBe(0);
   expect(callbacks.size).toBe(0);
+  loop.stop(); expect(callbacks.size).toBe(0);
 });

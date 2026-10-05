@@ -1,16 +1,16 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import RobinPartsArt from './RobinPartsArt.svelte';
-  import reference from '../lib/theme/christmas/robin-atlas/19e5dead3fa5799417d06f5a8aa4598e3ddcfea81eb603aea0a0915e6e6ba969-neutral.webp';
-  import manifest from './robin-parts/manifest.json';
-  import { partsModes, partsViewport } from './robin-parts-pose';
+  import LayeredRobin from '../lib/theme/christmas/LayeredRobin.svelte';
+  import reference from './robin-reference.webp';
+  import manifest from '../lib/theme/christmas/robin-parts/manifest.json' with { type: 'json' };
+  import { partsModes, partsViewport } from '../lib/theme/christmas/parts-pose';
 
   let elapsed = 0, playing = true, mode = 'alive', mirrored = false, exploded = false;
   let showNeck = true, guides = false, reduced = false, background = 'light';
   let hidden: string[] = [];
   const modes = partsModes;
   $: viewport = partsViewport(mode, reduced);
-  const thumbnails = import.meta.glob<string>('./robin-parts/*.webp', { eager: true, query: '?url', import: 'default' });
+  const thumbnails = import.meta.glob<string>('../lib/theme/christmas/robin-parts/*.webp', { eager: true, query: '?url', import: 'default' });
   onMount(() => {
     reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     let previous = performance.now(), request = 0;
@@ -42,18 +42,18 @@
   </section>
   <label class="scrub">Time <input aria-label="Time" type="range" min="0" max="12000" step="10" bind:value={elapsed} /><output>{Math.round(elapsed)} ms</output></label>
   <section class="comparison">
-    <figure><div class="large parts-view" style="--view-width: {viewport[2]}px; --view-height: {viewport[3]}px" data-preview="parts"><RobinPartsArt {elapsed} {mode} {mirrored} {exploded} {showNeck} {guides} {reduced} {hidden} /></div><figcaption>Layered prototype · same body scale in every pose</figcaption></figure>
+    <figure><div class="large parts-view" style="--view-width: {viewport[2]}px; --view-height: {viewport[3]}px" data-preview="parts"><LayeredRobin {elapsed} {mode} {mirrored} {exploded} {showNeck} {guides} {reduced} {hidden} /></div><figcaption>Layered robin · same body scale in every pose</figcaption></figure>
     <figure><div class="large"><img src={reference} alt="Current canonical robin" /></div><figcaption>Current canonical reference · 3× native</figcaption></figure>
   </section>
   <section class="small-comparison">
-    <figure><div class="actual parts-view" style="--view-width: {viewport[2]}px; --view-height: {viewport[3]}px" data-preview="actual"><RobinPartsArt {elapsed} {mode} {mirrored} {exploded} {showNeck} {guides} {reduced} {hidden} /></div><figcaption>Dashboard size</figcaption></figure>
+    <figure><div class="actual parts-view" style="--view-width: {viewport[2]}px; --view-height: {viewport[3]}px" data-preview="actual"><LayeredRobin {elapsed} {mode} {mirrored} {exploded} {showNeck} {guides} {reduced} {hidden} /></div><figcaption>Dashboard size</figcaption></figure>
     <figure><img class="actual" src={reference} alt="Current robin at dashboard size" /><figcaption>Current robin</figcaption></figure>
-    <figure><div class="native parts-view" style="--view-width: {viewport[2]}px; --view-height: {viewport[3]}px"><RobinPartsArt {elapsed} {mode} {mirrored} {exploded} {showNeck} {guides} {reduced} {hidden} /></div><figcaption>Native size</figcaption></figure>
+    <figure><div class="native parts-view" style="--view-width: {viewport[2]}px; --view-height: {viewport[3]}px"><LayeredRobin {elapsed} {mode} {mirrored} {exploded} {showNeck} {guides} {reduced} {hidden} /></div><figcaption>Native size</figcaption></figure>
   </section>
   <details>
     <summary>Inspect the layers</summary>
     <div class="layer-controls">{#each Object.keys(manifest.parts) as id}<label><input type="checkbox" value={id} bind:group={hidden} /> Hide {id}</label>{/each}</div>
-    <div class="parts-grid">{#each Object.entries(manifest.parts) as [id, part]}<figure><img src={thumbnails['./robin-parts/' + part.file]} alt={id + ' component'} /><figcaption>{id}</figcaption></figure>{/each}</div>
+    <div class="parts-grid">{#each Object.entries(manifest.parts) as [id, part]}<figure><img src={thumbnails['../lib/theme/christmas/robin-parts/' + part.file]} alt={id + ' component'} /><figcaption>{id}</figcaption></figure>{/each}</div>
     <p>Every component is extracted from its measured alpha bounds and registered at an anatomical attachment. No generated grid positions are used.</p>
   </details>
   <footer>Choose hop, peck or flight to review each movement. Flight-up, flight-forward, flight-down and flight-recovery hold the principal wing profiles for attachment checks; the other flight modes hold their intermediates. Larger canvases give moving poses clearance at the same body scale.</footer>

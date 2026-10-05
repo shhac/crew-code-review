@@ -3,11 +3,11 @@ import { readFileSync, mkdtempSync, rmSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
-import { partsPose, partsLayers, partsViewport } from '../../../../internal/dashboard/ui/src/lab/robin-parts-pose.ts';
-import { svgMatrix, multiply } from '../../../../internal/dashboard/ui/src/lab/robin-parts-affine.ts';
+import { partsPose, partsLayers, partsViewport } from '../../../../internal/dashboard/ui/src/lib/theme/christmas/parts-pose.ts';
+import { svgMatrix, multiply } from '../../../../internal/dashboard/ui/src/lib/theme/christmas/parts-affine.ts';
 
 const here = dirname(fileURLToPath(import.meta.url));
-const assets = resolve(here, '../../../../internal/dashboard/ui/src/lab/robin-parts');
+const assets = resolve(here, '../../../../internal/dashboard/ui/src/lib/theme/christmas/robin-parts');
 const manifest = JSON.parse(readFileSync(resolve(assets, 'manifest.json'), 'utf8'));
 const temporary = mkdtempSync(resolve(tmpdir(), 'robin-parts-preview-'));
 const magick = (...args) => execFileSync('magick', args);
