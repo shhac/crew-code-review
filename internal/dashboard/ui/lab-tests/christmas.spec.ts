@@ -335,7 +335,7 @@ for (const width of [1440, 480]) {
 }
 
 // Both seasonal shelves must obey the same real rail/identity footer contract.
-for (const theme of ['christmas', 'halloween']) {
+for (const theme of ['christmas', 'halloween', 'bonfire']) {
   test(`${theme} shelf sits above identity and hides on cramped rails`, async ({ page }) => {
     const api: string[] = [];
     await page.route('**/api/**', (route) => { api.push(route.request().url()); return route.abort(); });

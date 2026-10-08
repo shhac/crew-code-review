@@ -1,12 +1,7 @@
 import type { Ledge } from '../floors';
-import type { Point, Segment } from '../pointer';
+import { distance, type Segment } from '../pointer';
 import { footClearance, snowProfile, type Sample } from './snow';
 export type Snow = Sample & { seed: number; wiped: number; at: number };
-export function distance(p: Point, a: Point, b: Point): number {
-  const dx = b.x - a.x, dy = b.y - a.y;
-  const t = Math.max(0, Math.min(1, ((p.x - a.x) * dx + (p.y - a.y) * dy) / (dx * dx + dy * dy || 1)));
-  return Math.hypot(p.x - a.x - t * dx, p.y - a.y - t * dy);
-}
 export function depth(s: Snow, now: number): number {
   return s.seed - (s.seed - s.wiped) * 2 ** (-Math.max(0, now - s.at - 1500) / 4000);
 }

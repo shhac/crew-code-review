@@ -16,6 +16,8 @@
   import Overview from './routes/Overview.svelte';
   import Prompt from './routes/Prompt.svelte';
   import ReviewLog from './routes/ReviewLog.svelte';
+  import BonfireLayer from './lib/theme/bonfire/BonfireLayer.svelte';
+  import BonfireShelf from './lib/theme/bonfire/BonfireShelf.svelte';
   import ChristmasLayer from './lib/theme/christmas/ChristmasLayer.svelte';
   import ChristmasShelf from './lib/theme/christmas/ChristmasShelf.svelte';
   import HalloweenLayer from './lib/theme/halloween/HalloweenLayer.svelte';
@@ -115,6 +117,8 @@
     </nav>
     {#if theme === 'halloween'}
       <HalloweenShelf />
+    {:else if theme === 'bonfire'}
+      <BonfireShelf />
     {:else if theme === 'christmas'}
       <ChristmasShelf />
     {/if}
@@ -151,6 +155,8 @@
 
 {#if theme === 'halloween'}
   <HalloweenLayer />
+{:else if theme === 'bonfire'}
+  <BonfireLayer />
 {:else if theme === 'christmas'}
   <ChristmasLayer />
 {/if}

@@ -14,6 +14,20 @@
   background-attachment: fixed;
 }
 
+/* Sparkler gold for Bonfire Night, kept clear of the warning amber. */
+:root[data-theme="bonfire"] {
+  --accent: #f4c25b;
+  --accent-edge: rgba(244, 194, 91, .3);
+  --accent-ring: rgba(244, 194, 91, .35);
+  --rule: #f4c25b;
+}
+
+/* Firelight from the rail's bonfire, low in the corner behind everything. */
+:root[data-theme="bonfire"] body {
+  background-image: radial-gradient(ellipse 45% 40% at 0% 100%, rgba(255, 120, 40, .08), transparent 70%);
+  background-attachment: fixed;
+}
+
 /* Shared click-through scene, below dialogs (50). */
 .seasonal-overlay { position: fixed; inset: 0; z-index: 40; pointer-events: none; overflow: hidden; }
 :root[data-theme="christmas"] {

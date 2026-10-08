@@ -1,4 +1,5 @@
 import type { Ledge } from './floors';
+import { hash } from './seed';
 
 // Stubby candles left burning on the page's floors. Where they stand comes
 // from the floor's id rather than from chance each frame, so a candle stays
@@ -15,12 +16,6 @@ const MAX = 5;
 const SPACING = 360;
 // Kept off the ends, where the spiders turn and drop.
 const MARGIN = 0.1;
-
-// Small, fast, and stable for the lifetime of a card.
-function hash(n: number): number {
-  const x = Math.sin(n * 12.9898) * 43758.5453;
-  return x - Math.floor(x);
-}
 
 export function candleSpots(floors: ReadonlyMap<number, Ledge>, stubs: number, height = Infinity): CandleSpot[] {
   const spots = [...floors].flatMap(([id, f]) => {

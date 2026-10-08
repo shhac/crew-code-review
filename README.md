@@ -510,8 +510,8 @@ deliberately.
 - **Logs**: a live tail of the daemon's own log.
 
 **Seasonal themes.** `dashboard.theme` adds decorations to the dashboard: `auto` (the
-default) switches a set on in its season, Halloween in October and Christmas throughout December. `none` turns
-decorations off, and naming a set (`halloween` or `christmas`) forces it on. They are purely cosmetic and
+default) switches a set on in its season: Halloween in October, Bonfire Night in November and Christmas throughout December. `none` turns
+decorations off, and naming a set (`halloween`, `bonfire` or `christmas`) forces it on. They are purely cosmetic and
 never block a click. Reduced-motion users get the decorations without the
 animation. To preview a set whatever the date, add `?theme=halloween` to the
 URL.
@@ -529,6 +529,16 @@ away, never across cards, charts or text. Touch and contact gestures do nothing.
 Reduced motion shows seeded snow, a safe perched robin and holly, without
 interaction or animation. Scene state is ephemeral and never written to disk.
 Design and phase boundaries: [Christmas scene](design-docs/christmas/README.md).
+
+November is Bonfire Night: a bonfire with its guy and toffee apples on the
+rail, with occasional quiet fireworks in the rail's empty space above (never
+over the page; hidden with the shelf on small screens). Embers smoulder along
+the card tops and flare when the cursor passes. A hedgehog lives in a small
+woodpile on one ledge: it comes out once the page has been still for a few
+seconds, potters about, and curls into a ball if the cursor comes close.
+Reduced motion shows the hedgehog sat by its pile, one still firework and
+motionless flames. Preview with `?theme=bonfire`; design notes:
+[Bonfire Night](design-docs/bonfire/README.md).
 
 
 Queue add/reorder/promote are also available as JSON endpoints

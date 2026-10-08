@@ -40,3 +40,16 @@ manual-clock wrapper no longer retains subscriptions across theme changes.
 Headless memory checks cover sustained animation, navigation and repeated
 theme mounts; see [memory investigation](../design-docs/2026-10-robin-memory.md)
 for measurements and limits.
+
+November now has its own theme, Bonfire Night (`dashboard.theme` `bonfire`,
+on by default under `auto` from 1 to 30 November). The rail shows a bonfire
+with its guy and toffee apples, with one quiet firework every 7 to 15 seconds
+in the rail's free space; the page gets embers along card tops that a passing
+cursor fans, and a hedgehog that leaves its woodpile when the page is still
+and curls up when the cursor comes close. Reduced motion keeps a still scene.
+
+Seasonal scenes now measure the page through one shared snapshot, and each
+creature decides how much headroom it needs instead of inheriting the
+spider's. Halloween and Christmas render exactly as before. The
+`?theme-debug=1` overlay labels ledges with their headroom in pixels instead
+of marking spider-cramped tops in orange.

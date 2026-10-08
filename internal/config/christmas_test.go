@@ -12,7 +12,7 @@ func TestChristmasCalendarAndOverrides(t *testing.T) {
 			at   time.Time
 			want string
 		}{
-			{time.Date(2026, 11, 30, 23, 59, 0, 0, zone), ThemeNone},
+			{time.Date(2026, 11, 30, 23, 59, 0, 0, zone), ThemeBonfire},
 			{time.Date(2026, 12, 1, 0, 0, 0, 0, zone), ThemeChristmas},
 			{time.Date(2026, 12, 31, 23, 59, 0, 0, zone), ThemeChristmas},
 			{time.Date(2027, 1, 1, 0, 0, 0, 0, zone), ThemeNone},

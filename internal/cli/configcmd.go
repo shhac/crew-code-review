@@ -191,7 +191,7 @@ func configKeySpecs() []configKeySpec {
 			func(c *config.Config) *string { return &c.Dashboard.Tailscale.Mode }, validateOneOf("tailscale mode", tailscaleModeValues)), tailscaleModeValues),
 		plain(stringKey("dashboard.usage_poll_interval", "Engine usage refresh cadence as a Go duration (default 10m)",
 			func(c *config.Config) *string { return &c.Dashboard.UsagePollInterval }, validateDuration)),
-		static(stringKey("dashboard.theme", "Seasonal dashboard decorations: auto (default: Halloween in October, Christmas in December), none, or a set by name to force it on",
+		static(stringKey("dashboard.theme", "Seasonal dashboard decorations: auto (default: Halloween in October, Bonfire Night in November, Christmas in December), none, or a set by name to force it on",
 			func(c *config.Config) *string { return &c.Dashboard.Theme }, validateOneOf("dashboard theme", config.Themes)), config.Themes),
 		plain(stringKey("store.path", "DuckDB file path (default under XDG data dir)",
 			func(c *config.Config) *string { return &c.Store.Path }, nil)),

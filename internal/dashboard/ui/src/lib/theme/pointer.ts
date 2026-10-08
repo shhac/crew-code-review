@@ -1,6 +1,12 @@
 // Passive decoration input never captures a gesture.
 export type Point = { x: number; y: number };
 export type Segment = { from: Point; to: Point; at: number };
+// How near p comes to the stroke from a to b.
+export function distance(p: Point, a: Point, b: Point): number {
+  const dx = b.x - a.x, dy = b.y - a.y;
+  const t = Math.max(0, Math.min(1, ((p.x - a.x) * dx + (p.y - a.y) * dy) / (dx * dx + dy * dy || 1)));
+  return Math.hypot(p.x - a.x - t * dx, p.y - a.y - t * dy);
+}
 type Input = { pointerId: number; pointerType: string; buttons: number; pressure: number; clientX: number; clientY: number };
 export function pointerTracker() {
   let origin: (Point & { id: number; type: string }) | null = null;

@@ -8,9 +8,10 @@ import (
 
 func TestDashboardTheme(t *testing.T) {
 	october := time.Date(2026, time.October, 2, 12, 0, 0, 0, time.UTC)
-	november := time.Date(2026, time.November, 1, 0, 0, 0, 0, time.UTC)
+	september := time.Date(2026, time.September, 1, 0, 0, 0, 0, time.UTC)
 	// The month is read in whatever zone the clock is given: the daemon's
-	// local time, so Halloween ends at the operator's midnight, not UTC's.
+	// local time, so Halloween hands over to Bonfire Night at the operator's
+	// midnight, not UTC's.
 	sydney := time.FixedZone("AEDT", 11*60*60)
 	lastMinute := time.Date(2026, time.October, 31, 23, 59, 0, 0, sydney)
 	firstMinute := time.Date(2026, time.November, 1, 0, 0, 0, 0, sydney)
@@ -20,14 +21,14 @@ func TestDashboardTheme(t *testing.T) {
 		want  string
 	}{
 		"unset is auto, in season":  {"", october, ThemeHalloween},
-		"unset is auto, off season": {"", november, ThemeNone},
+		"unset is auto, off season": {"", september, ThemeNone},
 		"auto in season":            {ThemeAuto, october, ThemeHalloween},
-		"auto off season":           {ThemeAuto, november, ThemeNone},
+		"auto off season":           {ThemeAuto, september, ThemeNone},
 		"none beats the calendar":   {ThemeNone, october, ThemeNone},
-		"named set out of season":   {ThemeHalloween, november, ThemeHalloween},
+		"named set out of season":   {ThemeHalloween, september, ThemeHalloween},
 		"unknown shows nothing":     {"xmas", october, ThemeNone},
 		"last minute of october":    {ThemeAuto, lastMinute, ThemeHalloween},
-		"first minute of november":  {ThemeAuto, firstMinute, ThemeNone},
+		"first minute of november":  {ThemeAuto, firstMinute, ThemeBonfire},
 	} {
 		t.Run(name, func(t *testing.T) {
 			cfg := Config{Dashboard: DashboardSettings{Theme: tc.theme}}
