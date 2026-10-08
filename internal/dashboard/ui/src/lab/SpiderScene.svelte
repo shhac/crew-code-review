@@ -3,6 +3,8 @@
   // heading rule, a stack of cards (wall climbs between them), cards side by
   // side across a narrow gap (jumps), one sitting higher than its neighbour
   // (a jump up), and one running past the bottom of the window (a way out).
+  import AuroraLayer from '../lib/theme/aurora/AuroraLayer.svelte';
+  import AuroraShelf from '../lib/theme/aurora/AuroraShelf.svelte';
   import BonfireLayer from '../lib/theme/bonfire/BonfireLayer.svelte';
   import BonfireShelf from '../lib/theme/bonfire/BonfireShelf.svelte';
   import ChristmasLayer from '../lib/theme/christmas/ChristmasLayer.svelte';
@@ -79,6 +81,8 @@
       <BonfireShelf />
     {:else if theme === 'christmas'}
       {#if legacyShelf}<LegacyChristmasShelf />{:else}<ChristmasShelf />{/if}
+    {:else if theme === 'aurora'}
+      <AuroraShelf />
     {/if}
     <ViewerChip />
     <div class="feed"><span class="signal"></span><span>synthetic</span><small>no daemon connection</small></div>
@@ -106,7 +110,7 @@
   </main>
 </div>
 <div class="controls">
-  <label>theme <select bind:value={theme}><option>halloween</option><option>bonfire</option><option>christmas</option><option>none</option></select></label>
+  <label>theme <select bind:value={theme}><option>halloween</option><option>bonfire</option><option>christmas</option><option>aurora</option><option>none</option></select></label>
   <label><input type="checkbox" bind:checked={empty} /> empty</label>
   <label><input type="checkbox" bind:checked={blocked} /> blocked routes</label>
   <label><input type="checkbox" bind:checked={manual} /> manual clock</label>
@@ -130,6 +134,8 @@
 <HalloweenLayer {timeScale} prefer={prefer || undefined} bind:world bind:floors />
 {:else if theme === 'bonfire'}
 <BonfireLayer />
+{:else if theme === 'aurora'}
+<AuroraLayer />
 {:else if theme === 'christmas'}
 {#if manual}
   <ChristmasLayer clock={() => elapsed} random={() => randomValue} />

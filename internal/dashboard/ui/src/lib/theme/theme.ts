@@ -1,7 +1,7 @@
 // The seasonal decoration set. The daemon decides which one is active (it owns
 // the calendar rule for `auto`); the page only draws it.
 
-export const THEMES = ['none', 'halloween', 'bonfire', 'christmas'] as const;
+export const THEMES = ['none', 'halloween', 'bonfire', 'christmas', 'aurora'] as const;
 export type ThemeName = (typeof THEMES)[number];
 
 const known = (name: string | null): ThemeName | undefined => THEMES.find((t) => t === name);

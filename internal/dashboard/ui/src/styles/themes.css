@@ -28,6 +28,22 @@
   background-attachment: fixed;
 }
 
+/* Aurora teal for the northern lights, clear of the default lime and the
+   info blue. */
+:root[data-theme="aurora"] {
+  --accent: #72e0cf;
+  --accent-edge: rgba(114, 224, 207, .3);
+  --accent-ring: rgba(114, 224, 207, .35);
+  --rule: #72e0cf;
+}
+
+/* A faint glow from the aurora in the rail's sky, high in the corner behind
+   everything. */
+:root[data-theme="aurora"] body {
+  background-image: radial-gradient(ellipse 50% 40% at 0% 0%, rgba(110, 240, 190, .06), transparent 70%);
+  background-attachment: fixed;
+}
+
 /* Shared click-through scene, below dialogs (50). */
 .seasonal-overlay { position: fixed; inset: 0; z-index: 40; pointer-events: none; overflow: hidden; }
 :root[data-theme="christmas"] {

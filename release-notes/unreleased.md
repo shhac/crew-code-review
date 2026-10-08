@@ -48,6 +48,14 @@ in the rail's free space; the page gets embers along card tops that a passing
 cursor fans, and a hedgehog that leaves its woodpile when the page is still
 and curls up when the cursor comes close. Reduced motion keeps a still scene.
 
+January now has its own theme, the northern lights (`dashboard.theme`
+`aurora`, on by default under `auto` from 1 to 31 January). The rail shows a
+thermos, bobble hat, mittens and cocoa, with the aurora rippling slowly in the
+rail's free space; the page gets a rim of frost along the ledges, tinted by
+the aurora, and an Arctic fox asleep on a ledge that twitches an ear at a
+passing cursor, wakes and moves on when the cursor lingers, and sometimes
+pounces. Reduced motion keeps a still scene.
+
 Seasonal scenes now measure the page through one shared snapshot, and each
 creature decides how much headroom it needs instead of inheriting the
 spider's. Halloween and Christmas render exactly as before. The

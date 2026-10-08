@@ -16,6 +16,8 @@
   import Overview from './routes/Overview.svelte';
   import Prompt from './routes/Prompt.svelte';
   import ReviewLog from './routes/ReviewLog.svelte';
+  import AuroraLayer from './lib/theme/aurora/AuroraLayer.svelte';
+  import AuroraShelf from './lib/theme/aurora/AuroraShelf.svelte';
   import BonfireLayer from './lib/theme/bonfire/BonfireLayer.svelte';
   import BonfireShelf from './lib/theme/bonfire/BonfireShelf.svelte';
   import ChristmasLayer from './lib/theme/christmas/ChristmasLayer.svelte';
@@ -121,6 +123,8 @@
       <BonfireShelf />
     {:else if theme === 'christmas'}
       <ChristmasShelf />
+    {:else if theme === 'aurora'}
+      <AuroraShelf />
     {/if}
     <ViewerChip viewer={$viewer} />
     <div class:stale={!$feed.ok} class="feed">
@@ -159,4 +163,6 @@
   <BonfireLayer />
 {:else if theme === 'christmas'}
   <ChristmasLayer />
+{:else if theme === 'aurora'}
+  <AuroraLayer />
 {/if}

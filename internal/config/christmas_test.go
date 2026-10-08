@@ -15,7 +15,7 @@ func TestChristmasCalendarAndOverrides(t *testing.T) {
 			{time.Date(2026, 11, 30, 23, 59, 0, 0, zone), ThemeBonfire},
 			{time.Date(2026, 12, 1, 0, 0, 0, 0, zone), ThemeChristmas},
 			{time.Date(2026, 12, 31, 23, 59, 0, 0, zone), ThemeChristmas},
-			{time.Date(2027, 1, 1, 0, 0, 0, 0, zone), ThemeNone},
+			{time.Date(2027, 1, 1, 0, 0, 0, 0, zone), ThemeAurora},
 		} {
 			if got := (Config{Dashboard: DashboardSettings{Theme: theme}}).DashboardTheme(tc.at); got != tc.want {
 				t.Fatalf("%q at %v: %q, want %q", theme, tc.at, got, tc.want)

@@ -510,15 +510,16 @@ deliberately.
 - **Logs**: a live tail of the daemon's own log.
 
 **Seasonal themes.** `dashboard.theme` adds decorations to the dashboard: `auto` (the
-default) switches a set on in its season: Halloween in October, Bonfire Night in November and Christmas throughout December. `none` turns
-decorations off, and naming a set (`halloween`, `bonfire` or `christmas`) forces it on. They are purely cosmetic and
+default) switches a set on in its season: the northern lights in January, Halloween in October, Bonfire Night in November and Christmas throughout December. `none` turns
+decorations off, and naming a set (`aurora`, `halloween`, `bonfire` or `christmas`) forces it on. They are purely cosmetic and
 never block a click. Reduced-motion users get the decorations without the
 animation. To preview a set whatever the date, add `?theme=halloween` to the
 URL.
 For geometry checks, use `?theme=halloween&theme-debug=1`: blue lines mark
 floors and purple lines mark walls. A floor with another one above it is
 labelled with its headroom in pixels; each creature decides how much it needs
-(a spider, 34). The overlay also passes clicks through.
+(a spider, 34). A dashed box marks the rail's sky, where the fireworks and the
+aurora play. The overlay also passes clicks through.
 
 December uses quiet snow on measured card tops and heading rules, one interactive
 robin and a small rail holly sprig. Preview with `?theme=christmas`; set
@@ -539,6 +540,16 @@ seconds, potters about, and curls into a ball if the cursor comes close.
 Reduced motion shows the hedgehog sat by its pile, one still firework and
 motionless flames. Preview with `?theme=bonfire`; design notes:
 [Bonfire Night](design-docs/bonfire/README.md).
+
+January brings the northern lights: a thermos, bobble hat, mittens and cocoa on
+the rail, with the aurora rippling slowly in the rail's empty space above
+(hidden with the shelf on small screens). Frost rims the ledges, tinted by the
+aurora's colour, and glints as the cursor passes. An Arctic fox sleeps curled
+on a ledge: its ear twitches at a passing cursor, a cursor that lingers wakes
+it and it trots off to sleep elsewhere, and now and then it pounces at
+something in the snow. Reduced motion shows a still aurora and the fox asleep.
+Preview with `?theme=aurora`; design notes:
+[Northern lights](design-docs/aurora/README.md).
 
 
 Queue add/reorder/promote are also available as JSON endpoints
