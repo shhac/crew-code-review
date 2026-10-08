@@ -42,13 +42,12 @@ export function measureObstacles(root: Page = document, text: () => readonly Obs
 const MIN_WIDTH = 120;
 // A nested card that starts where its parent does is the same edge twice.
 const SAME_EDGE = 8;
-// A spider standing on a floor needs this much clear space above it, or the
-// floor above runs through its body (a card tucked right under a heading rule).
-const HEADROOM = 34;
-
 // A floor also knows how much clear space sits on it, up to whatever is
 // above: enough for a spider to pass under is not enough to stand a candle.
-export type Ledge = Floor & { room: number; kind?: 'card' | 'heading' };
+// headroom is narrower: the gap up to the nearest floor overlapping it from
+// above, which is what runs through a creature standing there. Each creature
+// decides for itself how much it needs.
+export type Ledge = Floor & { room: number; headroom: number; kind?: 'card' | 'heading' };
 
 // What measuring needs from the page: the document, or a fake one in tests.
 type Box = { left: number; right: number; top: number; bottom: number; width: number; height: number };
@@ -67,7 +66,7 @@ function idOf(el: Measurable): number {
 
 const spans = (a: { left: number; right: number }, b: { left: number; right: number }) => a.left < b.right && b.left < a.right;
 const overlaps = (a: Floor, b: Floor) => Math.abs(a.y - b.y) < SAME_EDGE && spans(a, b);
-const cramped = (f: Floor, all: Floor[]) => all.some((g) => g.y < f.y && f.y - g.y < HEADROOM && spans(f, g));
+const headroom = (f: Floor, all: Floor[]) => Math.min(Infinity, ...all.filter((g) => g.y < f.y && spans(f, g)).map((g) => f.y - g.y));
 
 // The clear space on a heading rule is what its own content leaves free.
 function roomInside(el: Measurable, r: Box): number {
@@ -108,8 +107,21 @@ export function measureFloors(root: Page = document): Map<number, Ledge> {
   const all = [...floors.values()];
   return new Map(
     [...floors]
-      // Retain the card's wall geometry even if its top has no headroom.
-      // Arrival and landing choose only walkable ledges.
-      .map(([id, f]) => [id, { ...f, kind: kinds.get(id), walkable: !cramped(f, all), room: rooms.get(id) ?? roomAbove(f, blocks) }]),
+      // A ledge with no headroom stays: its walls and its own decorations do
+      // not depend on what can stand on it.
+      .map(([id, f]) => [id, { ...f, kind: kinds.get(id), headroom: headroom(f, all), room: rooms.get(id) ?? roomAbove(f, blocks) }]),
   );
 }
+
+// One measurement of everything a scene is placed against, taken together so
+// its ledges and obstacles always describe the same layout.
+export type PageMap = { floors: ReadonlyMap<number, Ledge>; obstacles: readonly Obstacle[]; width: number; height: number };
+
+// Walking every text node is the costly part, so a scene that never steers
+// around text can leave the obstacles out.
+export function measurePage({ obstacles = true } = {}): PageMap {
+  return { floors: measureFloors(), obstacles: obstacles ? measureObstacles() : [], width: innerWidth, height: innerHeight };
+}
+
+export const samePage = (a: PageMap, b: PageMap) => a.width === b.width && a.height === b.height
+  && JSON.stringify([...a.floors]) === JSON.stringify([...b.floors]) && JSON.stringify(a.obstacles) === JSON.stringify(b.obstacles);

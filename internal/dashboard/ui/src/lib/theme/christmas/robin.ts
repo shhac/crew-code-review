@@ -1,8 +1,8 @@
-import type { Ledge, Obstacle } from '../floors';
+import type { PageMap } from '../floors';
 import type { Point, Segment } from '../pointer';
 import { choosePerch, type Perch } from './snow';
 import { arcPoint, clearArc, clearFlight, flightRoute, routeFacing, routeLength, routePoint, routeTilt, type FlightCurve } from './flight-route';
-export type Scene = { floors: ReadonlyMap<number, Ledge>; obstacles: readonly Obstacle[]; width: number; height: number };
+export type Scene = PageMap;
 type Action = { from: Point; to: Point; target: Perch; start: number; duration: number; rise: number; kind: 'hop' | 'flight'; route?: FlightCurve[] };
 export type Bird = { perch: Perch | null; action: Action | null; restUntil: number; flightAt: number; cooldown: number; nearAt: number; alert: boolean; escapeHops: number };
 const range = (rand: () => number, min: number, max: number) => min + Math.max(0, Math.min(1, rand())) * (max - min);

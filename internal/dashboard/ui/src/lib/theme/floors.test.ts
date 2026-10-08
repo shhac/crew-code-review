@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { measureFloors } from './floors';
+import { fits } from './spiderwalk/model';
 
 // measureFloors only needs querySelectorAll and rects, so a fake page stands
 // in for the document.
@@ -8,7 +9,7 @@ const el = (r: Box) => ({ getBoundingClientRect: () => ({ ...r, width: r.right -
 const page = (cards: Box[], rules: Box[] = []) => ({
   querySelectorAll: (sel: string) => (sel.includes('.hero') ? rules : cards).map(el),
 });
-const ys = (root: ReturnType<typeof page>) => [...measureFloors(root).values()].filter((f) => f.walkable).map((f) => f.y).sort((a, b) => a - b);
+const ys = (root: ReturnType<typeof page>) => [...measureFloors(root).values()].filter(fits).map((f) => f.y).sort((a, b) => a - b);
 
 describe('measureFloors', () => {
   it('retains element IDs through scroll and classifies heading content clearance', () => {
@@ -36,7 +37,23 @@ describe('measureFloors', () => {
   it('keeps the walls of a cramped card without offering its top as a landing', () => {
     const root = page([{ left: 0, right: 600, top: 184, bottom: 500 }], [{ left: 0, right: 600, top: 40, bottom: 160 }]);
     expect(ys(root)).toEqual([160]);
-    expect([...measureFloors(root).values()]).toContainEqual(expect.objectContaining({ y: 184, base: 500, walkable: false }));
+    expect([...measureFloors(root).values()]).toContainEqual(expect.objectContaining({ y: 184, base: 500, headroom: 24 }));
+  });
+
+  it('measures headroom to the nearest overlapping floor above, or none', () => {
+    const root = page([
+      { left: 0, right: 300, top: 194, bottom: 500 },
+      { left: 400, right: 700, top: 100, bottom: 500 },
+    ], [{ left: 0, right: 700, top: 40, bottom: 160 }]);
+    const byY = new Map([...measureFloors(root).values()].map((f) => [f.y, f.headroom]));
+    expect(byY).toEqual(new Map([[160, 60], [194, 34], [100, Infinity]]));
+  });
+
+  it('lets a spider stand at exactly its headroom and not a hair under', () => {
+    const ledge = { left: 0, right: 600, y: 200, base: 400 };
+    expect(fits({ ...ledge, headroom: 34 })).toBe(true);
+    expect(fits({ ...ledge, headroom: 33.9 })).toBe(false);
+    expect(fits(ledge)).toBe(true);
   });
 
   it('measures physical cards rather than the layout section between them', () => {

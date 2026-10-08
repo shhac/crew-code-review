@@ -10,7 +10,7 @@
   import Geometry from '../Geometry.svelte';
   import { observeLayout } from '../layout';
   import { candleSpots, type CandleSpot } from '../candles';
-  import { measureFloors, type Ledge } from '../floors';
+  import { measurePage, type Ledge } from '../floors';
   import { advance, away, BOTTOM_WEB, pose, WEB, type Choice, type Frame, type Pose, type World } from '../spiderwalk';
   import { movingPointer, stepped, strandPath, strands, type Strand } from '../strands';
   import squatStub from './candle-stub-0.webp';
@@ -61,7 +61,7 @@
   const moved = (e: PointerEvent) => Object.assign(pointer, { x: e.clientX, y: e.clientY, at: performance.now() });
 
   function measure() {
-    floors = measureFloors();
+    floors = measurePage({ obstacles: false }).floors;
     candles = candleSpots(floors, STUBS.length, innerHeight);
     dirty = false;
     measuredAt = performance.now();

@@ -10,10 +10,13 @@ export function footClearance(x: number, feet?: number | readonly number[]): num
 
 // The bird model checks local text/control clearance before choosing or
 // traversing a perch. Whole-ledge room is only used to limit the snow height.
+// The headroom gate is the spider's, inherited when both shared one flag; it
+// stays at that value until a robin-sized one is chosen deliberately.
+const HEADROOM = 34;
 function eligible(f: Ledge, width: number, height: number, x: number): boolean {
   const px = f.left + x;
   return [f.left, f.right, f.y, width, height, x].every(Number.isFinite)
-    && f.walkable !== false && f.y >= 42 && f.y <= height - 12
+    && f.headroom >= HEADROOM && f.y >= 42 && f.y <= height - 12
     && x >= 24 && x <= f.right - f.left - 24 && px >= 24 && px <= width - 24;
 }
 

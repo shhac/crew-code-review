@@ -49,7 +49,7 @@ const walking = (s: Spider, floor: number) => s.kind === 'walk' && s.floor === f
 
 describe('measured geometry', () => {
   it('never arrives, drops or jumps onto a top without headroom', () => {
-    const floor = { ...card(300), walkable: false };
+    const floor = { ...card(300), headroom: 20 };
     const floors = new Map([[1, floor]]);
     const ctx = { floors, frame, dt: 1 / 60, rand: fixed(0.5) };
     expect(advance({ spiders: [away(fixed(0))], lines: [], nextLine: 1 }, ctx).spiders[0].kind).toBe('away');

@@ -1,5 +1,5 @@
 import { clamp } from '../spidergait';
-import { type Act, BELOW, BODY, BOTTOM_MARGIN, CLIMB_SPEED, type Choice, type Climb, type Context, DROP_SPEED, type Dangle, type Dir, type Floor, HURRY, INSET, type Line, MAX_HANG, MIN_DROP, type Outcome, type Pose, REEL_SPEED, type Rand, type Rest, type Route, STARTLE, type Spider, type Tween, UPRIGHT, WALK_SPEED, WEIGHTS, type Walk, away, between, coin, flip, inView, pace, still, welcoming } from './model';
+import { type Act, BELOW, BODY, BOTTOM_MARGIN, CLIMB_SPEED, type Choice, type Climb, type Context, DROP_SPEED, type Dangle, type Dir, type Floor, HURRY, INSET, type Line, MAX_HANG, MIN_DROP, type Outcome, type Pose, REEL_SPEED, type Rand, type Rest, type Route, STARTLE, type Spider, type Tween, UPRIGHT, WALK_SPEED, WEIGHTS, type Walk, away, between, coin, fits, flip, inView, pace, still, welcoming } from './model';
 import { pose } from './pose';
 import { anchor, floorBelow, hanging, jumpTarget, reachesTopWeb, resolve, sideRunsOut, wallTarget } from './routes';
 
@@ -186,7 +186,7 @@ function seekLine(ctx: Context, s: Walk, lines: readonly Line[]): Walk | null {
 
 function walk(s: Walk, ctx: Context, lines: readonly Line[]): Outcome {
   const f = ctx.floors.get(s.floor);
-  if (!f || f.walkable === false || !inView(f, ctx.frame)) return still(away(ctx.rand));
+  if (!f || !fits(f) || !inView(f, ctx.frame)) return still(away(ctx.rand));
   if (s.goal !== null) {
     const line = lines.find((l) => l.id === s.goal && l.bottom.floor === s.floor);
     return line ? seek(s, ctx, line) : still({ ...s, goal: null });
@@ -235,7 +235,7 @@ function setOff(s: Rest, f: Floor, rand: Rand): Dir {
 
 function rest(s: Rest, ctx: Context): Outcome {
   const f = ctx.floors.get(s.floor);
-  if (!f || f.walkable === false || !inView(f, ctx.frame)) return still(away(ctx.rand));
+  if (!f || !fits(f) || !inView(f, ctx.frame)) return still(away(ctx.rand));
   if (s.left - ctx.dt > 0) return still({ ...s, left: s.left - ctx.dt });
   return still({ kind: 'walk', floor: s.floor, x: s.x, dir: setOff(s, f, ctx.rand), left: between(ctx.rand, 1.5, 6), goal: null });
 }
@@ -258,7 +258,7 @@ function dangle(s: Dangle, ctx: Context): Outcome {
       if (s.out) return still(a.y + drop > ctx.frame.height + BELOW ? away(ctx.rand) : { ...s, drop });
       if (s.to !== null) {
         const target = ctx.floors.get(s.to);
-        if (!target || target.walkable === false) return still({ ...s, drop, phase: 'up' });
+        if (!target || !fits(target)) return still({ ...s, drop, phase: 'up' });
         // It touches down wherever its swing has carried it, which is where
         // the dragline it leaves is tied below.
         const swungTo = hanging({ ...s, drop }, ctx.floors)?.x ?? a.x;

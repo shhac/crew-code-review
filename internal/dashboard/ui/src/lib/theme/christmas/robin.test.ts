@@ -1,6 +1,6 @@
 import { expect, it } from 'vitest';
 import { advanceBird, birdPose, createBird, reconcileBird, safePerch, safeRoute, type Bird, type Scene } from './robin';
-const scene: Scene = { floors: new Map([[1, { left: 100, right: 500, y: 200, base: 300, room: 100 }]]), obstacles: [{ left: 100, right: 500, top: 200, bottom: 300 }], width: 800, height: 600 };
+const scene: Scene = { floors: new Map([[1, { left: 100, right: 500, y: 200, base: 300, room: 100, headroom: Infinity }]]), obstacles: [{ left: 100, right: 500, top: 200, bottom: 300 }], width: 800, height: 600 };
 const rand = () => .5;
 const cursor = (x: number, y = 200) => ({ from: { x: x - 1, y }, to: { x, y }, at: 0 });
 it('samples rest and flight intervals at both bounds', () => {
@@ -102,7 +102,7 @@ it('allows ground motion beneath content that an extended flight wing would hit'
 });
 
 it('uses locally clear heading pockets without covering text or controls', () => {
-  const heading = { ...scene, floors: new Map([[1, { left: 100, right: 500, y: 200, base: 200, room: 24, kind: 'heading' as const }]]),
+  const heading = { ...scene, floors: new Map([[1, { left: 100, right: 500, y: 200, base: 200, room: 24, headroom: Infinity, kind: 'heading' as const }]]),
     obstacles: [{ left: 100, right: 260, top: 100, bottom: 185 }, { left: 430, right: 500, top: 100, bottom: 195 }] };
   const perch = safePerch(heading)!;
   expect(perch).not.toBeNull();

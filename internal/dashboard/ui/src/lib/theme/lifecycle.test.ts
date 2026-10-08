@@ -40,7 +40,7 @@ it('resumes articulation from a new neutral epoch after reduced motion', () => {
   vi.stubGlobal('document', { hidden: false, addEventListener: () => {}, removeEventListener: () => {} });
   vi.stubGlobal('requestAnimationFrame', (f: FrameRequestCallback) => { callbacks.set(++id, f); return id; });
   vi.stubGlobal('cancelAnimationFrame', (i: number) => callbacks.delete(i));
-  const scene: Scene = { floors: new Map([[1, { left: 100, right: 500, y: 200, base: 300, room: 100 }]]), obstacles: [], width: 800, height: 600 };
+  const scene: Scene = { floors: new Map([[1, { left: 100, right: 500, y: 200, base: 300, room: 100, headroom: Infinity }]]), obstacles: [], width: 800, height: 600 };
   const bird = createBird(scene, 0, () => .5), player = createRobinPlayback();
   let rendered = player.pose(bird, now, true);
   const loop = sceneLoop((_time, reduced) => { rendered = player.pose(bird, now, reduced); }, player.reset);

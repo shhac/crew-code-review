@@ -1,4 +1,4 @@
-import { BELOW, BOTTOM_MARGIN, BOTTOM_WEB, type Context, type Dangle, type Dir, type Floor, type Floors, type Frame, INSET, JUMP_FALL, JUMP_GAP, JUMP_RISE, MIN_DROP, type Point, type Route, swayAngle, swing, type Tie, UPRIGHT, WALL_GAP, inView, topWebSize } from './model';
+import { BELOW, BOTTOM_MARGIN, BOTTOM_WEB, type Context, type Dangle, type Dir, type Floor, type Floors, type Frame, INSET, JUMP_FALL, JUMP_GAP, JUMP_RISE, MIN_DROP, type Point, type Route, swayAngle, swing, type Tie, UPRIGHT, WALL_GAP, fits, inView, topWebSize } from './model';
 
 // ---------------------------------------------------------------- finding the ways
 
@@ -24,7 +24,7 @@ export function hanging(s: Dangle, floors: Floors): (Point & { angle: number; ti
 // The nearest floor under frame x, below y, that a spider could land on.
 export function floorBelow(ctx: Context, x: number, y: number): number | null {
   const below = [...ctx.floors]
-    .filter(([, f]) => f.walkable !== false && f.y > y + MIN_DROP && f.y <= ctx.frame.height - BOTTOM_MARGIN)
+    .filter(([, f]) => fits(f) && f.y > y + MIN_DROP && f.y <= ctx.frame.height - BOTTOM_MARGIN)
     .filter(([, f]) => x >= f.left + INSET && x <= f.right - INSET)
     .sort(([, a], [, b]) => a.y - b.y);
   return below[0]?.[0] ?? null;
@@ -34,7 +34,7 @@ export function floorBelow(ctx: Context, x: number, y: number): number | null {
 export function jumpTarget(ctx: Context, f: Floor, dir: Dir): number | null {
   const edge = dir === 1 ? f.right : f.left;
   const near = [...ctx.floors]
-    .filter(([, g]) => g !== f && g.walkable !== false && inView(g, ctx.frame) && g.right - g.left >= INSET * 4)
+    .filter(([, g]) => g !== f && fits(g) && inView(g, ctx.frame) && g.right - g.left >= INSET * 4)
     .map(([id, g]) => ({ id, gap: dir === 1 ? g.left - edge : edge - g.right, rise: f.y - g.y }))
     .filter((c) => c.gap >= JUMP_GAP.min && c.gap <= JUMP_GAP.max && c.rise <= JUMP_RISE && c.rise >= -JUMP_FALL)
     .sort((a, b) => a.gap - b.gap);
@@ -46,7 +46,7 @@ export function jumpTarget(ctx: Context, f: Floor, dir: Dir): number | null {
 export function wallTarget(ctx: Context, f: Floor, dir: Dir): number | null {
   const edge = dir === 1 ? f.right : f.left;
   const near = [...ctx.floors]
-    .filter(([, g]) => g !== f && g.walkable !== false && inView(g, ctx.frame))
+    .filter(([, g]) => g !== f && fits(g) && inView(g, ctx.frame))
     .map(([id, g]) => ({ id, g, gap: dir === 1 ? g.left - edge : edge - g.right }))
     .filter((c) => c.gap >= 0 && c.gap <= WALL_GAP && c.g.y < f.y - MIN_DROP / 2 && c.g.base >= f.y - 4)
     .sort((a, b) => a.gap - b.gap);

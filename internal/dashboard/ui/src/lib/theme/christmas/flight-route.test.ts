@@ -3,8 +3,8 @@ import { clearFlight, curvePoint, flightRoute, routeFacing, routeLength, routePo
 import { advanceBird, birdPose, createBird, type Scene } from './robin';
 
 const scene: Scene = { width: 900, height: 700, floors: new Map([
-  [1, { left: 150, right: 550, y: 200, base: 300, room: 100 }],
-  [2, { left: 150, right: 550, y: 450, base: 550, room: 150 }],
+  [1, { left: 150, right: 550, y: 200, base: 300, room: 100, headroom: Infinity }],
+  [2, { left: 150, right: 550, y: 450, base: 550, room: 150, headroom: Infinity }],
 ]), obstacles: [{ left: 150, right: 550, top: 200, bottom: 300 }, { left: 150, right: 550, top: 450, bottom: 550 }] };
 
 it.each([false, true])('uses smooth sweeping curves around stacked cards, reverse=%s', reverse => {

@@ -516,8 +516,9 @@ never block a click. Reduced-motion users get the decorations without the
 animation. To preview a set whatever the date, add `?theme=halloween` to the
 URL.
 For geometry checks, use `?theme=halloween&theme-debug=1`: blue lines mark
-walkable floors, purple lines mark walls, and orange lines mark tops with too
-little headroom for a spider. The overlay also passes clicks through.
+floors and purple lines mark walls. A floor with another one above it is
+labelled with its headroom in pixels; each creature decides how much it needs
+(a spider, 34). The overlay also passes clicks through.
 
 December uses quiet snow on measured card tops and heading rules, one interactive
 robin and a small rail holly sprig. Preview with `?theme=christmas`; set

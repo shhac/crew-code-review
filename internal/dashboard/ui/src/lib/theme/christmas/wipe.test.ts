@@ -1,6 +1,6 @@
 import { expect, it } from 'vitest';
 import { depth, reconcileSnow, renderSnow, wipeSnow, type Snow } from './wipe';
-const floors = new Map([[1, { left: 0, right: 500, y: 100, base: 200, room: 100 }]]);
+const floors = new Map([[1, { left: 0, right: 500, y: 100, base: 200, room: 100, headroom: Infinity }]]);
 const sample = (x: number): Snow => ({ x, depth: 6, seed: 6, wiped: 6, at: 0 });
 const stroke = (y: number, at = 0) => ({ from: { x: 0, y }, to: { x: 500, y }, at });
 it('wipes the complete segment, 24px core, 8px falloff and exact boundary', () => {

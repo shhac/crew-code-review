@@ -1,5 +1,5 @@
 import { clamp } from '../spidergait';
-import { type Act, type Dir, EASES, type Floors, type Frame, JUMP_ARC, type Pose, type Spider, swayAngle, swing, type Tween } from './model';
+import { type Act, type Dir, EASES, type Floors, type Frame, JUMP_ARC, fits, type Pose, type Spider, swayAngle, swing, type Tween } from './model';
 import { hanging, resolve } from './routes';
 
 // ---------------------------------------------------------------- drawing
@@ -82,7 +82,7 @@ export function pose(s: Spider, floors: Floors, frame: Frame = NOWHERE): Pose | 
     case 'walk':
     case 'rest': {
       const f = floors.get(s.floor);
-      if (!f || f.walkable === false) return null;
+      if (!f || !fits(f)) return null;
       return restingPose(f.left + s.x, f.y, s.dir, s.kind === 'walk');
     }
   }

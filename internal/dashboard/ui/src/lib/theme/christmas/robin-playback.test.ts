@@ -3,7 +3,7 @@ import { createRobinPlayback } from './robin-playback';
 import { createBird, type Bird, type Scene } from './robin';
 import { mixPartsPose, partsLayers, partsPose, partsTransforms } from './parts-pose';
 
-const scene: Scene = { floors: new Map([[1, { left: 100, right: 500, y: 200, base: 300, room: 100 }]]), obstacles: [], width: 800, height: 600 };
+const scene: Scene = { floors: new Map([[1, { left: 100, right: 500, y: 200, base: 300, room: 100, headroom: Infinity }]]), obstacles: [], width: 800, height: 600 };
 const bird = () => createBird(scene, 0, () => .5);
 const moving = (kind: 'hop' | 'flight', duration: number): Bird => ({ ...bird(), action: {
   kind, duration, start: 1000, rise: 24, from: { x: 130, y: 200 }, to: { x: 465, y: 200 },

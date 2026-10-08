@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { choosePerch, ROBIN, snowProfile } from './snow';
 import type { Ledge } from '../floors';
 
-const ledge: Ledge = { left: 100, right: 400, y: 150, base: 300, room: 80, walkable: true, kind: 'card' };
+const ledge: Ledge = { left: 100, right: 400, y: 150, base: 300, room: 80, headroom: Infinity, kind: 'card' };
 describe('still Christmas geometry', () => {
   it('clips, tapers, leaves gaps and stays above the edge within clearance', () => {
     const samples = snowProfile(7, ledge);
@@ -34,7 +34,7 @@ describe('still Christmas geometry', () => {
     expect(choosePerch(new Map([[1, { ...ledge, y: 80 }]]), 800, 600, perch)).toEqual(perch);
     expect(choosePerch(new Map([[2, ledge]]), 800, 600, perch)?.floor).toBe(2);
     expect(choosePerch(new Map([[1, { ...ledge, room: 24 }]]), 800, 600, perch)).toBe(perch);
-    for (const f of [{ ...ledge, walkable: false }, { ...ledge, y: 30 }, { ...ledge, left: 900, right: 1200 }]) {
+    for (const f of [{ ...ledge, headroom: 20 }, { ...ledge, y: 30 }, { ...ledge, left: 900, right: 1200 }]) {
       expect(choosePerch(new Map([[1, f]]), 800, 600)).toBeNull();
     }
     expect(choosePerch(new Map(), 800, 600, perch)).toBeNull();

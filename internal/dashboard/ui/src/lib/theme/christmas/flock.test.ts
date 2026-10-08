@@ -8,8 +8,8 @@ import { footClearance } from './snow';
 
 const scene: Scene = {
   floors: new Map([
-    [1, { left: 100, right: 500, y: 200, base: 300, room: 100 }],
-    [2, { left: 100, right: 500, y: 450, base: 550, room: 150 }],
+    [1, { left: 100, right: 500, y: 200, base: 300, room: 100, headroom: Infinity }],
+    [2, { left: 100, right: 500, y: 450, base: 550, room: 150, headroom: Infinity }],
   ]),
   obstacles: [{ left: 100, right: 500, top: 200, bottom: 300 }, { left: 100, right: 500, top: 450, bottom: 550 }],
   width: 800, height: 750,
@@ -47,7 +47,7 @@ it('prefers another floor despite map order and lands at the reserved destinatio
 
 it('finds flight landing pockets when both ends of the destination have text', () => {
   const heading: Scene = { ...scene, floors: new Map([
-    [1, scene.floors.get(1)!], [2, { left: 600, right: 780, y: 300, base: 300, room: 100 }],
+    [1, scene.floors.get(1)!], [2, { left: 600, right: 780, y: 300, base: 300, room: 100, headroom: Infinity }],
   ]), obstacles: [scene.obstacles[0], { left: 600, right: 640, top: 210, bottom: 299 }, { left: 745, right: 780, top: 210, bottom: 299 }] };
   const flight = advanceBird(createBird(heading, 0, random), heading, 16000, random);
   expect(flight.action?.target.floor).toBe(2);
@@ -78,7 +78,7 @@ it('clears snow beneath both birds when they share a ledge', () => {
 
 it('fits two birds into the exact clear pocket beside mobile heading text', () => {
   const mobile: Scene = { width: 390, height: 900,
-    floors: new Map([[1, { left: 14, right: 376, y: 310, base: 600, room: 30 }]]),
+    floors: new Map([[1, { left: 14, right: 376, y: 310, base: 600, room: 30, headroom: Infinity }]]),
     obstacles: [{ left: 14, right: 249, top: 264, bottom: 280 }, { left: 14, right: 376, top: 310, bottom: 600 }] };
   const birds = createFlock(mobile, 0, random);
   expect(birds.every(b => b.perch !== null)).toBe(true);

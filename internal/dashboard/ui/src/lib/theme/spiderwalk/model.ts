@@ -14,8 +14,10 @@
 
 // base is where the floor's element ends below it: a card's bottom edge, or
 // for a heading rule the rule itself. Walls are found from it.
-import type { Floor } from '../scene';
-export type { Floor } from '../scene';
+import type { Floor as Edge } from '../scene';
+// headroom is the clear height above the floor, up to the next floor over it
+// (unmeasured means open sky).
+export type Floor = Edge & { headroom?: number };
 export type Floors = ReadonlyMap<number, Floor>;
 // The area the spiders live in. bottomWeb says whether the bottom-right corner
 // web is drawn (it is hidden on narrow screens), so a spider can go home to it.
@@ -145,6 +147,10 @@ export function swing(pivot: Point, point: Point, degrees: number): Point {
 // stands on a card's rounded corner.
 export const INSET = 14;
 export const MIN_DROP = 60;
+// A spider standing on a floor needs this much clear space above it, or the
+// floor above runs through its body (a card tucked right under a heading rule).
+export const HEADROOM = 34;
+export const fits = (f: Floor) => (f.headroom ?? Infinity) >= HEADROOM;
 // A hanging spider hangs head-down below its thread, so it touches a floor
 // this far before the end of its thread does.
 export const BODY = 50;
@@ -197,7 +203,7 @@ export const away = (rand: Rand, lo = 3, hi = 9): Away => ({ kind: 'away', left:
 // Arrival is choosy, so a spider lands somewhere it will be seen; staying is
 // not, so scrolling a card off screen takes its spider with it rather than
 // making it vanish mid-page.
-export const welcoming = (f: Floor, frame: Frame) => f.walkable !== false && f.y >= TOP_MARGIN && f.y <= frame.height - BOTTOM_MARGIN;
+export const welcoming = (f: Floor, frame: Frame) => fits(f) && f.y >= TOP_MARGIN && f.y <= frame.height - BOTTOM_MARGIN;
 export const inView = (f: Floor, frame: Frame) => f.y >= -OFFSCREEN && f.y <= frame.height + OFFSCREEN;
 
 export const EASES = {

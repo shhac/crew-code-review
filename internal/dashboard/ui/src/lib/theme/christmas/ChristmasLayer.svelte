@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { measureFloors, measureObstacles, type Ledge } from '../floors';
+  import { measurePage, samePage, type Ledge } from '../floors';
   import Geometry from '../Geometry.svelte';
   import { observeLayout } from '../layout';
   import { ROBIN } from './snow';
@@ -33,12 +33,10 @@
     const reset = () => { pointer.reset(); players.forEach(player => player.reset()); dirty = true; restarting = true; };
     const measure = (time: number) => {
       const previousScene = scene;
-      floors = measureFloors();
-      scene = { floors, obstacles: measureObstacles(), width: innerWidth, height: innerHeight };
+      scene = measurePage();
+      floors = scene.floors;
       snow = reconcileSnow(floors, snow);
-      const sameGeometry = JSON.stringify([...floors]) === JSON.stringify([...previousScene.floors])
-        && JSON.stringify(scene.obstacles) === JSON.stringify(previousScene.obstacles)
-        && scene.width === previousScene.width && scene.height === previousScene.height;
+      const sameGeometry = samePage(scene, previousScene);
       if (fresh) birds = createFlock(scene, time, random);
       else if (restarting || !sameGeometry) {
         const checked = reconcileFlock(birds, scene, time, random);
@@ -74,9 +72,7 @@
     // cancel an action every second. Compare bounds before invalidating.
     const timer = window.setInterval(() => {
       if (document.hidden || performance.now() - measuredAt < 1000) return;
-      const next = measureFloors();
-      const obstacles = measureObstacles();
-      if (JSON.stringify([...next]) !== JSON.stringify([...floors]) || JSON.stringify(obstacles) !== JSON.stringify(scene.obstacles)) changed();
+      if (!samePage(measurePage(), scene)) changed();
     }, 1000);
     return () => { players.forEach(player => player.reset()); loop.stop(); stopPointer(); stopObserving(); clearInterval(timer); };
   });
