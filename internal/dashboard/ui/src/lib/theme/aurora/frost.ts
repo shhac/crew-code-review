@@ -84,7 +84,11 @@ export function reconcileRime(floors: ReadonlyMap<number, Ledge>, obstacles: rea
     });
     return [id, { ...rime, glints }] as const;
   });
-  const kept = new Set(fresh.flatMap(([, r]) => r.glints).slice(0, MAX_GLINTS));
+  // A glint from each ledge in turn, so a long page keeps some on every
+  // ledge rather than all of them on the first few cards.
+  const rounds = Math.max(0, ...fresh.map(([, r]) => r.glints.length));
+  const turns = Array.from({ length: rounds }, (_, i) => fresh.flatMap(([, r]) => r.glints.slice(i, i + 1))).flat();
+  const kept = new Set(turns.slice(0, MAX_GLINTS));
   return new Map(fresh.map(([id, r]) => [id, { ...r, glints: r.glints.filter((g) => kept.has(g)) }]));
 }
 

@@ -80,6 +80,11 @@ const runs = (f: Ledge, scene: PageMap) => clearRuns(f, scene.obstacles, CLEAR, 
 const length = (r: Run) => r.hi - r.lo;
 const runAt = (f: Ledge, scene: PageMap, x: number) => runs(f, scene).find((r) => r.lo <= x && x <= r.hi) ?? null;
 const clampTo = (r: Run, x: number) => Math.max(r.lo, Math.min(r.hi, x));
+// Where it lies or trots, its whole body stays on the clear run, not just
+// its middle: the part of the run its middle may use.
+const HALF = POSES.trot.width / 2;
+const body = (r: Run): Run => ({ lo: r.lo + HALF, hi: r.hi - HALF });
+const within = (r: Run, x: number) => r.lo <= x && x <= r.hi;
 const sign = (d: number): 1 | -1 => (d < 0 ? -1 : 1);
 const flip = (d: 1 | -1): 1 | -1 => (d === 1 ? -1 : 1);
 // The ends of a run that are also ends of its ledge, where the fox can come
@@ -103,7 +108,8 @@ function bestSpot(scene: PageMap): { floor: number; run: Run } | null {
 export function createFox(scene: PageMap, now: number, rand: Rand): Fox | null {
   const spot = bestSpot(scene);
   if (!spot) return null;
-  const x = between(rand, spot.run.lo + 16, spot.run.hi - 16);
+  const room = body(spot.run);
+  const x = between(rand, room.lo, room.hi);
   return asleepAt(spot.floor, x, now, between(rand, 20000, 40000), rand() < 0.5 ? -1 : 1);
 }
 
@@ -111,7 +117,8 @@ export function createFox(scene: PageMap, now: number, rand: Rand): Fox | null {
 // so a scroll never moves it.
 export function restingFox(scene: PageMap, previous: Fox | null): Fox | null {
   const f = previous && scene.floors.get(previous.floor);
-  if (previous && previous.mode !== 'away' && f && runAt(f, scene, previous.x)) return asleepAt(previous.floor, previous.x, 0, Infinity, previous.dir);
+  const run = f && previous && runAt(f, scene, previous.x);
+  if (previous && previous.mode !== 'away' && run && within(body(run), previous.x)) return asleepAt(previous.floor, previous.x, 0, Infinity, previous.dir);
   const spot = bestSpot(scene);
   return spot && asleepAt(spot.floor, (spot.run.lo + spot.run.hi) / 2, 0, Infinity);
 }
@@ -119,13 +126,19 @@ export function restingFox(scene: PageMap, previous: Fox | null): Fox | null {
 // After a layout change. A fox out of sight keeps its trip (checked when it
 // arrives). Otherwise it stays on its ledge, whatever it is doing, while the
 // stretch under it is still clear, pulled back inside it if that shrank; if
-// not, it is placed asleep somewhere new, without animation.
+// not, it is placed asleep somewhere new, without animation. Leaving, it
+// only ever goes at a ledge's end: if that end is now covered, it trots to
+// where the run stops instead and settles there.
 export function reconcileFox(fox: Fox, scene: PageMap, now: number, rand: Rand): Fox | null {
   if (fox.mode === 'away') return fox;
   const f = scene.floors.get(fox.floor);
   const run = f && runAt(f, scene, clampTo({ lo: RUNS.inset, hi: f.right - f.left - RUNS.inset }, fox.x));
-  if (!run) return createFox(scene, now, rand);
-  return { ...fox, x: clampTo(run, fox.x), target: clampTo(run, fox.target), from: clampTo(run, fox.from) };
+  if (!f || !run || length(run) < 2 * HALF) return createFox(scene, now, rand);
+  // Coming or going, it is at the run's end; otherwise all of it is on the run.
+  const room = fox.mode === 'exit' || fox.mode === 'enter' ? run : body(run);
+  const kept = { ...fox, x: clampTo(room, fox.x), target: clampTo(room, fox.target), from: clampTo(room, fox.from) };
+  if (kept.mode !== 'exit' || ends(f, run).includes(kept.target)) return kept;
+  return { ...kept, mode: 'trot', target: clampTo(body(run), kept.target), trip: null };
 }
 
 // Where the fox is drawn, or null while it is out of sight.
@@ -180,7 +193,7 @@ const spare = (f: Ledge, scene: PageMap, pose: Pose, x0: number, x1: number) => 
 function pounce(fox: Fox, f: Ledge, scene: PageMap): { target: number; hop: number } | null {
   const run = runAt(f, scene, fox.x);
   if (!run) return null;
-  const leaps = [fox.dir, -fox.dir].map((d) => fox.x + d * LEAP_LENGTH).filter((to) => to >= run.lo && to <= run.hi);
+  const leaps = [fox.dir, -fox.dir].map((d) => fox.x + d * LEAP_LENGTH).filter((to) => within(body(run), to));
   // A pixel short of the space above, so the arc never touches what is there.
   const leap = leaps.map((target) => ({ target, hop: spare(f, scene, 'pounce', fox.x, target) - 1 })).find((l) => l.hop >= MIN_HOP);
   return leap ? { ...leap, hop: Math.min(MAX_HOP, leap.hop) } : null;
@@ -203,10 +216,11 @@ function depart(fox: Fox, scene: PageMap, now: number, rand: Rand, cursor: Curso
   const exit = maxBy(ends(f, run), (x) => (avoid ? dist(pagePoint(f, x), avoid) : -Math.abs(x - fox.x)));
   const way = exit === undefined ? undefined : choose(entries(fox, scene, rand), (e, from) => dist(e.at, from));
   if (exit !== undefined && way) return { ...fox, mode: 'exit', target: exit, dir: sign(exit - fox.x), trip: way.trip };
-  const sides = ([-1, 1] as const).filter((d) => (d < 0 ? fox.x - run.lo : run.hi - fox.x) >= MIN_MOVE);
+  const room = body(run);
+  const sides = ([-1, 1] as const).filter((d) => (d < 0 ? fox.x - room.lo : room.hi - fox.x) >= MIN_MOVE);
   const side = choose(sides, (d, from) => Math.abs(f.left + fox.x + d * MIN_MOVE - from.x));
   if (!side) return settle(fox, now);
-  const reach = side < 0 ? fox.x - run.lo : run.hi - fox.x;
+  const reach = side < 0 ? fox.x - room.lo : room.hi - fox.x;
   return { ...fox, mode: 'trot', target: fox.x + side * between(rand, MIN_MOVE, reach), dir: side };
 }
 

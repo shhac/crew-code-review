@@ -26,10 +26,14 @@ describe('frost', () => {
     expect(rimeOn(2, card, []).d).not.toEqual(rimeOn(1, card, []).d);
   });
 
-  it('caps the glints on a page', () => {
+  it('caps the glints on a page, sharing them across the ledges', () => {
     const floors = new Map(Array.from({ length: 20 }, (_, i) => [i + 1, { ...card, y: 100 + i * 40 }] as const));
     const glints = [...reconcileRime(floors, []).values()].flatMap((r) => r.glints);
     expect(glints.length).toBe(MAX_GLINTS);
+    // Shared out a ledge at a time, so the last ledges are not left bare.
+    const uncapped = [...floors].filter(([id, f]) => rimeOn(id, f, []).glints.length > 0);
+    const kept = reconcileRime(floors, []);
+    expect(uncapped.every(([id]) => kept.get(id)!.glints.length > 0)).toBe(true);
   });
 
   it('glints softly once a period, and when a moving cursor passes', () => {

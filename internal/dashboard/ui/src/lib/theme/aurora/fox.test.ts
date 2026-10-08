@@ -222,3 +222,28 @@ describe('fox trips', () => {
     expect(crouched).toMatchObject({ target: 544, dir: -1 });
   });
 });
+
+describe('fox body on the ledge', () => {
+  const text = { left: 550, right: 560, top: 185, bottom: 195 };
+  // The stretch clear of the text, and where its middle may go.
+  const clearOf = (x: number) => x + 16 <= text.left - rule.left - 2 || x - 16 >= text.right - rule.left + 2;
+
+  it('trots and lies down with all of itself clear of what overhangs the ledge', () => {
+    const s = scene([[1, rule]], [text]);
+    const states = trace(asleep(1, 300), s, 0, 20000, (t) => (t < 4000 ? still(rule.left + 260, rule.y - 8) : null), fixed(1));
+    const trot = states.find((f) => f.mode === 'trot')!;
+    expect(trot.dir).toBe(1);
+    expect(states.every((f) => clearOf(f.x))).toBe(true);
+  });
+
+  it('never fades out mid-ledge when the end it was leaving for gets covered', () => {
+    const leaving = asleep(1, 300, { mode: 'exit', target: 592, dir: 1, trip: { floor: 2, entry: 8, x: 100 } });
+    const s = scene([[1, rule]], [text]);
+    const reconciled = reconcileFox(leaving, s, 0, fixed(0.5))!;
+    expect(reconciled).toMatchObject({ mode: 'trot', trip: null });
+    const states = trace(reconciled, s, 0, 10000);
+    expect(states.some((f) => f.mode === 'away')).toBe(false);
+    expect(states.at(-1)).toMatchObject({ mode: 'asleep', floor: 1 });
+    expect(clearOf(states.at(-1)!.x)).toBe(true);
+  });
+});

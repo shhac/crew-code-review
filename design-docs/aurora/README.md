@@ -228,3 +228,23 @@ byte-identical through it).
 - The lab's shared shelf contract, now including `aurora` (the 760/761px and
   640px-tall boundaries).
 - The Bonfire suites unchanged after the sky and clearance extractions.
+
+## Addendum: after the structure pass (2026-10-08)
+
+A seven-lens structure review of the finished theme found three behaviours
+that broke the rules above, fixed with regression tests:
+
+- **The fox's body, not just its middle, stays on the clear run.** Where it
+  lies, trots to, pounces to or is clamped after a layout change, the whole
+  32px trotting body must fit; before, its tail could stop under text at the
+  end of a run.
+- **An exit whose ledge end gets covered becomes a trot.** If a layout change
+  covers the end a leaving fox was heading for, it trots to where the run now
+  stops and settles there, instead of fading out mid-ledge.
+- **The 40-glint cap is shared out a ledge at a time.** Before, it kept the
+  first 40 in document order, which left the heading rule and every later
+  card bare on a long page.
+
+The same pass moved the measure, step and cursor cycle that the Aurora and
+Bonfire layers had each written out into one `ledgeScene()` in
+`lib/theme/layout.ts`, so the next month starts from it.
