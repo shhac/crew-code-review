@@ -47,7 +47,6 @@
 
   let candles: CandleSpot[] = [];
   let silk: Strand[] = [];
-  const debug = new URLSearchParams(location.search).get('theme-debug') === '1';
   let dirty = true;
   let measuredAt = -Infinity;
 
@@ -103,9 +102,7 @@
   <div class="web top-right"><div class="sway"><Web size={WEB} /></div></div>
   <div class="web bottom-right"><div class="sway"><Web size={BOTTOM_WEB} /></div></div>
 
-  {#if debug}
-    <Geometry {floors} />
-  {/if}
+  <Geometry {floors} />
 
   <div class="resident">
     <span class="thread"></span>

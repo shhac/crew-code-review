@@ -149,5 +149,11 @@ export function measurePage({ obstacles = true } = {}): PageMap {
   return { floors: measureFloors(), obstacles: obstacles ? measureObstacles() : [], width: innerWidth, height: innerHeight };
 }
 
+// Where a creature may newly settle or head for: clear of the top bar and the
+// window's bottom edge, and wholly inside the window's width.
+const TOP_MARGIN = 70;
+const BOTTOM_MARGIN = 30;
+export const inView = (f: Ledge, scene: PageMap) => f.y >= TOP_MARGIN && f.y <= scene.height - BOTTOM_MARGIN && f.left >= 0 && f.right <= scene.width;
+
 export const samePage = (a: PageMap, b: PageMap) => a.width === b.width && a.height === b.height
   && JSON.stringify([...a.floors]) === JSON.stringify([...b.floors]) && JSON.stringify(a.obstacles) === JSON.stringify(b.obstacles);

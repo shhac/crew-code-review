@@ -1,6 +1,8 @@
 // Passive decoration input never captures a gesture.
 export type Point = { x: number; y: number };
 export type Segment = { from: Point; to: Point; at: number };
+// The last place the cursor moved to, and when.
+export type Cursor = Point & { at: number };
 // How near p comes to the stroke from a to b.
 export function distance(p: Point, a: Point, b: Point): number {
   const dx = b.x - a.x, dy = b.y - a.y;

@@ -6,18 +6,18 @@
   import { onMount } from 'svelte';
   import { sceneLoop } from '../lifecycle';
   import { hash } from '../seed';
-  import { measureRailSky, watchRailSky } from '../sky';
-  import { curtains, rays, roomy, STILL, type Curtain, type Ray, type Sky } from './aurora';
+  import { measureRailSky, NO_SKY, watchRailSky, type SkySize } from '../sky';
+  import { curtains, rays, roomy, STILL, type Curtain, type Ray } from './aurora';
   import winterKit from './winter-kit.webp';
 
   const STARS = Array.from({ length: 14 }, (_, i) => ({ x: hash(i * 7 + 1), y: hash(i * 13 + 2), r: 0.6 + 0.5 * hash(i * 3 + 5), delay: -6 * hash(i + 9) }));
 
   let root: HTMLElement;
-  let sky: Sky = { width: 0, height: 0 };
+  let sky: SkySize = NO_SKY;
   let shown: Curtain[] = [];
   let shimmer: Ray[] = [];
 
-  const measure = () => { sky = measureRailSky(root) ?? { width: 0, height: 0 }; };
+  const measure = () => { sky = measureRailSky(root) ?? NO_SKY; };
 
   onMount(() => {
     measure();

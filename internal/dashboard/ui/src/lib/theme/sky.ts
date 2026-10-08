@@ -3,6 +3,9 @@
 // can play without ever covering the page. One measurement for every theme,
 // in viewport coordinates.
 export type Sky = { left: number; top: number; width: number; height: number };
+// What a sky effect draws in: the sky's own coordinates, so only its size.
+export type SkySize = Pick<Sky, 'width' | 'height'>;
+export const NO_SKY: SkySize = { width: 0, height: 0 };
 
 // Kept clear of the nav's last link.
 const GAP = 16;

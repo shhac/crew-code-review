@@ -1,16 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import type { Ledge, PageMap } from '../floors';
+import { fixed, scene, steps } from '../test-scene';
 import { chooseHome, createHog, HOG, hogPoint, PILE, reconcileHog, restingHog, stepHog, type Hog } from './hedgehog';
 
 const card: Ledge = { left: 100, right: 700, y: 300, base: 500, room: 60, headroom: Infinity, kind: 'card' };
-const scene = (floors: [number, Ledge][], obstacles: PageMap['obstacles'] = []): PageMap => ({ floors: new Map(floors), obstacles, width: 1000, height: 800 });
-const fixed = (v: number) => () => v;
 
 // Runs the hedgehog forward in 50ms steps with the given cursor, keeping every
 // state it passes through.
 function trace(hog: Hog, s: PageMap, from: number, to: number, cursor: Parameters<typeof stepHog>[5], rand = fixed(0.5)): Hog[] {
-  const times = Array.from({ length: Math.floor((to - from) / 50) + 1 }, (_, i) => from + i * 50);
-  return times.reduce((states, t) => [...states, stepHog(states.at(-1)!, s, t, 50, rand, cursor)], [hog]);
+  return steps(hog, from, to, (h, t) => stepHog(h, s, t, 50, rand, cursor));
 }
 const run = (...args: Parameters<typeof trace>) => trace(...args).at(-1)!;
 

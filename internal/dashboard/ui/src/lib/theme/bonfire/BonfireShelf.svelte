@@ -5,10 +5,10 @@
   // Fireworks stay inside the rail's free space, never over the page.
   import { onMount } from 'svelte';
   import { sceneLoop } from '../lifecycle';
-  import { measureRailSky, watchRailSky } from '../sky';
+  import { measureRailSky, NO_SKY, watchRailSky, type SkySize } from '../sky';
   import bonfire from './bonfire.webp';
   import toffeeApples from './toffee-apples.webp';
-  import { LIFE, nextBurst, rocket, roomy, sparks, stillBurst, type Burst, type Sky, type Spark } from './fireworks';
+  import { LIFE, nextBurst, rocket, roomy, sparks, stillBurst, type Burst, type Spark } from './fireworks';
 
   // Flame tongues along the base of the stack, in the stage's pixels: x, the
   // tongue's height, its beat and delay. Measured against bonfire.webp's
@@ -19,13 +19,13 @@
   const embers = [[30, 0], [40, -1.3], [48, -0.6], [36, -2.1], [55, -1.7]];
 
   let root: HTMLElement;
-  let sky: Sky = { width: 0, height: 0 };
+  let sky: SkySize = NO_SKY;
   let shown: Spark[] = [];
   let colour = '#f4c25b';
   let trail: ReturnType<typeof rocket> = null;
 
   // None when the shelf is hidden on a cramped rail.
-  const measure = () => { sky = measureRailSky(root) ?? { width: 0, height: 0 }; };
+  const measure = () => { sky = measureRailSky(root) ?? NO_SKY; };
 
   onMount(() => {
     let burst: Burst | null = null;

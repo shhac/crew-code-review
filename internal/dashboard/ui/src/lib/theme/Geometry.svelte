@@ -3,10 +3,14 @@
   import { measureRailSky } from './sky';
   export let floors: ReadonlyMap<number, Ledge>;
 
+  // Drawn only on request (?theme-debug=1), whichever theme is showing.
+  const shown = new URLSearchParams(location.search).get('theme-debug') === '1';
+
   // Remeasured whenever the ledges are, which is often enough for debugging.
-  $: sky = floors && measureRailSky(document.querySelector<HTMLElement>('.theme-shelf'));
+  $: sky = shown && floors && measureRailSky(document.querySelector<HTMLElement>('.theme-shelf'));
 </script>
 
+{#if shown}
 <svg class="geometry" width="100%" height="100%">
   {#each [...floors] as [id, f] (id)}
     <g data-floor-id={id} data-headroom={f.headroom}>
@@ -25,6 +29,7 @@
     </g>
   {/if}
 </svg>
+{/if}
 
 <style>
   .geometry { position: absolute; inset: 0; }

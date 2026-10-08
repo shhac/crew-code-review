@@ -1,22 +1,20 @@
 import { describe, expect, it } from 'vitest';
 import type { Ledge, PageMap } from '../floors';
-import { createFox, FADE, foxView, POSES, reconcileFox, restingFox, stepFox, type Cursor, type Fox } from './fox';
+import type { Cursor } from '../pointer';
+import { fixed, scene, steps } from '../test-scene';
+import { createFox, FADE, foxView, POSES, reconcileFox, restingFox, stepFox, type Fox, type Trip } from './fox';
 
 // A heading rule with room above it, and a card top below with the 22px the
 // dashboard's first row of cards has.
 const rule: Ledge = { left: 100, right: 700, y: 200, base: 200, room: 40, headroom: Infinity, kind: 'heading' };
 const card: Ledge = { left: 100, right: 400, y: 222, base: 500, room: 22, headroom: 22, kind: 'card' };
-const scene = (floors: [number, Ledge][], obstacles: PageMap['obstacles'] = []): PageMap => ({ floors: new Map(floors), obstacles, width: 1000, height: 800 });
-const fixed = (v: number) => () => v;
 const still = (x: number, y: number, at = -Infinity): Cursor => ({ x, y, at });
 
 // Runs the fox forward in 50ms steps, keeping every state it passes through.
-function trace(fox: Fox, s: PageMap, from: number, to: number, cursor: (t: number) => Cursor | null = () => null, rand = fixed(0.5)): Fox[] {
-  const times = Array.from({ length: Math.floor((to - from) / 50) + 1 }, (_, i) => from + i * 50);
-  return times.reduce((states, t) => [...states, stepFox(states.at(-1)!, s, t, 50, rand, cursor(t))], [fox]);
-}
+const trace = (fox: Fox, s: PageMap, from: number, to: number, cursor: (t: number) => Cursor | null = () => null, rand = fixed(0.5)) =>
+  steps(fox, from, to, (f, t) => stepFox(f, s, t, 50, rand, cursor(t)));
 const modes = (states: Fox[]) => states.map((f) => f.mode).filter((m, i, all) => m !== all[i - 1]);
-const asleep = (floor: number, x: number, over: Partial<Fox> = {}): Fox => ({ ...createFox(scene([[floor, floor === 1 ? rule : card]]), 0, fixed(0.5))!, floor, x, restless: Infinity, ...over });
+const asleep = (floor: number, x: number, over: Partial<Fox> = {}): Fox => ({ ...createFox(scene([[floor, floor === 1 ? rule : card]]), 0, fixed(0.5))!, floor, x, until: Infinity, ...over });
 
 describe('fox placement', () => {
   it('curls up on the longest clear stretch in view', () => {
@@ -33,7 +31,7 @@ describe('fox placement', () => {
   it('sleeps through reduced motion where it lay, and in the middle of a fresh stretch otherwise', () => {
     const s = scene([[1, rule]]);
     const lay = { ...asleep(1, 150), mode: 'trot' as const };
-    expect(restingFox(s, lay)).toMatchObject({ floor: 1, x: 150, mode: 'asleep', restless: Infinity });
+    expect(restingFox(s, lay)).toMatchObject({ floor: 1, x: 150, mode: 'asleep', until: Infinity });
     expect(restingFox(s, null)).toMatchObject({ floor: 1, x: 300 });
   });
 });
@@ -131,7 +129,7 @@ describe('fox woken by the cursor', () => {
 describe('fox on its own', () => {
   it('wakes when restless and pounces where there is room, the arc held under the clear space', () => {
     const s = scene([[1, rule]], [{ left: 0, right: 1000, top: 140, bottom: 160 }]);
-    const fox = asleep(1, 300, { restless: 100 });
+    const fox = asleep(1, 300, { until: 100 });
     const states = trace(fox, s, 0, 5000);
     expect(modes(states).slice(0, 6)).toEqual(['asleep', 'waking', 'crouch', 'leap', 'dig', 'settle']);
     const leaps = states.map((f, i) => [f, foxView(f, s, (i - 1) * 50)!] as const).filter(([f]) => f.mode === 'leap');
@@ -143,7 +141,7 @@ describe('fox on its own', () => {
 
   it('trots somewhere else instead where a pounce would not fit', () => {
     const s = scene([[2, card]]);
-    const states = trace(asleep(2, 150, { restless: 100 }), s, 0, 2000);
+    const states = trace(asleep(2, 150, { until: 100 }), s, 0, 2000);
     expect(modes(states).slice(0, 3)).toEqual(['asleep', 'waking', 'trot']);
   });
 
@@ -153,7 +151,7 @@ describe('fox on its own', () => {
     const turning = states.flatMap((f, i) => (f.mode === 'settle' ? [foxView(f, s, (i - 1) * 50)!.dir] : []));
     expect(turning.filter((d, i) => i > 0 && d !== turning[i - 1]).length).toBe(2);
     expect(states.at(-1)).toMatchObject({ mode: 'asleep', x: 400, dir: 1 });
-    expect(states.at(-1)!.restless).toBeGreaterThan(40000);
+    expect(states.at(-1)!.until).toBeGreaterThan(40000);
   });
 });
 
@@ -181,5 +179,46 @@ describe('fox and layout changes', () => {
   it('keeps a trip under way while out of sight', () => {
     const away = asleep(1, 300, { mode: 'away', until: 500, trip: { floor: 2, entry: 8, x: 100 } });
     expect(reconcileFox(away, scene([]), 0, fixed(0.5))).toBe(away);
+  });
+});
+
+describe('fox trips', () => {
+  const lower: Ledge = { ...card, y: 300, headroom: 60 };
+  const away = (trip: Trip) => asleep(1, 300, { mode: 'away', until: 0, trip });
+  const trip = { floor: 2, entry: 8, x: 100 };
+
+  it('trots in only while the way in is still open', () => {
+    expect(stepFox(away(trip), scene([[1, rule], [2, lower]]), 10, 50, fixed(0.5), null)).toMatchObject({ mode: 'enter', floor: 2, x: 8, target: 100 });
+    const closed = [
+      scene([[1, rule], [2, { ...lower, y: 780 }]]),
+      scene([[1, rule], [2, lower]], [{ left: 100, right: 130, top: 285, bottom: 295 }]),
+      scene([[1, rule], [2, lower]], [{ left: 190, right: 210, top: 285, bottom: 295 }]),
+    ];
+    for (const s of closed) expect(stepFox(away(trip), s, 10, 50, fixed(0.5), null)).toMatchObject({ mode: 'asleep', floor: 1 });
+  });
+
+  it('stays out of sight and tries again later when there is nowhere at all', () => {
+    expect(stepFox(away(trip), scene([]), 10, 50, fixed(0.5), null)).toMatchObject({ mode: 'away', until: 2010 });
+  });
+
+  it('keeps to its own ledge when its stretch reaches neither end, whatever else is free', () => {
+    const boxedIn = [{ left: 150, right: 160, top: 185, bottom: 195 }, { left: 540, right: 550, top: 185, bottom: 195 }];
+    const s = scene([[1, rule], [2, lower]], boxedIn);
+    const states = trace(asleep(1, 300), s, 0, 5000, () => still(rule.left + 340, rule.y - 8));
+    expect(states.some((f) => f.mode === 'exit')).toBe(false);
+    expect(states.find((f) => f.mode === 'trot')).toMatchObject({ floor: 1, dir: -1 });
+  });
+
+  it('changes ledge on its own too, when it wakes restless with no room to pounce', () => {
+    const s = scene([[2, card], [3, { ...card, y: 400, headroom: 60 }]]);
+    const states = trace(asleep(2, 150, { until: 100 }), s, 0, 20000);
+    expect(modes(states).slice(0, 4)).toEqual(['asleep', 'waking', 'exit', 'away']);
+    expect(states.find((f) => f.mode === 'enter')).toMatchObject({ floor: 3 });
+  });
+
+  it('pounces back the way it came when there is no room ahead', () => {
+    const s = scene([[1, rule]], [{ left: 0, right: 1000, top: 140, bottom: 160 }]);
+    const crouched = trace(asleep(1, 580, { until: 100, dir: 1 }), s, 0, 800).find((f) => f.mode === 'crouch');
+    expect(crouched).toMatchObject({ target: 544, dir: -1 });
   });
 });

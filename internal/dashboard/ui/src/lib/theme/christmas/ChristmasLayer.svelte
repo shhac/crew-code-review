@@ -18,7 +18,6 @@
   export let random: () => number = Math.random;
   const players = [createRobinPlayback(), createRobinPlayback(1800)];
 
-  const debug = new URLSearchParams(location.search).get('theme-debug') === '1';
   let floors: ReadonlyMap<number, Ledge> = new Map();
   let scene: Scene = { floors, obstacles: [], width: 0, height: 0 };
   let birds: Bird[] = createFlock(scene, 0, random);
@@ -73,7 +72,7 @@
 </script>
 
 <div class="seasonal-overlay" aria-hidden="true" data-christmas>
-  {#if debug}<Geometry {floors} />{/if}
+  <Geometry {floors} />
   <svg width="100%" height="100%">
     {#each [...floors] as [id, f] (id)}
       {@const feet = birds.flatMap(bird => !bird.action && bird.perch?.floor === id ? [bird.perch.x] : [])}

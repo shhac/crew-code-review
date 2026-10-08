@@ -45,6 +45,11 @@ describe('frost', () => {
     const lit = caught.get(1)!.glints[0];
     expect(lit.at).toBe(100000);
     expect(shine(lit, 100300)).toBeCloseTo(0.8);
+    // A second pass while it is still glinting changes nothing; one after
+    // starts the glint again.
+    const pass = (at: number) => catchLight(caught, floors, { from: { x: x - 30, y: 297 }, to: { x: x + 30, y: 297 }, at }).get(1)!.glints[0].at;
+    expect(pass(100300)).toBe(100000);
+    expect(pass(100600)).toBe(100600);
     // Kept across a remeasure.
     expect(reconcileRime(floors, [], caught).get(1)!.glints[0].at).toBe(100000);
   });

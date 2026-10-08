@@ -1,6 +1,6 @@
-import { clearance, type Ledge, type PageMap } from '../floors';
-import type { Point } from '../pointer';
-import { between, type Rand } from '../seed';
+import { clearance, inView, type Ledge, type PageMap } from '../floors';
+import type { Cursor, Point } from '../pointer';
+import { between, maxBy, type Rand } from '../seed';
 
 // A hedgehog living in a small unlit woodpile on one card top. It stays in
 // while the cursor is moving, peeks out once the page has been still for a
@@ -23,8 +23,6 @@ const INSET = 24;
 // cards are about 25px, which is what sized the art.
 const HEADROOM = 22;
 const MIN_WIDTH = 220;
-const TOP_MARGIN = 70;
-const BOTTOM_MARGIN = 30;
 // A ledge whose free stretch is shorter than this is only good for peeking.
 const MIN_ROAM = 40;
 // How finely the hedgehog's range is searched for obstacles.
@@ -40,15 +38,11 @@ const HURRY = 34;
 export type Mode = 'hidden' | 'peek' | 'walk' | 'sniff' | 'curled' | 'flee' | 'home';
 export type Home = { floor: number; pile: number; lo: number; hi: number };
 export type Hog = { home: Home | null; x: number; dir: 1 | -1; mode: Mode; target: number; until: number; out: number };
-// The last place the cursor moved to, and when.
-export type Cursor = Point & { at: number };
 
 // Any text, chart, control or card in the band just above the ledge blocks
 // the part of the ledge under it. A heading rule qualifies only along the
 // stretch its own text leaves free.
 const blocked = (f: Ledge, scene: PageMap, x0: number, x1: number) => clearance(f, scene.obstacles, x0, x1) < HEADROOM;
-
-const inView = (f: Ledge, scene: PageMap) => f.y >= TOP_MARGIN && f.y <= scene.height - BOTTOM_MARGIN && f.left >= 0 && f.right <= scene.width;
 
 // Walks left from hi, a step at a time, until the hedgehog would stand under
 // something or reach the ledge's inset; returns how far it got.
@@ -80,7 +74,7 @@ export function chooseHome(scene: PageMap, previous: Home | null = null): Home |
   if (sameHome(again, previous)) return again;
   // The roomiest ledge in view, so the hedgehog has somewhere to walk.
   const homes = [...scene.floors].flatMap(([id, f]) => homeOn(id, f, scene) ?? []);
-  return homes.reduce<Home | null>((best, h) => (!best || h.hi - h.lo > best.hi - best.lo ? h : best), null);
+  return maxBy(homes, (h) => h.hi - h.lo) ?? null;
 }
 
 // A hedgehog newly moved in: tucked inside its pile, waiting for stillness.

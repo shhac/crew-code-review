@@ -1,11 +1,11 @@
-import { between, type Rand } from '../seed';
+import { between, pick, type Rand } from '../seed';
+import type { SkySize } from '../sky';
 
 // Fireworks in the rail's empty sky above the bonfire, never over the page.
 // They are kept deliberately quiet: one burst at a time, many seconds apart,
 // a small fixed number of sparks, and no flash; the sparks fade in and out
 // rather than popping to full brightness.
 
-export type Sky = { width: number; height: number };
 export type Burst = { at: number; x: number; y: number; colour: string; sparks: number; reach: number; turn: number };
 // A spark and the short trail it draws behind it (tx, ty).
 export type Spark = { x: number; y: number; tx: number; ty: number; r: number; opacity: number };
@@ -20,14 +20,14 @@ const COLOURS = ['#f4c25b', '#ff8a4c', '#9fd3ff', '#c9a7ff', '#ffe9a8'];
 
 
 // A sky too small to hold a burst gets none.
-export const roomy = (sky: Sky) => sky.width >= 120 && sky.height >= 90;
+export const roomy = (sky: SkySize) => sky.width >= 120 && sky.height >= 90;
 
 // How far a spark has fallen by the time it has faded to almost nothing;
 // below that a spark leaving the sky would be visibly cut off.
 const VISIBLE_FALL = GRAVITY * (0.7 * LIFE / 1000) ** 2;
 const EDGE = 4;
 
-export function nextBurst(after: number, sky: Sky, rand: Rand): Burst {
+export function nextBurst(after: number, sky: SkySize, rand: Rand): Burst {
   const x = sky.width * between(rand, 0.25, 0.75);
   const y = sky.height * between(rand, 0.25, 0.5);
   const wanted = Math.min(sky.width, sky.height) * between(rand, 0.22, 0.3);
@@ -37,7 +37,7 @@ export function nextBurst(after: number, sky: Sky, rand: Rand): Burst {
     at: after + between(rand, GAP.min, GAP.max),
     x,
     y,
-    colour: COLOURS[Math.floor(between(rand, 0, COLOURS.length - 0.001))],
+    colour: pick(rand, COLOURS),
     sparks: Math.round(between(rand, 18, MAX_SPARKS)),
     reach: Math.max(0, Math.min(wanted, room)),
     turn: between(rand, 0, Math.PI * 2),
@@ -46,7 +46,7 @@ export function nextBurst(after: number, sky: Sky, rand: Rand): Burst {
 
 // The rocket's climb from the bottom of the sky to where it bursts, as a
 // short fading streak; null outside the climb.
-export function rocket(b: Burst, sky: Sky, now: number): { x: number; y1: number; y2: number; opacity: number } | null {
+export function rocket(b: Burst, sky: SkySize, now: number): { x: number; y1: number; y2: number; opacity: number } | null {
   const t = (now - (b.at - RISE)) / RISE;
   if (t < 0 || t >= 1) return null;
   const head = sky.height - (sky.height - b.y) * (1 - (1 - t) ** 2);
@@ -77,7 +77,7 @@ export function sparks(b: Burst, now: number): Spark[] {
 }
 
 // Reduced motion: one burst held at its fullest, dimmed.
-export function stillBurst(sky: Sky): Spark[] {
+export function stillBurst(sky: SkySize): Spark[] {
   const b: Burst = { at: 0, x: sky.width / 2, y: sky.height * 0.4, colour: COLOURS[0], sparks: 20, reach: Math.min(sky.width, sky.height) * 0.25, turn: 0 };
   return sparks(b, LIFE * 0.35).map((s) => ({ ...s, opacity: 0.4 }));
 }

@@ -3,18 +3,15 @@
   // a hedgehog living in a small unlit woodpile on one of them, well away
   // from the bonfire on the rail. The layer takes no pointer events.
   import { onMount } from 'svelte';
-  import { measurePage, samePage, type Ledge, type PageMap } from '../floors';
+  import { samePage, type Ledge, type PageMap } from '../floors';
   import Geometry from '../Geometry.svelte';
-  import { watchPage } from '../layout';
-  import { sceneLoop } from '../lifecycle';
-  import { observePointer, pointerTracker } from '../pointer';
+  import { ledgeScene } from '../layout';
   import { emberColour, fanEmbers, heat, reconcileEmbers, type Ember } from './embers';
-  import { BALL, createHog, HOG, hogPoint, moving, PILE, reconcileHog, restingHog, stepHog, type Cursor, type Hog } from './hedgehog';
+  import { BALL, createHog, HOG, hogPoint, moving, PILE, reconcileHog, restingHog, stepHog, type Hog } from './hedgehog';
   import hedgehogBall from './hedgehog-ball.webp';
   import hedgehogWalk from './hedgehog-walk.webp';
   import woodpile from './woodpile.webp';
 
-  const debug = new URLSearchParams(location.search).get('theme-debug') === '1';
   let floors: ReadonlyMap<number, Ledge> = new Map();
   let scene: PageMap = { floors, obstacles: [], width: 0, height: 0 };
   let embers: ReadonlyMap<number, Ember[]> = new Map();
@@ -38,43 +35,27 @@
     return samePage(scene, previous) ? current : reconcileHog(current, scene, time);
   }
 
-  onMount(() => {
-    const pointer = pointerTracker();
-    let cursor: Cursor | null = null;
-    let dirty = true, measuredAt = -Infinity, last = performance.now();
-    const measure = (time: number) => {
-      const previous = scene;
-      scene = measurePage();
-      floors = scene.floors;
+  onMount(() => ledgeScene({
+    motion(still) { reduced = still; hog = null; },
+    measured(page, previous, time) {
+      scene = page;
+      floors = page.floors;
       embers = reconcileEmbers(floors, embers);
       hog = placeHog(hog, previous, time);
-      dirty = false; measuredAt = performance.now();
-    };
-    const loop = sceneLoop((time, still) => {
-      if (still !== reduced) { reduced = still; hog = null; dirty = true; }
+    },
+    frame(time, step) {
       now = time;
-      if (dirty) measure(time);
-      if (still) return;
-      const dt = Math.min(100, time - last);
-      last = time;
+      if (!step) return;
       const before = hog?.x ?? 0;
-      hog = hog && stepHog(hog, scene, time, dt, Math.random, cursor);
+      hog = hog && stepHog(hog, scene, time, step.dt, Math.random, step.cursor);
       walked += Math.abs((hog?.x ?? 0) - before);
-    }, () => { pointer.reset(); dirty = true; last = performance.now(); });
-    const changed = () => { pointer.reset(); dirty = true; loop.invalidate(); };
-    const stopWatching = watchPage(changed, () => ({ scene, at: measuredAt }));
-    const stopPointer = observePointer((e) => {
-      cursor = { x: e.clientX, y: e.clientY, at: performance.now() };
-      if (reduced || dirty || document.hidden) { pointer.reset(); return; }
-      const stroke = pointer.move(e, performance.now());
-      if (stroke) embers = fanEmbers(embers, floors, stroke);
-    }, pointer.reset);
-    return () => { loop.stop(); stopPointer(); stopWatching(); };
-  });
+    },
+    stroke(segment) { embers = fanEmbers(embers, floors, segment); },
+  }));
 </script>
 
 <div class="seasonal-overlay" aria-hidden="true" data-bonfire>
-  {#if debug}<Geometry {floors} />{/if}
+  <Geometry {floors} />
   <svg width="100%" height="100%">
     <defs>
       <radialGradient id="ember-glow">

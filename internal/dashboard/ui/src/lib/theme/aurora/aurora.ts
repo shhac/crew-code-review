@@ -1,11 +1,12 @@
 import { hash } from '../seed';
+import type { SkySize } from '../sky';
 
 // The northern lights in the rail's sky: three curtains, each a rippling
 // lower edge with rays fading upward, coloured from one slow cycle. Kept
 // deliberately calm: everything changes over many seconds, nothing jumps,
 // and no curtain is ever more than PEAK opaque.
 
-type Rgb = readonly [number, number, number];
+export type Rgb = readonly [number, number, number];
 // Green, teal, violet, and round again.
 const STOPS: readonly Rgb[] = [[111, 245, 176], [95, 224, 224], [180, 140, 255]];
 const CYCLE = 48000;
@@ -19,14 +20,17 @@ export function auroraRgb(now: number): Rgb {
   const t = ((now / CYCLE) % 1 + 1) % 1 * STOPS.length;
   const i = Math.floor(t);
   const a = STOPS[i], b = STOPS[(i + 1) % STOPS.length];
-  const k = (1 - Math.cos(Math.PI * (t - i))) / 2;
+  return mixRgb(a, b, (1 - Math.cos(Math.PI * (t - i))) / 2);
+}
+
+// k of the way from a to b, channel by channel.
+export function mixRgb(a: Rgb, b: Rgb, k: number): Rgb {
   const mix = (c: 0 | 1 | 2) => Math.round(a[c] + (b[c] - a[c]) * k);
   return [mix(0), mix(1), mix(2)];
 }
 
-export const rgb = ([r, g, b]: Rgb, alpha = 1) => (alpha === 1 ? `rgb(${r}, ${g}, ${b})` : `rgba(${r}, ${g}, ${b}, ${alpha})`);
+export const rgb = ([r, g, b]: Rgb) => `rgb(${r}, ${g}, ${b})`;
 
-export type Sky = { width: number; height: number };
 export type Curtain = { d: string; colour: string; opacity: number };
 
 // Each curtain's shape and pace: where its lower edge hangs (as a share of
@@ -39,9 +43,9 @@ const CURTAINS = [
 const STEP = 6;
 
 // A sky too small to hold the curtains gets none.
-export const roomy = (sky: Sky) => sky.width >= 120 && sky.height >= 60;
+export const roomy = (sky: SkySize) => sky.width >= 120 && sky.height >= 60;
 
-export function curtains(sky: Sky, now: number): Curtain[] {
+export function curtains(sky: SkySize, now: number): Curtain[] {
   const xs = Array.from({ length: Math.ceil(sky.width / STEP) + 1 }, (_, i) => Math.min(sky.width, i * STEP));
   return CURTAINS.map((c, n) => {
     const swing = (2 * Math.PI * now) / c.drift + c.phase;
@@ -60,7 +64,7 @@ export function curtains(sky: Sky, now: number): Curtain[] {
 export type Ray = { x: number; width: number; opacity: number };
 const RAY_SPACING = 5;
 
-export function rays(sky: Sky, now: number): Ray[] {
+export function rays(sky: SkySize, now: number): Ray[] {
   return Array.from({ length: Math.ceil(sky.width / RAY_SPACING) }, (_, i) => {
     const seed = i * 7.31;
     const beat = 4000 + 7000 * hash(seed + 1);

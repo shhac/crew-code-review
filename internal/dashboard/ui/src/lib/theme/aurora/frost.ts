@@ -1,7 +1,7 @@
-import { clearRuns, type Ledge, type Obstacle } from '../floors';
+import { clearRuns, type Ledge, type Obstacle, type Run } from '../floors';
 import { distance, type Segment } from '../pointer';
 import { hash } from '../seed';
-import { auroraRgb, rgb } from './aurora';
+import { auroraRgb, mixRgb, rgb, type Rgb } from './aurora';
 
 // A thin rim of frost along the ledges, its crystals tinted by the aurora's
 // current colour, with a few glints that catch the light now and then, and
@@ -21,7 +21,7 @@ const GLINT_PEAK = 0.8;
 const GLINT_REACH = 24;
 // The page holds at most this many glints, so a long page costs no more.
 export const MAX_GLINTS = 40;
-const ICE = [232, 246, 255] as const;
+const ICE: Rgb = [232, 246, 255];
 const TINT = 0.35;
 
 export type Glint = { key: string; x: number; size: number; phase: number; period: number; at: number };
@@ -31,22 +31,34 @@ export type Rime = { d: string; glints: Glint[] };
 
 export function rimeOn(id: number, f: Ledge, obstacles: readonly Obstacle[]): Rime {
   const runs = clearRuns(f, obstacles, CLEAR, { inset: INSET });
-  // Crystals grow in small seeded clusters, a fan of three, rather than in a
-  // row, which would read as grass or stitching.
-  const d = runs.map((r) => {
-    const clusters = Array.from({ length: Math.floor((r.hi - r.lo) / CLUSTER_SPACING) }, (_, i) => i).flatMap((i) => {
-      const seed = id * 17 + Math.round(r.lo) + i * 5;
-      if (hash(seed) < 0.35) return [];
-      const x = r.lo + CLUSTER_SPACING * (i + 0.2 + 0.6 * hash(seed + 1));
-      const h = 2 + (TALL - 2) * hash(seed + 2);
-      return [-1, 0, 1].map((k) => {
-        const tall = k === 0 ? h : h * 0.65;
-        return `M${(x + k * 1.2).toFixed(1)} 0L${(x + k * (1.2 + tall * 0.55)).toFixed(1)} ${(-tall * (k === 0 ? 1 : 0.85)).toFixed(1)}`;
-      });
-    });
-    return `M${r.lo} -0.5H${r.hi}${clusters.join('')}`;
+  return { d: runs.map((r) => rimPath(id, r)).join(''), glints: runs.flatMap((r) => glintsOn(id, r)) };
+}
+
+// The slots of a run spacing apart, for seeded decorations.
+const slots = (r: Run, spacing: number) => Array.from({ length: Math.floor((r.hi - r.lo) / spacing) }, (_, i) => i);
+
+// The rim along a run, and crystals in small seeded clusters, a fan of three,
+// rather than in a row, which would read as grass or stitching.
+function rimPath(id: number, r: Run): string {
+  const clusters = slots(r, CLUSTER_SPACING).flatMap((i) => {
+    const seed = id * 17 + Math.round(r.lo) + i * 5;
+    if (hash(seed) < 0.35) return [];
+    return [fan(r.lo + CLUSTER_SPACING * (i + 0.2 + 0.6 * hash(seed + 1)), 2 + (TALL - 2) * hash(seed + 2))];
+  });
+  return `M${r.lo} -0.5H${r.hi}${clusters.join('')}`;
+}
+
+// Three crystals from about x, the middle one h tall and upright, the outer
+// two shorter and leaning away.
+function fan(x: number, h: number): string {
+  return [-1, 0, 1].map((k) => {
+    const [tall, rise] = k === 0 ? [h, h] : [h * 0.65, h * 0.65 * 0.85];
+    return `M${(x + k * 1.2).toFixed(1)} 0L${(x + k * (1.2 + tall * 0.55)).toFixed(1)} ${(-rise).toFixed(1)}`;
   }).join('');
-  const glints = runs.flatMap((r) => Array.from({ length: Math.floor((r.hi - r.lo) / GLINT_SPACING) }, (_, i) => i).flatMap((i) => {
+}
+
+function glintsOn(id: number, r: Run): Glint[] {
+  return slots(r, GLINT_SPACING).flatMap((i) => {
     const seed = id * 41 + Math.round(r.lo) * 3 + i;
     if (hash(seed) < 0.5) return [];
     return [{
@@ -57,8 +69,7 @@ export function rimeOn(id: number, f: Ledge, obstacles: readonly Obstacle[]): Ri
       period: 7000 + 8000 * hash(seed + 4),
       at: -Infinity,
     }];
-  }));
-  return { d, glints };
+  });
 }
 
 // Frost for every ledge, keeping the moment each surviving glint last caught
@@ -102,7 +113,11 @@ export function catchLight(rime: ReadonlyMap<number, Rime>, floors: ReadonlyMap<
 
 // Ice white, tinted by the aurora at now.
 export function frostColour(now: number): string {
-  const sky = auroraRgb(now);
-  const mix = (c: 0 | 1 | 2) => Math.round(ICE[c] + (sky[c] - ICE[c]) * TINT);
-  return rgb([mix(0), mix(1), mix(2)]);
+  return rgb(mixRgb(ICE, auroraRgb(now), TINT));
+}
+
+// A four-pointed star of radius s, pinched to a fifth of that between points.
+export function glintPath(s: number): string {
+  const pinch = s * 0.22;
+  return `M0 ${-s}L${pinch} ${-pinch}L${s} 0L${pinch} ${pinch}L0 ${s}L${-pinch} ${pinch}L${-s} 0L${-pinch} ${-pinch}Z`;
 }
