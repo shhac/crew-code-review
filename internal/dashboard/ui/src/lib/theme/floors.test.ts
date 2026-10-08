@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { measureFloors } from './floors';
+import { measureFloors, samePage } from './floors';
 import { fits } from './spiderwalk/model';
 
 // measureFloors only needs querySelectorAll and rects, so a fake page stands
@@ -76,5 +76,21 @@ describe('measureFloors', () => {
 
   it('ignores slivers too narrow to walk', () => {
     expect(ys(page([{ left: 0, right: 80, top: 300, bottom: 400 }]))).toEqual([]);
+  });
+});
+
+describe('samePage', () => {
+  const ledge = { left: 0, right: 600, y: 200, base: 400, room: 50, headroom: Infinity, kind: 'card' as const };
+  const map = (y = 200, obstacles = [{ left: 0, right: 10, top: 0, bottom: 10 }], width = 1000) =>
+    ({ floors: new Map([[1, { ...ledge, y }]]), obstacles, width, height: 800 });
+
+  it('treats separately measured but identical pages as the same, open headroom included', () => {
+    expect(samePage(map(), map())).toBe(true);
+  });
+
+  it('sees a scroll, a moved obstacle or a resize as a change', () => {
+    expect(samePage(map(), map(180))).toBe(false);
+    expect(samePage(map(), map(200, [{ left: 0, right: 12, top: 0, bottom: 10 }]))).toBe(false);
+    expect(samePage(map(), map(200, undefined, 900))).toBe(false);
   });
 });

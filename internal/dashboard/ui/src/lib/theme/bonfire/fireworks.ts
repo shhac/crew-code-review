@@ -1,3 +1,5 @@
+import { between, type Rand } from '../seed';
+
 // Fireworks in the rail's empty sky above the bonfire, never over the page.
 // They are kept deliberately quiet: one burst at a time, many seconds apart,
 // a small fixed number of sparks, and no flash; the sparks fade in and out
@@ -16,20 +18,28 @@ const MAX_OPACITY = 0.8;
 const GRAVITY = 14;
 const COLOURS = ['#f4c25b', '#ff8a4c', '#9fd3ff', '#c9a7ff', '#ffe9a8'];
 
-type Rand = () => number;
-const between = (rand: Rand, lo: number, hi: number) => lo + Math.max(0, Math.min(1, rand())) * (hi - lo);
 
 // A sky too small to hold a burst gets none.
 export const roomy = (sky: Sky) => sky.width >= 120 && sky.height >= 90;
 
+// How far a spark has fallen by the time it has faded to almost nothing;
+// below that a spark leaving the sky would be visibly cut off.
+const VISIBLE_FALL = GRAVITY * (0.7 * LIFE / 1000) ** 2;
+const EDGE = 4;
+
 export function nextBurst(after: number, sky: Sky, rand: Rand): Burst {
+  const x = sky.width * between(rand, 0.25, 0.75);
+  const y = sky.height * between(rand, 0.25, 0.5);
+  const wanted = Math.min(sky.width, sky.height) * between(rand, 0.22, 0.3);
+  // Every spark stays inside the sky while it can still be seen.
+  const room = Math.min(x, sky.width - x, y, sky.height - y - VISIBLE_FALL) - EDGE;
   return {
     at: after + between(rand, GAP.min, GAP.max),
-    x: sky.width * between(rand, 0.25, 0.75),
-    y: sky.height * between(rand, 0.25, 0.5),
+    x,
+    y,
     colour: COLOURS[Math.floor(between(rand, 0, COLOURS.length - 0.001))],
     sparks: Math.round(between(rand, 18, MAX_SPARKS)),
-    reach: Math.min(sky.width, sky.height) * between(rand, 0.22, 0.3),
+    reach: Math.max(0, Math.min(wanted, room)),
     turn: between(rand, 0, Math.PI * 2),
   };
 }

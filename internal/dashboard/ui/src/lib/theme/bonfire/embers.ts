@@ -10,7 +10,7 @@ export type Ember = { key: string; x: number; size: number; phase: number; perio
 
 // The glow spreads this far above the ledge; less clear space and it would
 // light up whatever sits over the card.
-export const GLOW = 8;
+const GLOW = 8;
 const SPACING = 70;
 const INSET = 14;
 const FAN_REACH = 28;
@@ -46,13 +46,14 @@ export function reconcileEmbers(floors: ReadonlyMap<number, Ledge>, old: Readonl
   }));
 }
 
+// What is left at now of the last fanning.
+const flare = (e: Ember, now: number) => e.fanned * 2 ** (-Math.max(0, now - e.at) / FAN_HALF_LIFE);
+
 // 0 is cold ash, 1 a bright coal. Evaluated from time alone, so a skipped
 // frame or a hidden tab changes nothing.
 export function heat(e: Ember, now: number): number {
   const cycle = 0.5 + 0.5 * Math.sin(2 * Math.PI * (now / e.period + e.phase));
-  const smoulder = 0.1 + 0.75 * cycle ** 2;
-  const flare = e.fanned * 2 ** (-Math.max(0, now - e.at) / FAN_HALF_LIFE);
-  return Math.min(1, smoulder + flare);
+  return Math.min(1, 0.1 + 0.75 * cycle ** 2 + flare(e, now));
 }
 
 export function fanEmbers(embers: ReadonlyMap<number, Ember[]>, floors: ReadonlyMap<number, Ledge>, stroke: Segment): Map<number, Ember[]> {
@@ -61,9 +62,8 @@ export function fanEmbers(embers: ReadonlyMap<number, Ember[]>, floors: Readonly
     if (!f) return [id, list];
     return [id, list.map((e) => {
       const strength = Math.max(0, Math.min(1, (FAN_REACH - distance({ x: f.left + e.x, y: f.y - 2 }, stroke.from, stroke.to)) / 10));
-      if (!strength) return e;
-      const remaining = e.fanned * 2 ** (-Math.max(0, stroke.at - e.at) / FAN_HALF_LIFE);
-      return { ...e, fanned: Math.max(remaining, strength), at: stroke.at };
+      // A second pass never cools what the first left burning.
+      return strength ? { ...e, fanned: Math.max(flare(e, stroke.at), strength), at: stroke.at } : e;
     })];
   }));
 }
@@ -72,7 +72,6 @@ export function fanEmbers(embers: ReadonlyMap<number, Ember[]>, floors: Readonly
 export function emberColour(h: number): string {
   const stops = [[112, 106, 100], [236, 96, 38], [255, 214, 120]];
   const t = Math.max(0, Math.min(1, h)) * 2;
-  const [a, b] = t < 1 ? [stops[0], stops[1]] : [stops[1], stops[2]];
-  const k = t < 1 ? t : t - 1;
+  const [a, b, k] = t < 1 ? [stops[0], stops[1], t] : [stops[1], stops[2], t - 1];
   return `rgb(${a.map((v, i) => Math.round(v + (b[i] - v) * k)).join(', ')})`;
 }

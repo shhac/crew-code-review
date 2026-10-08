@@ -2,9 +2,12 @@ import { describe, expect, it } from 'vitest';
 import { LIFE, nextBurst, rocket, roomy, sparks, stillBurst } from './fireworks';
 
 const sky = { width: 200, height: 220 };
-const draws = [0.1, 0.9, 0.4, 0.6, 0.3, 0.7, 0.2];
-const counter = { i: 0 };
-const rand = () => draws[counter.i++ % draws.length];
+// Each call gets its own sequence, so no test depends on another's draws.
+const sequence = (draws: number[]) => {
+  const counter = { i: 0 };
+  return () => draws[counter.i++ % draws.length];
+};
+const rand = sequence([0.1, 0.9, 0.4, 0.6, 0.3, 0.7, 0.2]);
 
 describe('fireworks', () => {
   it('spaces bursts many seconds apart, so two are never in the air at once', () => {
@@ -28,6 +31,25 @@ describe('fireworks', () => {
     expect(sparks(b, b.at + 1)[0].opacity).toBeLessThan(0.2);
     expect(sparks(b, b.at - 1)).toEqual([]);
     expect(sparks(b, b.at + LIFE)).toEqual([]);
+  });
+
+  it('keeps every visible spark and the rocket inside the sky, whatever the draws', () => {
+    const skies = [{ width: 120, height: 90 }, { width: 200, height: 150 }, { width: 200, height: 240 }];
+    const extremes = Array.from({ length: 2 ** 7 }, (_, n) => Array.from({ length: 7 }, (_, bit) => (n >> bit) & 1));
+    for (const s of skies) {
+      for (const draws of extremes) {
+        const b = nextBurst(0, s, sequence(draws));
+        for (let t = b.at - 700; t < b.at + LIFE; t += 40) {
+          const trail = rocket(b, s, t);
+          if (trail) expect(Math.min(trail.y1, trail.y2) >= 0 && Math.max(trail.y1, trail.y2) <= s.height).toBe(true);
+          for (const p of sparks(b, t).filter((p) => p.opacity > 0.1)) {
+            for (const [x, y] of [[p.x, p.y], [p.tx, p.ty]]) {
+              expect({ x, y, inside: x >= 0 && x <= s.width && y >= 0 && y <= s.height }).toMatchObject({ inside: true });
+            }
+          }
+        }
+      }
+    }
   });
 
   it('climbs as a rocket before it bursts', () => {

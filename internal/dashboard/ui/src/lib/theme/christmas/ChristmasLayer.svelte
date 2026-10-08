@@ -2,7 +2,7 @@
   import { onMount } from 'svelte';
   import { measurePage, samePage, type Ledge } from '../floors';
   import Geometry from '../Geometry.svelte';
-  import { observeLayout } from '../layout';
+  import { watchPage } from '../layout';
   import { ROBIN } from './snow';
   import { pointerTracker, observePointer } from '../pointer';
   import { sceneLoop } from '../lifecycle';
@@ -60,7 +60,7 @@
       birds = still ? birds.map(bird => ({ ...bird, action: null, alert: false })) : advanceFlock(birds, scene, now, random);
     }, reset);
     const changed = () => { pointer.reset(); dirty = true; loop.invalidate(); };
-    const stopObserving = observeLayout(changed);
+    const stopWatching = watchPage(changed, () => ({ scene, at: measuredAt }));
     const stopPointer = observePointer((e) => {
       if (reduced || dirty || document.hidden) { pointer.reset(); return; }
       const stroke = pointer.move(e, clock());
@@ -68,13 +68,7 @@
       snow = wipeSnow(snow, floors, stroke);
       birds = advanceFlock(birds, scene, stroke.at, random, stroke);
     }, pointer.reset);
-    // CSS-only changes need a measurement, but unchanged geometry must not
-    // cancel an action every second. Compare bounds before invalidating.
-    const timer = window.setInterval(() => {
-      if (document.hidden || performance.now() - measuredAt < 1000) return;
-      if (!samePage(measurePage(), scene)) changed();
-    }, 1000);
-    return () => { players.forEach(player => player.reset()); loop.stop(); stopPointer(); stopObserving(); clearInterval(timer); };
+    return () => { players.forEach(player => player.reset()); loop.stop(); stopPointer(); stopWatching(); };
   });
 </script>
 

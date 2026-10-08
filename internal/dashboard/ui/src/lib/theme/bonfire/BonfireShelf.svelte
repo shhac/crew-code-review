@@ -45,7 +45,8 @@
       colour = burst.colour;
       trail = rocket(burst, sky, now);
     }, () => { burst = null; });
-    const resized = () => { measure(); loop.invalidate(); };
+    // A burst placed in the old sky could land outside the new one.
+    const resized = () => { measure(); burst = null; loop.invalidate(); };
     // In a full-height rail, the brand settling or the nav gaining its
     // leaderboard link moves the sky's top edge without resizing the rail,
     // so watch everything in it.

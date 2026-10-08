@@ -32,6 +32,20 @@ describe('embers', () => {
     expect(heat(fanned, 20000)).toBeCloseTo(heat(target, 20000), 2);
   });
 
+  it('lets a weaker second pass add to, never cool, the first one\'s flare', () => {
+    const floors = new Map([[4, card]]);
+    const embers = reconcileEmbers(floors);
+    const x = card.left + embers.get(4)![0].x;
+    const strong = fanEmbers(embers, floors, { from: { x: x - 20, y: card.y - 2 }, to: { x: x + 20, y: card.y - 2 }, at: 1000 });
+    const weak = fanEmbers(strong, floors, { from: { x: x - 20, y: card.y - 24 }, to: { x: x + 20, y: card.y - 24 }, at: 1500 });
+    const [once, twice] = [strong.get(4)![0], weak.get(4)![0]];
+    expect(twice.fanned).toBeCloseTo(2 ** (-500 / 1400), 5);
+    expect(heat(twice, 1600)).toBeCloseTo(heat(once, 1600), 5);
+    const partial = fanEmbers(embers, floors, { from: { x: x - 20, y: card.y - 24 }, to: { x: x + 20, y: card.y - 24 }, at: 1000 }).get(4)![0];
+    expect(partial.fanned).toBeGreaterThan(0);
+    expect(partial.fanned).toBeLessThan(1);
+  });
+
   it('keeps an ember\'s fanning through a re-measure that leaves it in place', () => {
     const floors = new Map([[4, card]]);
     const fanned = new Map([[4, reconcileEmbers(floors).get(4)!.map((e) => ({ ...e, fanned: 1, at: 10 }))]]);

@@ -35,6 +35,31 @@ describe('hedgehog home', () => {
     expect(card.left + home.lo - HOG.width / 2).toBeGreaterThanOrEqual(360);
   });
 
+  it('moves in afresh, tucked away, when its home stops being usable', () => {
+    const s = scene([[1, card], [2, { ...card, y: 600 }]]);
+    const out: Hog = { ...createHog(s, 0), mode: 'walk', x: 200, target: 150 };
+    const gone = reconcileHog(out, scene([[2, { ...card, y: 600 }]]), 10);
+    expect(gone).toMatchObject({ mode: 'hidden', home: { floor: 2 } });
+    const narrowed = reconcileHog(out, scene([[1, { ...card, right: 600 }]]), 10);
+    expect(narrowed.mode).toBe('hidden');
+    expect(narrowed.home!.pile).not.toBe(out.home!.pile);
+    const covered = reconcileHog(out, scene([[1, card]], [{ left: card.left + out.home!.pile - 10, right: card.left + out.home!.pile + 10, top: 285, bottom: 295 }]), 10);
+    expect(covered).toMatchObject({ mode: 'hidden', home: null });
+    expect(hogPoint(covered, scene([]))).toBeNull();
+  });
+
+  it('keeps a walking hedgehog in range when something lands on its ledge', () => {
+    const s = scene([[1, card]]);
+    const out: Hog = { ...createHog(s, 0), mode: 'walk', x: 60, target: 45 };
+    const later = reconcileHog(out, scene([[1, card]], [{ left: card.left + 100, right: card.left + 160, top: 285, bottom: 295 }]), 10);
+    expect(later.home!.floor).toBe(1);
+    expect(later.mode).toBe('walk');
+    expect(card.left + later.x - HOG.width / 2).toBeGreaterThanOrEqual(card.left + 160);
+    expect(later.target).toBeGreaterThanOrEqual(later.home!.lo);
+    const peeking = reconcileHog({ ...out, mode: 'peek', x: 400 }, s, 10);
+    expect(peeking.x).toBe(400);
+  });
+
   it('keeps its pile on a card that scrolls away rather than moving it', () => {
     const s = scene([[1, card], [2, { ...card, y: 600 }]]);
     const hog = createHog(s, 0);
@@ -48,10 +73,27 @@ describe('hedgehog behaviour', () => {
 
   it('stays hidden while the cursor keeps moving, and peeks out once it is still', () => {
     const hog = createHog(s, 0);
-    const busy = run(hog, s, 0, 6000, { x: 900, y: 100, at: 5990 });
-    expect(['hidden']).toContain(busy.mode);
+    const times = Array.from({ length: 120 }, (_, i) => i * 50);
+    const busy = times.reduce((h, t) => stepHog(h, s, t, 50, fixed(0.5), { x: 900, y: 100, at: t }), hog);
+    expect(busy.mode).toBe('hidden');
     const still = run(hog, s, 0, 6000, { x: 900, y: 100, at: 0 });
     expect(still.mode).not.toBe('hidden');
+  });
+
+  it('ducks back in if the cursor moves while it is peeking', () => {
+    const states = trace(createHog(s, 0), s, 0, 4000, null);
+    const peeking = states.find((h) => h.mode === 'peek')!;
+    const ducked = stepHog(peeking, s, 3000, 50, fixed(0.5), { x: 900, y: 100, at: 3000 });
+    expect(ducked).toMatchObject({ mode: 'hidden', x: peeking.home!.pile, until: 3000 + 2500 });
+  });
+
+  it('only ever peeks from a home with no room to walk', () => {
+    const cramped = scene([[1, card]], [{ left: card.left, right: card.left + 470, top: 280, bottom: 296 }]);
+    const home = chooseHome(cramped)!;
+    expect(home.hi - home.lo).toBeLessThan(40);
+    const modes = trace(createHog(cramped, 0), cramped, 0, 30000, null).map((h) => h.mode);
+    expect(modes).toContain('peek');
+    expect(modes).not.toContain('walk');
   });
 
   it('wanders out along its ledge, then goes home', () => {

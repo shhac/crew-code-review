@@ -1,11 +1,11 @@
 import type { PageMap } from '../floors';
+import { between } from '../seed';
 import type { Point, Segment } from '../pointer';
 import { choosePerch, type Perch } from './snow';
 import { arcPoint, clearArc, clearFlight, flightRoute, routeFacing, routeLength, routePoint, routeTilt, type FlightCurve } from './flight-route';
 export type Scene = PageMap;
 type Action = { from: Point; to: Point; target: Perch; start: number; duration: number; rise: number; kind: 'hop' | 'flight'; route?: FlightCurve[] };
 export type Bird = { perch: Perch | null; action: Action | null; restUntil: number; flightAt: number; cooldown: number; nearAt: number; alert: boolean; escapeHops: number };
-const range = (rand: () => number, min: number, max: number) => min + Math.max(0, Math.min(1, rand())) * (max - min);
 export const position = (p: Perch, scene: Scene): Point => ({ x: scene.floors.get(p.floor)!.left + p.x, y: scene.floors.get(p.floor)!.y });
 export function perchCandidates(s: Scene): Perch[] {
   const candidates: Perch[] = [];
@@ -37,7 +37,7 @@ export function safePerch(s: Scene, previous: Perch | null = null): Perch | null
 }
 export function createBird(scene: Scene, now: number, rand: () => number): Bird {
   // Leave enough time for the resting peck to finish before ordinary movement.
-  return { perch: safePerch(scene), action: null, restUntil: now + range(rand, 9000, 13000), flightAt: now + range(rand, 12000, 20000), cooldown: -Infinity, nearAt: -Infinity, alert: false, escapeHops: 0 };
+  return { perch: safePerch(scene), action: null, restUntil: now + between(rand, 9000, 13000), flightAt: now + between(rand, 12000, 20000), cooldown: -Infinity, nearAt: -Infinity, alert: false, escapeHops: 0 };
 }
 export function birdPose(b: Bird, scene: Scene, now: number): (Point & { dir: 1 | -1; rotation: number; pose: 'perch' | 'alert' | 'flight' }) | null {
   if (!b.perch || !scene.floors.has(b.perch.floor)) return null;
@@ -53,7 +53,7 @@ export function safeRoute(from: Point, to: Point, rise: number, s: Scene, kind: 
   return clearArc({ from, to, rise }, s, kind === 'flight' ? 35 : 30, kind === 'flight' ? 59 : 37);
 }
 export function reconcileBird(b: Bird, s: Scene, now: number, rand: () => number): Bird {
-  return { ...b, perch: safePerch(s, b.perch), action: null, alert: false, nearAt: -Infinity, escapeHops: 0, restUntil: now + range(rand, 9000, 13000) };
+  return { ...b, perch: safePerch(s, b.perch), action: null, alert: false, nearAt: -Infinity, escapeHops: 0, restUntil: now + between(rand, 9000, 13000) };
 }
 export function advanceBird(b: Bird, s: Scene, now: number, rand: () => number, cursor: Segment | null = null, flightAllowed = true): Bird {
   if (!b.perch) return b;
@@ -65,7 +65,7 @@ export function advanceBird(b: Bird, s: Scene, now: number, rand: () => number, 
     const from = position(b.perch, s), to = position(a.target, s);
     if (from.x !== a.from.x || from.y !== a.from.y || to.x !== a.to.x || to.y !== a.to.y) return reconcileBird(b, s, now, rand);
     if (now < b.action.start + b.action.duration) return b;
-    return { ...b, perch: b.action.target, action: null, restUntil: now + range(rand, 9000, 13000) };
+    return { ...b, perch: b.action.target, action: null, restUntil: now + between(rand, 9000, 13000) };
   }
   const here = position(b.perch, s);
   const d = cursor ? Math.hypot(cursor.to.x - here.x, cursor.to.y - here.y) : Infinity;
@@ -75,15 +75,15 @@ export function advanceBird(b: Bird, s: Scene, now: number, rand: () => number, 
   const chased = escape && next.escapeHops >= 2;
   if (!escape && (cursor || now < b.restUntil || next.alert)) return next;
   const dir: 1 | -1 = escape ? (cursor!.to.x >= here.x ? -1 : 1) : rand() < .5 ? -1 : 1;
-  const length = range(rand, 18, 32), rise = range(rand, 6, 10);
+  const length = between(rand, 18, 32), rise = between(rand, 6, 10);
   const target = { ...b.perch, x: b.perch.x + dir * length, dir };
   const held = choosePerch(s.floors, s.width, s.height, target);
   let action: Action | null = held === target && safeRoute(here, position(target, s), rise, s, 'hop')
-    ? { from: here, to: position(target, s), target, rise, start: now, duration: range(rand, 220, 320), kind: 'hop' } : null;
+    ? { from: here, to: position(target, s), target, rise, start: now, duration: between(rand, 220, 320), kind: 'hop' } : null;
   if (flightAllowed && (now >= b.flightAt || chased) && (!escape || !action || chased)) {
     const candidates = perchCandidates(s);
     // Rotate the choices, but always try a different ledge before this one.
-    const offset = Math.max(0, Math.min(candidates.length - 1, Math.floor(range(rand, 0, candidates.length))));
+    const offset = Math.max(0, Math.min(candidates.length - 1, Math.floor(between(rand, 0, candidates.length))));
     const rotated = [...candidates.slice(offset), ...candidates.slice(0, offset)];
     const ordered = [...rotated.filter(p => p.floor !== b.perch!.floor), ...rotated.filter(p => p.floor === b.perch!.floor)];
     const away = (p: Perch) => (position(p, s).x - here.x) * dir > 0;
@@ -96,13 +96,13 @@ export function advanceBird(b: Bird, s: Scene, now: number, rand: () => number, 
       if (!route) continue;
       const p: Perch = { ...candidate, dir: routeFacing(route, 1) };
       action = { from: here, to, target: p, route, rise: 0, start: now,
-        duration: Math.max(range(rand, 900, 1200), routeLength(route) / range(rand, 220, 280) * 1000), kind: 'flight' };
+        duration: Math.max(between(rand, 900, 1200), routeLength(route) / between(rand, 220, 280) * 1000), kind: 'flight' };
       break;
     }
   }
-  if (!action) return { ...next, restUntil: now + range(rand, 9000, 13000) };
+  if (!action) return { ...next, restUntil: now + between(rand, 9000, 13000) };
   return { ...next, perch: { ...b.perch, dir: action.route ? routeFacing(action.route, 0) : dir }, action, alert: false,
     escapeHops: action.kind === 'flight' ? 0 : escape ? next.escapeHops + 1 : 0,
     cooldown: escape ? now + action.duration + 2000 : b.cooldown,
-    flightAt: action.kind === 'flight' ? now + range(rand, 12000, 20000) : b.flightAt };
+    flightAt: action.kind === 'flight' ? now + between(rand, 12000, 20000) : b.flightAt };
 }

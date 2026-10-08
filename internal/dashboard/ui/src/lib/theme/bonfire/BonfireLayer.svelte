@@ -5,11 +5,11 @@
   import { onMount } from 'svelte';
   import { measurePage, samePage, type Ledge, type PageMap } from '../floors';
   import Geometry from '../Geometry.svelte';
-  import { observeLayout } from '../layout';
+  import { watchPage } from '../layout';
   import { sceneLoop } from '../lifecycle';
   import { observePointer, pointerTracker } from '../pointer';
   import { emberColour, fanEmbers, heat, reconcileEmbers, type Ember } from './embers';
-  import { BALL, createHog, HOG, PILE, reconcileHog, restingHog, stepHog, type Cursor, type Hog } from './hedgehog';
+  import { BALL, createHog, HOG, hogPoint, moving, PILE, reconcileHog, restingHog, stepHog, type Cursor, type Hog } from './hedgehog';
   import hedgehogBall from './hedgehog-ball.webp';
   import hedgehogWalk from './hedgehog-walk.webp';
   import woodpile from './woodpile.webp';
@@ -26,7 +26,17 @@
   const STILL_HEAT = 0.55;
 
   $: pile = hog?.home ? floors.get(hog.home.floor) : undefined;
-  $: hogAt = hog && pile && hog.mode !== 'hidden' ? { x: pile.left + hog.x, y: pile.y } : null;
+  $: hogAt = hog && hog.mode !== 'hidden' ? hogPoint(hog, scene) : null;
+  $: art = hog?.mode === 'curled' ? { src: hedgehogBall, ...BALL } : { src: hedgehogWalk, ...HOG };
+  $: bob = hog && moving(hog.mode) ? -Math.abs(Math.sin(walked / 3)) : 0;
+
+  // Reduced motion draws a still frame only after a measurement, so the
+  // resting hedgehog is placed here with everything else.
+  function placeHog(current: Hog | null, previous: PageMap, time: number): Hog {
+    if (reduced) return restingHog(scene);
+    if (!current) return createHog(scene, time);
+    return samePage(scene, previous) ? current : reconcileHog(current, scene, time);
+  }
 
   onMount(() => {
     const pointer = pointerTracker();
@@ -37,15 +47,14 @@
       scene = measurePage();
       floors = scene.floors;
       embers = reconcileEmbers(floors, embers);
-      if (!hog) hog = createHog(scene, time);
-      else if (!samePage(scene, previous)) hog = reconcileHog(hog, scene, time);
+      hog = placeHog(hog, previous, time);
       dirty = false; measuredAt = performance.now();
     };
     const loop = sceneLoop((time, still) => {
       if (still !== reduced) { reduced = still; hog = null; dirty = true; }
       now = time;
       if (dirty) measure(time);
-      if (still) { hog = restingHog(scene); return; }
+      if (still) return;
       const dt = Math.min(100, time - last);
       last = time;
       const before = hog?.x ?? 0;
@@ -53,19 +62,14 @@
       walked += Math.abs((hog?.x ?? 0) - before);
     }, () => { pointer.reset(); dirty = true; last = performance.now(); });
     const changed = () => { pointer.reset(); dirty = true; loop.invalidate(); };
-    const stopObserving = observeLayout(changed);
+    const stopWatching = watchPage(changed, () => ({ scene, at: measuredAt }));
     const stopPointer = observePointer((e) => {
       cursor = { x: e.clientX, y: e.clientY, at: performance.now() };
       if (reduced || dirty || document.hidden) { pointer.reset(); return; }
       const stroke = pointer.move(e, performance.now());
       if (stroke) embers = fanEmbers(embers, floors, stroke);
     }, pointer.reset);
-    // Catches CSS-only layout changes without disturbing an unchanged scene.
-    const timer = window.setInterval(() => {
-      if (document.hidden || performance.now() - measuredAt < 1000) return;
-      if (!samePage(measurePage(), scene)) changed();
-    }, 1000);
-    return () => { loop.stop(); stopPointer(); stopObserving(); clearInterval(timer); };
+    return () => { loop.stop(); stopPointer(); stopWatching(); };
   });
 </script>
 
@@ -96,11 +100,11 @@
       class="hedgehog"
       class:sniffing={hog.mode === 'sniff' && !reduced}
       data-hedgehog={hog.mode}
-      src={hog.mode === 'curled' ? hedgehogBall : hedgehogWalk}
+      src={art.src}
       alt=""
-      width={hog.mode === 'curled' ? BALL.width : HOG.width}
-      height={hog.mode === 'curled' ? BALL.height : HOG.height}
-      style="left: {hogAt.x - (hog.mode === 'curled' ? BALL.width : HOG.width) / 2}px; top: {hogAt.y - (hog.mode === 'curled' ? BALL.height : HOG.height) + (hog.mode === 'walk' || hog.mode === 'flee' || hog.mode === 'home' ? -Math.abs(Math.sin(walked / 3)) : 0)}px; transform: scaleX({hog.dir})"
+      width={art.width}
+      height={art.height}
+      style="left: {hogAt.x - art.width / 2}px; top: {hogAt.y - art.height + bob}px; transform: scaleX({hog.dir})"
     />
   {/if}
   {#if pile && hog?.home}
