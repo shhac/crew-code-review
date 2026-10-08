@@ -113,6 +113,32 @@ export function measureFloors(root: Page = document): Map<number, Ledge> {
   );
 }
 
+// How tall something can stand on f over the stretch x0..x1 (ledge-local):
+// up to the next ledge above, and lower wherever text, a control, a chart or
+// a card overhangs that stretch.
+export function clearance(f: Ledge, obstacles: readonly Obstacle[], x0: number, x1: number): number {
+  const over = obstacles.filter((o) => o.top < f.y - 1 && o.right > f.left + x0 && o.left < f.left + x1);
+  return Math.min(f.headroom, ...over.map((o) => f.y - o.bottom));
+}
+
+// A stretch of a ledge, in ledge-local x.
+export type Run = { lo: number; hi: number };
+
+// The stretches of f where something height tall fits, sampled every step px
+// and kept inset px in from each end.
+export function clearRuns(f: Ledge, obstacles: readonly Obstacle[], height: number, { inset = 8, step = 4 } = {}): Run[] {
+  if (f.headroom < height) return [];
+  // Only what overhangs low enough can block; the rest is skipped per sample.
+  const low = obstacles.filter((o) => f.y - o.bottom < height);
+  const count = Math.max(0, Math.floor((f.right - f.left - 2 * inset) / step) + 1);
+  const xs = Array.from({ length: count }, (_, i) => inset + i * step);
+  return xs.reduce<Run[]>((runs, x) => {
+    if (clearance(f, low, x - step / 2, x + step / 2) < height) return runs;
+    const last = runs.at(-1);
+    return last && last.hi === x - step ? [...runs.slice(0, -1), { lo: last.lo, hi: x }] : [...runs, { lo: x, hi: x }];
+  }, []);
+}
+
 // One measurement of everything a scene is placed against, taken together so
 // its ledges and obstacles always describe the same layout.
 export type PageMap = { floors: ReadonlyMap<number, Ledge>; obstacles: readonly Obstacle[]; width: number; height: number };

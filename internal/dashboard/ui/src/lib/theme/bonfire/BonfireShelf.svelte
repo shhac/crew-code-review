@@ -5,6 +5,7 @@
   // Fireworks stay inside the rail's free space, never over the page.
   import { onMount } from 'svelte';
   import { sceneLoop } from '../lifecycle';
+  import { measureRailSky, watchRailSky } from '../sky';
   import bonfire from './bonfire.webp';
   import toffeeApples from './toffee-apples.webp';
   import { LIFE, nextBurst, rocket, roomy, sparks, stillBurst, type Burst, type Sky, type Spark } from './fireworks';
@@ -23,14 +24,8 @@
   let colour = '#f4c25b';
   let trail: ReturnType<typeof rocket> = null;
 
-  // The free space between the nav and this shelf; none when the shelf is
-  // hidden on a cramped rail.
-  function measure() {
-    const nav = root?.previousElementSibling;
-    if (!root || !nav || root.offsetParent === null) { sky = { width: 0, height: 0 }; return; }
-    const room = root.getBoundingClientRect().top - nav.getBoundingClientRect().bottom - 16;
-    sky = { width: root.clientWidth, height: Math.max(0, Math.min(240, room)) };
-  }
+  // None when the shelf is hidden on a cramped rail.
+  const measure = () => { sky = measureRailSky(root) ?? { width: 0, height: 0 }; };
 
   onMount(() => {
     let burst: Burst | null = null;
@@ -46,14 +41,8 @@
       trail = rocket(burst, sky, now);
     }, () => { burst = null; });
     // A burst placed in the old sky could land outside the new one.
-    const resized = () => { measure(); burst = null; loop.invalidate(); };
-    // In a full-height rail, the brand settling or the nav gaining its
-    // leaderboard link moves the sky's top edge without resizing the rail,
-    // so watch everything in it.
-    const observer = new ResizeObserver(resized);
-    [root.parentElement, ...(root.parentElement?.children ?? [])].forEach((el) => el && observer.observe(el));
-    addEventListener('resize', resized);
-    return () => { loop.stop(); observer.disconnect(); removeEventListener('resize', resized); };
+    const stopWatching = watchRailSky(root, () => { measure(); burst = null; loop.invalidate(); });
+    return () => { loop.stop(); stopWatching(); };
   });
 </script>
 

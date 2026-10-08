@@ -1,6 +1,10 @@
 <script lang="ts">
   import type { Ledge } from './floors';
+  import { measureRailSky } from './sky';
   export let floors: ReadonlyMap<number, Ledge>;
+
+  // Remeasured whenever the ledges are, which is often enough for debugging.
+  $: sky = floors && measureRailSky(document.querySelector<HTMLElement>('.theme-shelf'));
 </script>
 
 <svg class="geometry" width="100%" height="100%">
@@ -14,6 +18,12 @@
       <text x={f.left + 4} y={f.y - 4}>{id}{Number.isFinite(f.headroom) ? ` · headroom ${Math.round(f.headroom)}` : ''}</text>
     </g>
   {/each}
+  {#if sky}
+    <g data-sky>
+      <rect class="sky" x={sky.left} y={sky.top} width={sky.width} height={sky.height} />
+      <text x={sky.left + 4} y={sky.top + 12}>sky {Math.round(sky.width)}x{Math.round(sky.height)}</text>
+    </g>
+  {/if}
 </svg>
 
 <style>
@@ -21,5 +31,6 @@
   line { stroke-width: 1; stroke-dasharray: 4 3; }
   .floor { stroke: #78c8ff; }
   .wall { stroke: #bd9cff; }
+  .sky { fill: none; stroke: #78c8ff; stroke-width: 1; stroke-dasharray: 4 3; }
   text { fill: #78c8ff; font: 10px ui-monospace, monospace; }
 </style>

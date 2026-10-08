@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { measureFloors, samePage } from './floors';
+import { clearance, clearRuns, measureFloors, samePage } from './floors';
 import { fits } from './spiderwalk/model';
 
 // measureFloors only needs querySelectorAll and rects, so a fake page stands
@@ -92,5 +92,23 @@ describe('samePage', () => {
     expect(samePage(map(), map(180))).toBe(false);
     expect(samePage(map(), map(200, [{ left: 0, right: 12, top: 0, bottom: 10 }]))).toBe(false);
     expect(samePage(map(), map(200, undefined, 900))).toBe(false);
+  });
+});
+
+describe('clearance', () => {
+  const f = { left: 100, right: 500, y: 300, base: 400, room: 50, headroom: 40, kind: 'card' as const };
+  const text = { left: 200, right: 260, top: 270, bottom: 284 };
+
+  it('is the headroom, lowered by whatever overhangs the stretch', () => {
+    expect(clearance(f, [text], 0, 50)).toBe(40);
+    expect(clearance(f, [text], 90, 110)).toBe(16);
+    // Something below the ledge, or starting at it, is not overhead.
+    expect(clearance(f, [{ left: 100, right: 500, top: 300, bottom: 400 }], 0, 400)).toBe(40);
+  });
+
+  it('splits the ledge into the runs where something that tall fits', () => {
+    expect(clearRuns(f, [text], 20)).toEqual([{ lo: 8, hi: 96 }, { lo: 164, hi: 392 }]);
+    expect(clearRuns(f, [text], 16)).toEqual([{ lo: 8, hi: 392 }]);
+    expect(clearRuns(f, [], 41)).toEqual([]);
   });
 });

@@ -1,4 +1,4 @@
-import type { Ledge, PageMap } from '../floors';
+import { clearance, type Ledge, type PageMap } from '../floors';
 import type { Point } from '../pointer';
 import { between, type Rand } from '../seed';
 
@@ -43,13 +43,10 @@ export type Hog = { home: Home | null; x: number; dir: 1 | -1; mode: Mode; targe
 // The last place the cursor moved to, and when.
 export type Cursor = Point & { at: number };
 
-
 // Any text, chart, control or card in the band just above the ledge blocks
 // the part of the ledge under it. A heading rule qualifies only along the
 // stretch its own text leaves free.
-function blocked(f: Ledge, scene: PageMap, x0: number, x1: number): boolean {
-  return scene.obstacles.some((o) => o.bottom > f.y - HEADROOM && o.top < f.y - 1 && o.right > f.left + x0 && o.left < f.left + x1);
-}
+const blocked = (f: Ledge, scene: PageMap, x0: number, x1: number) => clearance(f, scene.obstacles, x0, x1) < HEADROOM;
 
 const inView = (f: Ledge, scene: PageMap) => f.y >= TOP_MARGIN && f.y <= scene.height - BOTTOM_MARGIN && f.left >= 0 && f.right <= scene.width;
 
