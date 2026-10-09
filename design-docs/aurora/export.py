@@ -13,15 +13,15 @@ from pathlib import Path
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from art import ankle, crop, export, feature, fill_only, keyed, poses, rows  # noqa: E402
+from art import crop, export, feature, fill_only, keyed, poses, rows  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
 OUT = HERE.parents[1] / 'internal/dashboard/ui/src/lib/theme/aurora'
 FOX = ['fox-curled', 'fox-alert', 'fox-trot', 'fox-bow', 'fox-pounce']
 # The poses still shipped: curled up, asleep or looking up. Standing and
 # moving, the fox is put together from PARTS, on legs: fox-haunch.png from
-# hip to knee, the upper piece of fox-legs.png from knee to ankle, standing
-# on fox-paw.png.
+# hip to knee (shoulder to elbow), the upper piece of fox-legs.png for the
+# bones below, standing on fox-toes.png.
 SHIPPED = ['fox-curled', 'fox-alert']
 PARTS = ['fox-tail', 'fox-torso', 'fox-head']
 # The eye's size in drawing units, and file pixels per drawing unit.
@@ -32,10 +32,12 @@ RES = 12
 EYES = {'fox-sheet.png': (1187, 416), 'fox-parts.png': (1895, 386)}
 # In drawing units: the legs' thickness below the haunch, outline included;
 # the haunch's at its thick end (the hind legs'; the forelegs draw it
-# thinner); and the paws' length, a small paw, its ankle under the leg's end.
+# thinner); and the toes' length. A fox stands on its toes; the leg comes
+# down onto their back (HEEL, as fractions of their box).
 LEG = 1.9
 HAUNCH = 3.2
-PAW = 3.5
+TOES = 3.0
+HEEL = (0.3, 0.3)
 
 
 def on_eye(sheet: str) -> float:
@@ -59,12 +61,10 @@ def main() -> None:
     haunch = crop(keyed(HERE / 'fox-haunch.png'))
     units['fox-haunch'] = export(haunch, OUT, 'fox-haunch', HAUNCH * RES / haunch.shape[0])
     units['fox-haunch-fur'] = export(fill_only(haunch), OUT, 'fox-haunch-fur', HAUNCH * RES / haunch.shape[0])
-    paw = crop(keyed(HERE / 'fox-paw.png'))
-    stub_x, stub_y = ankle(paw)
-    scale = PAW * RES / paw.shape[1]
-    units['fox-paw'] = export(paw, OUT, 'fox-paw', scale)
-    units['fox-paw-fur'] = export(fill_only(paw), OUT, 'fox-paw-fur', scale)
-    print(f'fox-paw ankle: {stub_x * scale / RES:.2f}, {stub_y * scale / RES:.2f}')
+    toes = crop(keyed(HERE / 'fox-toes.png'))
+    w, h = export(toes, OUT, 'fox-toes', TOES * RES / toes.shape[1])
+    export(fill_only(toes), OUT, 'fox-toes-fur', TOES * RES / toes.shape[1])
+    print(f'fox-toes: {w / RES:.2f}x{h / RES:.2f}, heel {w * HEEL[0] / RES:.2f}, {h * HEEL[1] / RES:.2f}')
     for name, (w, h) in units.items():
         print(f'{name}: {w}x{h}, drawing units {w / RES:.2f}x{h / RES:.2f}')
 

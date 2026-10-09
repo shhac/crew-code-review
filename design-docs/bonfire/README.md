@@ -74,9 +74,12 @@ is put together from generated parts on the shared rig (`lib/theme/rig/`):
 - **Body and head.** The head sits in front of the body's cream chest; its
   back edge is soft fur with no outline, so no line crosses the neck (a first
   try tucked the head behind the body, whose outline then crossed it).
-- **Legs.** Each leg is one piece of leg art laid from hip to ankle (too short
-  to show a knee), on a small flat paw, stepping in a four-beat walk driven by
-  distance walked, so planted paws never slide. Each piece is drawn twice:
+- **Legs.** A hedgehog walks on its soles, low, on short legs mostly under its
+  skirt of spines. Each leg is one piece of leg art laid from hip to heel (too
+  short to show a knee), the hind feet reaching back a little and the front
+  ones forward, stepping in a four-beat walk driven by distance walked, so
+  planted feet never slide. The front feet are like little hands, a palm with
+  four clawed fingers; the hind ones are longer paws. Each piece is drawn twice:
   outlined, then as fur alone with its outline taken out, so outlines only run
   round the leg's silhouette; the near pair's fur is drawn over the body's
   edge, so the legs grow out of it. The far pair is a shade darker.
@@ -132,9 +135,11 @@ magenta `#FF00FF` background, with `design-docs/halloween/pumpkins.png` and
 same way on 2026-10-09, with `hedgehog-sheet.png`'s walking pose as the
 character reference: `hedgehog-parts-2.png` (the body without legs or head,
 and the head with a soft unoutlined back edge to sit over the body),
-`hedgehog-legs.png` (leg pieces) and `hedgehog-paw.png` (a small paw seen from
-the side, its ankle on top). A first parts sheet, with a neck tab tucked
-behind the body, and a long foot that read as a human foot, were replaced.
+`hedgehog-legs.png` (leg pieces), `hedgehog-hand.png` (a front foot) and
+`hedgehog-hind.png` (a hind foot), each foot seen from the side with nothing
+sticking up out of it. A first parts sheet, with a neck tab tucked behind the
+body, then a long foot that read as a human foot, then a paw with an ankle
+stub on top, were each replaced.
 
 | Source | Shipped as (`ui/src/lib/theme/bonfire/`) | Display size | Notes |
 | --- | --- | --- | --- |
@@ -144,13 +149,14 @@ behind the body, and a long foot that read as a human foot, were replaced.
 | `hedgehog-sheet.png` | `hedgehog-ball.webp` | 17x16.6 units | Split at the widest empty column run. The walking pose is no longer shipped. |
 | `hedgehog-parts-2.png` | `hedgehog-body.webp`, `hedgehog-head.webp` | 22.3x15.7, 11.7x8.9 units | |
 | `hedgehog-legs.png` | `hedgehog-leg.webp`, `hedgehog-leg-fur.webp` | 2.3 units thick | The upper piece only; the fur version has its outline taken out (`art.py`'s `fill_only`). |
-| `hedgehog-paw.png` | `hedgehog-paw.webp`, `hedgehog-paw-fur.webp` | 4x2.3 units | Its ankle found from the art (`art.py`'s `ankle`) and printed by `export.py`. |
+| `hedgehog-hand.png` | `hedgehog-hand.webp`, `hedgehog-hand-fur.webp` | 3.4x1.3 units | |
+| `hedgehog-hind.png` | `hedgehog-hind.webp`, `hedgehog-hind-fur.webp` | 4.2x1.3 units | Each foot's heel (where the leg comes down) is set in `export.py` as a fraction of its box and printed. |
 
 The hedgehog's pictures are in drawing units, all on one scale: each sheet's
 eye is measured (`art.py`'s `feature`, from a seed point set in `export.py`)
 and every picture is exported so its eye is 1.82 units, at 12 file pixels per
 unit, sharp at the lab's zoom. Where parts sit, the neck pivot, the eye, the
-hips and the paws' ankles are set in `hedgehog-rig.ts`, measured against these
+hips and the feet's heels are set in `hedgehog-rig.ts`, measured against these
 exports (the lab's joints view shows them); regenerated parts mean measuring
 again.
 

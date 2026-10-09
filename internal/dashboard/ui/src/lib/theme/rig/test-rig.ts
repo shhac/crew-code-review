@@ -3,8 +3,9 @@ import type { Point } from '../pointer';
 import { footBox, piecesOf, turned, type Layer, type RigPose } from './rig';
 
 export const flatLayers = (layers: readonly Layer[]): Layer[] => layers.flatMap((l) => (l.kind === 'group' ? [l, ...flatLayers(l.layers)] : [l]));
-// Each leg once: from the outlined pass, not again from the fur over it.
-export const legsOf = (pose: RigPose) => flatLayers(pose.layers).flatMap((l) => (l.kind === 'legs' && !l.fur ? l.legs : []));
+// Each leg once (from the outlined pass, not again from the fur over it),
+// in the order the rig lists its legs' layers.
+export const legsOf = (pose: RigPose) => flatLayers(pose.layers).flatMap((l) => (l.kind === 'legs' && !l.fur ? l.legs.map((d) => d.limb) : []));
 export const lidsOf = (pose: RigPose) => flatLayers(pose.layers).filter((l) => l.kind === 'lid');
 export const imagesOf = (pose: RigPose) => flatLayers(pose.layers).flatMap((l) => (l.kind === 'image' ? [l.src] : []));
 
@@ -22,7 +23,7 @@ function reach(l: Exclude<Layer, { kind: 'group' }>): Point[] {
     case 'legs': {
       // Each piece runs half its thickness past its joints, every way; each
       // foot is its own box.
-      const pieces = l.legs.flatMap((leg, i) => piecesOf(leg, l.art, l.width, l.haunches[i]));
+      const pieces = l.legs.flatMap((leg) => piecesOf(leg, l.art, l.width));
       const joints = pieces.flatMap((p) => [p.from, p.to].flatMap((at) => corners(at.x - p.width / 2, at.y - p.width / 2, at.x + p.width / 2, at.y + p.width / 2)));
       const feet = l.legs.map((leg) => footBox(leg, l.art)).flatMap((b) => corners(b.x, b.y, b.x + b.width, b.y + b.height));
       return [...joints, ...feet];

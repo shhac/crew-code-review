@@ -4,10 +4,10 @@ import { gaitPhase, legsTo, restingFeet, steppingFeet, type Gait, type QuadLeg }
 
 const GROUND = 20;
 const WALK: Gait = { stride: 4, lift: 1.5, stance: 0.75 };
-const fore: QuadLeg = { hip: { x: 14, y: 12 }, reach: 0, thigh: 4, shin: 4.5, beat: 0, bend: 1, far: false };
-const hind: QuadLeg = { ...fore, hip: { x: 4, y: 12 }, beat: 0.5, bend: -1 };
+const fore: QuadLeg = { hip: { x: 14, y: 12 }, reach: 0, thigh: 4, shin: 4.5, beat: 0, bend: 1, far: false, fore: true };
+const hind: QuadLeg = { ...fore, hip: { x: 4, y: 12 }, beat: 0.5, bend: -1, fore: false };
 const hipsOf = (specs: readonly QuadLeg[]) => specs.map((s) => s.hip);
-const walking = (specs: readonly QuadLeg[], walked: number) => legsTo(specs, hipsOf(specs), steppingFeet(specs, hipsOf(specs), walked, GROUND, WALK));
+const walking = (specs: readonly QuadLeg[], walked: number) => legsTo(specs, hipsOf(specs), steppingFeet(specs, hipsOf(specs), walked, GROUND, WALK), GROUND, WALK.lift);
 
 describe('stepping', () => {
   it('keeps a planted foot still on the floor while the body walks on', () => {
@@ -48,8 +48,26 @@ describe('restingFeet', () => {
 });
 
 describe('legsTo', () => {
+  const toed: QuadLeg = { ...fore, toes: { length: 2, lean: 10, fold: 50 } };
+
+  it('stands a toe-walker on a bone from its toes, leaning back, folding further as the paw lifts', () => {
+    const [down] = legsTo([toed], [toed.hip], [{ x: 14, y: GROUND }], GROUND, 1);
+    expect(Math.hypot(down.ankle.x - down.foot.x, down.ankle.y - down.foot.y)).toBeCloseTo(2);
+    expect(down.ankle.x).toBeLessThan(down.foot.x);
+    expect(down.ankle.y).toBeLessThan(down.foot.y);
+    const [up] = legsTo([toed], [toed.hip], [{ x: 14, y: GROUND - 1 }], GROUND, 1);
+    const lean = (l: typeof down) => Math.atan2(l.foot.x - l.ankle.x, l.foot.y - l.ankle.y);
+    expect(lean(up)).toBeGreaterThan(lean(down));
+    expect(Math.hypot(up.knee.x - up.ankle.x, up.knee.y - up.ankle.y)).toBeCloseTo(toed.shin);
+  });
+
+  it('ends at the foot itself where there is no bone up from the toes', () => {
+    const [leg] = legsTo([fore], [fore.hip], [{ x: 14, y: GROUND }], GROUND);
+    expect(leg.ankle).toEqual(leg.foot);
+  });
+
   it('joins moved hips to chosen feet with legs of the right length', () => {
-    const [leg] = legsTo([fore], [{ x: 10, y: 15 }], [{ x: 13, y: GROUND }]);
+    const [leg] = legsTo([fore], [{ x: 10, y: 15 }], [{ x: 13, y: GROUND }], GROUND);
     expect(Math.hypot(leg.knee.x - 10, leg.knee.y - 15)).toBeCloseTo(fore.thigh);
     expect(Math.hypot(leg.foot.x - leg.knee.x, leg.foot.y - leg.knee.y)).toBeCloseTo(fore.shin);
   });

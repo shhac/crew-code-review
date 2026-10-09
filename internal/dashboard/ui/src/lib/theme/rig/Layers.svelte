@@ -1,7 +1,7 @@
 <script lang="ts">
   // One level of a rig's layers, in order; a group draws its own inside it.
   import Layers from './Layers.svelte';
-  import { bone, footBox, piecesOf, transformOf, type Layer } from './rig';
+  import { bone, footBox, footOf, piecesOf, transformOf, type Layer } from './rig';
 
   export let layers: readonly Layer[];
 </script>
@@ -11,11 +11,11 @@
     <image href={layer.src} x={layer.x} y={layer.y} width={layer.width} height={layer.height} />
   {:else if layer.kind === 'legs'}
     <g data-legs={layer.fur ? 'fur' : 'outlined'} class:far={layer.far}>
-      {#each layer.legs as leg, n}
-        {#each piecesOf(leg, layer.art, layer.width, layer.haunches[n]) as piece, i}
+      {#each layer.legs as leg}
+        {#each piecesOf(leg, layer.art, layer.width) as piece, i}
           <image href={layer.fur ? piece.fur : piece.src} preserveAspectRatio="none" {...bone(piece.from, piece.to, piece.width, layer.fur && i === 0)} />
         {/each}
-        <image href={layer.fur ? layer.art.foot.fur : layer.art.foot.src} {...footBox(leg, layer.art)} />
+        <image href={layer.fur ? footOf(leg, layer.art).fur : footOf(leg, layer.art).src} {...footBox(leg, layer.art)} />
       {/each}
     </g>
   {:else if layer.kind === 'patch'}

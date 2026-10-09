@@ -215,13 +215,21 @@ now are, so the rules hold every frame (`foxes.ts`, on the shared
 
 Single pictures slid along the ledge looked stiff. The tail, torso and head
 are now separate generated parts on the shared rig (`lib/theme/rig/`, as the
-hedgehogs are). Each leg is a haunch from hip to knee (thick where it meets
-the body, thicker on the hind legs), a furred lower leg to the ankle, and a
-small paw standing flat. Each piece is drawn twice, outlined and then as fur
+hedgehogs are). The legs follow a fox's: it stands on its toes, so each leg
+has three bones. A hind leg's hip is up in the rump; the thigh (a haunch,
+thick where it meets the body) runs down and forward to a knee at the belly,
+the shin back to a hock well off the ground, and a long bone near upright to
+the toes. A foreleg's shoulder is in the chest; the upper arm runs back to an
+elbow at the chest's foot, the forearm near straight down to a wrist just off
+the ground, and a short bone to the toes. The bottom bone's lean is set from
+the toes and folds further back as the paw lifts; the two above are solved
+between the hip (or shoulder) and that joint (`rig/gait.ts`). The toes are a
+compact rounded cluster standing on the ledge. Each piece is drawn twice, outlined and then as fur
 alone with its outline taken out, so outlines run only round the leg's
-silhouette, never across a knee or ankle; the near pair's fur is drawn over
-the torso's edge so those legs grow out of the body with no line across the
-hip. The far pair is a shade darker. Trotting, diagonal pairs step together,
+silhouette, never across a joint; the near pair's fur is drawn over the
+torso's edge so those legs grow out of the body with no line across the hip
+or shoulder. A first try put the hips at the torso's underside, with two bones
+and a flat paw, which looked stuck on and stood on what read as feet. The far pair is a shade darker. Trotting, diagonal pairs step together,
 driven by distance trotted so planted paws never slide; the body bounces
 gently and the head nods and the tail swishes once a stride. The bow tilts the body down onto forelegs reaching
 forward with the tail up; the crouch lowers it; the leap arcs it nose up then
@@ -263,8 +271,9 @@ magenta `#FF00FF` background, with `design-docs/halloween/pumpkins.png`,
 references. The fox's parts were generated the same way on 2026-10-09, with
 `fox-sheet.png`'s trotting pose as the character reference: `fox-parts.png`
 (tail, torso, head), `fox-haunch.png` (the tapered upper leg), `fox-legs.png`
-(leg pieces) and `fox-paw.png` (a small paw seen from the side). A long foot
-that read as a human foot was replaced by the paw.
+(leg pieces) and `fox-toes.png` (its toes, seen from the side). A long foot
+that read as a human foot, then a paw with an ankle stub on top, were
+replaced by the toes.
 
 | Source | Shipped as (`ui/src/lib/theme/aurora/`) | Display size |
 | --- | --- | --- |
@@ -273,7 +282,7 @@ that read as a human foot was replaced by the paw.
 | `fox-parts.png` | `fox-tail.webp`, `fox-torso.webp`, `fox-head.webp` | 10.8x11.2, 13.1x7.6, 10.3x10 units |
 | `fox-haunch.png` | `fox-haunch.webp`, `fox-haunch-fur.webp` | 3.2 units thick at the hip |
 | `fox-legs.png` | `fox-leg.webp`, `fox-leg-fur.webp` | 1.9 units thick; the upper piece only |
-| `fox-paw.png` | `fox-paw.webp`, `fox-paw-fur.webp` | 3.5x2.25 units |
+| `fox-toes.png` | `fox-toes.webp`, `fox-toes-fur.webp` | 3x1.25 units |
 
 The fox sheet is split into its five poses at the four widest runs of empty
 columns, and only the two curled ones are still shipped. The fox's pictures
@@ -281,8 +290,9 @@ are in drawing units, all on one scale: each sheet's eye is measured
 (`art.py`'s `feature`, from a seed point set in `export.py`) and every picture
 is exported so its eye is 1.544 units, at 12 file pixels per unit, sharp at
 the lab's zoom. The fur versions have their outline taken out (`art.py`'s
-`fill_only`); the paw's ankle is found from the art (`ankle`). Where parts
-sit, the pivots, the eye, the seam patch, the hips and the paws' ankles are
+`fill_only`); where the leg comes down onto the toes is set in `export.py`.
+Where parts sit, the pivots, the eye, the seam patch, the hips, the bones'
+lengths and the toes' heel are
 set in `fox-rig.ts`, measured against these exports (the lab's joints view
 shows them); regenerated parts mean measuring again. `export.py`
 reproduces every shipped file with the Halloween keying recipe, now shared

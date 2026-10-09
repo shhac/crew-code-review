@@ -1,5 +1,5 @@
 import type { Point } from '../pointer';
-import { fore, gaitPhase, legsTo, restingFeet, steppingFeet, type Gait, type QuadLeg } from '../rig/gait';
+import { gaitPhase, legsTo, restingFeet, steppingFeet, type Gait, type QuadLeg } from '../rig/gait';
 import { blinking, breath } from '../rig/life';
 import { legsLayer, lidLayers, stillPicture, turnAbout, turned, type Frame, type Fur, type LegArt, type RigPose, type Turn } from '../rig/rig';
 import { leapt, poseOf, type Fox } from './fox';
@@ -10,9 +10,9 @@ import haunchArt from './fox-haunch.webp';
 import headArt from './fox-head.webp';
 import legFurArt from './fox-leg-fur.webp';
 import legArt from './fox-leg.webp';
-import pawFurArt from './fox-paw-fur.webp';
-import pawArt from './fox-paw.webp';
 import tailArt from './fox-tail.webp';
+import toesFurArt from './fox-toes-fur.webp';
+import toesArt from './fox-toes.webp';
 import torsoArt from './fox-torso.webp';
 
 // The fox put together from its parts: a tail, a torso and a head over its
@@ -40,27 +40,39 @@ const SEAM = { x: 18.4, y: 13.2 };
 const HIND = { x: 12.5, y: 16 };
 
 const FACE: Fur = { fill: '#fbfcfc', outline: '#0a0809' };
-// A haunch from hip to knee, thick where it meets the body; the leg below
-// it to the ankle; a small paw.
+// A fox stands on its toes. Each leg: a haunch from hip to knee (shoulder
+// to elbow), thick where it meets the body; the leg on down to the hock (or
+// wrist); a bone from there to the toes, which stand on the ledge.
+const TOES = { src: toesArt, fur: toesFurArt, width: 3, height: 1.25, heel: { x: 0.9, y: 0.38 } };
 const LEG_ART: LegArt = {
   bone: legArt, boneFur: legFurArt, knee: true,
   thigh: { src: haunchArt, fur: haunchFurArt },
-  foot: { src: pawArt, fur: pawFurArt, width: 3.5, height: 2.25, ankle: { x: 1.08, y: 0.76 } },
+  feet: { fore: TOES, hind: TOES },
 };
 const LEG_WIDTH = 1.9;
 
-// Hips just inside the torso's underside; the far pair a little behind and
-// above the near, as they would be seen. Trotting, diagonal pairs move
-// together: near fore with far hind, far fore with near hind.
+// Where the legs are, as a fox's are: the hips up in the rump, each thigh
+// running down and forward to a knee at the belly, the shin back to a hock
+// well off the ground, and a long bone near upright to the toes; the
+// shoulders high in the chest, the upper arm back to an elbow at the chest's
+// foot, the forearm near straight down to a wrist just off the ground, and a
+// short bone to the toes. Those bottom bones fold back as the paw lifts. The
+// far pair a little behind and above the near, as they would be seen.
+// Trotting, diagonal pairs move together: near fore with far hind, far fore
+// with near hind.
+const HIND_LEG = { thigh: 3, shin: 3.1, bend: 1, fore: false, haunch: 3.4, reach: -0.4, toes: { length: 2.5, lean: 10, fold: 55 } } as const;
+const FORE_LEG = { thigh: 2.9, shin: 4.3, bend: -1, fore: true, haunch: 2.4, reach: 0.4, toes: { length: 0.9, lean: 12, fold: 75 } } as const;
 const LEGS: QuadLeg[] = [
-  { hip: { x: 13.2, y: 15.8 }, reach: -0.3, thigh: 2.4, shin: 2.4, beat: 0, bend: -1, far: true, haunch: 3.2 },
-  { hip: { x: 20.2, y: 15.8 }, reach: 0.3, thigh: 2.4, shin: 2.4, beat: 0.5, bend: 1, far: true, haunch: 2.4 },
-  { hip: { x: 12, y: 16 }, reach: -0.3, thigh: 2.4, shin: 2.4, beat: 0.5, bend: -1, far: false, haunch: 3.2 },
-  { hip: { x: 19, y: 16 }, reach: 0.3, thigh: 2.4, shin: 2.4, beat: 0, bend: 1, far: false, haunch: 2.4 },
+  { ...HIND_LEG, hip: { x: 13, y: 13.8 }, beat: 0, far: true },
+  { ...FORE_LEG, hip: { x: 20.4, y: 13 }, beat: 0.5, far: true },
+  { ...HIND_LEG, hip: { x: 12, y: 14 }, beat: 0.5, far: false },
+  { ...FORE_LEG, hip: { x: 19.6, y: 13.2 }, beat: 0, far: false },
 ];
+const FAR = { name: 'far legs', far: true };
+const NEAR = { name: 'near legs', far: false };
 const TROT: Gait = { stride: 5, lift: 1.8, stance: 0.5 };
-// Where each leg ends: its ankle, as high as the paw under it stands.
-const FEET = GROUND - (LEG_ART.foot.height - LEG_ART.foot.ankle.y);
+// Where each leg ends: on the toes' back, as high as they stand.
+const FEET = GROUND - (TOES.height - TOES.heel.y);
 
 export type FoxLook = { now: number; still: boolean };
 // What the drawing reads of a fox.
@@ -70,7 +82,7 @@ type Feet = (hips: readonly Point[]) => Point[];
 type Stance = { body: Turn; head: number; tail: number; feet: Feet };
 
 // Feet planted on the ledge, fore and hind each set this far from its hip.
-const planted = (foreBy: number, hindBy: number): Feet => (hips) => hips.map((h, i) => ({ x: h.x + (fore(LEGS[i]) ? foreBy : hindBy), y: FEET }));
+const planted = (foreBy: number, hindBy: number): Feet => (hips) => hips.map((h, i) => ({ x: h.x + (LEGS[i].fore ? foreBy : hindBy), y: FEET }));
 const standing = (tail: number): Stance => ({ body: turnAbout(0, HIND), head: 0, tail, feet: (hips) => restingFeet(LEGS, hips, FEET) });
 
 // The body's turn and where the feet go, for each way the fox stands.
@@ -97,13 +109,13 @@ function stance(fox: RigFox, look: FoxLook): Stance {
       // Nose up as it springs, nose down as it lands: hind legs trail, then
       // the forelegs reach for the snow.
       const t = leapt(fox, look.now);
-      const reach = (h: Point, i: number): Point => (fore(LEGS[i]) ? { x: h.x + 1.5 + 2 * t, y: h.y + 2.5 + 2 * t } : { x: h.x - 3.5 + t, y: h.y + 3 - t });
+      const reach = (h: Point, i: number): Point => (LEGS[i].fore ? { x: h.x + 1.5 + 2.5 * t, y: h.y + 4 + 2.5 * t } : { x: h.x - 4 + t, y: h.y + 4.5 - t });
       return { body: turnAbout(-28 + 56 * t, HIND), head: 10 * t, tail: -25 + 30 * t, feet: (hips) => hips.map(reach) };
     }
     case 'dig': {
       // Nose in the snow, forepaws scrabbling turn about.
       const scrabble = (i: number) => Math.sin(look.now / 55 + (i === 1 ? Math.PI : 0));
-      const paw = (h: Point, i: number): Point => (fore(LEGS[i]) ? { x: h.x + 2.5 + 1.2 * scrabble(i), y: FEET - Math.max(0, 1.4 * scrabble(i)) } : { x: h.x - 0.3, y: FEET });
+      const paw = (h: Point, i: number): Point => (LEGS[i].fore ? { x: h.x + 2.5 + 1.2 * scrabble(i), y: FEET - Math.max(0, 1.4 * scrabble(i)) } : { x: h.x - 0.4, y: FEET });
       return { body: turnAbout(10, HIND), head: 22, tail: -18 + sway, feet: (hips) => hips.map(paw) };
     }
     default:
@@ -117,18 +129,19 @@ export function foxRig(fox: RigFox, look: FoxLook): RigPose {
   if (pose === 'curled' || pose === 'alert') return stillPicture(FRAME, PICTURES[pose], look.still ? 1 : 1 + 0.035 * breath(fox.seed, look.now, 3400));
   const { body, head, tail, feet } = stance(fox, look);
   const hips = LEGS.map((s) => turned(body, s.hip));
-  const legs = legsTo(LEGS, hips, feet(hips));
+  const legs = legsTo(LEGS, hips, feet(hips), FEET, TROT.lift);
   const nod = turnAbout(head, NECK);
   return {
     ...FRAME,
     layers: [
-      // The legs behind the torso, outlined, then as fur alone so no line
-      // crosses a knee or ankle; the head sits in front, its ruff over the
-      // chest; then the near legs' fur over the torso's edge, so they grow
-      // out of it with no line across the hip.
-      legsLayer(LEGS, legs, LEG_ART, LEG_WIDTH, true, false),
-      legsLayer(LEGS, legs, LEG_ART, LEG_WIDTH, true, true),
-      legsLayer(LEGS, legs, LEG_ART, LEG_WIDTH, false, false),
+      // The legs start inside the body, its hips high in the rump and its
+      // shoulders in the chest: the far legs behind the torso, outlined,
+      // then as fur alone so no line crosses a joint; the near legs
+      // outlined behind it too, their fur then over its edge, so they grow
+      // out of it with no line across.
+      legsLayer(LEGS, legs, LEG_ART, LEG_WIDTH, FAR, false),
+      legsLayer(LEGS, legs, LEG_ART, LEG_WIDTH, FAR, true),
+      legsLayer(LEGS, legs, LEG_ART, LEG_WIDTH, NEAR, false),
       {
         kind: 'group', turn: body,
         layers: [
@@ -144,11 +157,12 @@ export function foxRig(fox: RigFox, look: FoxLook): RigPose {
           },
         ],
       },
-      legsLayer(LEGS, legs, LEG_ART, LEG_WIDTH, false, true),
+      legsLayer(LEGS, legs, LEG_ART, LEG_WIDTH, NEAR, true),
     ],
     guides: [
       { name: 'stands here', at: ANCHOR }, { name: 'tail root', at: turned(body, TAIL_ROOT) }, { name: 'neck', at: turned(body, NECK) },
       { name: 'eye', at: turned(body, turned(nod, EYE)) }, ...hips.map((at) => ({ name: 'hip', at })),
+      ...legs.flatMap((l) => [{ name: 'knee', at: l.knee }, { name: 'ankle', at: l.ankle }, { name: 'toes', at: l.foot }]),
     ],
   };
 }

@@ -8,11 +8,15 @@ const leaves = (layers: readonly Layer[]): Leaf[] => layers.flatMap((l) => (l.ki
 // Every part a pose draws, in drawing order, each once.
 export const partNames = (pose: RigPose): string[] => [...new Set(leaves(pose.layers).map(layerName))];
 
-// The art each part is drawn from: images by their part, leg pieces by bone.
-export const partArt = (pose: RigPose): { name: string; src: string }[] => leaves(pose.layers).flatMap((l) => {
+// The art each part is drawn from, each once: images by their part, leg
+// pieces by bone and foot.
+export const partArt = (pose: RigPose): { name: string; src: string }[] => [...new Map(artOf(pose).map((a) => [a.name, a])).values()];
+const artOf = (pose: RigPose): { name: string; src: string }[] => leaves(pose.layers).flatMap((l) => {
   if (l.kind === 'image') return [{ name: l.name, src: l.src }];
   if (l.kind === 'legs' && !l.far && !l.fur) {
-    return [{ name: 'leg bone', src: l.art.bone }, { name: 'leg bone, fur', src: l.art.boneFur }, { name: 'foot', src: l.art.foot.src }, { name: 'foot, fur', src: l.art.foot.fur }];
+    const thigh = l.art.thigh ? [{ name: 'upper leg', src: l.art.thigh.src }, { name: 'upper leg, fur', src: l.art.thigh.fur }] : [];
+    const { fore, hind } = l.art.feet;
+    return [...thigh, { name: 'leg bone', src: l.art.bone }, { name: 'leg bone, fur', src: l.art.boneFur }, { name: 'front foot', src: fore.src }, { name: 'front foot, fur', src: fore.fur }, { name: 'hind foot', src: hind.src }, { name: 'hind foot, fur', src: hind.fur }];
   }
   return [];
 });

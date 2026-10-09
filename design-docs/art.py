@@ -85,20 +85,6 @@ def feature(path: Path, seed: tuple[int, int]) -> float:
     return ((max(bx) - min(bx) + 1) + (max(by) - min(by) + 1)) / 2
 
 
-def ankle(rgba: np.ndarray) -> tuple[float, float]:
-    """Where a foot drawn with its ankle stub pointing up (toes to the right)
-    meets its leg, in its own pixels: the stub's middle, at the first row
-    where the foot spreads to half again the stub's width."""
-    solid = rgba[..., 3] > 128
-    filled = [np.nonzero(r)[0] for r in solid]
-    rows_ = [i for i, r in enumerate(filled) if len(r)]
-    top = rows_[0]
-    stub = filled[top + max(2, len(rows_) // 10)]
-    width = stub.max() - stub.min()
-    spread = next(i for i in rows_ if filled[i].max() - filled[i].min() > 1.5 * width)
-    return (stub.min() + stub.max()) / 2, float(spread)
-
-
 def export(rgba: np.ndarray, out: Path, name: str, scale: float) -> tuple[int, int]:
     img = Image.fromarray(rgba, 'RGBA')
     size = (round(img.width * scale), round(img.height * scale))

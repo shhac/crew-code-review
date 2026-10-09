@@ -15,7 +15,7 @@ from pathlib import Path
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from art import ankle, crop, export, feature, fill_only, keyed, poses, rows  # noqa: E402
+from art import crop, export, feature, fill_only, keyed, poses, rows  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
 OUT = HERE.parents[1] / 'internal/dashboard/ui/src/lib/theme/bonfire'
@@ -24,10 +24,12 @@ EYE = 1.82
 RES = 12
 # Where each sheet's eye is (source pixels), measured by eye.
 EYES = {'hedgehog-sheet.png': (705, 480), 'hedgehog-parts-2.png': (1487, 490)}
-# The legs' thickness, outline included, and the paws' length, in drawing
-# units: a small paw, its ankle under the leg's end.
+# The legs' thickness, outline included, in drawing units; and each foot's
+# length, and where on it (as fractions of its box) the leg comes down: its
+# heel, as it walks on its soles. The front feet are like little hands, the
+# hind ones longer paws.
 LEG = 2.3
-PAW = 4
+FEET = {'hedgehog-hand': (3.4, (0.27, 0.35)), 'hedgehog-hind': (4.2, (0.2, 0.35))}
 
 
 def on_eye(sheet: str) -> float:
@@ -48,16 +50,15 @@ def main() -> None:
     units['hedgehog-body'] = export(body, OUT, 'hedgehog-body', on_eye('hedgehog-parts-2.png'))
     units['hedgehog-head'] = export(head, OUT, 'hedgehog-head', on_eye('hedgehog-parts-2.png'))
     # Each leg is one bone piece, hip to ankle (too short to show a knee),
-    # standing on a paw; each also as fur alone, its outline taken out.
+    # standing on its foot; each also as fur alone, its outline taken out.
     bone, _ = (crop(p) for p in rows(keyed(HERE / 'hedgehog-legs.png'), 2))
     units['hedgehog-leg'] = export(bone, OUT, 'hedgehog-leg', LEG * RES / bone.shape[0])
     units['hedgehog-leg-fur'] = export(fill_only(bone), OUT, 'hedgehog-leg-fur', LEG * RES / bone.shape[0])
-    paw = crop(keyed(HERE / 'hedgehog-paw.png'))
-    stub_x, stub_y = ankle(paw)
-    scale = PAW * RES / paw.shape[1]
-    units['hedgehog-paw'] = export(paw, OUT, 'hedgehog-paw', scale)
-    units['hedgehog-paw-fur'] = export(fill_only(paw), OUT, 'hedgehog-paw-fur', scale)
-    print(f'hedgehog-paw ankle: {stub_x * scale / RES:.2f}, {stub_y * scale / RES:.2f}')
+    for name, (length, (hx, hy)) in FEET.items():
+        foot = crop(keyed(HERE / f'{name}.png'))
+        w, h = export(foot, OUT, name, length * RES / foot.shape[1])
+        export(fill_only(foot), OUT, f'{name}-fur', length * RES / foot.shape[1])
+        print(f'{name}: heel {w * hx / RES:.2f}, {h * hy / RES:.2f}')
     for name, (w, h) in sizes.items():
         print(f'{name}: display {w:g}x{h:g}')
     for name, (w, h) in units.items():

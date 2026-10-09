@@ -1,6 +1,5 @@
 import type { Point } from '../pointer';
-import type { Leg } from '../spidergait';
-import type { QuadLeg } from './gait';
+import type { Limb, QuadLeg } from './gait';
 
 // An animal drawn from parts: generated images for the body, head and tail,
 // and for leg pieces stretched along legs posed in code, with eyelids drawn
@@ -13,28 +12,32 @@ import type { QuadLeg } from './gait';
 // Turned by angle degrees about pivot, then moved by (dx, dy).
 export type Turn = { angle: number; pivot: Point; dx: number; dy: number };
 export type Fur = { fill: string; outline: string };
+// A foot (a paw, toes, a little hand), standing flat, toes forward; `heel`
+// is where the leg's end meets it, in its own box.
+export type Foot = { src: string; fur: string; width: number; height: number; heel: Point };
 // A leg's art: a bone piece (straight, lying along x, rounded at both ends)
-// laid along each bone, and a foot standing flat at the leg's end, its
-// ankle (in the foot's own box) on the leg's end. Each comes twice: as drawn,
-// and as fur alone with the outline taken out, which is drawn over the
-// outlined pieces so the outlines only show round the leg's silhouette, not
-// where its pieces meet. Legs too short to show a knee are one bone, hip to
-// ankle.
+// laid along each bone, and a foot standing at the leg's end, the fore and
+// hind feet each their own. Each comes twice: as drawn, and as fur alone
+// with the outline taken out, which is drawn over the outlined pieces so
+// the outlines only show round the leg's silhouette, not where its pieces
+// meet. Legs too short to show a knee are one bone, hip to foot.
 export type LegArt = {
   bone: string;
   boneFur: string;
   // The upper bone's own piece (thick at the hip, tapering to the knee), if
   // the leg has one; drawn as thick as each leg's haunch.
   thigh?: { src: string; fur: string };
-  foot: { src: string; fur: string; width: number; height: number; ankle: Point };
+  feet: { fore: Foot; hind: Foot };
   knee: boolean;
 };
+// One leg as drawn: its pose, how thick its upper piece is, and which foot.
+export type DrawnLeg = { limb: Limb; haunch: number; fore: boolean };
 
 export type Layer =
   | { kind: 'image'; name: string; src: string; x: number; y: number; width: number; height: number }
   // Each bone drawn with a piece of leg art `width` thick, then its foot;
-  // the far pair shaded; `fur` for the pass of fur alone.
-  | { kind: 'legs'; legs: readonly Leg[]; haunches: readonly number[]; art: LegArt; width: number; far: boolean; fur: boolean }
+  // the far side shaded; `fur` for the pass of fur alone.
+  | { kind: 'legs'; name: string; legs: readonly DrawnLeg[]; art: LegArt; width: number; far: boolean; fur: boolean }
   | { kind: 'lid'; at: Point; r: number; fur: Fur }
   // Fur painted over where two parts' outlines would otherwise show a seam.
   | { kind: 'patch'; at: Point; rx: number; ry: number; fill: string }
@@ -73,24 +76,33 @@ export function bone(from: Point, to: Point, thick: number, flush = false) {
   return { x: -start, y: -thick / 2, width: length + start + thick / 2, height: thick, transform: `translate(${from.x} ${from.y}) rotate(${angle})` };
 }
 
-// One pair of legs (far or near), outlined or as fur alone. A rig draws the
-// far pair outlined then as fur, then the near pair outlined, behind the
-// body; then the body; then the near pair's fur over the body's edge, so
-// those legs grow out of it with no line across.
-export function legsLayer(specs: readonly QuadLeg[], legs: readonly Leg[], art: LegArt, width: number, far: boolean, fur: boolean): Layer {
-  const mine = specs.flatMap((s, i) => (s.far === far ? [{ leg: legs[i], haunch: s.haunch ?? width }] : []));
-  return { kind: 'legs', legs: mine.map((m) => m.leg), haunches: mine.map((m) => m.haunch), art, width, far, fur };
+// Some of the legs (those `which` picks), outlined or as fur alone. A rig
+// draws each group outlined and then as fur, in an order that puts each
+// where it belongs against the body: legs that start behind it drawn before
+// it, with their fur after it, over its edge, so they grow out of it with
+// no line across.
+export function legsLayer(specs: readonly QuadLeg[], limbs: readonly Limb[], art: LegArt, width: number, which: { name: string; far: boolean; pick?: (spec: QuadLeg) => boolean }, fur: boolean): Layer {
+  const legs = specs.flatMap((s, i) => (s.far === which.far && (which.pick?.(s) ?? true) ? [{ limb: limbs[i], haunch: s.haunch ?? width, fore: s.fore }] : []));
+  return { kind: 'legs', name: which.name, legs, art, width, far: which.far, fur };
 }
 
 // The pieces a leg is drawn with: a piece of art laid along each bone, as
 // thick as it is drawn, outlined and as fur alone.
 export type Piece = { from: Point; to: Point; width: number; src: string; fur: string };
-export function piecesOf(leg: Leg, art: LegArt, width: number, haunch: number): Piece[] {
+export function piecesOf(leg: DrawnLeg, art: LegArt, width: number): Piece[] {
+  const { hip, knee, ankle, foot } = leg.limb;
   const plain = { src: art.bone, fur: art.boneFur };
-  if (!art.knee) return [{ from: leg.hip, to: leg.foot, width, ...plain }];
-  return [{ from: leg.hip, to: leg.knee, width: haunch, ...(art.thigh ?? plain) }, { from: leg.knee, to: leg.foot, width, ...plain }];
+  if (!art.knee) return [{ from: hip, to: foot, width, ...plain }];
+  const upper = { from: hip, to: knee, width: leg.haunch, ...(art.thigh ?? plain) };
+  const toes = ankle.x === foot.x && ankle.y === foot.y ? [] : [{ from: ankle, to: foot, width, ...plain }];
+  return [upper, { from: knee, to: ankle, width, ...plain }, ...toes];
 }
-export const footBox = (leg: Leg, art: LegArt) => ({ x: leg.foot.x - art.foot.ankle.x, y: leg.foot.y - art.foot.ankle.y, width: art.foot.width, height: art.foot.height });
+
+export const footOf = (leg: DrawnLeg, art: LegArt) => (leg.fore ? art.feet.fore : art.feet.hind);
+export function footBox(leg: DrawnLeg, art: LegArt) {
+  const foot = footOf(leg, art);
+  return { x: leg.limb.foot.x - foot.heel.x, y: leg.limb.foot.y - foot.heel.y, width: foot.width, height: foot.height };
+}
 
 // An eyelid over the eye at `at`, while the eye is shut.
 export const lidLayers = (shut: boolean, at: Point, r: number, fur: Fur): Layer[] => (shut ? [{ kind: 'lid', at, r, fur }] : []);
@@ -106,7 +118,7 @@ export function stillPicture(frame: Frame, art: { name: string; src: string; wid
 export function layerName(layer: Exclude<Layer, { kind: 'group' }>): string {
   switch (layer.kind) {
     case 'image': return layer.name;
-    case 'legs': return `${layer.far ? 'far' : 'near'} legs${layer.fur ? ', fur' : ''}`;
+    case 'legs': return `${layer.name}${layer.fur ? ', fur' : ''}`;
     case 'lid': return 'eyelid';
     case 'patch': return 'seam';
   }
