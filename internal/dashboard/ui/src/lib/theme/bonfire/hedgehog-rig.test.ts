@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import type { RigPose } from '../rig/rig';
-import { firstShut, imagesOf, legsOf, lidsOf, rigBounds } from '../rig/test-rig';
+import type { Point } from '../pointer';
+import { footBox, turnAbout, turned, type RigPose } from '../rig/rig';
+import { firstShut, flatLayers, imagesOf, legsOf, lidsOf, rigBounds } from '../rig/test-rig';
 import { HOG, type Hog, type Mode } from './hedgehog';
 import { gazeAt, hogRig, type HogLook } from './hedgehog-rig';
 
@@ -13,6 +14,25 @@ const headTurn = (pose: RigPose) => {
   const head = body?.kind === 'group' ? body.layers.find((l) => l.kind === 'group') : undefined;
   return head?.kind === 'group' ? head.turn.angle : NaN;
 };
+// Where each foot's sole reaches lowest, turned as its foot rolls, in the
+// order legsOf lists the legs (far hind, far fore, near hind, near fore).
+const solesOf = (pose: RigPose) => flatLayers(pose.layers).flatMap((l) => {
+  if (l.kind !== 'legs' || l.fur) return [];
+  return l.legs.map((leg) => {
+    const b = footBox(leg, l.art);
+    const corners: Point[] = [{ x: b.x, y: b.y + b.height }, { x: b.x + b.width, y: b.y + b.height }];
+    return Math.max(...corners.map((c) => turned(turnAbout(leg.limb.paw, leg.limb.foot), c).y));
+  });
+});
+const guide = (pose: RigPose, name: string) => pose.guides?.find((g) => g.name === name)?.at;
+// Whether each leg is lifted, at each of `count` moments through `distance`.
+const lifts = (mode: Mode, distance: number, count = 400) => Array.from({ length: count }, (_, i) => {
+  const pose = hogRig(hog(mode, (i * distance) / count), look());
+  return solesOf(pose).map((y) => y < pose.anchor.y - 1e-6);
+});
+// The order legs set down in, by their places in legsOf.
+const landings = (frames: boolean[][]) => frames.slice(1).flatMap((now, i) => now.flatMap((up, leg) => (frames[i][leg] && !up ? [leg] : [])));
+
 // A moment with the eye open, and one with it shut, for seed 1.
 const OPEN = 3900;
 const shutAt = () => firstShut((now) => hogRig(hog('sniff'), look({ now })))!;
@@ -22,7 +42,7 @@ describe('hedgehog rig', () => {
   // it on the page, whatever its stride, sniff or glance toward the cursor.
   it('stays inside its footprint, whatever it does and wherever it looks', () => {
     const modes: Mode[] = ['walk', 'flee', 'home', 'sniff', 'peek', 'curled'];
-    const worst = { left: 0, right: 0, top: 0 };
+    const worst = { left: 0, right: 0, top: 0, sole: -Infinity, nose: -Infinity };
     for (const mode of modes) {
       for (const gaze of [-14, -7, 0, 7, 14]) {
         for (let now = 0; now < 3600; now += 15) {
@@ -31,12 +51,18 @@ describe('hedgehog rig', () => {
           worst.left = Math.max(worst.left, (rig.anchor.x - b.left) * rig.scale);
           worst.right = Math.max(worst.right, (b.right - rig.anchor.x) * rig.scale);
           worst.top = Math.max(worst.top, (rig.anchor.y - b.top) * rig.scale);
+          worst.sole = Math.max(worst.sole, ...solesOf(rig).map((y) => y - rig.anchor.y));
+          worst.nose = Math.max(worst.nose, (guide(rig, 'nose')?.y ?? -Infinity) - rig.anchor.y);
         }
       }
     }
     expect(worst.left).toBeLessThanOrEqual(HOG.width / 2);
     expect(worst.right).toBeLessThanOrEqual(HOG.width / 2);
     expect(worst.top).toBeLessThanOrEqual(HOG.height);
+    // Its feet stand on the ledge and its nose stays above it; neither
+    // ever sinks into it.
+    expect(worst.sole).toBeLessThanOrEqual(1e-6);
+    expect(worst.nose).toBeLessThan(0);
   });
 
   it('stands on four legs with every foot on the ledge', () => {
@@ -46,13 +72,29 @@ describe('hedgehog rig', () => {
     expect(feet[0]).toBeLessThan(hogRig(hog('sniff'), look()).anchor.y);
   });
 
-  it('steps its legs as it walks, lifting one foot at a time', () => {
-    const at = (walked: number) => legsOf(hogRig(hog('walk', walked), look()));
-    expect(at(1)).not.toEqual(at(0));
-    const ground = Math.max(...at(0).map((l) => l.foot.y));
-    for (const walked of [0.3, 1.1, 2.0, 2.9]) {
-      expect(at(walked).filter((l) => l.foot.y < ground - 1e-6).length).toBeLessThanOrEqual(1);
+  it('walks a hind foot, then the forefoot on its side, then the other side, three feet always down', () => {
+    const frames = lifts('walk', 40);
+    expect(Math.max(...frames.map((f) => f.filter(Boolean).length))).toBe(1);
+    const order = landings(frames);
+    expect(order.length).toBeGreaterThan(8);
+    // Near hind, near fore, far hind, far fore, round again.
+    const next = new Map([[2, 3], [3, 0], [0, 1], [1, 2]]);
+    order.slice(1).forEach((leg, i) => expect(leg).toBe(next.get(order[i])));
+  });
+
+  it('trots when it hurries, the diagonal pairs together', () => {
+    const frames = lifts('flee', 40);
+    expect(Math.max(...frames.map((f) => f.filter(Boolean).length))).toBe(2);
+    for (const [farHind, farFore, nearHind, nearFore] of frames) {
+      expect(nearHind).toBe(farFore);
+      expect(farHind).toBe(nearFore);
     }
+  });
+
+  it('keeps its feet down while they are down, and rolls each over its toes to push off', () => {
+    const poses = Array.from({ length: 200 }, (_, i) => hogRig(hog('walk', i * 0.1), look()));
+    for (const pose of poses) expect(solesOf(pose).filter((y) => Math.abs(y - pose.anchor.y) < 1e-6).length).toBeGreaterThanOrEqual(3);
+    expect(Math.max(...poses.flatMap((p) => legsOf(p).map((l) => l.paw)))).toBeGreaterThan(20);
   });
 
   it('blinks now and then, and never under reduced motion', () => {
@@ -71,7 +113,10 @@ describe('hedgehog rig', () => {
     expect(below).toBeGreaterThan(0);
     expect(Math.abs(above)).toBeLessThanOrEqual(14);
     expect(gazeAt(hog('peek'), at, { x: 600, y: 20 })).toBe(0);
-    expect(headTurn(hogRig(hog('peek'), look({ now: OPEN, gaze: above })))).toBe(above);
+    // Peeking, it also lifts its nose to test the air.
+    const peeking = headTurn(hogRig(hog('peek'), look({ now: OPEN })));
+    expect(peeking).toBeLessThan(0);
+    expect(headTurn(hogRig(hog('peek'), look({ now: OPEN, gaze: above })))).toBeCloseTo(peeking + above);
   });
 
   it('looks the right way when facing left', () => {

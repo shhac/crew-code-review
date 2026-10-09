@@ -8,7 +8,7 @@
   // robin-parts.html).
   import { onMount } from 'svelte';
   import { LEAP, POSES, poseOf, SPEED as FOX_SPEED, type Mode as FoxMode } from '../lib/theme/aurora/fox';
-  import { foxRig, REFERENCE, type RigFox } from '../lib/theme/aurora/fox-rig';
+  import { foxRig, REFERENCE as FOX_REFERENCE, type RigFox } from '../lib/theme/aurora/fox-rig';
   import foxBow from './fox-pose-bow.webp';
   import foxCrouch from './fox-pose-crouch.webp';
   import foxDig from './fox-pose-dig.webp';
@@ -17,7 +17,13 @@
   import foxTrotReach from './fox-pose-trot-reach.webp';
   import foxReference from './fox-reference.webp';
   import { HOG, HURRY, moving, SPEED as HOG_SPEED, type Hog, type Mode as HogMode } from '../lib/theme/bonfire/hedgehog';
-  import { gazeAt, hogRig } from '../lib/theme/bonfire/hedgehog-rig';
+  import { gazeAt, hogRig, REFERENCE as HOG_REFERENCE } from '../lib/theme/bonfire/hedgehog-rig';
+  import hogHurry from './hedgehog-pose-hurry.webp';
+  import hogPeek from './hedgehog-pose-peek.webp';
+  import hogSniff from './hedgehog-pose-sniff.webp';
+  import hogWalkContact from './hedgehog-pose-walk-contact.webp';
+  import hogWalkPass from './hedgehog-pose-walk-pass.webp';
+  import hogReference from './hedgehog-reference.webp';
   import LayeredRobin from '../lib/theme/christmas/LayeredRobin.svelte';
   import { partsModes, partsViewport } from '../lib/theme/christmas/parts-pose';
   import robinManifest from '../lib/theme/christmas/robin-parts/manifest.json' with { type: 'json' };
@@ -73,27 +79,42 @@
   let separate = false;
   let guides = false;
   let footprint = true;
-  // A drawing of the fox laid over it to compare: the standing one its parts
-  // and legs were measured from (where its parts sat), or a key pose drawn
-  // from it (export.py prints their sizes), stood on the ledge, centred.
-  const DRAWINGS: Record<string, { src: string; width: number; height: number; at?: Point }> = {
-    standing: { src: foxReference, width: REFERENCE.width, height: REFERENCE.height, at: REFERENCE },
-    'trot reach': { src: foxTrotReach, width: 29.67, height: 16.5 },
-    'trot pass': { src: foxTrotPass, width: 29.25, height: 16.83 },
-    crouch: { src: foxCrouch, width: 31.42, height: 10.67 },
-    bow: { src: foxBow, width: 27.33, height: 18.75 },
-    pounce: { src: foxPounce, width: 32.08, height: 16.75 },
-    dig: { src: foxDig, width: 27.08, height: 18.5 },
+  // A drawing of the animal laid over it to compare: the standing one its
+  // parts and legs were measured from (where its parts sat), or a key pose
+  // drawn from it (export.py prints their sizes), stood on the ledge,
+  // centred.
+  type Drawing = { src: string; width: number; height: number; at?: Point };
+  const DRAWINGS: Partial<Record<Animal, Record<string, Drawing>>> = {
+    hedgehog: {
+      standing: { src: hogReference, ...HOG_REFERENCE, at: HOG_REFERENCE },
+      'walk contact': { src: hogWalkContact, width: 24, height: 16.25 },
+      'walk pass': { src: hogWalkPass, width: 24.17, height: 16.5 },
+      hurry: { src: hogHurry, width: 25.92, height: 15.33 },
+      sniff: { src: hogSniff, width: 24.75, height: 14.33 },
+      peek: { src: hogPeek, width: 25.92, height: 15.83 },
+    },
+    fox: {
+      standing: { src: foxReference, ...FOX_REFERENCE, at: FOX_REFERENCE },
+      'trot reach': { src: foxTrotReach, width: 29.67, height: 16.5 },
+      'trot pass': { src: foxTrotPass, width: 29.25, height: 16.83 },
+      crouch: { src: foxCrouch, width: 31.42, height: 10.67 },
+      bow: { src: foxBow, width: 27.33, height: 18.75 },
+      pounce: { src: foxPounce, width: 32.08, height: 16.75 },
+      dig: { src: foxDig, width: 27.08, height: 18.5 },
+    },
   };
   // The drawing each mode is compared with.
-  const DRAWING_OF: Record<string, string> = { trot: 'trot reach', stand: 'standing', stretch: 'bow', crouch: 'crouch', leap: 'pounce', dig: 'dig' };
+  const DRAWING_OF: Partial<Record<Animal, Record<string, string>>> = {
+    hedgehog: { walk: 'walk contact', flee: 'hurry', sniff: 'sniff', peek: 'peek' },
+    fox: { trot: 'trot reach', stand: 'standing', stretch: 'bow', crouch: 'crouch', leap: 'pounce', dig: 'dig' },
+  };
   let reference = '';
   function setMode(m: string) {
     mode = m;
-    if (reference) reference = DRAWING_OF[m] ?? reference;
+    if (reference) reference = DRAWING_OF[animal]?.[m] ?? reference;
   }
-  const overlay = (pose: RigPose, name: string): RigPose => {
-    const d = DRAWINGS[name];
+  $: drawings = DRAWINGS[animal] ?? {};
+  const overlay = (pose: RigPose, d: Drawing): RigPose => {
     const at = d.at ?? { x: pose.anchor.x - d.width / 2, y: pose.anchor.y - d.height };
     return { ...pose, layers: [{ kind: 'image', name: 'reference', src: d.src, x: at.x, y: at.y, width: d.width, height: d.height }] };
   };
@@ -137,6 +158,7 @@
     mode = MODES[a][0];
     speed = SPEEDS[a];
     hidden = [];
+    reference = '';
   }
   function track(e: PointerEvent) {
     const r = stage.getBoundingClientRect();
@@ -228,11 +250,11 @@
     <label><input type="checkbox" bind:checked={guides} /> joints</label>
     <label><input type="checkbox" bind:checked={separate} /> separate pieces</label>
     {#if box}<label><input type="checkbox" bind:checked={footprint} /> footprint</label>{/if}
-    {#if animal === 'fox'}
+    {#if Object.keys(drawings).length}
       <label>drawing
         <select bind:value={reference}>
           <option value="">none</option>
-          {#each Object.keys(DRAWINGS) as name}<option value={name}>{name}</option>{/each}
+          {#each Object.keys(drawings) as name}<option value={name}>{name}</option>{/each}
         </select>
       </label>
     {/if}
@@ -259,8 +281,8 @@
       {/if}
       {#if shown}
         <Rig pose={shown} x={0} y={0} {dir} {guides} data-critter={mode} />
-        {#if reference && animal === 'fox'}
-          <Rig pose={overlay(shown, reference)} x={0} y={0} {dir} opacity={0.45} />
+        {#if drawings[reference]}
+          <Rig pose={overlay(shown, drawings[reference])} x={0} y={0} {dir} opacity={0.45} />
         {/if}
       {:else if animal === 'spider'}
         <div class="spider" class:hanging={mode === 'hang'} style="transform: scaleX({dir})" data-critter={mode}>

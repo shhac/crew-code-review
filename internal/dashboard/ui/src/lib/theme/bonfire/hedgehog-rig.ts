@@ -1,7 +1,7 @@
 import type { Point } from '../pointer';
-import { gaitPhase, legsTo, restingFeet, steppingFeet, type Gait, type QuadLeg } from '../rig/gait';
+import { gaitPhase, legsTo, restingFeet, steppingFeet, stepsOf, type Gait, type QuadLeg, type Step } from '../rig/gait';
 import { blinking, breath, snuffle } from '../rig/life';
-import { legsLayer, lidLayers, stillPicture, turnAbout, turned, type Frame, type Fur, type LegArt, type Layer, type RigPose } from '../rig/rig';
+import { legsLayer, lidLayers, stillPicture, turnAbout, turned, type Foot, type Frame, type Fur, type LegArt, type Layer, type RigPose, type Turn } from '../rig/rig';
 import { clamp } from '../spidergait';
 import { moving, type Hog } from './hedgehog';
 import ballArt from './hedgehog-ball.webp';
@@ -17,55 +17,74 @@ import legArt from './hedgehog-leg.webp';
 // The hedgehog put together from its parts: spines and belly, a head over
 // their cream front (its soft back edge hides the join), and four legs, each
 // a piece of leg art laid along a leg posed in code. Facing right, on the
-// ledge at ANCHOR. Every picture is on one scale, its eye's
-// (design-docs/bonfire/export.py, which prints the sizes below in drawing
-// units), so the ball is the same hedgehog curled up.
+// ledge at ANCHOR. The parts were cut from one drawing of it standing
+// square (design-docs/bonfire/hedgehog-standing.png), and every size and
+// place below is in that drawing's units, as export.py prints them; every
+// picture is on one scale, its eye's, so the ball is the same hedgehog
+// curled up.
 
 // Page pixels per drawing unit, for every pose.
-export const SCALE = 1.375;
-const GROUND = 19.4;
-const ANCHOR = { x: 17, y: GROUND };
-const FRAME: Frame = { width: 34, height: 20, anchor: ANCHOR, scale: SCALE };
-// Low on short legs, mostly under its skirt of spines.
-const BODY = { x: 2, y: 2.2, width: 22.25, height: 15.67 };
-const HEAD = { x: 20.5, y: 7.2, width: 11.67, height: 8.92 };
-const NECK = { x: 22, y: 13.7 };
-const EYE = { x: 27, y: 10.95 };
+export const SCALE = 1.52;
+const GROUND = 17.43;
+const ANCHOR = { x: 14.9, y: GROUND };
+const FRAME: Frame = { width: 28, height: 17.6, anchor: ANCHOR, scale: SCALE };
+const BODY = { x: 1.91, y: 1.27, width: 20.33, height: 14.58 };
+const HEAD = { x: 13.69, y: 6.46, width: 11.67, height: 10.08 };
+const NECK = { x: 17, y: 14 };
+const EYE = { x: 20.1, y: 10.25 };
+const NOSE = { x: 25.2, y: 11 };
+// The standing drawing, for the lab to lay over the rig: where it sits.
+export const REFERENCE = { x: 1, y: 1, width: 24.42, height: 16.58 };
 const BALL = { name: 'ball', src: ballArt, width: 17, height: 16.58 };
-// Too short to show a knee: one piece, hip to heel, on its sole. The front
-// feet are like little hands, the hind ones longer paws.
+// Too short to show a knee: one stubby piece, hip to heel, on its sole. The
+// front feet are short and broad like little hands, the hind ones longer.
 const LEG_ART: LegArt = {
-  bone: legArt, boneFur: legFurArt, knee: false,
+  bone: legArt, boneFur: legFurArt, knee: false, overFoot: true,
   feet: {
-    fore: { src: handArt, fur: handFurArt, width: 3.42, height: 1.33, heel: { x: 0.92, y: 0.47 } },
-    hind: { src: hindArt, fur: hindFurArt, width: 4.17, height: 1.25, heel: { x: 0.83, y: 0.44 } },
+    fore: { src: handArt, fur: handFurArt, width: 3.42, height: 2, heel: { x: 1.16, y: 0.65 } },
+    hind: { src: hindArt, fur: hindFurArt, width: 4, height: 2, heel: { x: 1.16, y: 0.65 } },
   },
 };
-const LEG_WIDTH = 2.3;
+const LEG_WIDTH = 2.6;
 // Where each leg ends: its heel, as high as the foot under it stands.
 const FEET = GROUND - (LEG_ART.feet.hind.height - LEG_ART.feet.hind.heel.y);
 const FACE: Fur = { fill: '#fdd79b', outline: '#140c05' };
 
-// Hips sit just inside the belly, so the legs' tops are hidden behind it;
-// the hind feet reach back a little and the front ones forward. The far pair
-// is set a little apart from the near, as it would be seen.
+// Hips just inside the belly, over the feet as the drawing stands them; the
+// far pair a little apart from the near, as it would be seen. Each foot's
+// heel peels up over the tips of its toes as it pushes off.
+const toesOf = (foot: Foot) => ({ x: foot.width - foot.heel.x, y: foot.height - foot.heel.y });
+const HIND = { reach: 0, thigh: 1, shin: 1, bend: 1, fore: false, sole: { toes: toesOf(LEG_ART.feet.hind), peel: 30 } } as const;
+const FORE = { reach: 0.2, thigh: 1, shin: 1, bend: -1, fore: true, sole: { toes: toesOf(LEG_ART.feet.fore), peel: 30 } } as const;
 const LEGS: QuadLeg[] = [
-  { hip: { x: 8.5, y: 16.2 }, reach: -1.1, thigh: 1.7, shin: 2, beat: 0, bend: 1, far: false, fore: false },
-  { hip: { x: 19.5, y: 15.8 }, reach: 0.8, thigh: 1.7, shin: 2, beat: 0.25, bend: -1, far: false, fore: true },
-  { hip: { x: 11, y: 16.2 }, reach: -1.1, thigh: 1.7, shin: 2, beat: 0.5, bend: 1, far: true, fore: false },
-  { hip: { x: 16.5, y: 16.2 }, reach: 0.8, thigh: 1.7, shin: 2, beat: 0.75, bend: -1, far: true, fore: true },
+  { ...HIND, hip: { x: 5.9, y: 14.6 }, beat: 0, far: false },
+  { ...FORE, hip: { x: 15.5, y: 14.6 }, beat: 0, far: false },
+  { ...HIND, hip: { x: 9.9, y: 14.8 }, beat: 0, far: true },
+  { ...FORE, hip: { x: 18.7, y: 14.4 }, beat: 0, far: true },
 ];
 const FAR = { name: 'far legs', far: true };
 const NEAR = { name: 'near legs', far: false };
-// Quick short steps, three feet down at a time.
-const WALK: Gait = { stride: 2.4, lift: 1, stance: 0.75 };
+
+// Walking, a lateral-sequence walk, as small mammals and pygmy hedgehogs
+// walk slowly: a hind foot, then the forefoot on its side, then the other
+// side's, evenly spaced, three feet always down. Hurrying, it trots, the
+// diagonal pairs together, its body lifted higher on straighter legs.
+// (Beats are in LEGS' order; a later beat sets its foot down sooner.)
+const WALK: Gait = { stride: 2.6, lift: 0.7, stance: 0.75 };
+const WALKING = [0.75, 0.5, 0.25, 0].map((beat, i) => ({ ...LEGS[i], beat }));
+const TROT: Gait = { stride: 3.4, lift: 0.9, stance: 0.5 };
+const TROTTING = [0.5, 0, 0, 0.5].map((beat, i) => ({ ...LEGS[i], beat }));
+const RAISED = 0.5;
 
 // How far the head turns toward a cursor, and from how far it notices one;
 // sniffing, how far the nose dips at most, which keeps the drawing inside
-// the hedgehog's footprint.
+// the hedgehog's footprint; peeking, how far it lifts its nose to test the
+// air and stretches its neck out.
 const LOOK = 14;
 const LOOK_REACH = 160;
-const DIP = 18;
+const DIP = 26;
+const TEST_AIR = -8;
+const STRETCH = 1.2;
 
 // What the drawing needs besides the hedgehog: the time, how far its head is
 // turned toward the cursor (eased by the caller, see gazeAt), and whether
@@ -87,30 +106,47 @@ export function gazeAt(hog: Pick<Hog, 'dir'>, at: Point, cursor: Point | null): 
 
 // On the move: a slight rise and fall with each stride, a slow rock of the
 // body every four strides, and the head nodding a little behind it. Its
-// strides are short and quick (about four a second walking, eight in a
-// hurry), so the rock and nod go at a quarter of their pace: slow and small,
-// a waddle at page size, not a flicker.
-const sway = (phase: number) => ({ bob: -0.22 * (0.5 - 0.5 * Math.cos(2 * Math.PI * phase)), rock: 1.2 * Math.sin((Math.PI * phase) / 2), nod: 2 * Math.sin((Math.PI * phase) / 2 - 0.8) });
+// strides are short and quick (about four a second), so the rock and nod go
+// at a quarter of their pace: slow and small, a waddle at page size, not a
+// flicker.
+const sway = (phase: number) => ({ bob: -0.2 * (0.5 - 0.5 * Math.cos(2 * Math.PI * phase)), rock: 1.2 * Math.sin((Math.PI * phase) / 2), nod: 2 * Math.sin((Math.PI * phase) / 2 - 0.8) });
 
-// The head's turn: nodding on the move; nose down and snuffling while
-// sniffing; otherwise toward a cursor.
-function headAngle(hog: Hog, look: HogLook): number {
-  if (look.still) return 0;
-  if (moving(hog.mode)) return sway(gaitPhase(hog.walked / SCALE, WALK)).nod;
-  if (hog.mode === 'sniff') return Math.min(DIP, 14 + 2 * Math.sin(look.now / 380) + snuffle(hog.seed, look.now) + look.gaze / 3);
-  return look.gaze;
+// How the hedgehog stands: its body's turn, its head's, how far its neck
+// stretches forward, where its feet go, and where each is in its step.
+type Stance = { body: Turn; head: number; neck: number; legs: readonly QuadLeg[]; feet: (hips: readonly Point[]) => Point[]; steps: Step[] };
+const resting = (body: Turn, head: number, neck = 0): Stance => ({ body, head, neck, legs: LEGS, feet: (hips) => restingFeet(LEGS, hips, FEET), steps: [] });
+
+// Each tuned against its key pose (design-docs/bonfire/hedgehog-pose-*.png,
+// laid over the rig in the critters lab). A positive head turns the nose
+// down.
+function stance(hog: Hog, look: HogLook): Stance {
+  if (look.still) return resting(turnAbout(0, ANCHOR), 0);
+  const walked = hog.walked / SCALE;
+  if (moving(hog.mode)) {
+    const { legs, gait, raised } = hog.mode === 'flee' ? { legs: TROTTING, gait: TROT, raised: RAISED } : { legs: WALKING, gait: WALK, raised: 0 };
+    const step = sway(gaitPhase(walked, gait));
+    return { body: turnAbout(step.rock, ANCHOR, 0, step.bob - raised), head: step.nod, neck: 0, legs, feet: (hips) => steppingFeet(legs, hips, walked, FEET, gait), steps: stepsOf(legs, walked, gait) };
+  }
+  if (hog.mode === 'sniff') {
+    // Nose to the ground, the front of the body dipped a little, snuffling.
+    return resting(turnAbout(4, ANCHOR), Math.min(DIP, 22 + 2 * Math.sin(look.now / 380) + snuffle(hog.seed, look.now) + look.gaze / 3));
+  }
+  if (hog.mode === 'peek') {
+    // Low and wary at the pile's mouth, its neck stretched out and nose
+    // lifted to test the air, a forefoot raised to creep out.
+    const creep: Stance = resting(turnAbout(0, ANCHOR, 0, 0.3), TEST_AIR + look.gaze, STRETCH);
+    const raise = (h: Point, i: number): Point => (i === 1 ? { x: h.x + 0.9, y: FEET - 0.5 } : { x: h.x + LEGS[i].reach, y: FEET });
+    return { ...creep, feet: (hips) => hips.map(raise), steps: LEGS.map((_, i) => (i === 1 ? { down: false, t: 0.35 } : { down: true, t: 0 })) };
+  }
+  return resting(turnAbout(0, ANCHOR), look.gaze);
 }
 
 export function hogRig(hog: Hog, look: HogLook): RigPose {
   if (hog.mode === 'curled') return stillPicture(FRAME, BALL, look.still ? 1 : 1 + 0.04 * breath(hog.seed, look.now, 2600));
-  const walking = moving(hog.mode) && !look.still;
-  const walked = hog.walked / SCALE;
-  const step = walking ? sway(gaitPhase(walked, WALK)) : { bob: 0, rock: 0 };
-  // A little nose-down while sniffing.
-  const body = turnAbout(step.rock + (hog.mode === 'sniff' && !look.still ? 2 : 0), ANCHOR, 0, step.bob);
-  const hips = LEGS.map((s) => turned(body, s.hip));
-  const legs = legsTo(LEGS, hips, walking ? steppingFeet(LEGS, hips, walked, FEET, WALK) : restingFeet(LEGS, hips, FEET));
-  const nod = turnAbout(headAngle(hog, look), NECK);
+  const { body, head: angle, neck, legs: specs, feet, steps } = stance(hog, look);
+  const hips = specs.map((s) => turned(body, s.hip));
+  const legs = legsTo(specs, hips, feet(hips), steps);
+  const nod = turnAbout(angle, NECK, neck);
   const head: Layer = {
     kind: 'group', turn: nod,
     layers: [{ kind: 'image', name: 'head', src: headArt, ...HEAD }, ...lidLayers(!look.still && blinking(hog.seed, look.now), EYE, 0.95, FACE)],
@@ -118,12 +154,21 @@ export function hogRig(hog: Hog, look: HogLook): RigPose {
   return {
     ...FRAME,
     layers: [
-      legsLayer(LEGS, legs, LEG_ART, LEG_WIDTH, FAR, false),
-      legsLayer(LEGS, legs, LEG_ART, LEG_WIDTH, FAR, true),
-      legsLayer(LEGS, legs, LEG_ART, LEG_WIDTH, NEAR, false),
+      // The legs start inside the body: the far legs behind it, outlined,
+      // then as fur alone so no line crosses where their pieces meet; the
+      // near legs outlined behind it too, their fur then over its edge, so
+      // they grow out of it with no line across.
+      legsLayer(specs, legs, LEG_ART, LEG_WIDTH, FAR, false),
+      legsLayer(specs, legs, LEG_ART, LEG_WIDTH, FAR, true),
+      legsLayer(specs, legs, LEG_ART, LEG_WIDTH, NEAR, false),
       { kind: 'group', turn: body, layers: [{ kind: 'image', name: 'body', src: bodyArt, ...BODY }, head] },
-      legsLayer(LEGS, legs, LEG_ART, LEG_WIDTH, NEAR, true),
+      legsLayer(specs, legs, LEG_ART, LEG_WIDTH, NEAR, true),
     ],
-    guides: [{ name: 'stands here', at: ANCHOR }, { name: 'neck', at: turned(body, NECK) }, { name: 'eye', at: turned(body, turned(nod, EYE)) }, ...hips.map((at) => ({ name: 'hip', at }))],
+    guides: [
+      { name: 'stands here', at: ANCHOR }, { name: 'neck', at: turned(body, NECK) }, { name: 'eye', at: turned(body, turned(nod, EYE)) },
+      { name: 'nose', at: turned(body, turned(nod, NOSE)) },
+      ...hips.map((at, i) => ({ name: specs[i].fore ? 'shoulder' : 'hip', at })),
+      ...legs.map((l, i) => ({ name: specs[i].fore ? 'wrist' : 'ankle', at: l.foot })),
+    ],
   };
 }

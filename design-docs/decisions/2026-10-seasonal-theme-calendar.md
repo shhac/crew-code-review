@@ -243,6 +243,13 @@ first shipped with one stiff sprite each:
   Each animal has a page in the critters lab (`lab/critters.html`), driven
   by numbered frames (60 a second) so a frame number, or the page's address,
   names one drawing exactly when talking about it.
+- **From one drawing, checked against real animals.** An animal starts as one
+  generated drawing of it standing square. Its parts and legs are cut from
+  that drawing by image edits and placed where they sat in it, and key poses
+  for each thing it does are drawn as edits of it and laid over the rig in
+  the lab to tune against. Its anatomy and gait (which joints bend which way,
+  the order its feet move, how a foot leaves and meets the ground) are
+  looked up and cited in its theme's notes before its legs are built.
 - **One animal, one scale.** Every picture of an animal (each pose and each
   part) is exported so its eye is the same size, and its rig sets one page
   scale for every pose, so curled up or trotting it is the same animal.

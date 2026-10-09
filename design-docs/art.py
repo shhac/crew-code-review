@@ -85,12 +85,24 @@ def feature(path: Path, seed: tuple[int, int]) -> float:
     return ((max(bx) - min(bx) + 1) + (max(by) - min(by) + 1)) / 2
 
 
-def place(part: np.ndarray, whole: np.ndarray, step: int = 4) -> tuple[int, int]:
+def opaque(rgba: np.ndarray) -> np.ndarray:
+    return rgba[..., 3] > 128
+
+
+def pale(rgba: np.ndarray) -> np.ndarray:
+    """The light fur of a picture: what to match a part by when its shape
+    alone fits anywhere inside the whole (a head against a spiny body)."""
+    lum = rgba[..., :3].astype(np.float32) @ np.array([0.299, 0.587, 0.114], dtype=np.float32)
+    return opaque(rgba) & (lum > 170)
+
+
+def place(part: np.ndarray, whole: np.ndarray, step: int = 4, mask=opaque) -> tuple[int, int]:
     """Where a part cut from a whole picture sits in it (its top left, in the
-    whole's pixels): the offset at which their shapes overlap best, found on
-    copies shrunk step times, then refined at full size."""
-    a = (part[..., 3] > 128).astype(np.float32)
-    b = (whole[..., 3] > 128).astype(np.float32)
+    whole's pixels): the offset at which their shapes (or what mask picks
+    out of them) overlap best, found on copies shrunk step times, then
+    refined at full size."""
+    a = mask(part).astype(np.float32)
+    b = mask(whole).astype(np.float32)
 
     def best(a: np.ndarray, b: np.ndarray, ys, xs) -> tuple[int, int]:
         h, w = a.shape

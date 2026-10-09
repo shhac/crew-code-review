@@ -16,7 +16,7 @@ import { between, maxBy, type Rand } from '../seed';
 // display size (design-docs/bonfire/export.py), and the box hedgehog-rig.ts's
 // drawing stays inside whatever it does (its tests check this).
 export const PILE = { width: 88, height: 25 };
-export const HOG = { width: 47, height: 26.5 };
+export const HOG = { width: 41, height: 26.5 };
 // Kept off the ledge's ends, and the pile kept clear of the right one.
 const INSET = 24;
 // The pile and the hedgehogs stand up to this tall, so a home needs this

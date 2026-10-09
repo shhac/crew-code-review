@@ -29,6 +29,9 @@ export type LegArt = {
   thigh?: { src: string; fur: string };
   feet: { fore: Foot; hind: Foot };
   knee: boolean;
+  // A sole walker's leg is drawn over its foot, its rounded end the heel,
+  // hiding the foot's back; otherwise the foot is drawn over the leg's end.
+  overFoot?: boolean;
 };
 // One leg as drawn: its pose, how thick its upper piece is, which foot, and
 // whether its shank tapers to the hock (see QuadLeg).

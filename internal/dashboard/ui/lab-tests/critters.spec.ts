@@ -124,3 +124,21 @@ test('the spider and the robin list their layers, and hide them', async ({ page 
   await page.getByLabel('tail', { exact: true }).uncheck();
   await expect(big(page).locator('[data-part="tail"]')).toHaveCount(0);
 });
+
+test('the hedgehog has its drawings to lay over it, each mode its own', async ({ page }) => {
+  const drawing = page.locator('[data-stage] image[href*="hedgehog-pose"], [data-stage] image[href*="hedgehog-reference"]');
+  await page.goto('/lab/critters.html#animal=hedgehog&mode=sniff&frame=10&ref=sniff');
+  await expect(drawing).toHaveAttribute('href', /hedgehog-pose-sniff/);
+  expect(await drawing.evaluate(async (el) => {
+    const image = new Image();
+    image.src = el.getAttribute('href')!;
+    await image.decode();
+    return image.naturalWidth;
+  })).toBeGreaterThan(0);
+  await page.getByRole('button', { name: 'walk', exact: true }).click();
+  await expect(drawing).toHaveAttribute('href', /hedgehog-pose-walk-contact/);
+  await page.getByLabel('drawing').selectOption('standing');
+  await expect(drawing).toHaveAttribute('href', /hedgehog-reference/);
+  await page.getByRole('button', { name: 'fox', exact: true }).click();
+  await expect(drawing).toHaveCount(0);
+});

@@ -9,31 +9,72 @@ hedgehogs, at four times. The hedgehog's
 pictures (its ball, and the parts it is put together from) are all put on
 one scale, the eye's, so every pose is the same animal; they are written at
 RES pixels per drawing unit, and hedgehog-rig.ts sets how big a drawing unit
-is on the page. The sizes printed are what the components lay out.
+is on the page. Standing and walking, it is put together from PARTS cut from
+hedgehog-standing.png (the whole hedgehog standing square, its anatomy
+reference) into hedgehog-parts-3.png, each printed with where it sat in the
+reference: its place in the rig. The sizes printed are what the components
+lay out.
 """
 from pathlib import Path
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from art import crop, export, feature, fill_only, keyed, poses, rows  # noqa: E402
+from art import crop, export, feature, fill_only, keyed, pale, place, poses  # noqa: E402
+from PIL import Image  # noqa: E402
+import numpy as np  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
 OUT = HERE.parents[1] / 'internal/dashboard/ui/src/lib/theme/bonfire'
+LAB = HERE.parents[1] / 'internal/dashboard/ui/src/lab'
+PARTS = ['hedgehog-body', 'hedgehog-head']
+# Drawing units are the reference's, moved by this, so a frame round it has
+# a margin.
+MARGIN = 1
 # The eye's size in drawing units, and file pixels per drawing unit.
 EYE = 1.82
 RES = 12
 # Where each sheet's eye is (source pixels), measured by eye.
-EYES = {'hedgehog-sheet.png': (705, 480), 'hedgehog-parts-2.png': (1487, 490)}
+EYES = {'hedgehog-sheet.png': (705, 480), 'hedgehog-standing.png': (1165, 468), 'hedgehog-parts-3.png': (1460, 470)}
+# Key poses of the same hedgehog, drawn from hedgehog-standing.png, that the
+# rig's poses are tuned toward; the lab lays each over its mode. Where each
+# one's eye is (source pixels), measured by eye.
+KEY_POSES = {
+    'walk-contact': (1170, 476), 'walk-pass': (1166, 474), 'hurry': (1180, 446),
+    'sniff': (1200, 590), 'peek': (1220, 432),
+}
 # The legs' thickness, outline included, in drawing units; and each foot's
 # length, and where on it (as fractions of its box) the leg comes down: its
-# heel, as it walks on its soles. The front feet are like little hands, the
+# heel, as it walks on its soles. Both cut from the reference's legs into
+# hedgehog-limbs.png: the front feet short and broad like little hands, the
 # hind ones longer paws.
-LEG = 2.3
-FEET = {'hedgehog-hand': (3.4, (0.27, 0.35)), 'hedgehog-hind': (4.2, (0.2, 0.35))}
+LEG = 2.6
+FEET = {'hedgehog-hand': (3.4, (0.34, 0.325)), 'hedgehog-hind': (4.0, (0.29, 0.325))}
 
 
 def on_eye(sheet: str) -> float:
     return EYE / feature(HERE / sheet, EYES[sheet]) * RES
+
+
+def lum(rgba: np.ndarray) -> np.ndarray:
+    return rgba[..., :3].astype(np.float32) @ np.array([0.299, 0.587, 0.114], dtype=np.float32)
+
+
+def belly(body: np.ndarray) -> np.ndarray:
+    """The commonest cream on the bottom of the body: its belly."""
+    low = body[body.shape[0] * 3 // 4:]
+    fill = low[(low[..., 3] > 200) & (lum(low) > 150)][:, :3]
+    colours, counts = np.unique(fill // 4 * 4, axis=0, return_counts=True)
+    return colours[counts.argmax()]
+
+
+def flat(rgba: np.ndarray, colour: np.ndarray) -> np.ndarray:
+    """A leg piece or foot with its fur one even cream, the belly's, so where
+    the pieces cross each other and the belly's edge no change of shade
+    shows; a bar's shading runs along it, so stood upright its shaded side
+    would. Its outline and claws are kept."""
+    out = rgba.copy()
+    out[lum(rgba) > 130, :3] = colour
+    return out
 
 
 def main() -> None:
@@ -46,19 +87,34 @@ def main() -> None:
     units = {}
     _, ball = (crop(h) for h in poses(keyed(HERE / 'hedgehog-sheet.png'), 2))
     units['hedgehog-ball'] = export(ball, OUT, 'hedgehog-ball', on_eye('hedgehog-sheet.png'))
-    body, head = (crop(p) for p in poses(keyed(HERE / 'hedgehog-parts-2.png'), 2))
-    units['hedgehog-body'] = export(body, OUT, 'hedgehog-body', on_eye('hedgehog-parts-2.png'))
-    units['hedgehog-head'] = export(head, OUT, 'hedgehog-head', on_eye('hedgehog-parts-2.png'))
-    # Each leg is one bone piece, hip to ankle (too short to show a knee),
+    # The reference, for the lab to lay over the rig, and where each part sat
+    # in it: their places in the rig.
+    reference = crop(keyed(HERE / 'hedgehog-standing.png'))
+    per_unit = feature(HERE / 'hedgehog-standing.png', EYES['hedgehog-standing.png']) / EYE
+    units['hedgehog-reference'] = export(reference, LAB, 'hedgehog-reference', on_eye('hedgehog-standing.png'))
+    ground = np.nonzero((reference[..., 3] > 128).any(axis=1))[0].max()
+    print(f'hedgehog-reference: at {MARGIN}, {MARGIN}; ground {ground / per_unit + MARGIN:.2f}')
+    for name, seed in KEY_POSES.items():
+        path = HERE / f'hedgehog-pose-{name}.png'
+        w, h = export(crop(keyed(path)), LAB, f'hedgehog-pose-{name}', EYE / feature(path, seed) * RES)
+        print(f'hedgehog-pose-{name}: drawing units {w / RES:.2f}x{h / RES:.2f}')
+    k = feature(HERE / 'hedgehog-standing.png', EYES['hedgehog-standing.png']) / feature(HERE / 'hedgehog-parts-3.png', EYES['hedgehog-parts-3.png'])
+    for name, art in zip(PARTS, (crop(p) for p in poses(keyed(HERE / 'hedgehog-parts-3.png'), len(PARTS)))):
+        units[name] = export(art, OUT, name, on_eye('hedgehog-parts-3.png'))
+        img = Image.fromarray(art, 'RGBA')
+        y, x = place(np.asarray(img.resize((round(img.width * k), round(img.height * k)), Image.LANCZOS)), reference, mask=pale)
+        print(f'{name}: at {x / per_unit + MARGIN:.2f}, {y / per_unit + MARGIN:.2f}')
+    # Each leg is one bone piece, hip to heel (too short to show a knee),
     # standing on its foot; each also as fur alone, its outline taken out.
-    bone, _ = (crop(p) for p in rows(keyed(HERE / 'hedgehog-legs.png'), 2))
+    bone, *feet = (crop(p) for p in poses(keyed(HERE / 'hedgehog-limbs.png'), 3))
+    cream = belly(crop(poses(keyed(HERE / 'hedgehog-parts-3.png'), len(PARTS))[0]))
+    bone, feet = flat(bone, cream), [flat(f, cream) for f in feet]
     units['hedgehog-leg'] = export(bone, OUT, 'hedgehog-leg', LEG * RES / bone.shape[0])
     units['hedgehog-leg-fur'] = export(fill_only(bone), OUT, 'hedgehog-leg-fur', LEG * RES / bone.shape[0])
-    for name, (length, (hx, hy)) in FEET.items():
-        foot = crop(keyed(HERE / f'{name}.png'))
+    for (name, (length, (hx, hy))), foot in zip(FEET.items(), feet):
         w, h = export(foot, OUT, name, length * RES / foot.shape[1])
         export(fill_only(foot), OUT, f'{name}-fur', length * RES / foot.shape[1])
-        print(f'{name}: heel {w * hx / RES:.2f}, {h * hy / RES:.2f}')
+        print(f'{name}: {w / RES:.2f}x{h / RES:.2f}, heel {w * hx / RES:.2f}, {h * hy / RES:.2f}')
     for name, (w, h) in sizes.items():
         print(f'{name}: display {w:g}x{h:g}')
     for name, (w, h) in units.items():

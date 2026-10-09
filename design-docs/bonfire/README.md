@@ -67,41 +67,70 @@ They are stepped as a group, in a fixed order, each seeing the others as they
 now are (`lib/theme/group.ts`, shared with the foxes). Reduced motion sits them in a row by the pile, spaced, and keeps the
 row across scrolls.
 
-**Drawn from parts (added 2026-10-09, revised the same day).** The first
-version slid one walking picture along the ledge, which looked stiff. Now it
-is put together from generated parts on the shared rig (`lib/theme/rig/`):
+**Drawn from parts (added 2026-10-09, revised the same day, then rebuilt
+from one drawing).** The first version slid one walking picture along the
+ledge, which looked stiff. Now it is put together from generated parts on the
+shared rig (`lib/theme/rig/`). As with the fox, every part comes from one
+drawing of the hedgehog standing square (`hedgehog-standing.png`): the body
+and head were cut from it by an image edit, each placed in the rig where it
+sat in the drawing (`export.py` finds the spot by matching the part's pale
+fur against the drawing's, since a head's outline alone fits anywhere inside
+the spines), and the legs and feet were cut from its near legs, so their
+thickness and size are the drawing's. Before that, the parts came from an old
+walking sprite and the legs were sized by guesswork.
 
 - **Body and head.** The head sits in front of the body's cream chest; its
   back edge is soft fur with no outline, so no line crosses the neck (a first
   try tucked the head behind the body, whose outline then crossed it).
-- **Legs.** A hedgehog walks on its soles, low, on short legs mostly under its
-  skirt of spines. Each leg is one piece of leg art laid from hip to heel (too
-  short to show a knee), the hind feet reaching back a little and the front
-  ones forward, stepping in a four-beat walk driven by distance walked, so
-  planted feet never slide. The front feet are like little hands, a palm with
-  four clawed fingers; the hind ones are longer paws. Each piece is drawn twice:
-  outlined, then as fur alone with its outline taken out, so outlines only run
-  round the leg's silhouette; the near pair's fur is drawn over the body's
-  edge, so the legs grow out of it. The far pair is a shade darker.
+- **Legs.** A hedgehog walks on its soles (plantigrade), its belly about an
+  inch off the ground, its legs mostly hidden under the skirt of spines and
+  only really seen when it runs. Each leg is one stubby piece laid from hip to
+  heel (too short to show a knee), drawn over its foot, its rounded end the
+  heel. The front feet are short and broad like little hands; the hind ones
+  are longer. Legs and feet share the belly's cream, so no change of shade
+  shows where they cross each other or the belly's edge. Each piece is drawn
+  twice: outlined, then as fur alone with its outline taken out, so outlines
+  only run round the leg's silhouette; the near pair's fur is drawn over the
+  body's edge, so the legs grow out of it. The far pair is a shade darker.
+- **Gait.** Steps are driven by distance walked, so planted feet never slide.
+  Walking, it uses a lateral-sequence walk, as slow pygmy hedgehogs and most
+  small mammals do: a hind foot, then the forefoot on its side, then the
+  other side's, evenly spaced, three feet always down. Hurrying, it trots,
+  the diagonal pairs together, its body lifted higher on straighter legs.
+  Each foot stays flat through most of its time down, then the heel peels up
+  and the foot rolls over its toe tips as it pushes off, swings low and lands
+  flat. No study of the European hedgehog's walk turned up; the sequence and
+  the shift to a trot come from Biknevicius et al. on the African pygmy
+  hedgehog (SICB abstract), the foot roll from plantigrade walking in general
+  (rabbit stance foot angles, PeerJ 2022), and the posture from Animal
+  Diversity Web, Britannica and Hedgehog Street (sources below).
 - **Movement.** Walking, the body rises and falls a little with each stride
   and rocks slowly, the head nodding behind it, at a quarter of the stride's
-  pace (its strides are short and quick, about four a second, eight in a
-  hurry), so it waddles rather than flickers. Sniffing, the nose dips slowly
-  with a brief snuffle now and then. Otherwise the head turns toward a cursor
+  pace (its strides are short and quick, about four a second), so it waddles
+  rather than flickers. Sniffing, the front of the body dips and the nose
+  goes to the ground, with a brief snuffle now and then. Peeking from the
+  pile, it stretches its neck out, nose lifted to test the air, a forefoot
+  raised to creep out. Otherwise the head turns toward a cursor
   within 160px (at most 14 degrees), eased so it turns smoothly. The eye
   blinks every 1.5 to 6.5s on a schedule seeded per hedgehog. Curled up, the
   ball breathes. Reduced motion stands each on four feet, head level, with no
   blink.
 - **One scale.** Every picture (the ball and the parts) is exported so its eye
   is the same size, so curled up it is the same hedgehog; `hedgehog-rig.ts`
-  sets one page scale (1.375 page pixels per drawing unit) for every pose.
+  sets one page scale (1.52 page pixels per drawing unit) for every pose.
+- **Key poses.** Each mode was tuned against a drawing of it, an edit of the
+  standing drawing (`hedgehog-pose-*.png`: a walk's contact and passing
+  moments, the hurry, the sniff and the peek).
 
 The workbench is `lab/critters.html`: every pose, the layers one by one, the
-art each is drawn from, the joints and the footprint.
+art each is drawn from, the joints and the footprint, with the standing
+drawing or a key pose laid over the rig (each mode picks its own).
 
-**Where it can live.** The pile is 88x25 and a hedgehog's footprint 47x26.5
+**Where it can live.** The pile is 88x25 and a hedgehog's footprint 41x26.5
 (the box its drawing stays inside whatever it does, which the rig's tests
-check; first drawn at 26x18). A home needs 260px of ledge and 27px of clear
+check, along with its feet never sinking into the ledge and its nose staying
+above it; first drawn at 26x18, then 47x26.5 before the rebuild, whose
+rounder drawing is shorter nose to tail). A home needs 260px of ledge and 27px of clear
 space above it, free of the page's content (text, controls, charts), up to the
 next floor and the bottom of any card above. It may count 6px past those, into
 the empty bottom edge of a card or heading above, but never over content:
@@ -133,13 +162,16 @@ The first four sources were generated on 2026-10-08 by the Codex CLI
 magenta `#FF00FF` background, with `design-docs/halloween/pumpkins.png` and
 `candles.png` as style references. The hedgehog's parts were generated the
 same way on 2026-10-09, with `hedgehog-sheet.png`'s walking pose as the
-character reference: `hedgehog-parts-2.png` (the body without legs or head,
-and the head with a soft unoutlined back edge to sit over the body),
-`hedgehog-legs.png` (leg pieces), `hedgehog-hand.png` (a front foot) and
-`hedgehog-hind.png` (a hind foot), each foot seen from the side with nothing
-sticking up out of it. A first parts sheet, with a neck tab tucked behind the
-body, then a long foot that read as a human foot, then a paw with an ankle
-stub on top, were each replaced.
+character reference. They were rebuilt the same day from
+`hedgehog-standing.png` (the whole hedgehog standing square, generated with
+the sheet and the first parts as references), each later image an edit of it:
+`hedgehog-parts-3.png` (the body without legs or head, closed underneath, and
+the head with a soft unoutlined back edge to sit over the body),
+`hedgehog-limbs.png` (a leg piece and the two feet, cut from its near legs)
+and the key poses (`hedgehog-pose-walk-contact.png`, `-walk-pass`, `-hurry`,
+`-sniff`, `-peek`). Earlier parts sheets (a neck tab tucked behind the body;
+thin legs on a long foot that read as a human foot, then on a paw with an
+ankle stub, then on separate hand and hind feet) were each replaced.
 
 | Source | Shipped as (`ui/src/lib/theme/bonfire/`) | Display size | Notes |
 | --- | --- | --- | --- |
@@ -147,10 +179,10 @@ stub on top, were each replaced.
 | `toffee-apples.png` | `toffee-apples.webp` | 54x34 | |
 | `woodpile.png` | `woodpile.webp` | 88x25 | Den opens on the right; the page mirrors it. Exported at four times its size. |
 | `hedgehog-sheet.png` | `hedgehog-ball.webp` | 17x16.6 units | Split at the widest empty column run. The walking pose is no longer shipped. |
-| `hedgehog-parts-2.png` | `hedgehog-body.webp`, `hedgehog-head.webp` | 22.3x15.7, 11.7x8.9 units | |
-| `hedgehog-legs.png` | `hedgehog-leg.webp`, `hedgehog-leg-fur.webp` | 2.3 units thick | The upper piece only; the fur version has its outline taken out (`art.py`'s `fill_only`). |
-| `hedgehog-hand.png` | `hedgehog-hand.webp`, `hedgehog-hand-fur.webp` | 3.4x1.3 units | |
-| `hedgehog-hind.png` | `hedgehog-hind.webp`, `hedgehog-hind-fur.webp` | 4.2x1.3 units | Each foot's heel (where the leg comes down) is set in `export.py` as a fraction of its box and printed. |
+| `hedgehog-standing.png` | `../../lab/hedgehog-reference.webp` | 24.4x16.6 units | For the lab only; `export.py` prints where each part sat in it. |
+| `hedgehog-parts-3.png` | `hedgehog-body.webp`, `hedgehog-head.webp` | 20.3x14.6, 11.7x10.1 units | Placed at (1.91, 1.27) and (13.69, 6.46). |
+| `hedgehog-limbs.png` | `hedgehog-leg.webp`, `hedgehog-hand.webp`, `hedgehog-hind.webp`, each with a `-fur` version | leg 2.6 units thick; feet 3.4x2 and 4x2 units | The fur versions have their outline taken out (`art.py`'s `fill_only`); the fur of all three is recoloured the belly's cream. Each foot's heel (where the leg comes down) is set in `export.py` as a fraction of its box and printed. |
+| `hedgehog-pose-*.png` | `../../lab/hedgehog-pose-*.webp` | about 24-26 units wide | Key poses, for the lab only. |
 
 The hedgehog's pictures are in drawing units, all on one scale: each sheet's
 eye is measured (`art.py`'s `feature`, from a seed point set in `export.py`)
@@ -173,6 +205,27 @@ Unit tests for the pure models and the rig (`bonfire/*.test.ts`,
 `rig/*.test.ts`), the Go calendar and override cases
 (`internal/config/bonfire_test.go`), `e2e/bonfire.spec.ts` against the real
 daemon (palette, pass-through, at least two hedgehogs out and one curling,
-fireworks bounded by the rail, reduced motion still, phone layout), the
-critters lab tests (parts decode, legs step and hold, still under reduced
-motion) and the lab's shared shelf contract.
+fireworks bounded by the rail, reduced motion still, phone layout, no
+hedgehog over content), the critters lab tests (parts decode, legs step and
+hold, still under reduced motion, the drawings laid over each mode) and the
+lab's shared shelf contract. The rig's tests also check the walk's footfall
+order, the trot's diagonal pairs, three soles always down walking, and each
+foot rolling over its toes.
+
+## Sources
+
+- Animal Diversity Web, *Erinaceus europaeus* and Erinaceidae (plantigrade;
+  belly about an inch off the ground; five clawed toes):
+  https://animaldiversity.org/accounts/Erinaceus_europaeus/
+- Hedgehog Street, hedgehog biology (legs mostly hidden, seen when running;
+  front feet wider like little hands, back feet slimmer and longer):
+  https://www.hedgehogstreet.org/about-hedgehogs/hedgehog-biology/
+- Biknevicius et al., SICB abstract on African pygmy hedgehog gait
+  (lateral-sequence walk at slow speeds, toward a trot faster):
+  https://sicb.org/?p=28291
+- Britannica, hedgehog (body raised high off the ground when running):
+  https://www.britannica.com/animal/hedgehog-mammal
+- Hildebrand 1980, the adaptive significance of tetrapod gait selection
+  (walk and trot by duty factor).
+- PeerJ 2022, rabbit hindlimb stance (the foot rolling up toward toe-off):
+  https://peerj.com/articles/13611

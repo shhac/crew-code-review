@@ -1,5 +1,5 @@
 import type { Point } from '../pointer';
-import { gaitPhase, legsTo, restingFeet, steppingFeet, swingsOf, type Gait, type QuadLeg } from '../rig/gait';
+import { gaitPhase, legsTo, restingFeet, steppingFeet, stepsOf, type Gait, type Step, type QuadLeg } from '../rig/gait';
 import { blinking, breath } from '../rig/life';
 import { legsLayer, lidLayers, stillPicture, turnAbout, turned, type Frame, type Fur, type LegArt, type RigPose, type Turn } from '../rig/rig';
 import { leapt, poseOf, type Fox } from './fox';
@@ -92,8 +92,8 @@ export type FoxLook = { now: number; still: boolean };
 export type RigFox = Pick<Fox, 'mode' | 'walked' | 'seed' | 'until' | 'ear' | 'look'>;
 
 type Feet = (hips: readonly Point[]) => Point[];
-// swings: how far through its swing each foot is, when stepping (swingsOf).
-type Stance = { body: Turn; head: number; tail: number; feet: Feet; swings?: number[] };
+// steps: where each foot is in its step, when stepping (stepsOf).
+type Stance = { body: Turn; head: number; tail: number; feet: Feet; steps?: Step[] };
 
 // Feet planted on the ledge, fore and hind each set this far from its hip.
 const planted = (foreBy: number, hindBy: number): Feet => (hips) => hips.map((h, i) => ({ x: h.x + (LEGS[i].fore ? foreBy : hindBy), y: FEET }));
@@ -112,7 +112,7 @@ function stance(fox: RigFox, look: FoxLook): Stance {
       const walked = fox.walked / SCALE;
       const phase = gaitPhase(walked, TROT);
       const body = turnAbout(0, HIND, 0, -0.3 * Math.abs(Math.sin(2 * Math.PI * phase)));
-      return { body, head: 0.8 * Math.sin(2 * Math.PI * phase), tail: 5 * Math.sin(2 * Math.PI * phase), feet: (hips) => steppingFeet(LEGS, hips, walked, FEET, TROT), swings: swingsOf(LEGS, walked, TROT) };
+      return { body, head: 0.8 * Math.sin(2 * Math.PI * phase), tail: 5 * Math.sin(2 * Math.PI * phase), feet: (hips) => steppingFeet(LEGS, hips, walked, FEET, TROT), steps: stepsOf(LEGS, walked, TROT) };
     }
     // Each tuned against its key pose (design-docs/aurora/fox-pose-*.png,
     // laid over the rig in the critters lab). A positive head turns the nose
@@ -145,9 +145,9 @@ export function foxRig(fox: RigFox, look: FoxLook): RigPose {
   const pose = poseOf(fox, look.now);
   // Curled up asleep, or looking up from there, breathing slowly.
   if (pose === 'curled' || pose === 'alert') return stillPicture(FRAME, PICTURES[pose], look.still ? 1 : 1 + 0.035 * breath(fox.seed, look.now, 3400));
-  const { body, head, tail, feet, swings } = stance(fox, look);
+  const { body, head, tail, feet, steps } = stance(fox, look);
   const hips = LEGS.map((s) => turned(body, s.hip));
-  const legs = legsTo(LEGS, hips, feet(hips), swings);
+  const legs = legsTo(LEGS, hips, feet(hips), steps);
   const nod = turnAbout(head, NECK);
   return {
     ...FRAME,

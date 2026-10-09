@@ -12,10 +12,15 @@
   {:else if layer.kind === 'legs'}
     <g data-legs={layer.fur ? 'fur' : 'outlined'} class:far={layer.far}>
       {#each layer.legs as leg}
+        {#if layer.art.overFoot}
+          <image href={layer.fur ? footOf(leg, layer.art).fur : footOf(leg, layer.art).src} {...footBox(leg, layer.art)} />
+        {/if}
         {#each piecesOf(leg, layer.art, layer.width) as piece, i}
           <image href={layer.fur ? piece.fur : piece.src} preserveAspectRatio="none" {...bone(piece.from, piece.to, piece.width, layer.fur && i === 0)} />
         {/each}
-        <image href={layer.fur ? footOf(leg, layer.art).fur : footOf(leg, layer.art).src} {...footBox(leg, layer.art)} />
+        {#if !layer.art.overFoot}
+          <image href={layer.fur ? footOf(leg, layer.art).fur : footOf(leg, layer.art).src} {...footBox(leg, layer.art)} />
+        {/if}
       {/each}
     </g>
   {:else if layer.kind === 'lid'}
