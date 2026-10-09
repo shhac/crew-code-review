@@ -8,22 +8,9 @@
   // robin-parts.html).
   import { onMount } from 'svelte';
   import { LEAP, POSES, poseOf, SPEED as FOX_SPEED, type Mode as FoxMode } from '../lib/theme/aurora/fox';
-  import { foxRig, REFERENCE as FOX_REFERENCE, type RigFox } from '../lib/theme/aurora/fox-rig';
-  import foxBow from './fox-pose-bow.webp';
-  import foxCrouch from './fox-pose-crouch.webp';
-  import foxDig from './fox-pose-dig.webp';
-  import foxPounce from './fox-pose-pounce.webp';
-  import foxTrotPass from './fox-pose-trot-pass.webp';
-  import foxTrotReach from './fox-pose-trot-reach.webp';
-  import foxReference from './fox-reference.webp';
+  import { foxRig, type RigFox } from '../lib/theme/aurora/fox-rig';
   import { HOG, HURRY, moving, SPEED as HOG_SPEED, type Hog, type Mode as HogMode } from '../lib/theme/bonfire/hedgehog';
-  import { gazeAt, hogRig, REFERENCE as HOG_REFERENCE } from '../lib/theme/bonfire/hedgehog-rig';
-  import hogHurry from './hedgehog-pose-hurry.webp';
-  import hogPeek from './hedgehog-pose-peek.webp';
-  import hogSniff from './hedgehog-pose-sniff.webp';
-  import hogWalkContact from './hedgehog-pose-walk-contact.webp';
-  import hogWalkPass from './hedgehog-pose-walk-pass.webp';
-  import hogReference from './hedgehog-reference.webp';
+  import { gazeAt, hogRig } from '../lib/theme/bonfire/hedgehog-rig';
   import LayeredRobin from '../lib/theme/christmas/LayeredRobin.svelte';
   import { partsModes, partsViewport } from '../lib/theme/christmas/parts-pose';
   import robinManifest from '../lib/theme/christmas/robin-parts/manifest.json' with { type: 'json' };
@@ -36,6 +23,7 @@
   import { easeTo } from '../lib/theme/rig/life';
   import type { RigPose } from '../lib/theme/rig/rig';
   import Rig from '../lib/theme/rig/Rig.svelte';
+  import { drawingFor, drawingsOf, overlay } from './drawings';
   import { allPartNames, keepParts, partArt } from './rig-parts';
 
   type Animal = 'hedgehog' | 'fox' | 'spider' | 'robin';
@@ -79,45 +67,13 @@
   let separate = false;
   let guides = false;
   let footprint = true;
-  // A drawing of the animal laid over it to compare: the standing one its
-  // parts and legs were measured from (where its parts sat), or a key pose
-  // drawn from it (export.py prints their sizes), stood on the ledge,
-  // centred.
-  type Drawing = { src: string; width: number; height: number; at?: Point };
-  const DRAWINGS: Partial<Record<Animal, Record<string, Drawing>>> = {
-    hedgehog: {
-      standing: { src: hogReference, ...HOG_REFERENCE, at: HOG_REFERENCE },
-      'walk contact': { src: hogWalkContact, width: 24, height: 16.25 },
-      'walk pass': { src: hogWalkPass, width: 24.17, height: 16.5 },
-      hurry: { src: hogHurry, width: 25.92, height: 15.33 },
-      sniff: { src: hogSniff, width: 24.75, height: 14.33 },
-      peek: { src: hogPeek, width: 25.92, height: 15.83 },
-    },
-    fox: {
-      standing: { src: foxReference, ...FOX_REFERENCE, at: FOX_REFERENCE },
-      'trot reach': { src: foxTrotReach, width: 29.67, height: 16.5 },
-      'trot pass': { src: foxTrotPass, width: 29.25, height: 16.83 },
-      crouch: { src: foxCrouch, width: 31.42, height: 10.67 },
-      bow: { src: foxBow, width: 27.33, height: 18.75 },
-      pounce: { src: foxPounce, width: 32.08, height: 16.75 },
-      dig: { src: foxDig, width: 27.08, height: 18.5 },
-    },
-  };
-  // The drawing each mode is compared with.
-  const DRAWING_OF: Partial<Record<Animal, Record<string, string>>> = {
-    hedgehog: { walk: 'walk contact', flee: 'hurry', sniff: 'sniff', peek: 'peek' },
-    fox: { trot: 'trot reach', stand: 'standing', stretch: 'bow', crouch: 'crouch', leap: 'pounce', dig: 'dig' },
-  };
+  // The drawing laid over the animal to compare, by name; none is ''.
   let reference = '';
   function setMode(m: string) {
     mode = m;
-    if (reference) reference = DRAWING_OF[animal]?.[m] ?? reference;
+    reference = drawingFor(animal, m, reference);
   }
-  $: drawings = DRAWINGS[animal] ?? {};
-  const overlay = (pose: RigPose, d: Drawing): RigPose => {
-    const at = d.at ?? { x: pose.anchor.x - d.width / 2, y: pose.anchor.y - d.height };
-    return { ...pose, layers: [{ kind: 'image', name: 'reference', src: d.src, x: at.x, y: at.y, width: d.width, height: d.height }] };
-  };
+  $: drawings = drawingsOf(animal);
   let stage: HTMLDivElement;
 
   const hogFor = (m: string, w: number): Hog => ({ id: 0, seed: 1, x: 0, dir, mode: HOG_MODES.find((h) => h === m) ?? 'walk', target: 0, until: 0, out: 0, walked: w });

@@ -1,13 +1,17 @@
 import { describe, expect, it } from 'vitest';
-import { cycleLength } from '../spidergait';
-import { flexion, gaitPhase, legsTo, restingFeet, roll, steppingFeet, stepsOf, type Gait, type QuadLeg } from './gait';
+import { cycleLength, rotate } from '../spidergait';
+import { flexion, gaitPhase, legsTo, restingFeet, roll, stepping, steppingFeet, stepsOf, type Gait, type QuadLeg } from './gait';
 
 const GROUND = 20;
-const WALK: Gait = { stride: 4, lift: 1.5, stance: 0.75 };
-const fore: QuadLeg = { hip: { x: 14, y: 12 }, reach: 0, thigh: 4, shin: 4.5, beat: 0, bend: 1, far: false, fore: true };
-const hind: QuadLeg = { ...fore, hip: { x: 4, y: 12 }, beat: 0.5, bend: -1, fore: false };
+// Beats for [fore, hind], or a lone leg stepping on the first.
+const WALK: Gait = { stride: 4, lift: 1.5, stance: 0.75, beats: [0, 0.5] };
+const fore: QuadLeg = { hip: { x: 14, y: 12 }, reach: 0, thigh: 4, shin: 4.5, bend: 1, far: false, fore: true };
+const hind: QuadLeg = { ...fore, hip: { x: 4, y: 12 }, bend: -1, fore: false };
 const hipsOf = (specs: readonly QuadLeg[]) => specs.map((s) => s.hip);
-const walking = (specs: readonly QuadLeg[], walked: number) => legsTo(specs, hipsOf(specs), steppingFeet(specs, hipsOf(specs), walked, GROUND, WALK), stepsOf(specs, walked, WALK));
+const walking = (specs: readonly QuadLeg[], walked: number) => {
+  const { feet, steps } = stepping(specs, walked, GROUND, WALK);
+  return legsTo(specs, hipsOf(specs), feet(hipsOf(specs)), steps);
+};
 
 describe('stepping', () => {
   it('keeps a planted foot still on the floor while the body walks on', () => {
@@ -32,7 +36,8 @@ describe('stepping', () => {
 
   it('steps from hips the body has moved', () => {
     const moved = [{ x: 20, y: 13 }];
-    expect(steppingFeet([fore], moved, 0, GROUND, WALK)[0].x - 20).toBeCloseTo(steppingFeet([fore], hipsOf([fore]), 0, GROUND, WALK)[0].x - 14);
+    const steps = stepsOf(0, WALK);
+    expect(steppingFeet([fore], moved, steps, GROUND, WALK)[0].x - 20).toBeCloseTo(steppingFeet([fore], hipsOf([fore]), steps, GROUND, WALK)[0].x - 14);
   });
 
   it('counts the phase in whole stride cycles', () => {
@@ -48,7 +53,7 @@ describe('restingFeet', () => {
 });
 
 describe('legsTo', () => {
-  const toed: QuadLeg = { ...fore, toes: { length: 2, lean: 10, fold: 50 } };
+  const toed: QuadLeg = { ...fore, walksOn: { kind: 'toes', length: 2, lean: 10, fold: 50 } };
 
   it('stands a toe-walker on a bone from its toes, the joint above behind the toes', () => {
     const [down] = legsTo([toed], [toed.hip], [{ x: 14, y: GROUND }]);
@@ -83,9 +88,9 @@ describe('steps', () => {
 
   it('counts each foot through its time down, then through its swing', () => {
     const cycle = cycleLength(WALK.stride, WALK.stance);
-    expect(stepsOf([fore], 0.375 * cycle, WALK)).toEqual([{ down: true, t: 0.5 }]);
-    expect(stepsOf([fore], 0.875 * cycle, WALK)[0].down).toBe(false);
-    expect(stepsOf([fore], 0.875 * cycle, WALK)[0].t).toBeCloseTo(0.5);
+    expect(stepsOf(0.375 * cycle, WALK)[0]).toEqual({ down: true, t: 0.5 });
+    expect(stepsOf(0.875 * cycle, WALK)[0].down).toBe(false);
+    expect(stepsOf(0.875 * cycle, WALK)[0].t).toBeCloseTo(0.5);
   });
 
   it('folds a paw most early in the swing, unfolds it, and tips it back just before landing', () => {
@@ -108,7 +113,7 @@ describe('steps', () => {
 });
 
 describe('a sole walker', () => {
-  const sole: QuadLeg = { ...fore, sole: { toes: { x: 2, y: 1 }, peel: 30 } };
+  const sole: QuadLeg = { ...fore, walksOn: { kind: 'sole', toes: { x: 2, y: 1 }, peel: 30 } };
 
   it('stands on its heel, flat, with no bone up from the toes', () => {
     const [leg] = legsTo([sole], [sole.hip], [{ x: 14, y: GROUND }], [{ down: true, t: 0.3 }]);
@@ -121,15 +126,15 @@ describe('a sole walker', () => {
     const [leg] = legsTo([sole], [sole.hip], [{ x: 14, y: GROUND }], [{ down: true, t: 1 }]);
     expect(leg.paw).toBeCloseTo(30);
     expect(leg.foot.y).toBeLessThan(GROUND - 0.5);
-    // The toes, turned with the foot about its heel, are where they were.
-    const a = (leg.paw * Math.PI) / 180;
-    expect(leg.foot.x + 2 * Math.cos(a) - Math.sin(a)).toBeCloseTo(16);
-    expect(leg.foot.y + 2 * Math.sin(a) + Math.cos(a)).toBeCloseTo(GROUND + 1);
+    // The toe tips, turned with the foot about its heel, are where they were.
+    const tips = rotate({ x: leg.foot.x + 2, y: leg.foot.y + 1 }, leg.foot, leg.paw);
+    expect(tips.x).toBeCloseTo(16);
+    expect(tips.y).toBeCloseTo(GROUND + 1);
   });
 
   it('moves smoothly from pushing off into its swing', () => {
     const cycle = cycleLength(WALK.stride, WALK.stance);
-    const at = (walked: number) => legsTo([sole], [sole.hip], steppingFeet([sole], [sole.hip], walked, GROUND, WALK), stepsOf([sole], walked, WALK))[0];
+    const at = (walked: number) => walking([sole], walked)[0];
     const [before, after] = [at(0.7499 * cycle), at(0.7501 * cycle)];
     expect(Math.hypot(after.foot.x - before.foot.x, after.foot.y - before.foot.y)).toBeLessThan(0.01);
     expect(Math.abs(after.paw - before.paw)).toBeLessThan(0.1);

@@ -1,4 +1,5 @@
 import type { Point } from '../pointer';
+import { rotate } from '../spidergait';
 import type { Limb, QuadLeg } from './gait';
 
 // An animal drawn from parts: generated images for the body, head and tail,
@@ -56,9 +57,8 @@ export const turnAbout = (angle: number, pivot: Point, dx = 0, dy = 0): Turn => 
 // Where a point drawn inside a turned group ends up: needed for the hips,
 // since the legs are drawn outside the body's group to keep feet planted.
 export function turned(turn: Turn, p: Point): Point {
-  const a = (turn.angle * Math.PI) / 180;
-  const x = p.x - turn.pivot.x, y = p.y - turn.pivot.y;
-  return { x: turn.pivot.x + x * Math.cos(a) - y * Math.sin(a) + turn.dx, y: turn.pivot.y + x * Math.sin(a) + y * Math.cos(a) + turn.dy };
+  const at = rotate(p, turn.pivot, turn.angle);
+  return { x: at.x + turn.dx, y: at.y + turn.dy };
 }
 
 export const transformOf = (turn: Turn, scaleY = 1) => {
@@ -78,14 +78,20 @@ export function bone(from: Point, to: Point, thick: number, flush = false) {
   return { x: -start, y: -thick / 2, width: length + start + thick / 2, height: thick, transform: `translate(${from.x} ${from.y}) rotate(${angle})` };
 }
 
-// Some of the legs (those `which` picks), outlined or as fur alone. A rig
-// draws each group outlined and then as fur, in an order that puts each
-// where it belongs against the body: legs that start behind it drawn before
-// it, with their fur after it, over its edge, so they grow out of it with
+// One side's legs, outlined or as fur alone.
+function legsLayer(specs: readonly QuadLeg[], limbs: readonly Limb[], art: LegArt, width: number, far: boolean, fur: boolean): Layer {
+  const legs = specs.flatMap((s, i) => (s.far === far ? [{ limb: limbs[i], haunch: s.haunch ?? width, fore: s.fore, taper: !!s.taper }] : []));
+  return { kind: 'legs', name: far ? 'far legs' : 'near legs', legs, art, width, far, fur };
+}
+
+// The legs round the body, each where it belongs against it: they start
+// inside it, so the far legs are drawn behind it, outlined, then as fur
+// alone so no line crosses where their pieces meet; the near legs outlined
+// behind it too, their fur then over its edge, so they grow out of it with
 // no line across.
-export function legsLayer(specs: readonly QuadLeg[], limbs: readonly Limb[], art: LegArt, width: number, which: { name: string; far: boolean; pick?: (spec: QuadLeg) => boolean }, fur: boolean): Layer {
-  const legs = specs.flatMap((s, i) => (s.far === which.far && (which.pick?.(s) ?? true) ? [{ limb: limbs[i], haunch: s.haunch ?? width, fore: s.fore, taper: !!s.taper }] : []));
-  return { kind: 'legs', name: which.name, legs, art, width, far: which.far, fur };
+export function legsAround(specs: readonly QuadLeg[], limbs: readonly Limb[], art: LegArt, width: number, body: Layer): Layer[] {
+  const side = (far: boolean, fur: boolean) => legsLayer(specs, limbs, art, width, far, fur);
+  return [side(true, false), side(true, true), side(false, false), body, side(false, true)];
 }
 
 // The pieces a leg is drawn with: a piece of art laid along each bone, as
@@ -108,6 +114,18 @@ export function footBox(leg: DrawnLeg, art: LegArt) {
   const foot = footOf(leg, art);
   const { x, y } = leg.limb.foot;
   return { x: x - foot.heel.x, y: y - foot.heel.y, width: foot.width, height: foot.height, transform: `rotate(${leg.limb.paw} ${x} ${y})` };
+}
+
+// A leg's images in the order they are drawn, outlined or as fur alone: a
+// piece of art stretched along each bone (in the fur pass the first runs
+// flush from the hip, see bone), then the foot over the leg's end; or, for
+// a sole walker, the foot first, under the leg's rounded end, its heel.
+export type LegImage = { href: string; stretch: boolean; x: number; y: number; width: number; height: number; transform: string };
+export function legImages(leg: DrawnLeg, art: LegArt, width: number, fur: boolean): LegImage[] {
+  const pieces = piecesOf(leg, art, width).map((p, i) => ({ href: fur ? p.fur : p.src, stretch: true, ...bone(p.from, p.to, p.width, fur && i === 0) }));
+  const drawn = footOf(leg, art);
+  const foot = { href: fur ? drawn.fur : drawn.src, stretch: false, ...footBox(leg, art) };
+  return art.overFoot ? [foot, ...pieces] : [...pieces, foot];
 }
 
 // An eyelid over the eye at `at`, while the eye is shut.

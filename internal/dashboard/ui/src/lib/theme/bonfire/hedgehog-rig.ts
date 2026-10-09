@@ -1,7 +1,7 @@
 import type { Point } from '../pointer';
-import { gaitPhase, legsTo, restingFeet, steppingFeet, stepsOf, type Gait, type QuadLeg, type Step } from '../rig/gait';
+import { gaitPhase, legsTo, restingFeet, stepping, type Gait, type QuadLeg, type Step } from '../rig/gait';
 import { blinking, breath, snuffle } from '../rig/life';
-import { legsLayer, lidLayers, stillPicture, turnAbout, turned, type Foot, type Frame, type Fur, type LegArt, type Layer, type RigPose, type Turn } from '../rig/rig';
+import { legsAround, lidLayers, stillPicture, turnAbout, turned, type Foot, type Frame, type Fur, type LegArt, type Layer, type RigPose, type Turn } from '../rig/rig';
 import { clamp } from '../spidergait';
 import { moving, type Hog } from './hedgehog';
 import ballArt from './hedgehog-ball.webp';
@@ -53,28 +53,25 @@ const FACE: Fur = { fill: '#fdd79b', outline: '#140c05' };
 // Hips just inside the belly, over the feet as the drawing stands them; the
 // far pair a little apart from the near, as it would be seen. Each foot's
 // heel peels up over the tips of its toes as it pushes off.
-const toesOf = (foot: Foot) => ({ x: foot.width - foot.heel.x, y: foot.height - foot.heel.y });
-const HIND = { reach: 0, thigh: 1, shin: 1, bend: 1, fore: false, sole: { toes: toesOf(LEG_ART.feet.hind), peel: 30 } } as const;
-const FORE = { reach: 0.2, thigh: 1, shin: 1, bend: -1, fore: true, sole: { toes: toesOf(LEG_ART.feet.fore), peel: 30 } } as const;
+const soleOf = (foot: Foot) => ({ kind: 'sole', toes: { x: foot.width - foot.heel.x, y: foot.height - foot.heel.y }, peel: 30 }) as const;
+const HIND = { reach: 0, thigh: 1, shin: 1, bend: 1, fore: false, walksOn: soleOf(LEG_ART.feet.hind) } as const;
+const FORE = { reach: 0.2, thigh: 1, shin: 1, bend: -1, fore: true, walksOn: soleOf(LEG_ART.feet.fore) } as const;
 const LEGS: QuadLeg[] = [
-  { ...HIND, hip: { x: 5.9, y: 14.6 }, beat: 0, far: false },
-  { ...FORE, hip: { x: 15.5, y: 14.6 }, beat: 0, far: false },
-  { ...HIND, hip: { x: 9.9, y: 14.8 }, beat: 0, far: true },
-  { ...FORE, hip: { x: 18.7, y: 14.4 }, beat: 0, far: true },
+  { ...HIND, hip: { x: 5.9, y: 14.6 }, far: false },
+  { ...FORE, hip: { x: 15.5, y: 14.6 }, far: false },
+  { ...HIND, hip: { x: 9.9, y: 14.8 }, far: true },
+  { ...FORE, hip: { x: 18.7, y: 14.4 }, far: true },
 ];
-const FAR = { name: 'far legs', far: true };
-const NEAR = { name: 'near legs', far: false };
+// Peeking, the foot it raises to creep out: its near fore.
+const CREEPING = 1;
 
 // Walking, a lateral-sequence walk, as small mammals and pygmy hedgehogs
 // walk slowly: a hind foot, then the forefoot on its side, then the other
 // side's, evenly spaced, three feet always down. Hurrying, it trots, the
 // diagonal pairs together, its body lifted higher on straighter legs.
-// (Beats are in LEGS' order; a later beat sets its foot down sooner.)
-const WALK: Gait = { stride: 2.6, lift: 0.7, stance: 0.75 };
-const WALKING = [0.75, 0.5, 0.25, 0].map((beat, i) => ({ ...LEGS[i], beat }));
-const TROT: Gait = { stride: 3.4, lift: 0.9, stance: 0.5 };
-const TROTTING = [0.5, 0, 0, 0.5].map((beat, i) => ({ ...LEGS[i], beat }));
-const RAISED = 0.5;
+// (Beats are in LEGS' order.)
+const WALKING = { gait: { stride: 2.6, lift: 0.7, stance: 0.75, beats: [0.75, 0.5, 0.25, 0] } satisfies Gait, raised: 0 };
+const TROTTING = { gait: { stride: 3.4, lift: 0.9, stance: 0.5, beats: [0.5, 0, 0, 0.5] } satisfies Gait, raised: 0.5 };
 
 // How far the head turns toward a cursor, and from how far it notices one;
 // sniffing, how far the nose dips at most, which keeps the drawing inside
@@ -113,8 +110,8 @@ const sway = (phase: number) => ({ bob: -0.2 * (0.5 - 0.5 * Math.cos(2 * Math.PI
 
 // How the hedgehog stands: its body's turn, its head's, how far its neck
 // stretches forward, where its feet go, and where each is in its step.
-type Stance = { body: Turn; head: number; neck: number; legs: readonly QuadLeg[]; feet: (hips: readonly Point[]) => Point[]; steps: Step[] };
-const resting = (body: Turn, head: number, neck = 0): Stance => ({ body, head, neck, legs: LEGS, feet: (hips) => restingFeet(LEGS, hips, FEET), steps: [] });
+type Stance = { body: Turn; head: number; neck: number; feet: (hips: readonly Point[]) => Point[]; steps: Step[] };
+const resting = (body: Turn, head: number, neck = 0): Stance => ({ body, head, neck, feet: (hips) => restingFeet(LEGS, hips, FEET), steps: [] });
 
 // Each tuned against its key pose (design-docs/bonfire/hedgehog-pose-*.png,
 // laid over the rig in the critters lab). A positive head turns the nose
@@ -123,9 +120,9 @@ function stance(hog: Hog, look: HogLook): Stance {
   if (look.still) return resting(turnAbout(0, ANCHOR), 0);
   const walked = hog.walked / SCALE;
   if (moving(hog.mode)) {
-    const { legs, gait, raised } = hog.mode === 'flee' ? { legs: TROTTING, gait: TROT, raised: RAISED } : { legs: WALKING, gait: WALK, raised: 0 };
+    const { gait, raised } = hog.mode === 'flee' ? TROTTING : WALKING;
     const step = sway(gaitPhase(walked, gait));
-    return { body: turnAbout(step.rock, ANCHOR, 0, step.bob - raised), head: step.nod, neck: 0, legs, feet: (hips) => steppingFeet(legs, hips, walked, FEET, gait), steps: stepsOf(legs, walked, gait) };
+    return { body: turnAbout(step.rock, ANCHOR, 0, step.bob - raised), head: step.nod, neck: 0, ...stepping(LEGS, walked, FEET, gait) };
   }
   if (hog.mode === 'sniff') {
     // Nose to the ground, the front of the body dipped a little, snuffling.
@@ -135,17 +132,17 @@ function stance(hog: Hog, look: HogLook): Stance {
     // Low and wary at the pile's mouth, its neck stretched out and nose
     // lifted to test the air, a forefoot raised to creep out.
     const creep: Stance = resting(turnAbout(0, ANCHOR, 0, 0.3), TEST_AIR + look.gaze, STRETCH);
-    const raise = (h: Point, i: number): Point => (i === 1 ? { x: h.x + 0.9, y: FEET - 0.5 } : { x: h.x + LEGS[i].reach, y: FEET });
-    return { ...creep, feet: (hips) => hips.map(raise), steps: LEGS.map((_, i) => (i === 1 ? { down: false, t: 0.35 } : { down: true, t: 0 })) };
+    const raise = (hips: readonly Point[]) => restingFeet(LEGS, hips, FEET).map((at, i) => (i === CREEPING ? { x: hips[i].x + 0.9, y: FEET - 0.5 } : at));
+    return { ...creep, feet: raise, steps: LEGS.map((_, i) => (i === CREEPING ? { down: false, t: 0.35 } : { down: true, t: 0 })) };
   }
   return resting(turnAbout(0, ANCHOR), look.gaze);
 }
 
 export function hogRig(hog: Hog, look: HogLook): RigPose {
   if (hog.mode === 'curled') return stillPicture(FRAME, BALL, look.still ? 1 : 1 + 0.04 * breath(hog.seed, look.now, 2600));
-  const { body, head: angle, neck, legs: specs, feet, steps } = stance(hog, look);
-  const hips = specs.map((s) => turned(body, s.hip));
-  const legs = legsTo(specs, hips, feet(hips), steps);
+  const { body, head: angle, neck, feet, steps } = stance(hog, look);
+  const hips = LEGS.map((s) => turned(body, s.hip));
+  const legs = legsTo(LEGS, hips, feet(hips), steps);
   const nod = turnAbout(angle, NECK, neck);
   const head: Layer = {
     kind: 'group', turn: nod,
@@ -153,22 +150,12 @@ export function hogRig(hog: Hog, look: HogLook): RigPose {
   };
   return {
     ...FRAME,
-    layers: [
-      // The legs start inside the body: the far legs behind it, outlined,
-      // then as fur alone so no line crosses where their pieces meet; the
-      // near legs outlined behind it too, their fur then over its edge, so
-      // they grow out of it with no line across.
-      legsLayer(specs, legs, LEG_ART, LEG_WIDTH, FAR, false),
-      legsLayer(specs, legs, LEG_ART, LEG_WIDTH, FAR, true),
-      legsLayer(specs, legs, LEG_ART, LEG_WIDTH, NEAR, false),
-      { kind: 'group', turn: body, layers: [{ kind: 'image', name: 'body', src: bodyArt, ...BODY }, head] },
-      legsLayer(specs, legs, LEG_ART, LEG_WIDTH, NEAR, true),
-    ],
+    layers: legsAround(LEGS, legs, LEG_ART, LEG_WIDTH, { kind: 'group', turn: body, layers: [{ kind: 'image', name: 'body', src: bodyArt, ...BODY }, head] }),
     guides: [
       { name: 'stands here', at: ANCHOR }, { name: 'neck', at: turned(body, NECK) }, { name: 'eye', at: turned(body, turned(nod, EYE)) },
       { name: 'nose', at: turned(body, turned(nod, NOSE)) },
-      ...hips.map((at, i) => ({ name: specs[i].fore ? 'shoulder' : 'hip', at })),
-      ...legs.map((l, i) => ({ name: specs[i].fore ? 'wrist' : 'ankle', at: l.foot })),
+      ...hips.map((at, i) => ({ name: LEGS[i].fore ? 'shoulder' : 'hip', at })),
+      ...legs.map((l, i) => ({ name: LEGS[i].fore ? 'wrist' : 'ankle', at: l.foot })),
     ],
   };
 }

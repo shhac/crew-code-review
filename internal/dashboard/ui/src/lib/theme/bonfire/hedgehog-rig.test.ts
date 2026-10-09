@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import type { Point } from '../pointer';
-import { footBox, turnAbout, turned, type RigPose } from '../rig/rig';
-import { firstShut, flatLayers, imagesOf, legsOf, lidsOf, rigBounds } from '../rig/test-rig';
+import type { RigPose } from '../rig/rig';
+import { firstShut, guideAt, imagesOf, legsOf, lidsOf, pageReach, solesOf } from '../rig/test-rig';
 import { HOG, type Hog, type Mode } from './hedgehog';
 import { gazeAt, hogRig, type HogLook } from './hedgehog-rig';
 
@@ -14,17 +13,7 @@ const headTurn = (pose: RigPose) => {
   const head = body?.kind === 'group' ? body.layers.find((l) => l.kind === 'group') : undefined;
   return head?.kind === 'group' ? head.turn.angle : NaN;
 };
-// Where each foot's sole reaches lowest, turned as its foot rolls, in the
-// order legsOf lists the legs (far hind, far fore, near hind, near fore).
-const solesOf = (pose: RigPose) => flatLayers(pose.layers).flatMap((l) => {
-  if (l.kind !== 'legs' || l.fur) return [];
-  return l.legs.map((leg) => {
-    const b = footBox(leg, l.art);
-    const corners: Point[] = [{ x: b.x, y: b.y + b.height }, { x: b.x + b.width, y: b.y + b.height }];
-    return Math.max(...corners.map((c) => turned(turnAbout(leg.limb.paw, leg.limb.foot), c).y));
-  });
-});
-const guide = (pose: RigPose, name: string) => pose.guides?.find((g) => g.name === name)?.at;
+// Legs are listed (legsOf, solesOf) far hind, far fore, near hind, near fore.
 // Whether each leg is lifted, at each of `count` moments through `distance`.
 const lifts = (mode: Mode, distance: number, count = 400) => Array.from({ length: count }, (_, i) => {
   const pose = hogRig(hog(mode, (i * distance) / count), look());
@@ -42,27 +31,16 @@ describe('hedgehog rig', () => {
   // it on the page, whatever its stride, sniff or glance toward the cursor.
   it('stays inside its footprint, whatever it does and wherever it looks', () => {
     const modes: Mode[] = ['walk', 'flee', 'home', 'sniff', 'peek', 'curled'];
-    const worst = { left: 0, right: 0, top: 0, sole: -Infinity, nose: -Infinity };
-    for (const mode of modes) {
-      for (const gaze of [-14, -7, 0, 7, 14]) {
-        for (let now = 0; now < 3600; now += 15) {
-          const rig = hogRig(hog(mode, now / 30), look({ now, gaze }));
-          const b = rigBounds(rig);
-          worst.left = Math.max(worst.left, (rig.anchor.x - b.left) * rig.scale);
-          worst.right = Math.max(worst.right, (b.right - rig.anchor.x) * rig.scale);
-          worst.top = Math.max(worst.top, (rig.anchor.y - b.top) * rig.scale);
-          worst.sole = Math.max(worst.sole, ...solesOf(rig).map((y) => y - rig.anchor.y));
-          worst.nose = Math.max(worst.nose, (guide(rig, 'nose')?.y ?? -Infinity) - rig.anchor.y);
-        }
-      }
-    }
-    expect(worst.left).toBeLessThanOrEqual(HOG.width / 2);
-    expect(worst.right).toBeLessThanOrEqual(HOG.width / 2);
-    expect(worst.top).toBeLessThanOrEqual(HOG.height);
+    const moments = Array.from({ length: 240 }, (_, i) => i * 15);
+    const rigs = modes.flatMap((mode) => [-14, -7, 0, 7, 14].flatMap((gaze) => moments.map((now) => hogRig(hog(mode, now / 30), look({ now, gaze })))));
+    const most = (of: (rig: RigPose) => number) => Math.max(...rigs.map(of));
+    expect(most((r) => pageReach(r).left)).toBeLessThanOrEqual(HOG.width / 2);
+    expect(most((r) => pageReach(r).right)).toBeLessThanOrEqual(HOG.width / 2);
+    expect(most((r) => pageReach(r).top)).toBeLessThanOrEqual(HOG.height);
     // Its feet stand on the ledge and its nose stays above it; neither
     // ever sinks into it.
-    expect(worst.sole).toBeLessThanOrEqual(1e-6);
-    expect(worst.nose).toBeLessThan(0);
+    expect(most((r) => Math.max(...solesOf(r)) - r.anchor.y)).toBeLessThanOrEqual(1e-6);
+    expect(most((r) => (guideAt(r, 'nose')?.y ?? -Infinity) - r.anchor.y)).toBeLessThan(0);
   });
 
   it('stands on four legs with every foot on the ledge', () => {
@@ -95,6 +73,21 @@ describe('hedgehog rig', () => {
     const poses = Array.from({ length: 200 }, (_, i) => hogRig(hog('walk', i * 0.1), look()));
     for (const pose of poses) expect(solesOf(pose).filter((y) => Math.abs(y - pose.anchor.y) < 1e-6).length).toBeGreaterThanOrEqual(3);
     expect(Math.max(...poses.flatMap((p) => legsOf(p).map((l) => l.paw)))).toBeGreaterThan(20);
+  });
+
+  it('peeking, raises only its near forefoot, its toes hanging', () => {
+    const pose = hogRig(hog('peek'), look({ now: OPEN }));
+    const lifted = solesOf(pose).map((y) => y < pose.anchor.y - 1e-6);
+    expect(lifted).toEqual([false, false, false, true]);
+    expect(legsOf(pose)[3].paw).toBeGreaterThan(0);
+  });
+
+  it('hurrying, carries its body higher than walking', () => {
+    const hipsAt = (mode: Mode) => {
+      const hips = hogRig(hog(mode, 0), look()).guides?.filter((g) => g.name === 'hip' || g.name === 'shoulder') ?? [];
+      return hips.reduce((sum, g) => sum + g.at.y, 0) / hips.length;
+    };
+    expect(hipsAt('walk') - hipsAt('flee')).toBeCloseTo(0.5, 1);
   });
 
   it('blinks now and then, and never under reduced motion', () => {

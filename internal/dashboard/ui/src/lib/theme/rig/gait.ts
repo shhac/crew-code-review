@@ -1,5 +1,7 @@
 import type { Point } from '../pointer';
-import { cycleLength, footAt, kneeToward, type Leg, type LegSpec } from '../spidergait';
+import { clamp, cycleLength, footOf, kneeToward, rotate, stepAt, type Leg, type LegSpec, type Step } from '../spidergait';
+
+export type { Step };
 
 // A four-legged animal's legs: the spider's stepping (spidergait.ts), driven
 // by distance walked so a planted foot never slides, with each leg's joints
@@ -16,7 +18,18 @@ import { cycleLength, footAt, kneeToward, type Leg, type LegSpec } from '../spid
 // that joint. One that walks on its soles (a hedgehog) has none: its foot
 // rolls instead, the heel peeling up over the planted toes as it pushes off.
 
-export type QuadLeg = LegSpec & {
+// A toe walker's bone up from the toes: its length, how far its foot end
+// sits ahead of the joint above standing (degrees from straight down), and
+// how far the wrist or hock folds it back as the paw swings through a step.
+export type Toes = { kind: 'toes'; length: number; lean: number; fold: number };
+// A sole walker's foot: where its toes press the ground, from the heel
+// (where the leg comes down), and how far (degrees) the heel peels up over
+// them as the foot pushes off.
+export type Sole = { kind: 'sole'; toes: Point; peel: number };
+
+// When each leg steps is the gait's (a walk and a trot move the same legs in
+// different orders), so a leg has no beat of its own.
+export type QuadLeg = Omit<LegSpec, 'beat'> & {
   fore: boolean;
   // Which way the middle joint points: a hind knee forward (1), a fore elbow
   // back (-1).
@@ -29,14 +42,8 @@ export type QuadLeg = LegSpec & {
   // On a hind leg, the shank (stifle to hock) drawn tapering, so the hock is
   // narrow and sharp rather than a rounded join.
   taper?: boolean;
-  // The bone up from the toes: its length, how far its foot end sits ahead
-  // of the joint above standing (degrees from straight down), and how far
-  // the wrist or hock folds it back as the paw swings through a step.
-  toes?: { length: number; lean: number; fold: number };
-  // A sole walker's foot: where its toes press the ground, from the heel
-  // (where the leg comes down), and how far (degrees) the heel peels up
-  // over them as the foot pushes off.
-  sole?: { toes: Point; peel: number };
+  // What it stands on, beyond a plain foot at the leg's end.
+  walksOn?: Toes | Sole;
 };
 // A leg posed: hip (or shoulder); knee (the stifle on a hind leg, the elbow
 // on a foreleg); ankle (the hock, or the wrist; the foot itself where there
@@ -45,29 +52,33 @@ export type QuadLeg = LegSpec & {
 export type Limb = Leg & { ankle: Point; paw: number };
 // stance: the share of each cycle a foot is down. A walk keeps three feet
 // down (0.75, four beats); a trot moves diagonal pairs together (about 0.5).
-export type Gait = { stride: number; lift: number; stance: number };
+// beats: when in the cycle each leg steps, 0 to 1, in the rig's order of
+// legs; a later beat sets its foot down sooner.
+export type Gait = { stride: number; lift: number; stance: number; beats: readonly number[] };
 
 // How far through its stride cycle an animal is: what its feet step to, and
 // what its body's bob and nod keep time with.
 export const gaitPhase = (walked: number, gait: Gait) => walked / cycleLength(gait.stride, gait.stance);
 
-export const steppingFeet = (specs: readonly QuadLeg[], hips: readonly Point[], walked: number, ground: number, gait: Gait): Point[] =>
-  specs.map((s, i) => footAt({ ...s, hip: hips[i] }, gaitPhase(walked, gait), ground, gait.stride, gait.lift, gait.stance));
+// Where each foot is in its step, this far into the walk.
+export function stepsOf(walked: number, gait: Gait): Step[] {
+  const phase = gaitPhase(walked, gait);
+  return gait.beats.map((beat) => stepAt(phase, beat, gait.stance));
+}
+
+export const steppingFeet = (specs: readonly QuadLeg[], hips: readonly Point[], steps: readonly Step[], ground: number, gait: Gait): Point[] =>
+  specs.map((s, i) => footOf(hips[i].x + s.reach, steps[i], ground, gait.stride, gait.lift));
+
+// Stepping this far into the walk: where the feet go from wherever the body
+// has moved the hips, and each foot's step, for legsTo to fold or roll it.
+export function stepping(specs: readonly QuadLeg[], walked: number, ground: number, gait: Gait) {
+  const steps = stepsOf(walked, gait);
+  return { feet: (hips: readonly Point[]) => steppingFeet(specs, hips, steps, ground, gait), steps };
+}
 
 // Stood still: every foot down at its resting reach.
 export const restingFeet = (specs: readonly QuadLeg[], hips: readonly Point[], ground: number): Point[] =>
   specs.map((s, i) => ({ x: hips[i].x + s.reach, y: ground }));
-
-// Where a foot is in its step: down, 0 setting down to 1 lifting off, or
-// swinging, 0 lifting off to 1 landing.
-export type Step = { down: boolean; t: number };
-export function stepsOf(specs: readonly QuadLeg[], walked: number, gait: Gait): Step[] {
-  const phase = gaitPhase(walked, gait);
-  return specs.map((s) => {
-    const p = phase + s.beat - Math.floor(phase + s.beat);
-    return p < gait.stance ? { down: true, t: p / gait.stance } : { down: false, t: (p - gait.stance) / (1 - gait.stance) };
-  });
-}
 
 // How far a paw is folded through its swing (from stepsOf): the wrist or
 // hock flexes as it lifts, folding the paw back with its toes down, then
@@ -80,7 +91,7 @@ export function flexion(step?: Step): number {
 }
 
 const smooth = (t: number) => {
-  const c = Math.min(1, Math.max(0, t));
+  const c = clamp(t, 0, 1);
   return c * c * (3 - 2 * c);
 };
 // How far a sole walker's foot is rolled up onto its toes (0 flat, 1 its
@@ -91,33 +102,32 @@ export function roll(step?: Step): number {
   return step.down ? smooth((step.t - 0.6) / 0.4) : 1 - smooth(step.t / 0.8);
 }
 
-// Where a rolled foot's heel is: turned `angle` degrees up about its toes,
-// which stay where they were.
-function peeled(heel: Point, toes: Point, angle: number): Point {
-  const a = (angle * Math.PI) / 180;
-  return { x: heel.x + toes.x - toes.x * Math.cos(a) + toes.y * Math.sin(a), y: heel.y + toes.y - toes.x * Math.sin(a) - toes.y * Math.cos(a) };
-}
-
 // Where the bone up from the toes starts, folded `fold` degrees back from
 // standing: rotating it that way swings the paw back behind the joint.
-function ankleOf(spec: QuadLeg, foot: Point, fold: number): Point {
-  if (!spec.toes) return foot;
-  const angle = ((spec.toes.lean - fold) * Math.PI) / 180;
-  return { x: foot.x - spec.toes.length * Math.sin(angle), y: foot.y - spec.toes.length * Math.cos(angle) };
+function ankleOf(toes: Toes, foot: Point, fold: number): Point {
+  const angle = ((toes.lean - fold) * Math.PI) / 180;
+  return { x: foot.x - toes.length * Math.sin(angle), y: foot.y - toes.length * Math.cos(angle) };
+}
+
+// One leg posed from its hip to its foot. A sole walker's heel is turned up
+// about its toe tips, which stay planted, as the foot rolls; a toe walker's
+// bone up from the toes folds back as the paw swings.
+function limbOf(spec: QuadLeg, hip: Point, foot: Point, step?: Step): Limb {
+  const knee = (to: Point) => kneeToward(hip, to, spec.thigh, spec.shin, spec.bend);
+  const on = spec.walksOn;
+  if (!on) return { hip, knee: knee(foot), ankle: foot, foot, paw: 0 };
+  if (on.kind === 'sole') {
+    const paw = on.peel * roll(step);
+    const heel = rotate(foot, { x: foot.x + on.toes.x, y: foot.y + on.toes.y }, paw);
+    return { hip, knee: knee(heel), ankle: heel, foot: heel, paw };
+  }
+  const fold = on.fold * flexion(step);
+  const ankle = ankleOf(on, foot, fold);
+  return { hip, knee: knee(ankle), ankle, foot, paw: fold };
 }
 
 // Each leg posed from its hip to its foot; `steps` (from stepsOf), when
 // stepping, fold the bones up from the toes as they swing, or roll a sole
 // walker's feet.
-export function legsTo(specs: readonly QuadLeg[], hips: readonly Point[], feet: readonly Point[], steps: readonly Step[] = []): Limb[] {
-  return specs.map((s, i) => {
-    if (s.sole) {
-      const paw = s.sole.peel * roll(steps[i]);
-      const foot = peeled(feet[i], s.sole.toes, paw);
-      return { hip: hips[i], knee: kneeToward(hips[i], foot, s.thigh, s.shin, s.bend), ankle: foot, foot, paw };
-    }
-    const fold = s.toes ? s.toes.fold * flexion(steps[i]) : 0;
-    const ankle = ankleOf(s, feet[i], fold);
-    return { hip: hips[i], knee: kneeToward(hips[i], ankle, s.thigh, s.shin, s.bend), ankle, foot: feet[i], paw: fold };
-  });
-}
+export const legsTo = (specs: readonly QuadLeg[], hips: readonly Point[], feet: readonly Point[], steps: readonly Step[] = []): Limb[] =>
+  specs.map((s, i) => limbOf(s, hips[i], feet[i], steps[i]));

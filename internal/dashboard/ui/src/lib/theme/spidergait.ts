@@ -30,15 +30,33 @@ export const cycleLength = (stride: number, stance = STANCE) => stride / stance;
 const fract = (n: number) => n - Math.floor(n);
 export const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
 
-// Where the foot is at this point in its cycle: planted and sliding back
-// under the body, or lifted and swinging forward over a low arc.
-export function footAt(spec: LegSpec, phase: number, ground: number, stride: number, lift: number, stance = STANCE): Point {
-  const p = fract(phase + spec.beat);
-  const rest = spec.hip.x + spec.reach;
-  if (p < stance) return { x: rest + stride * (0.5 - p / stance), y: ground };
-  const t = (p - stance) / (1 - stance);
-  return { x: rest + stride * (t - 0.5), y: ground - Math.sin(Math.PI * t) * lift };
+// `p` turned `angle` degrees about `pivot` (clockwise on the page, y down).
+export function rotate(p: Point, pivot: Point, angle: number): Point {
+  const a = (angle * Math.PI) / 180;
+  const x = p.x - pivot.x, y = p.y - pivot.y;
+  return { x: pivot.x + x * Math.cos(a) - y * Math.sin(a), y: pivot.y + x * Math.sin(a) + y * Math.cos(a) };
 }
+
+// Where a foot is in its step: down, 0 setting down to 1 lifting off, or
+// swinging, 0 lifting off to 1 landing. Everything a step moves (where the
+// foot is, how a paw folds or a sole rolls) reads this one reckoning, so
+// they can never fall out of step with each other.
+export type Step = { down: boolean; t: number };
+export function stepAt(phase: number, beat: number, stance = STANCE): Step {
+  const p = fract(phase + beat);
+  return p < stance ? { down: true, t: p / stance } : { down: false, t: (p - stance) / (1 - stance) };
+}
+
+// Where a foot resting at `rest` is in its step: planted and sliding back
+// under the body, or lifted and swinging forward over a low arc.
+export function footOf(rest: number, step: Step, ground: number, stride: number, lift: number): Point {
+  if (step.down) return { x: rest + stride * (0.5 - step.t), y: ground };
+  return { x: rest + stride * (step.t - 0.5), y: ground - Math.sin(Math.PI * step.t) * lift };
+}
+
+// Where the foot is at this point in its cycle.
+export const footAt = (spec: LegSpec, phase: number, ground: number, stride: number, lift: number, stance = STANCE): Point =>
+  footOf(spec.hip.x + spec.reach, stepAt(phase, spec.beat, stance), ground, stride, lift);
 
 // The two knees that join a thigh at the hip to a shin at the foot. A foot
 // out of reach straightens the leg toward it rather than tearing it off.

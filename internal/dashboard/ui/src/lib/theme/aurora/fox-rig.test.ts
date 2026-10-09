@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { firstShut, imagesOf, legsOf, lidsOf, rigBounds } from '../rig/test-rig';
+import { firstShut, imagesOf, legsOf, lidsOf, pageReach } from '../rig/test-rig';
 import { LEAP, POSES, poseOf, type Mode } from './fox';
 import { foxRig, type FoxLook, type RigFox } from './fox-rig';
 
@@ -20,11 +20,10 @@ describe('fox rig', () => {
           const f = fox(mode, { walked });
           const { width, height } = POSES[poseOf(f, now)];
           const rig = foxRig(f, look({ now }));
-          const b = rigBounds(rig);
-          // The footprint is on the page; the drawing in drawing units.
-          expect((rig.anchor.x - b.left) * rig.scale).toBeLessThanOrEqual(width / 2);
-          expect((b.right - rig.anchor.x) * rig.scale).toBeLessThanOrEqual(width / 2);
-          expect((rig.anchor.y - b.top) * rig.scale).toBeLessThanOrEqual(height);
+          const reach = pageReach(rig);
+          expect(reach.left).toBeLessThanOrEqual(width / 2);
+          expect(reach.right).toBeLessThanOrEqual(width / 2);
+          expect(reach.top).toBeLessThanOrEqual(height);
         }
       }
     });
