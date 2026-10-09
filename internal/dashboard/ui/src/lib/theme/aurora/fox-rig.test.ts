@@ -30,13 +30,19 @@ describe('fox rig', () => {
     });
   }
 
-  it('trots on four legs, diagonal pairs together', () => {
+  it('trots on four legs, the hind foot of each diagonal pair landing just before the fore', () => {
     const at = (walked: number) => legsOf(foxRig(fox('trot', { walked }), look({ now: OPEN })));
     expect(at(1)).not.toEqual(at(0));
-    // Far hind with near fore, and far fore with near hind.
-    const [farHind, farFore, nearHind, nearFore] = at(2.5);
-    expect(farHind.foot.y).toBeCloseTo(nearFore.foot.y);
-    expect(farFore.foot.y).toBeCloseTo(nearHind.foot.y);
+    // Far hind with near fore, and far fore with near hind (as listed: far
+    // hind, far fore, near hind, near fore). Down means its toes on the
+    // ledge and its paw flat.
+    const ground = Math.max(...at(0).map((l) => l.foot.y));
+    const down = (l: { foot: { y: number }; paw: number }) => l.foot.y >= ground - 1e-6 && l.paw === 0;
+    const frames = Array.from({ length: 400 }, (_, i) => at(i * 0.1));
+    const landed = (leg: number) => frames.findIndex((f, i) => i > 0 && down(f[leg]) && !down(frames[i - 1][leg]));
+    expect(landed(0)).toBeLessThan(landed(3));
+    // A tenth of a stride at most (24px on the page, sampled every 0.1px).
+    expect(landed(3) - landed(0)).toBeLessThan(25);
   });
 
   it('is one picture curled up, looking up from there when alert', () => {

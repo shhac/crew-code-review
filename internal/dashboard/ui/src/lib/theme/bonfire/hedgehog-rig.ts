@@ -109,7 +109,7 @@ export function hogRig(hog: Hog, look: HogLook): RigPose {
   // A little nose-down while sniffing.
   const body = turnAbout(step.rock + (hog.mode === 'sniff' && !look.still ? 2 : 0), ANCHOR, 0, step.bob);
   const hips = LEGS.map((s) => turned(body, s.hip));
-  const legs = legsTo(LEGS, hips, walking ? steppingFeet(LEGS, hips, walked, FEET, WALK) : restingFeet(LEGS, hips, FEET), FEET, WALK.lift);
+  const legs = legsTo(LEGS, hips, walking ? steppingFeet(LEGS, hips, walked, FEET, WALK) : restingFeet(LEGS, hips, FEET));
   const nod = turnAbout(headAngle(hog, look), NECK);
   const head: Layer = {
     kind: 'group', turn: nod,

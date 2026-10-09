@@ -1,6 +1,6 @@
 // Queries over a rig's drawing, shared by the animals' rig tests.
 import type { Point } from '../pointer';
-import { footBox, piecesOf, turned, type Layer, type RigPose } from './rig';
+import { footBox, piecesOf, turnAbout, turned, type Layer, type RigPose } from './rig';
 
 export const flatLayers = (layers: readonly Layer[]): Layer[] => layers.flatMap((l) => (l.kind === 'group' ? [l, ...flatLayers(l.layers)] : [l]));
 // Each leg once (from the outlined pass, not again from the fur over it),
@@ -24,7 +24,11 @@ function reach(l: Exclude<Layer, { kind: 'group' }>): Point[] {
       // foot is its own box.
       const pieces = l.legs.flatMap((leg) => piecesOf(leg, l.art, l.width));
       const joints = pieces.flatMap((p) => [p.from, p.to].flatMap((at) => corners(at.x - p.width / 2, at.y - p.width / 2, at.x + p.width / 2, at.y + p.width / 2)));
-      const feet = l.legs.map((leg) => footBox(leg, l.art)).flatMap((b) => corners(b.x, b.y, b.x + b.width, b.y + b.height));
+      const feet = l.legs.flatMap((leg) => {
+        const b = footBox(leg, l.art);
+        const turn = turnAbout(leg.limb.paw, leg.limb.foot);
+        return corners(b.x, b.y, b.x + b.width, b.y + b.height).map((p) => turned(turn, p));
+      });
       return [...joints, ...feet];
     }
   }

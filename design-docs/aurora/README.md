@@ -244,9 +244,17 @@ alone with its outline taken out, so outlines run only round the leg's
 silhouette, never across a joint; the near pair's fur is drawn over the
 torso's edge so those legs grow out of the body with no line across the hip
 or shoulder. A first try put the hips at the torso's underside, with two bones
-and a flat paw, which looked stuck on and stood on what read as feet. The far pair is a shade darker. Trotting, diagonal pairs step together,
-driven by distance trotted so planted paws never slide; the body bounces
-gently and the head nods and the tail swishes once a stride. The bow tilts the body down onto forelegs reaching
+and a flat paw, which looked stuck on and stood on what read as feet. The far pair is a shade darker. Trotting, diagonal pairs step together, driven by distance trotted so
+planted paws never slide, though never quite together: the hind foot of
+each pair lands a little before its fore foot (6% of a stride), as a
+trotter's tends to, and each foot is down for a little over half the stride,
+so the pairs overlap. As a paw lifts, the wrist (or hock) flexes and folds it
+back, toes down, then unfolds through the second half of the swing and tips
+it toes-up just before it lands flat. (Sources consulted: the canine gait
+and trot dissociation literature, e.g. Hobbs et al. 2016 in PeerJ, and canine
+forelimb swing-phase kinematics; no fox-specific measurements were found.)
+The body bounces gently and the head nods and the tail swishes once a
+stride. The bow tilts the body down onto forelegs reaching
 forward with the tail up; the crouch lowers it; the leap arcs it nose up then
 nose down, hind legs trailing, then forelegs reaching for the snow; the dig
 puts its nose down with the forepaws scrabbling in turn. The head sits over

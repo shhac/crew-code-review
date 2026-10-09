@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { cycleLength } from '../spidergait';
-import { gaitPhase, legsTo, restingFeet, steppingFeet, type Gait, type QuadLeg } from './gait';
+import { flexion, gaitPhase, legsTo, restingFeet, steppingFeet, swingsOf, type Gait, type QuadLeg } from './gait';
 
 const GROUND = 20;
 const WALK: Gait = { stride: 4, lift: 1.5, stance: 0.75 };
 const fore: QuadLeg = { hip: { x: 14, y: 12 }, reach: 0, thigh: 4, shin: 4.5, beat: 0, bend: 1, far: false, fore: true };
 const hind: QuadLeg = { ...fore, hip: { x: 4, y: 12 }, beat: 0.5, bend: -1, fore: false };
 const hipsOf = (specs: readonly QuadLeg[]) => specs.map((s) => s.hip);
-const walking = (specs: readonly QuadLeg[], walked: number) => legsTo(specs, hipsOf(specs), steppingFeet(specs, hipsOf(specs), walked, GROUND, WALK), GROUND, WALK.lift);
+const walking = (specs: readonly QuadLeg[], walked: number) => legsTo(specs, hipsOf(specs), steppingFeet(specs, hipsOf(specs), walked, GROUND, WALK), swingsOf(specs, walked, WALK));
 
 describe('stepping', () => {
   it('keeps a planted foot still on the floor while the body walks on', () => {
@@ -50,25 +50,46 @@ describe('restingFeet', () => {
 describe('legsTo', () => {
   const toed: QuadLeg = { ...fore, toes: { length: 2, lean: 10, fold: 50 } };
 
-  it('stands a toe-walker on a bone from its toes, leaning back, folding further as the paw lifts', () => {
-    const [down] = legsTo([toed], [toed.hip], [{ x: 14, y: GROUND }], GROUND, 1);
+  it('stands a toe-walker on a bone from its toes, the joint above behind the toes', () => {
+    const [down] = legsTo([toed], [toed.hip], [{ x: 14, y: GROUND }]);
     expect(Math.hypot(down.ankle.x - down.foot.x, down.ankle.y - down.foot.y)).toBeCloseTo(2);
     expect(down.ankle.x).toBeLessThan(down.foot.x);
     expect(down.ankle.y).toBeLessThan(down.foot.y);
-    const [up] = legsTo([toed], [toed.hip], [{ x: 14, y: GROUND - 1 }], GROUND, 1);
-    const lean = (l: typeof down) => Math.atan2(l.foot.x - l.ankle.x, l.foot.y - l.ankle.y);
-    expect(lean(up)).toBeGreaterThan(lean(down));
-    expect(Math.hypot(up.knee.x - up.ankle.x, up.knee.y - up.ankle.y)).toBeCloseTo(toed.shin);
+    expect(down.paw).toBe(0);
   });
 
+  it('folds the paw back behind the joint, toes down, early in its swing, and tips it toes-up just before it lands', () => {
+    const [early] = legsTo([toed], [toed.hip], [{ x: 14, y: GROUND - 1 }], [0.35]);
+    expect(early.paw).toBeGreaterThan(40);
+    expect(early.ankle.x).toBeGreaterThan(early.foot.x);
+    const [late] = legsTo([toed], [toed.hip], [{ x: 14, y: GROUND - 0.2 }], [0.9]);
+    expect(late.paw).toBeLessThan(0);
+    expect(Math.hypot(early.knee.x - early.ankle.x, early.knee.y - early.ankle.y)).toBeCloseTo(toed.shin);
+  });
   it('ends at the foot itself where there is no bone up from the toes', () => {
-    const [leg] = legsTo([fore], [fore.hip], [{ x: 14, y: GROUND }], GROUND);
+    const [leg] = legsTo([fore], [fore.hip], [{ x: 14, y: GROUND }]);
     expect(leg.ankle).toEqual(leg.foot);
   });
 
   it('joins moved hips to chosen feet with legs of the right length', () => {
-    const [leg] = legsTo([fore], [{ x: 10, y: 15 }], [{ x: 13, y: GROUND }], GROUND);
+    const [leg] = legsTo([fore], [{ x: 10, y: 15 }], [{ x: 13, y: GROUND }]);
     expect(Math.hypot(leg.knee.x - 10, leg.knee.y - 15)).toBeCloseTo(fore.thigh);
     expect(Math.hypot(leg.foot.x - leg.knee.x, leg.foot.y - leg.knee.y)).toBeCloseTo(fore.shin);
+  });
+});
+
+describe('swing', () => {
+  it('is -1 while a foot is down and runs 0 to 1 through its step', () => {
+    const cycle = cycleLength(WALK.stride, WALK.stance);
+    expect(swingsOf([fore], 0.5 * cycle, WALK)).toEqual([-1]);
+    expect(swingsOf([fore], 0.875 * cycle, WALK)[0]).toBeCloseTo(0.5);
+  });
+
+  it('folds most early in the swing, unfolds, and tips back just before landing', () => {
+    expect(flexion(-1)).toBe(0);
+    expect(flexion(0.375)).toBeCloseTo(1);
+    expect(flexion(0.75)).toBeCloseTo(0);
+    expect(flexion(0.875)).toBeLessThan(0);
+    expect(flexion(1)).toBeCloseTo(0);
   });
 });

@@ -31,8 +31,8 @@ export type LegArt = {
   knee: boolean;
 };
 // One leg as drawn: its pose, how thick its upper piece is, which foot, and
-// how far its shank runs past the hock (see QuadLeg).
-export type DrawnLeg = { limb: Limb; haunch: number; fore: boolean; heel: number };
+// whether its shank tapers to the hock (see QuadLeg).
+export type DrawnLeg = { limb: Limb; haunch: number; fore: boolean; taper: boolean };
 
 export type Layer =
   | { kind: 'image'; name: string; src: string; x: number; y: number; width: number; height: number }
@@ -81,7 +81,7 @@ export function bone(from: Point, to: Point, thick: number, flush = false) {
 // it, with their fur after it, over its edge, so they grow out of it with
 // no line across.
 export function legsLayer(specs: readonly QuadLeg[], limbs: readonly Limb[], art: LegArt, width: number, which: { name: string; far: boolean; pick?: (spec: QuadLeg) => boolean }, fur: boolean): Layer {
-  const legs = specs.flatMap((s, i) => (s.far === which.far && (which.pick?.(s) ?? true) ? [{ limb: limbs[i], haunch: s.haunch ?? width, fore: s.fore, heel: s.heel ?? 0 }] : []));
+  const legs = specs.flatMap((s, i) => (s.far === which.far && (which.pick?.(s) ?? true) ? [{ limb: limbs[i], haunch: s.haunch ?? width, fore: s.fore, taper: !!s.taper }] : []));
   return { kind: 'legs', name: which.name, legs, art, width, far: which.far, fur };
 }
 
@@ -94,17 +94,17 @@ export function piecesOf(leg: DrawnLeg, art: LegArt, width: number): Piece[] {
   if (!art.knee) return [{ from: hip, to: foot, width, ...plain }];
   const upper = { from: hip, to: knee, width: leg.haunch, ...(art.thigh ?? plain) };
   const toes = ankle.x === foot.x && ankle.y === foot.y ? [] : [{ from: ankle, to: foot, width, ...plain }];
-  // A hind shank tapers to the hock and runs on past it to its point.
-  const length = Math.hypot(ankle.x - knee.x, ankle.y - knee.y) || 1;
-  const past = { x: ankle.x + ((ankle.x - knee.x) / length) * leg.heel, y: ankle.y + ((ankle.y - knee.y) / length) * leg.heel };
-  const shank = leg.heel ? { from: knee, to: past, width: width * 1.15, ...(art.thigh ?? plain) } : { from: knee, to: ankle, width, ...plain };
+  // A hind shank tapers to a narrow hock.
+  const shank = leg.taper ? { from: knee, to: ankle, width: width * 1.15, ...(art.thigh ?? plain) } : { from: knee, to: ankle, width, ...plain };
   return [upper, shank, ...toes];
 }
 
 export const footOf = (leg: DrawnLeg, art: LegArt) => (leg.fore ? art.feet.fore : art.feet.hind);
+// A foot's box, and its turn about the heel as the bone above it folds.
 export function footBox(leg: DrawnLeg, art: LegArt) {
   const foot = footOf(leg, art);
-  return { x: leg.limb.foot.x - foot.heel.x, y: leg.limb.foot.y - foot.heel.y, width: foot.width, height: foot.height };
+  const { x, y } = leg.limb.foot;
+  return { x: x - foot.heel.x, y: y - foot.heel.y, width: foot.width, height: foot.height, transform: `rotate(${leg.limb.paw} ${x} ${y})` };
 }
 
 // An eyelid over the eye at `at`, while the eye is shut.

@@ -59,7 +59,9 @@ test('the hedgehogs come out one by one once the page is still, and one curls up
 });
 
 test('the hedgehogs never cover text, controls or charts, wherever they wander', async ({ page }) => {
-  test.setTimeout(60_000);
+  // Three routes, each waited on and measured six times: measuring every
+  // text range is slow on a busy machine.
+  test.setTimeout(150_000);
   await page.setViewportSize({ width: 1440, height: 900 });
   const seen: number[] = [];
   for (const route of ['/logs', '/', '/metrics']) {

@@ -1,5 +1,5 @@
 import type { Point } from '../pointer';
-import { gaitPhase, legsTo, restingFeet, steppingFeet, type Gait, type QuadLeg } from '../rig/gait';
+import { gaitPhase, legsTo, restingFeet, steppingFeet, swingsOf, type Gait, type QuadLeg } from '../rig/gait';
 import { blinking, breath } from '../rig/life';
 import { legsLayer, lidLayers, stillPicture, turnAbout, turned, type Frame, type Fur, type LegArt, type RigPose, type Turn } from '../rig/rig';
 import { leapt, poseOf, type Fox } from './fox';
@@ -68,17 +68,22 @@ const LEG_WIDTH = 2.1;
 // far pair a little behind and above the near, as they would be seen.
 // Trotting, diagonal pairs move together: near fore with far hind, far fore
 // with near hind.
-const HIND_LEG = { thigh: 2.3, shin: 2.1, bend: 1, fore: false, haunch: 2.6, heel: 0.6, reach: -1, toes: { length: 1.5, lean: 10, fold: 70 } } as const;
+// A trot's diagonal pairs never land quite together: the hind foot of each
+// pair lands this much of a stride before its fore foot, as a trotter's
+// tends to.
+const HIND_FIRST = 0.06;
+const HIND_LEG = { thigh: 2.3, shin: 2.1, bend: 1, fore: false, haunch: 2.6, taper: true, reach: -1, toes: { length: 1.5, lean: 10, fold: 70 } } as const;
 const FORE_LEG = { thigh: 2.3, shin: 3.6, bend: -1, fore: true, haunch: 2.4, reach: 0.3, toes: { length: 0.7, lean: 8, fold: 100 } } as const;
 const LEGS: QuadLeg[] = [
-  { ...HIND_LEG, hip: { x: 12.2, y: 11 }, beat: 0, far: true },
+  { ...HIND_LEG, hip: { x: 12.2, y: 11 }, beat: HIND_FIRST, far: true },
   { ...FORE_LEG, hip: { x: 21.9, y: 10.2 }, beat: 0.5, far: true },
-  { ...HIND_LEG, hip: { x: 11.2, y: 11.2 }, beat: 0.5, far: false },
+  { ...HIND_LEG, hip: { x: 11.2, y: 11.2 }, beat: 0.5 + HIND_FIRST, far: false },
   { ...FORE_LEG, hip: { x: 21, y: 10.4 }, beat: 0, far: false },
 ];
 const FAR = { name: 'far legs', far: true };
 const NEAR = { name: 'near legs', far: false };
-const TROT: Gait = { stride: 8, lift: 3.2, stance: 0.5 };
+// Each foot down for a little over half the stride, so the pairs overlap.
+const TROT: Gait = { stride: 8, lift: 3.2, stance: 0.55 };
 // Where each leg ends: on the toes' back, as high as they stand.
 const FEET = GROUND - (TOES.height - TOES.heel.y);
 
@@ -87,7 +92,8 @@ export type FoxLook = { now: number; still: boolean };
 export type RigFox = Pick<Fox, 'mode' | 'walked' | 'seed' | 'until' | 'ear' | 'look'>;
 
 type Feet = (hips: readonly Point[]) => Point[];
-type Stance = { body: Turn; head: number; tail: number; feet: Feet };
+// swings: how far through its swing each foot is, when stepping (swingsOf).
+type Stance = { body: Turn; head: number; tail: number; feet: Feet; swings?: number[] };
 
 // Feet planted on the ledge, fore and hind each set this far from its hip.
 const planted = (foreBy: number, hindBy: number): Feet => (hips) => hips.map((h, i) => ({ x: h.x + (LEGS[i].fore ? foreBy : hindBy), y: FEET }));
@@ -106,7 +112,7 @@ function stance(fox: RigFox, look: FoxLook): Stance {
       const walked = fox.walked / SCALE;
       const phase = gaitPhase(walked, TROT);
       const body = turnAbout(0, HIND, 0, -0.3 * Math.abs(Math.sin(2 * Math.PI * phase)));
-      return { body, head: 0.8 * Math.sin(2 * Math.PI * phase), tail: 5 * Math.sin(2 * Math.PI * phase), feet: (hips) => steppingFeet(LEGS, hips, walked, FEET, TROT) };
+      return { body, head: 0.8 * Math.sin(2 * Math.PI * phase), tail: 5 * Math.sin(2 * Math.PI * phase), feet: (hips) => steppingFeet(LEGS, hips, walked, FEET, TROT), swings: swingsOf(LEGS, walked, TROT) };
     }
     // Each tuned against its key pose (design-docs/aurora/fox-pose-*.png,
     // laid over the rig in the critters lab). A positive head turns the nose
@@ -139,9 +145,9 @@ export function foxRig(fox: RigFox, look: FoxLook): RigPose {
   const pose = poseOf(fox, look.now);
   // Curled up asleep, or looking up from there, breathing slowly.
   if (pose === 'curled' || pose === 'alert') return stillPicture(FRAME, PICTURES[pose], look.still ? 1 : 1 + 0.035 * breath(fox.seed, look.now, 3400));
-  const { body, head, tail, feet } = stance(fox, look);
+  const { body, head, tail, feet, swings } = stance(fox, look);
   const hips = LEGS.map((s) => turned(body, s.hip));
-  const legs = legsTo(LEGS, hips, feet(hips), FEET, TROT.lift);
+  const legs = legsTo(LEGS, hips, feet(hips), swings);
   const nod = turnAbout(head, NECK);
   return {
     ...FRAME,
