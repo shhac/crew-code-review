@@ -53,9 +53,7 @@ def fill_only(rgba: np.ndarray) -> np.ndarray:
     """The same piece with its black outline taken out, the fur alone: drawn
     over the outlined pieces of a leg, it hides the outlines where they
     cross inside the leg, so only the leg's silhouette is outlined."""
-    rgb = rgba[..., :3].astype(np.float32)
-    lum = rgb @ np.array([0.299, 0.587, 0.114], dtype=np.float32)
-    keep = np.clip((lum - 70) / 60, 0, 1)
+    keep = np.clip((lum(rgba) - 70) / 60, 0, 1)
     out = rgba.copy()
     out[..., 3] = (rgba[..., 3] * keep).astype(np.uint8)
     return out
@@ -85,15 +83,28 @@ def feature(path: Path, seed: tuple[int, int]) -> float:
     return ((max(bx) - min(bx) + 1) + (max(by) - min(by) + 1)) / 2
 
 
+def lum(rgba: np.ndarray) -> np.ndarray:
+    return rgba[..., :3].astype(np.float32) @ np.array([0.299, 0.587, 0.114], dtype=np.float32)
+
+
 def opaque(rgba: np.ndarray) -> np.ndarray:
     return rgba[..., 3] > 128
+
+
+def ground(rgba: np.ndarray) -> int:
+    """The lowest row anything stands on: the last with an opaque pixel."""
+    return int(np.nonzero(opaque(rgba).any(axis=1))[0].max())
 
 
 def pale(rgba: np.ndarray) -> np.ndarray:
     """The light fur of a picture: what to match a part by when its shape
     alone fits anywhere inside the whole (a head against a spiny body)."""
-    lum = rgba[..., :3].astype(np.float32) @ np.array([0.299, 0.587, 0.114], dtype=np.float32)
-    return opaque(rgba) & (lum > 170)
+    return opaque(rgba) & (lum(rgba) > 170)
+
+
+def rescaled(rgba: np.ndarray, k: float) -> np.ndarray:
+    img = Image.fromarray(rgba, 'RGBA')
+    return np.asarray(img.resize((round(img.width * k), round(img.height * k)), Image.LANCZOS))
 
 
 def place(part: np.ndarray, whole: np.ndarray, step: int = 4, mask=opaque) -> tuple[int, int]:
@@ -127,4 +138,12 @@ def export(rgba: np.ndarray, out: Path, name: str, scale: float) -> tuple[int, i
         png = Path(tmp) / f'{name}.png'
         img.save(png)
         subprocess.run(['cwebp', '-quiet', '-q', '90', '-alpha_q', '100', '-exact', str(png), '-o', str(out / f'{name}.webp')], check=True)
+    return size
+
+
+def export_with_fur(rgba: np.ndarray, out: Path, name: str, scale: float) -> tuple[int, int]:
+    """A piece and, under {name}-fur, its fur alone at the same scale, to
+    draw over the outlined pieces it joins."""
+    size = export(rgba, out, name, scale)
+    export(fill_only(rgba), out, f'{name}-fur', scale)
     return size

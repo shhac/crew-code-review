@@ -19,8 +19,7 @@ from pathlib import Path
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from art import crop, export, feature, fill_only, keyed, pale, place, poses  # noqa: E402
-from PIL import Image  # noqa: E402
+from art import crop, export, export_with_fur, feature, ground, keyed, lum, pale, place, poses, rescaled  # noqa: E402
 import numpy as np  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
@@ -51,12 +50,12 @@ LEG = 2.6
 FEET = {'hedgehog-hand': (3.4, (0.34, 0.325)), 'hedgehog-hind': (4.0, (0.29, 0.325))}
 
 
+def eye_px(sheet: str) -> float:
+    return feature(HERE / sheet, EYES[sheet])
+
+
 def on_eye(sheet: str) -> float:
-    return EYE / feature(HERE / sheet, EYES[sheet]) * RES
-
-
-def lum(rgba: np.ndarray) -> np.ndarray:
-    return rgba[..., :3].astype(np.float32) @ np.array([0.299, 0.587, 0.114], dtype=np.float32)
+    return EYE / eye_px(sheet) * RES
 
 
 def belly(body: np.ndarray) -> np.ndarray:
@@ -90,30 +89,27 @@ def main() -> None:
     # The reference, for the lab to lay over the rig, and where each part sat
     # in it: their places in the rig.
     reference = crop(keyed(HERE / 'hedgehog-standing.png'))
-    per_unit = feature(HERE / 'hedgehog-standing.png', EYES['hedgehog-standing.png']) / EYE
+    per_unit = eye_px('hedgehog-standing.png') / EYE
     units['hedgehog-reference'] = export(reference, LAB, 'hedgehog-reference', on_eye('hedgehog-standing.png'))
-    ground = np.nonzero((reference[..., 3] > 128).any(axis=1))[0].max()
-    print(f'hedgehog-reference: at {MARGIN}, {MARGIN}; ground {ground / per_unit + MARGIN:.2f}')
+    print(f'hedgehog-reference: at {MARGIN}, {MARGIN}; ground {ground(reference) / per_unit + MARGIN:.2f}')
     for name, seed in KEY_POSES.items():
         path = HERE / f'hedgehog-pose-{name}.png'
         w, h = export(crop(keyed(path)), LAB, f'hedgehog-pose-{name}', EYE / feature(path, seed) * RES)
         print(f'hedgehog-pose-{name}: drawing units {w / RES:.2f}x{h / RES:.2f}')
-    k = feature(HERE / 'hedgehog-standing.png', EYES['hedgehog-standing.png']) / feature(HERE / 'hedgehog-parts-3.png', EYES['hedgehog-parts-3.png'])
-    for name, art in zip(PARTS, (crop(p) for p in poses(keyed(HERE / 'hedgehog-parts-3.png'), len(PARTS)))):
+    parts = dict(zip(PARTS, (crop(p) for p in poses(keyed(HERE / 'hedgehog-parts-3.png'), len(PARTS)))))
+    k = eye_px('hedgehog-standing.png') / eye_px('hedgehog-parts-3.png')
+    for name, art in parts.items():
         units[name] = export(art, OUT, name, on_eye('hedgehog-parts-3.png'))
-        img = Image.fromarray(art, 'RGBA')
-        y, x = place(np.asarray(img.resize((round(img.width * k), round(img.height * k)), Image.LANCZOS)), reference, mask=pale)
+        y, x = place(rescaled(art, k), reference, mask=pale)
         print(f'{name}: at {x / per_unit + MARGIN:.2f}, {y / per_unit + MARGIN:.2f}')
     # Each leg is one bone piece, hip to heel (too short to show a knee),
     # standing on its foot; each also as fur alone, its outline taken out.
     bone, *feet = (crop(p) for p in poses(keyed(HERE / 'hedgehog-limbs.png'), 3))
-    cream = belly(crop(poses(keyed(HERE / 'hedgehog-parts-3.png'), len(PARTS))[0]))
+    cream = belly(parts['hedgehog-body'])
     bone, feet = flat(bone, cream), [flat(f, cream) for f in feet]
-    units['hedgehog-leg'] = export(bone, OUT, 'hedgehog-leg', LEG * RES / bone.shape[0])
-    units['hedgehog-leg-fur'] = export(fill_only(bone), OUT, 'hedgehog-leg-fur', LEG * RES / bone.shape[0])
+    units['hedgehog-leg'] = units['hedgehog-leg-fur'] = export_with_fur(bone, OUT, 'hedgehog-leg', LEG * RES / bone.shape[0])
     for (name, (length, (hx, hy))), foot in zip(FEET.items(), feet):
-        w, h = export(foot, OUT, name, length * RES / foot.shape[1])
-        export(fill_only(foot), OUT, f'{name}-fur', length * RES / foot.shape[1])
+        w, h = export_with_fur(foot, OUT, name, length * RES / foot.shape[1])
         print(f'{name}: {w / RES:.2f}x{h / RES:.2f}, heel {w * hx / RES:.2f}, {h * hy / RES:.2f}')
     for name, (w, h) in sizes.items():
         print(f'{name}: display {w:g}x{h:g}')
