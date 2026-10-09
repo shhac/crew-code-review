@@ -26,10 +26,14 @@ def main() -> None:
     pile = crop(keyed(HERE / 'woodpile.png'))
     sizes['woodpile'] = export(pile, OUT, 'woodpile', 2 * 20 / pile.shape[0])
     walk, ball = (crop(h) for h in poses(keyed(HERE / 'hedgehog-sheet.png'), 2))
-    # Both poses share the walking hedgehog's scale, so the ball is its size.
-    scale = 2 * 26 / walk.shape[1]
-    sizes['hedgehog-walk'] = export(walk, OUT, 'hedgehog-walk', scale)
-    sizes['hedgehog-ball'] = export(ball, OUT, 'hedgehog-ball', scale)
+    # The ball keeps the scale of the walking hedgehog it was drawn beside.
+    sizes['hedgehog-ball'] = export(ball, OUT, 'hedgehog-ball', 2 * 26 / walk.shape[1])
+    # The parts the walking hedgehog is put together from (legs are code):
+    # both at the body's scale, so they fit back together.
+    body, head = (crop(p) for p in poses(keyed(HERE / 'hedgehog-parts.png'), 2))
+    scale = 2 * 15 / body.shape[0]
+    sizes['hedgehog-body'] = export(body, OUT, 'hedgehog-body', scale)
+    sizes['hedgehog-head'] = export(head, OUT, 'hedgehog-head', scale)
     for name, (w, h) in sizes.items():
         print(f'{name}: {w}x{h} (display {w / 2:g}x{h / 2:g})')
 

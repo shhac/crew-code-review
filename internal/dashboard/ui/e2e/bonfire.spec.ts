@@ -1,7 +1,8 @@
 import { expect, test, type Page } from '@playwright/test';
 
 // Bonfire Night: a bonfire shelf with fireworks in the rail's free space,
-// and embers plus a hedgehog in its woodpile on the page's ledges.
+// and embers plus hedgehogs sharing a woodpile on the page's ledges. How
+// their legs and heads move is covered by the rig's unit tests and the lab.
 
 async function serveBonfire(page: Page) {
   await page.route('**/api/config', async (route) => {
@@ -29,6 +30,8 @@ test('nothing bonfire takes pointer events, and clicks pass through the woodpile
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/?theme=bonfire');
   await expect(page.locator('[data-woodpile]')).toBeVisible();
+  // Out of the pile, so its drawing is checked too.
+  await expect(page.locator('[data-hedgehog]').first()).toBeAttached({ timeout: 15_000 });
   const catching = await page.locator('[data-bonfire], [data-bonfire] *, .bonfire-shelf, .bonfire-shelf *').evaluateAll((els) =>
     els.filter((el) => getComputedStyle(el).pointerEvents !== 'none').map((el) => el.tagName + '.' + el.getAttribute('class')),
   );
@@ -40,12 +43,13 @@ test('nothing bonfire takes pointer events, and clicks pass through the woodpile
   expect(landsOnDecoration).toBe(false);
 });
 
-test('the hedgehog comes out once the page is still, and curls up at a nearby cursor', async ({ page }) => {
+test('the hedgehogs come out one by one once the page is still, and one curls up at a nearby cursor', async ({ page }) => {
   test.setTimeout(60_000);
   await page.addInitScript(() => { Math.random = () => 0.3; });
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/logs?theme=bonfire');
-  const hog = page.locator('[data-hedgehog]');
+  await expect.poll(() => page.locator('[data-hedgehog]').count(), { timeout: 20_000 }).toBeGreaterThanOrEqual(2);
+  const hog = page.locator('[data-hedgehog][data-id="0"]');
   await expect(hog).toHaveAttribute('data-hedgehog', /walk|sniff/, { timeout: 15_000 });
   const box = (await hog.boundingBox())!;
   await page.mouse.move(box.x + box.width / 2 + 40, box.y - 30);
@@ -77,14 +81,16 @@ test('reduced motion shows a still bonfire scene', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/?theme=bonfire');
-  const hog = page.locator('[data-hedgehog]');
-  await expect(hog).toHaveAttribute('data-hedgehog', 'sniff');
-  const at = await hog.boundingBox();
+  const hogs = page.locator('[data-hedgehog]');
+  await expect.poll(() => hogs.count()).toBeGreaterThanOrEqual(2);
+  const sat = async () => ({ modes: await hogs.evaluateAll((els) => els.map((el) => el.getAttribute('data-hedgehog'))), boxes: await hogs.evaluateAll((els) => els.map((el) => el.getBoundingClientRect().toJSON())) });
+  const before = await sat();
+  expect(new Set(before.modes)).toEqual(new Set(['sniff']));
   await expect(page.locator('.bonfire-shelf .sky line')).toHaveCount(20);
   expect(await page.locator('.bonfire-shelf .tongue').first().evaluate((el) => getComputedStyle(el).animationName)).toBe('none');
   await page.waitForTimeout(3000);
-  expect(await hog.boundingBox()).toEqual(at);
-  await expect(hog).toHaveAttribute('data-hedgehog', 'sniff');
+  expect(await sat()).toEqual(before);
+  await expect(page.locator('[data-bonfire] [data-lid]')).toHaveCount(0);
 });
 
 test('a phone keeps the page decorations and hides the shelf and its fireworks', async ({ page }) => {

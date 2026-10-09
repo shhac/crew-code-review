@@ -17,8 +17,9 @@ should keep it:
 1. **Shelf art**: illustrated raster art on the rail shelf.
 2. **Ledge quirk**: something that sits along the measured ledges of cards and
    heading rules (Halloween's candle stubs and webs, Christmas's snow).
-3. **Animal and activities**: one or two creatures that move between ledges
-   and react to the cursor, never covering controls, text or charts.
+3. **Animal and activities**: creatures that move between ledges and react
+   to the cursor, never covering controls, text or charts (how many, and how
+   they are drawn: see "Animals" below).
 
 Every theme also kept the existing constraints: a fixed `aria-hidden` overlay
 that never intercepts clicks, sits below dialogs, and shows a still scene
@@ -217,6 +218,28 @@ relies on it. None is built speculatively.
 | Gaps between ledges | June (bunting) | Neighbouring ledges only, with stable end ids and the vertical step between them |
 | Walls as segments | May (bumblebee) | Explicit vertical card sides, keeping today's rule that headings and `.panel` have none |
 | Rail shelf slot | none yet | The shelf sits outside `main` (which the layout observer watches) and is hidden by responsive CSS; it would need an App-owned slot that is absent when hidden |
+
+## Animals (added 2026-10-09)
+
+Two rules for every month from November on, set after November and January
+first shipped with one stiff sprite each:
+
+- **At least two of a decorative animal.** A month's animal comes as a small
+  group of the same species: two, or three where the page has room for them
+  all (decided from the animals' own footprints, once, when the group is
+  placed, so scrolling never grows it). Fewer, even none, only when the page's
+  geometry cannot host them safely. They keep their distance from each other,
+  so no two ever overlap. A theme may make an exception in its own note where
+  the idea needs one animal (a single predator and its prey, say).
+- **Drawn from parts, with legs and faces that move.** Not one image per pose
+  slid along the ledge, and not generated walk-cycle frames (the spider's
+  generated walk atlas came out with near-identical frames). The art is
+  generated as separate parts (body, head, tail and so on, no legs) and put
+  together in code; legs are drawn and stepped in code from the shared gait
+  (`lib/theme/rig/`, on the spider's `spidergait.ts`), driven by distance
+  walked so planted feet never slide; eyes blink and heads nod, turn and
+  look on seeded schedules (`rig/life.ts`), held still under reduced motion.
+  Each animal has a page in the critters lab (`lab/critters.html`).
 
 ## Sequencing
 

@@ -534,11 +534,11 @@ Design and phase boundaries: [Christmas scene](design-docs/christmas/README.md).
 November is Bonfire Night: a bonfire with its guy and toffee apples on the
 rail, with occasional quiet fireworks in the rail's empty space above (never
 over the page; hidden with the shelf on small screens). Embers smoulder along
-the card tops and flare when the cursor passes. A hedgehog lives in a small
-woodpile on one ledge: it comes out once the page has been still for a few
-seconds, potters about, and curls into a ball if the cursor comes close.
-Reduced motion shows the hedgehog sat by its pile, one still firework and
-motionless flames. Preview with `?theme=bonfire`; design notes:
+the card tops and flare when the cursor passes. Two or three hedgehogs share
+a small woodpile on one ledge: once the page has been still for a few seconds
+they come out one at a time, potter about on stepping legs, sniff and blink,
+and one curls into a ball if the cursor comes close. Reduced motion shows the
+hedgehogs sat by their pile, one still firework and motionless flames. Preview with `?theme=bonfire`; design notes:
 [Bonfire Night](design-docs/bonfire/README.md).
 
 January brings the northern lights: a thermos, bobble hat, mittens and cocoa on

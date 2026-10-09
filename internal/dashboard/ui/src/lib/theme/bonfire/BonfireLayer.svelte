@@ -1,54 +1,55 @@
 <script lang="ts">
   // Bonfire Night over the page: embers smouldering along the card tops, and
-  // a hedgehog living in a small unlit woodpile on one of them, well away
-  // from the bonfire on the rail. The layer takes no pointer events.
+  // hedgehogs sharing a small unlit woodpile on one of them, well away from
+  // the bonfire on the rail. The layer takes no pointer events.
   import { onMount } from 'svelte';
   import { samePage, type Ledge, type PageMap } from '../floors';
   import Geometry from '../Geometry.svelte';
   import { ledgeScene } from '../layout';
   import { emberColour, fanEmbers, heat, reconcileEmbers, type Ember } from './embers';
-  import { BALL, createHog, HOG, hogPoint, moving, PILE, reconcileHog, restingHog, stepHog, type Hog } from './hedgehog';
-  import hedgehogBall from './hedgehog-ball.webp';
-  import hedgehogWalk from './hedgehog-walk.webp';
+  import type { Point } from '../pointer';
+  import Rig from '../rig/Rig.svelte';
+  import { createHogs, hogPoint, PILE, reconcileHogs, restingHogs, stepHogs, type Hogs } from './hedgehog';
+  import { hogRig } from './hedgehog-rig';
   import woodpile from './woodpile.webp';
 
   let floors: ReadonlyMap<number, Ledge> = new Map();
   let scene: PageMap = { floors, obstacles: [], width: 0, height: 0 };
   let embers: ReadonlyMap<number, Ember[]> = new Map();
-  let hog: Hog | null = null;
+  let group: Hogs | null = null;
   let now = 0;
   let reduced = false;
-  // Distance walked, for the waddle.
-  let walked = 0;
+  let cursor: Point | null = null;
   const STILL_HEAT = 0.55;
 
-  $: pile = hog?.home ? floors.get(hog.home.floor) : undefined;
-  $: hogAt = hog && hog.mode !== 'hidden' ? hogPoint(hog, scene) : null;
-  $: art = hog?.mode === 'curled' ? { src: hedgehogBall, ...BALL } : { src: hedgehogWalk, ...HOG };
-  $: bob = hog && moving(hog.mode) ? -Math.abs(Math.sin(walked / 3)) : 0;
+  $: pile = group?.home ? floors.get(group.home.floor) : undefined;
+  $: shown = (group?.hogs ?? []).flatMap((hog) => {
+    const at = hog.mode === 'hidden' ? null : hogPoint(hog, group?.home ?? null, scene);
+    return at ? [{ hog, at, pose: hogRig(hog, { now, at, cursor, still: reduced }) }] : [];
+  });
 
   // Reduced motion draws a still frame only after a measurement, so the
-  // resting hedgehog is placed here with everything else.
-  function placeHog(current: Hog | null, previous: PageMap, time: number): Hog {
-    if (reduced) return restingHog(scene);
-    if (!current) return createHog(scene, time);
-    return samePage(scene, previous) ? current : reconcileHog(current, scene, time);
+  // resting hedgehogs are placed here with everything else.
+  function placeHogs(current: Hogs | null, previous: PageMap, time: number): Hogs {
+    if (reduced) return restingHogs(scene, current);
+    if (!current) return createHogs(scene, time, Math.random);
+    return samePage(scene, previous) ? current : reconcileHogs(current, scene, time, Math.random);
   }
 
   onMount(() => ledgeScene({
-    motion(still) { reduced = still; hog = null; },
+    // Either way the group starts afresh; reduced motion then keeps it put.
+    motion(still) { reduced = still; group = null; },
     measured(page, previous, time) {
       scene = page;
       floors = page.floors;
       embers = reconcileEmbers(floors, embers);
-      hog = placeHog(hog, previous, time);
+      group = placeHogs(group, previous, time);
     },
     frame(time, step) {
       now = time;
+      cursor = step?.cursor ?? null;
       if (!step) return;
-      const before = hog?.x ?? 0;
-      hog = hog && stepHog(hog, scene, time, step.dt, Math.random, step.cursor);
-      walked += Math.abs((hog?.x ?? 0) - before);
+      group = group && stepHogs(group, scene, time, step.dt, Math.random, step.cursor);
     },
     stroke(segment) { embers = fanEmbers(embers, floors, segment); },
   }));
@@ -76,21 +77,13 @@
       {/if}
     {/each}
   </svg>
-  {#if hogAt && hog}
-    <img
-      class="hedgehog"
-      class:sniffing={hog.mode === 'sniff' && !reduced}
-      data-hedgehog={hog.mode}
-      src={art.src}
-      alt=""
-      width={art.width}
-      height={art.height}
-      style="left: {hogAt.x - art.width / 2}px; top: {hogAt.y - art.height + bob}px; transform: scaleX({hog.dir})"
-    />
-  {/if}
-  {#if pile && hog?.home}
+  {#each shown as { hog, at, pose } (hog.id)}
+    <Rig {pose} x={at.x} y={at.y} dir={hog.dir} data-hedgehog={hog.mode} data-id={hog.id} />
+  {/each}
+  <!-- After the hedgehogs, so one peeking from the mouth is half behind it. -->
+  {#if pile && group?.home}
     <img class="woodpile" data-woodpile src={woodpile} alt="" width={PILE.width} height={PILE.height}
-      style="left: {pile.left + hog.home.pile - PILE.width / 2}px; top: {pile.y - PILE.height + 1}px" />
+      style="left: {pile.left + group.home.pile - PILE.width / 2}px; top: {pile.y - PILE.height + 1}px" />
   {/if}
 </div>
 
@@ -99,10 +92,4 @@
   img { position: absolute; display: block; max-width: none; }
   /* The art's den opens on its right; mirrored, it faces the hedgehog's range. */
   .woodpile { transform: scaleX(-1); }
-  .hedgehog { transform-origin: 50% 100%; }
-  .sniffing { animation: sniff .9s ease-in-out infinite alternate; }
-  @keyframes sniff {
-    from { rotate: 0deg; }
-    to { rotate: -3deg; }
-  }
 </style>

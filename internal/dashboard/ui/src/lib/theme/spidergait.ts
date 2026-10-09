@@ -15,9 +15,9 @@ export type LegSpec = {
   reach: number;
   thigh: number;
   shin: number;
-  // Which half of the gait the leg steps in: alternate legs share a beat, so
-  // the spider always stands on half its feet.
-  beat: 0 | 0.5;
+  // When in the cycle the leg steps, 0 to 1: a spider's alternate legs share
+  // a beat, so it always stands on half its feet.
+  beat: number;
 };
 export type Leg = { hip: Point; knee: Point; foot: Point };
 
@@ -25,25 +25,24 @@ export type Leg = { hip: Point; knee: Point; foot: Point };
 const STANCE = 0.65;
 
 // Ground covered per full cycle when each foot sweeps `stride` while planted.
-export const cycleLength = (stride: number) => stride / STANCE;
+export const cycleLength = (stride: number, stance = STANCE) => stride / stance;
 
 const fract = (n: number) => n - Math.floor(n);
 export const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
 
 // Where the foot is at this point in its cycle: planted and sliding back
 // under the body, or lifted and swinging forward over a low arc.
-export function footAt(spec: LegSpec, phase: number, ground: number, stride: number, lift: number): Point {
+export function footAt(spec: LegSpec, phase: number, ground: number, stride: number, lift: number, stance = STANCE): Point {
   const p = fract(phase + spec.beat);
   const rest = spec.hip.x + spec.reach;
-  if (p < STANCE) return { x: rest + stride * (0.5 - p / STANCE), y: ground };
-  const t = (p - STANCE) / (1 - STANCE);
+  if (p < stance) return { x: rest + stride * (0.5 - p / stance), y: ground };
+  const t = (p - stance) / (1 - stance);
   return { x: rest + stride * (t - 0.5), y: ground - Math.sin(Math.PI * t) * lift };
 }
 
-// The knee that joins a thigh at the hip to a shin at the foot. Of the two
-// that fit, the higher: spider knees arch up over the body. A foot out of
-// reach straightens the leg toward it rather than tearing it off.
-export function kneeFor(hip: Point, foot: Point, thigh: number, shin: number): Point {
+// The two knees that join a thigh at the hip to a shin at the foot. A foot
+// out of reach straightens the leg toward it rather than tearing it off.
+function knees(hip: Point, foot: Point, thigh: number, shin: number): [Point, Point] {
   const dx = foot.x - hip.x;
   const dy = foot.y - hip.y;
   // Clamped both ways: a foot out of reach straightens the leg, and a foot
@@ -51,8 +50,21 @@ export function kneeFor(hip: Point, foot: Point, thigh: number, shin: number): P
   const d = clamp(Math.hypot(dx, dy), Math.abs(thigh - shin) + 1e-3, thigh + shin - 1e-6);
   const toFoot = Math.atan2(dy, dx);
   const bend = Math.acos(clamp((thigh * thigh + d * d - shin * shin) / (2 * thigh * d), -1, 1));
-  const knees = [toFoot - bend, toFoot + bend].map((a) => ({ x: hip.x + thigh * Math.cos(a), y: hip.y + thigh * Math.sin(a) }));
-  return knees[0].y <= knees[1].y ? knees[0] : knees[1];
+  const at = (a: number) => ({ x: hip.x + thigh * Math.cos(a), y: hip.y + thigh * Math.sin(a) });
+  return [at(toFoot - bend), at(toFoot + bend)];
+}
+
+// Of the two knees, the higher: spider knees arch up over the body.
+export function kneeFor(hip: Point, foot: Point, thigh: number, shin: number): Point {
+  const [a, b] = knees(hip, foot, thigh, shin);
+  return a.y <= b.y ? a : b;
+}
+
+// Of the two knees, the one further toward side (1 forward, -1 back): a
+// four-legged animal's fore knees bend forward and its hocks back.
+export function kneeToward(hip: Point, foot: Point, thigh: number, shin: number, side: 1 | -1): Point {
+  const [a, b] = knees(hip, foot, thigh, shin);
+  return (a.x - b.x) * side >= 0 ? a : b;
 }
 
 // The leg standing at rest, mid-stride with the foot down: the pose to make

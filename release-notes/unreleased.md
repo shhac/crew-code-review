@@ -45,8 +45,10 @@ November now has its own theme, Bonfire Night (`dashboard.theme` `bonfire`,
 on by default under `auto` from 1 to 30 November). The rail shows a bonfire
 with its guy and toffee apples, with one quiet firework every 7 to 15 seconds
 in the rail's free space; the page gets embers along card tops that a passing
-cursor fans, and a hedgehog that leaves its woodpile when the page is still
-and curls up when the cursor comes close. Reduced motion keeps a still scene.
+cursor fans, and two or three hedgehogs that share a woodpile, come out one
+at a time when the page is still, walk on stepping legs, sniff, blink and
+turn to look at a nearby cursor, and curl up when it comes close. Reduced
+motion keeps a still scene.
 
 January now has its own theme, the northern lights (`dashboard.theme`
 `aurora`, on by default under `auto` from 1 to 31 January). The rail shows a

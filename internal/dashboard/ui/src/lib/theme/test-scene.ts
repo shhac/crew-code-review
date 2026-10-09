@@ -7,6 +7,15 @@ export const scene = (floors: [number, Ledge][], obstacles: PageMap['obstacles']
 // A stand-in for Math.random that always returns v.
 export const fixed = (v: number) => () => v;
 
+// A repeatable stand-in for Math.random that varies, for long runs.
+export function seeded(seed: number): () => number {
+  const state = { n: seed };
+  return () => {
+    state.n = (state.n * 1664525 + 1013904223) % 4294967296;
+    return state.n / 4294967296;
+  };
+}
+
 // Runs a model forward in 50ms steps from from to to, keeping every state it
 // passes through, the starting one first.
 export function steps<S>(start: S, from: number, to: number, step: (state: S, time: number) => S): S[] {
