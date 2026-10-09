@@ -8,6 +8,15 @@ const leaves = (layers: readonly Layer[]): Leaf[] => layers.flatMap((l) => (l.ki
 // Every part a pose draws, in drawing order, each once.
 export const partNames = (pose: RigPose): string[] => [...new Set(leaves(pose.layers).map(layerName))];
 
+// Every part any of the poses draws, in drawing order: one seen in only some
+// (an eyelid, mid-blink) goes after the part it follows there.
+export const allPartNames = (poses: readonly RigPose[]): string[] => poses.map(partNames).reduce<string[]>((all, names) =>
+  names.reduce<string[]>((merged, name, i) => {
+    if (merged.includes(name)) return merged;
+    const after = i === 0 ? -1 : merged.indexOf(names[i - 1]);
+    return [...merged.slice(0, after + 1), name, ...merged.slice(after + 1)];
+  }, all), []);
+
 // The art each part is drawn from, each once: images by their part, leg
 // pieces by bone and foot.
 export const partArt = (pose: RigPose): { name: string; src: string }[] => [...new Map(artOf(pose).map((a) => [a.name, a])).values()];

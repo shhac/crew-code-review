@@ -13,30 +13,38 @@ from pathlib import Path
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from art import crop, export, feature, fill_only, keyed, poses, rows  # noqa: E402
+from art import crop, export, feature, fill_only, keyed, place, poses, rows  # noqa: E402
+from PIL import Image  # noqa: E402
+import numpy as np  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
 OUT = HERE.parents[1] / 'internal/dashboard/ui/src/lib/theme/aurora'
+LAB = HERE.parents[1] / 'internal/dashboard/ui/src/lab'
 FOX = ['fox-curled', 'fox-alert', 'fox-trot', 'fox-bow', 'fox-pounce']
 # The poses still shipped: curled up, asleep or looking up. Standing and
-# moving, the fox is put together from PARTS, on legs: fox-haunch.png from
-# hip to knee (shoulder to elbow), the upper piece of fox-legs.png for the
-# bones below, standing on fox-toes.png.
+# moving, the fox is put together from PARTS, cut from fox-standing.png (the
+# whole fox standing square, its anatomy reference) into fox-parts-2.png, on
+# legs: fox-haunch.png from hip to knee (shoulder to elbow), the upper piece
+# of fox-legs.png for the bones below, standing on fox-toes.png, all sized to
+# the reference's legs.
 SHIPPED = ['fox-curled', 'fox-alert']
 PARTS = ['fox-tail', 'fox-torso', 'fox-head']
+# Drawing units are the reference's, moved by this, so a frame round it has
+# a margin.
+MARGIN = 1
 # The eye's size in drawing units, and file pixels per drawing unit.
 EYE = 1.544
 RES = 12
 # Where each sheet's eye is (source pixels), measured by eye: the sheet's
 # trotting fox stands for its scale.
-EYES = {'fox-sheet.png': (1187, 416), 'fox-parts.png': (1895, 386)}
+EYES = {'fox-sheet.png': (1187, 416), 'fox-standing.png': (1290, 330), 'fox-parts-2.png': (1800, 335)}
 # In drawing units: the legs' thickness below the haunch, outline included;
 # the haunch's at its thick end (the hind legs'; the forelegs draw it
 # thinner); and the toes' length. A fox stands on its toes; the leg comes
 # down onto their back (HEEL, as fractions of their box).
-LEG = 1.9
-HAUNCH = 3.2
-TOES = 3.0
+LEG = 2.1
+HAUNCH = 3.3
+TOES = 3.3
 HEEL = (0.3, 0.3)
 
 
@@ -52,8 +60,19 @@ def main() -> None:
     for name, art in zip(FOX, (crop(p) for p in poses(keyed(HERE / 'fox-sheet.png'), len(FOX)))):
         if name in SHIPPED:
             units[name] = export(art, OUT, name, on_eye('fox-sheet.png'))
-    for name, art in zip(PARTS, (crop(p) for p in poses(keyed(HERE / 'fox-parts.png'), len(PARTS)))):
-        units[name] = export(art, OUT, name, on_eye('fox-parts.png'))
+    # The reference, for the lab to lay over the rig, and where each part sat
+    # in it: their places in the rig.
+    reference = crop(keyed(HERE / 'fox-standing.png'))
+    per_unit = feature(HERE / 'fox-standing.png', EYES['fox-standing.png']) / EYE
+    units['fox-reference'] = export(reference, LAB, 'fox-reference', on_eye('fox-standing.png'))
+    ground = np.nonzero((reference[..., 3] > 128).any(axis=1))[0].max()
+    print(f'fox-reference: at {MARGIN}, {MARGIN}; ground {ground / per_unit + MARGIN:.2f}')
+    for name, art in zip(PARTS, (crop(p) for p in poses(keyed(HERE / 'fox-parts-2.png'), len(PARTS)))):
+        units[name] = export(art, OUT, name, on_eye('fox-parts-2.png'))
+        k = feature(HERE / 'fox-standing.png', EYES['fox-standing.png']) / feature(HERE / 'fox-parts-2.png', EYES['fox-parts-2.png'])
+        img = Image.fromarray(art, 'RGBA')
+        y, x = place(np.asarray(img.resize((round(img.width * k), round(img.height * k)), Image.LANCZOS)), reference)
+        print(f'{name}: at {x / per_unit + MARGIN:.2f}, {y / per_unit + MARGIN:.2f}')
     # Each piece also as fur alone, its outline taken out.
     bone, _ = (crop(p) for p in rows(keyed(HERE / 'fox-legs.png'), 2))
     units['fox-leg'] = export(bone, OUT, 'fox-leg', LEG * RES / bone.shape[0])

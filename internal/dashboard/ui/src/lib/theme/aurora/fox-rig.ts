@@ -16,40 +16,46 @@ import toesArt from './fox-toes.webp';
 import torsoArt from './fox-torso.webp';
 
 // The fox put together from its parts: a tail, a torso and a head over its
-// chest, on four legs, each a piece of furred leg art laid along a leg posed
-// in code. Facing right, on the ledge at ANCHOR. Curled up asleep, or
-// looking up from there, it is one picture. Every picture is on one scale,
-// its eye's (design-docs/aurora/export.py, which prints the sizes below in
-// drawing units), so curled up it is the same fox.
+// chest, on four legs, each made of furred leg art laid along a leg posed in
+// code. Facing right, on the ledge at ANCHOR. Curled up asleep, or looking
+// up from there, it is one picture. Every picture is on one scale, its
+// eye's, so curled up it is the same fox.
+//
+// The parts were cut from one drawing of the fox standing square
+// (design-docs/aurora/fox-standing.png), and the drawing units are that
+// drawing's: export.py prints where each part sat in it, which is where it
+// sits here, and the legs are measured from its legs. The critters lab lays
+// that drawing over the rig to compare.
 
 // Page pixels per drawing unit, for every pose.
-export const SCALE = 1.28;
+export const SCALE = 1.5;
 
-const GROUND = 22;
-const ANCHOR = { x: 15, y: GROUND };
-const FRAME: Frame = { width: 30, height: 23, anchor: ANCHOR, scale: SCALE };
-const TAIL = { x: 1, y: 3, width: 10.75, height: 11.17 };
-const TAIL_ROOT = { x: 10, y: 12.5 };
-const TORSO = { x: 9, y: 10.5, width: 13.08, height: 7.58 };
-const HEAD = { x: 17.5, y: 5.5, width: 10.33, height: 10 };
+const GROUND = 17.66;
+const ANCHOR = { x: 15.6, y: GROUND };
+const FRAME: Frame = { width: 31.5, height: 19, anchor: ANCHOR, scale: SCALE };
+const TAIL = { x: 1, y: 1.56, width: 11.83, height: 10.25 };
+const TAIL_ROOT = { x: 12, y: 8 };
+const TORSO = { x: 9.95, y: 5.91, width: 15.42, height: 7.75 };
+const HEAD = { x: 19.91, y: 1, width: 10.33, height: 9.75 };
 const PICTURES = { curled: { name: 'curled', src: curledArt, width: 15.33, height: 12.42 }, alert: { name: 'looking up', src: alertArt, width: 15.33, height: 14.17 } };
-const NECK = { x: 20.5, y: 12.5 };
-const EYE = { x: 24.5, y: 10 };
-// Where the head's back outline crosses the chest, painted over.
-const SEAM = { x: 18.4, y: 13.2 };
-const HIND = { x: 12.5, y: 16 };
+const NECK = { x: 21.8, y: 8.8 };
+const EYE = { x: 27.2, y: 5.15 };
+// The body turns about its hips.
+const HIND = { x: 11.5, y: 11.5 };
+// The standing drawing, for the lab to lay over the rig: where it sits.
+export const REFERENCE = { x: 1, y: 1, width: 29.25, height: 16.83 };
 
 const FACE: Fur = { fill: '#fbfcfc', outline: '#0a0809' };
 // A fox stands on its toes. Each leg: a haunch from hip to knee (shoulder
 // to elbow), thick where it meets the body; the leg on down to the hock (or
 // wrist); a bone from there to the toes, which stand on the ledge.
-const TOES = { src: toesArt, fur: toesFurArt, width: 3, height: 1.25, heel: { x: 0.9, y: 0.38 } };
+const TOES = { src: toesArt, fur: toesFurArt, width: 3.33, height: 1.42, heel: { x: 1, y: 0.42 } };
 const LEG_ART: LegArt = {
   bone: legArt, boneFur: legFurArt, knee: true,
   thigh: { src: haunchArt, fur: haunchFurArt },
   feet: { fore: TOES, hind: TOES },
 };
-const LEG_WIDTH = 1.9;
+const LEG_WIDTH = 2.1;
 
 // Where the legs are, as a fox's are: the hips up in the rump, each thigh
 // running down and forward to a knee at the belly, the shin back to a hock
@@ -60,17 +66,17 @@ const LEG_WIDTH = 1.9;
 // far pair a little behind and above the near, as they would be seen.
 // Trotting, diagonal pairs move together: near fore with far hind, far fore
 // with near hind.
-const HIND_LEG = { thigh: 3, shin: 3.1, bend: 1, fore: false, haunch: 3.4, reach: -0.4, toes: { length: 2.5, lean: 10, fold: 55 } } as const;
-const FORE_LEG = { thigh: 2.9, shin: 4.3, bend: -1, fore: true, haunch: 2.4, reach: 0.4, toes: { length: 0.9, lean: 12, fold: 75 } } as const;
+const HIND_LEG = { thigh: 2.3, shin: 2.1, bend: 1, fore: false, haunch: 2.6, reach: -1, toes: { length: 1.5, lean: 10, fold: 55 } } as const;
+const FORE_LEG = { thigh: 2.3, shin: 3.6, bend: -1, fore: true, haunch: 2.4, reach: 0.3, toes: { length: 0.7, lean: 8, fold: 75 } } as const;
 const LEGS: QuadLeg[] = [
-  { ...HIND_LEG, hip: { x: 13, y: 13.8 }, beat: 0, far: true },
-  { ...FORE_LEG, hip: { x: 20.4, y: 13 }, beat: 0.5, far: true },
-  { ...HIND_LEG, hip: { x: 12, y: 14 }, beat: 0.5, far: false },
-  { ...FORE_LEG, hip: { x: 19.6, y: 13.2 }, beat: 0, far: false },
+  { ...HIND_LEG, hip: { x: 12.2, y: 11 }, beat: 0, far: true },
+  { ...FORE_LEG, hip: { x: 21.9, y: 10.2 }, beat: 0.5, far: true },
+  { ...HIND_LEG, hip: { x: 11.2, y: 11.2 }, beat: 0.5, far: false },
+  { ...FORE_LEG, hip: { x: 21, y: 10.4 }, beat: 0, far: false },
 ];
 const FAR = { name: 'far legs', far: true };
 const NEAR = { name: 'near legs', far: false };
-const TROT: Gait = { stride: 5, lift: 1.8, stance: 0.5 };
+const TROT: Gait = { stride: 5.5, lift: 1.6, stance: 0.5 };
 // Where each leg ends: on the toes' back, as high as they stand.
 const FEET = GROUND - (TOES.height - TOES.heel.y);
 
@@ -110,7 +116,7 @@ function stance(fox: RigFox, look: FoxLook): Stance {
       // the forelegs reach for the snow.
       const t = leapt(fox, look.now);
       const reach = (h: Point, i: number): Point => (LEGS[i].fore ? { x: h.x + 1.5 + 2.5 * t, y: h.y + 4 + 2.5 * t } : { x: h.x - 4 + t, y: h.y + 4.5 - t });
-      return { body: turnAbout(-28 + 56 * t, HIND), head: 10 * t, tail: -25 + 30 * t, feet: (hips) => hips.map(reach) };
+      return { body: turnAbout(-12 + 32 * t, HIND), head: 8 * t, tail: -20 + 25 * t, feet: (hips) => hips.map(reach) };
     }
     case 'dig': {
       // Nose in the snow, forepaws scrabbling turn about.
@@ -151,7 +157,6 @@ export function foxRig(fox: RigFox, look: FoxLook): RigPose {
             kind: 'group', turn: nod,
             layers: [
               { kind: 'image', name: 'head', src: headArt, ...HEAD },
-              { kind: 'patch', at: SEAM, rx: 1.1, ry: 2, fill: FACE.fill },
               ...lidLayers(!look.still && blinking(fox.seed, look.now), EYE, 0.85, FACE),
             ],
           },

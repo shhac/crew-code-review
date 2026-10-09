@@ -39,8 +39,6 @@ export type Layer =
   // the far side shaded; `fur` for the pass of fur alone.
   | { kind: 'legs'; name: string; legs: readonly DrawnLeg[]; art: LegArt; width: number; far: boolean; fur: boolean }
   | { kind: 'lid'; at: Point; r: number; fur: Fur }
-  // Fur painted over where two parts' outlines would otherwise show a seam.
-  | { kind: 'patch'; at: Point; rx: number; ry: number; fill: string }
   | { kind: 'group'; turn: Turn; scaleY?: number; layers: readonly Layer[] };
 
 // Guides: where its joints are, for the lab and the debug overlay to mark.
@@ -120,6 +118,5 @@ export function layerName(layer: Exclude<Layer, { kind: 'group' }>): string {
     case 'image': return layer.name;
     case 'legs': return `${layer.name}${layer.fur ? ', fur' : ''}`;
     case 'lid': return 'eyelid';
-    case 'patch': return 'seam';
   }
 }

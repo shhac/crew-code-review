@@ -122,11 +122,11 @@ stride, leap or sway, which `fox-rig.test.ts` checks:
 
 | Pose | Footprint | Used for | Needs clear above it |
 | --- | --- | --- | --- |
-| curled | 20x16.5 | asleep | 27px (where it may lie) |
-| alert | 20x18.5 | the ear twitch, waking, looking up | 27px |
-| trot | 38x26 | trotting, entering, leaving, settling | 27px |
-| bow | 42x26 | the stretch, the crouch | 26px over its width |
-| pounce | 50x30 | the leap and the dig | 30px plus the hop, over the whole leap |
+| curled | 23.5x19 | asleep | 27px (where it may lie) |
+| alert | 23.5x21.5 | the ear twitch, waking, looking up | 27px |
+| trot | 46x26.5 | trotting, entering, leaving, settling | 27px |
+| bow | 49x24.5 | the stretch, the crouch | 24.5px over its width |
+| pounce | 54x31 | the leap and the dig | 31px plus the hop, over the whole leap |
 
 (As first drawn, as single pictures, they were trot 32x19, bow 26.5x23.5 and
 pounce 25x30, with the moving fox drawn a quarter smaller than the curled one;
@@ -214,8 +214,13 @@ now are, so the rules hold every frame (`foxes.ts`, on the shared
 ### Drawn from parts (added 2026-10-09)
 
 Single pictures slid along the ledge looked stiff. The tail, torso and head
-are now separate generated parts on the shared rig (`lib/theme/rig/`, as the
-hedgehogs are). The legs follow a fox's: it stands on its toes, so each leg
+are now separate parts on the shared rig (`lib/theme/rig/`, as the hedgehogs
+are), cut from one drawing of the fox standing square (`fox-standing.png`),
+which is the rig's anatomy reference: the parts sit where they sat in it, the
+torso keeps its rump and chest with the legs taken off, and the legs are
+measured from its legs. (A first set of parts, generated on their own, had a
+short chunky body and a large head and tail, so no legs looked right on
+them.) The critters lab lays the drawing over the rig to compare. The legs follow a fox's: it stands on its toes, so each leg
 has three bones. A hind leg's hip is up in the rump; the thigh (a haunch,
 thick where it meets the body) runs down and forward to a knee at the belly,
 the shin back to a hock well off the ground, and a long bone near upright to
@@ -239,7 +244,7 @@ the chest, with a little fur painted over where its outline would cross it.
 Its eye blinks on a schedule seeded per fox. Curled up it is still one
 picture (asleep, or looking up), breathing slowly. Every picture is exported
 so its eye is the same size, so curled up it is the same fox, and `fox-rig.ts`
-sets one page scale (1.28 page pixels per drawing unit) for every pose.
+sets one page scale (1.5 page pixels per drawing unit) for every pose.
 Reduced motion stands it square, head level, no blink. The workbench is
 `lab/critters.html`: every pose side by side, the layers one by one, the art
 each is drawn from, the joints and the footprint.
@@ -269,9 +274,11 @@ The first two sources were generated on 2026-10-08 by the Codex CLI
 magenta `#FF00FF` background, with `design-docs/halloween/pumpkins.png`,
 `candles.png` and `design-docs/bonfire/toffee-apples.png` as style
 references. The fox's parts were generated the same way on 2026-10-09, with
-`fox-sheet.png`'s trotting pose as the character reference: `fox-parts.png`
-(tail, torso, head), `fox-haunch.png` (the tapered upper leg), `fox-legs.png`
-(leg pieces) and `fox-toes.png` (its toes, seen from the side). A long foot
+`fox-sheet.png`'s trotting pose as the character reference: `fox-standing.png`
+(the whole fox standing square, the anatomy reference), `fox-parts-2.png`
+(that fox split by an edit into tail, torso and head, as drawn),
+`fox-haunch.png` (the tapered upper leg), `fox-legs.png` (leg pieces) and
+`fox-toes.png` (its toes, seen from the side). A long foot
 that read as a human foot, then a paw with an ankle stub on top, were
 replaced by the toes.
 
@@ -279,10 +286,11 @@ replaced by the toes.
 | --- | --- | --- |
 | `winter-kit.png` | `winter-kit.webp` | 124x62 |
 | `fox-sheet.png` | `fox-curled.webp`, `fox-alert.webp` | see the pose table |
-| `fox-parts.png` | `fox-tail.webp`, `fox-torso.webp`, `fox-head.webp` | 10.8x11.2, 13.1x7.6, 10.3x10 units |
+| `fox-standing.png` | `ui/src/lab/fox-reference.webp` (the lab's overlay) | 29.3x16.8 units |
+| `fox-parts-2.png` | `fox-tail.webp`, `fox-torso.webp`, `fox-head.webp` | 11.8x10.3, 15.4x7.8, 10.3x9.8 units; each placed where it sat in the reference (`art.py`'s `place`, printed by `export.py`) |
 | `fox-haunch.png` | `fox-haunch.webp`, `fox-haunch-fur.webp` | 3.2 units thick at the hip |
-| `fox-legs.png` | `fox-leg.webp`, `fox-leg-fur.webp` | 1.9 units thick; the upper piece only |
-| `fox-toes.png` | `fox-toes.webp`, `fox-toes-fur.webp` | 3x1.25 units |
+| `fox-legs.png` | `fox-leg.webp`, `fox-leg-fur.webp` | 2.1 units thick; the upper piece only |
+| `fox-toes.png` | `fox-toes.webp`, `fox-toes-fur.webp` | 3.3x1.4 units |
 
 The fox sheet is split into its five poses at the four widest runs of empty
 columns, and only the two curled ones are still shipped. The fox's pictures

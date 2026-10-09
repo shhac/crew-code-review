@@ -12,7 +12,7 @@ const MOMENTS = Array.from({ length: 230 }, (_, i) => i * 20);
 describe('fox rig', () => {
   // Placement and clearance work from POSES, so the drawing must never
   // reach past them, whatever the moment in its stride, leap or sway.
-  const modes: Mode[] = ['trot', 'exit', 'enter', 'settle', 'stretch', 'crouch', 'leap', 'dig'];
+  const modes: Mode[] = ['trot', 'exit', 'enter', 'settle', 'stretch', 'crouch', 'leap', 'dig', 'asleep'];
   for (const mode of modes) {
     it(`stays inside its footprint while it does ${mode}`, () => {
       for (const now of MOMENTS) {
@@ -21,9 +21,10 @@ describe('fox rig', () => {
           const { width, height } = POSES[poseOf(f, now)];
           const rig = foxRig(f, look({ now }));
           const b = rigBounds(rig);
-          expect(b.left).toBeGreaterThanOrEqual(rig.anchor.x - width / 2);
-          expect(b.right).toBeLessThanOrEqual(rig.anchor.x + width / 2);
-          expect(rig.anchor.y - b.top).toBeLessThanOrEqual(height);
+          // The footprint is on the page; the drawing in drawing units.
+          expect((rig.anchor.x - b.left) * rig.scale).toBeLessThanOrEqual(width / 2);
+          expect((b.right - rig.anchor.x) * rig.scale).toBeLessThanOrEqual(width / 2);
+          expect((rig.anchor.y - b.top) * rig.scale).toBeLessThanOrEqual(height);
         }
       }
     });

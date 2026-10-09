@@ -85,6 +85,28 @@ def feature(path: Path, seed: tuple[int, int]) -> float:
     return ((max(bx) - min(bx) + 1) + (max(by) - min(by) + 1)) / 2
 
 
+def place(part: np.ndarray, whole: np.ndarray, step: int = 4) -> tuple[int, int]:
+    """Where a part cut from a whole picture sits in it (its top left, in the
+    whole's pixels): the offset at which their shapes overlap best, found on
+    copies shrunk step times, then refined at full size."""
+    a = (part[..., 3] > 128).astype(np.float32)
+    b = (whole[..., 3] > 128).astype(np.float32)
+
+    def best(a: np.ndarray, b: np.ndarray, ys, xs) -> tuple[int, int]:
+        h, w = a.shape
+        def score(y: int, x: int) -> float:
+            window = b[y:y + h, x:x + w]
+            return float((window * a).sum() - 0.5 * ((1 - window) * a).sum())
+        return max(((y, x) for y in ys for x in xs), key=lambda p: score(*p))
+
+    small_a, small_b = a[::step, ::step], b[::step, ::step]
+    cy, cx = best(small_a, small_b, range(small_b.shape[0] - small_a.shape[0] + 1), range(small_b.shape[1] - small_a.shape[1] + 1))
+    h, w = a.shape
+    ys = range(max(0, cy * step - step), min(b.shape[0] - h, cy * step + step) + 1)
+    xs = range(max(0, cx * step - step), min(b.shape[1] - w, cx * step + step) + 1)
+    return best(a, b, ys, xs)
+
+
 def export(rgba: np.ndarray, out: Path, name: str, scale: float) -> tuple[int, int]:
     img = Image.fromarray(rgba, 'RGBA')
     size = (round(img.width * scale), round(img.height * scale))

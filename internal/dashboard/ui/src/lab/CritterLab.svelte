@@ -8,17 +8,23 @@
   // robin-parts.html).
   import { onMount } from 'svelte';
   import { LEAP, POSES, poseOf, SPEED as FOX_SPEED, type Mode as FoxMode } from '../lib/theme/aurora/fox';
-  import { foxRig, type RigFox } from '../lib/theme/aurora/fox-rig';
+  import { foxRig, REFERENCE, type RigFox } from '../lib/theme/aurora/fox-rig';
+  import foxReference from './fox-reference.webp';
   import { HOG, HURRY, moving, SPEED as HOG_SPEED, type Hog, type Mode as HogMode } from '../lib/theme/bonfire/hedgehog';
   import { gazeAt, hogRig } from '../lib/theme/bonfire/hedgehog-rig';
   import LayeredRobin from '../lib/theme/christmas/LayeredRobin.svelte';
   import { partsModes, partsViewport } from '../lib/theme/christmas/parts-pose';
+  import robinManifest from '../lib/theme/christmas/robin-parts/manifest.json' with { type: 'json' };
   import Spider from '../lib/theme/halloween/Spider.svelte';
+  import spiderBody from '../lib/theme/halloween/spider-body.webp';
+  import spiderHanging from '../lib/theme/halloween/spider-hanging.webp';
+  import spiderShin from '../lib/theme/halloween/leg-shin.webp';
+  import spiderThigh from '../lib/theme/halloween/leg-thigh.webp';
   import type { Point } from '../lib/theme/pointer';
   import { easeTo } from '../lib/theme/rig/life';
   import type { RigPose } from '../lib/theme/rig/rig';
   import Rig from '../lib/theme/rig/Rig.svelte';
-  import { keepParts, partArt, partNames } from './rig-parts';
+  import { allPartNames, keepParts, partArt } from './rig-parts';
 
   type Animal = 'hedgehog' | 'fox' | 'spider' | 'robin';
   const ANIMALS: Animal[] = ['hedgehog', 'fox', 'spider', 'robin'];
@@ -33,6 +39,12 @@
   const SPEEDS: Record<Animal, number> = { hedgehog: HOG_SPEED, fox: FOX_SPEED, spider: 26, robin: 0 };
   // The robin's drawing is 128x112 at 0.35 on the page, standing at (64, 100).
   const ROBIN = { scale: 0.35, x: 64, y: 100 };
+  const robinArt = import.meta.glob<string>('../lib/theme/christmas/robin-parts/*.webp', { eager: true, query: '?url', import: 'default' });
+  // The spider's layers, as Spider.svelte names them, and its art.
+  const SPIDER_PARTS = ['far legs', 'body', 'near legs'];
+  const SPIDER_ART = [{ name: 'body', src: spiderBody }, { name: 'thigh', src: spiderThigh }, { name: 'shin', src: spiderShin }, { name: 'hanging', src: spiderHanging }];
+  const ROBIN_PARTS = Object.keys(robinManifest.parts);
+  const ROBIN_ART = Object.entries(robinManifest.parts).map(([name, part]) => ({ name, src: robinArt[`../lib/theme/christmas/robin-parts/${part.file}`] }));
   const GAZE_EASE = 220;
 
   let animal: Animal = 'hedgehog';
@@ -50,6 +62,9 @@
   let separate = false;
   let guides = false;
   let footprint = true;
+  // The fox's standing drawing laid over it, which its parts and legs were
+  // measured from.
+  let reference = false;
   let stage: HTMLDivElement;
 
   const hogFor = (m: string, w: number): Hog => ({ id: 0, seed: 1, x: 0, dir, mode: HOG_MODES.find((h) => h === m) ?? 'walk', target: 0, until: 0, out: 0, walked: w });
@@ -67,8 +82,16 @@
   $: hog = hogFor(mode, walked);
   $: walking = animal === 'hedgehog' ? moving(hog.mode) : animal === 'fox' ? mode === 'trot' : animal === 'spider' && mode === 'walk';
   $: pose = rigFor(animal, mode, now, walked, gaze);
-  $: parts = pose ? partNames(pose) : [];
   $: shown = pose && keepParts(pose, (name) => !hidden.includes(name));
+  // Every layer the animal ever draws, whatever it is doing, so the list
+  // holds still while a part comes and goes (an eyelid, mid-blink).
+  const posesOf = (a: Animal): RigPose[] => MODES[a].flatMap((m) => Array.from({ length: 120 }, (_, i) => i).flatMap((i) => {
+    const each = rigFor(a, m, i * 40, i * 0.5, 0);
+    return each ? [each] : [];
+  }));
+  $: everyPose = posesOf(animal);
+  $: parts = animal === 'spider' ? SPIDER_PARTS : animal === 'robin' ? ROBIN_PARTS : allPartNames(everyPose);
+  $: art = animal === 'spider' ? SPIDER_ART : animal === 'robin' ? ROBIN_ART : [...new Map(everyPose.flatMap(partArt).map((a) => [a.name, a])).values()];
   // The box placement allows this pose on the page.
   $: box = animal === 'fox' ? POSES[poseOf(foxFor(mode, walked, now), now)] : animal === 'hedgehog' ? HOG : null;
   $: viewport = partsViewport(mode, still);
@@ -114,14 +137,17 @@
   <div class="controls">
     <label>speed {speed}px/s <input type="range" min="0" max="80" bind:value={speed} /></label>
     <label>zoom {zoom}x <input type="range" min="1" max="12" bind:value={zoom} /></label>
-    <label>step <input type="range" min="0" max="40" step="0.1" bind:value={walked} disabled={playing} /></label>
-    <label>time <input type="range" min="0" max="12000" step="10" bind:value={now} disabled={playing} /></label>
+    <!-- Showing where in a loop it is, never writing back while it plays: a
+         bound slider would clamp the clock at its maximum. -->
+    <label>step <input type="range" min="0" max="40" step="0.1" value={walked % 40} disabled={playing} on:input={(e) => (walked = Number(e.currentTarget.value))} /></label>
+    <label>time <input type="range" min="0" max="12000" step="10" value={now % 12000} disabled={playing} on:input={(e) => (now = Number(e.currentTarget.value))} /></label>
     <button type="button" on:click={() => (playing = !playing)}>{playing ? 'pause' : 'play'}</button>
     <button type="button" on:click={() => (dir = dir === 1 ? -1 : 1)}>face {dir === 1 ? 'left' : 'right'}</button>
     <label><input type="checkbox" bind:checked={still} /> reduced motion</label>
     <label><input type="checkbox" bind:checked={guides} /> joints</label>
     <label><input type="checkbox" bind:checked={separate} /> separate pieces</label>
     {#if box}<label><input type="checkbox" bind:checked={footprint} /> footprint</label>{/if}
+    {#if animal === 'fox'}<label><input type="checkbox" bind:checked={reference} /> reference</label>{/if}
   </div>
 
   <!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -133,42 +159,57 @@
       {/if}
       {#if shown}
         <Rig pose={shown} x={0} y={0} {dir} {guides} data-critter={mode} />
+        {#if reference && animal === 'fox'}
+          <Rig pose={{ ...shown, layers: [{ kind: 'image', name: 'reference', src: foxReference, ...REFERENCE }] }} x={0} y={0} {dir} opacity={0.45} />
+        {/if}
       {:else if animal === 'spider'}
         <div class="spider" class:hanging={mode === 'hang'} style="transform: scaleX({dir})" data-critter={mode}>
-          <Spider moving={playing && mode === 'walk'} hanging={mode === 'hang'} walked={walked} crouch={mode === 'crouch' ? 1 : 0} tuck={mode === 'jump' ? 1 : 0} />
+          <Spider moving={playing && mode === 'walk'} hanging={mode === 'hang'} walked={walked} crouch={mode === 'crouch' ? 1 : 0} tuck={mode === 'jump' ? 1 : 0} {hidden} />
         </div>
       {:else}
         <div class="robin" data-critter={mode} style="left: {(viewport[0] - ROBIN.x) * ROBIN.scale}px; top: {(viewport[1] - ROBIN.y) * ROBIN.scale}px; width: {viewport[2] * ROBIN.scale}px; height: {viewport[3] * ROBIN.scale}px">
-          <LayeredRobin elapsed={now % 12000} {mode} reduced={still} mirrored={dir === -1} exploded={separate} {guides} />
+          <LayeredRobin elapsed={now % 12000} {mode} reduced={still} mirrored={dir === -1} exploded={separate} {guides} {hidden} />
         </div>
       {/if}
     </div>
   </div>
 
-  {#if pose}
-    <section class="parts">
-      <p>Layers, back to front (untick to hide):</p>
-      <div class="controls">
+  <section class="parts">
+    <p>Layers, back to front (untick to hide):</p>
+    <div class="controls">
+      {#each parts as name}
+        <label><input type="checkbox" checked={!hidden.includes(name)} on:change={() => (hidden = hidden.includes(name) ? hidden.filter((h) => h !== name) : [...hidden, name])} /> {name}</label>
+      {/each}
+    </div>
+    {#if separate && pose}
+      <div class="row pieces">
         {#each parts as name}
-          <label><input type="checkbox" checked={!hidden.includes(name)} on:change={() => (hidden = hidden.includes(name) ? hidden.filter((h) => h !== name) : [...hidden, name])} /> {name}</label>
+          <figure>
+            <div class="spot" style="scale: {Math.max(2, zoom / 2)}"><Rig pose={keepParts(pose, (n) => n === name)} x={0} y={0} {dir} /></div>
+            <figcaption>{name}</figcaption>
+          </figure>
         {/each}
       </div>
-      {#if separate}
-        <div class="row pieces">
-          {#each parts as name}
-            <figure>
-              <div class="spot" style="scale: {Math.max(2, zoom / 2)}"><Rig pose={keepParts(pose, (n) => n === name)} x={0} y={0} {dir} /></div>
-              <figcaption>{name}</figcaption>
-            </figure>
-          {/each}
-        </div>
-      {/if}
-      <p>The art each part is drawn from, at its file's own size:</p>
-      <div class="art">
-        {#each partArt(pose) as { name, src }}
-          <figure><img {src} alt="" /><figcaption>{name}</figcaption></figure>
+    {:else if separate && animal === 'spider' && mode !== 'hang'}
+      <div class="row pieces">
+        {#each parts as name}
+          <figure>
+            <div class="spot" style="scale: {Math.max(2, zoom / 2)}">
+              <div class="spider"><Spider walked={walked} crouch={mode === 'crouch' ? 1 : 0} tuck={mode === 'jump' ? 1 : 0} hidden={parts.filter((n) => n !== name)} /></div>
+            </div>
+            <figcaption>{name}</figcaption>
+          </figure>
         {/each}
       </div>
+    {/if}
+    {#if separate && animal === 'robin'}<p>The robin's pieces are pulled apart on the stage above.</p>{/if}
+    <p>The art each part is drawn from, at its file's own size:</p>
+    <div class="art">
+      {#each art as { name, src }}
+        <figure><img {src} alt="" /><figcaption>{name}</figcaption></figure>
+      {/each}
+    </div>
+    {#if pose}
       <p>Every pose at the same scale, three times page size, so the animal stays the same size whatever it does:</p>
       <div class="row lineup">
         {#each MODES[animal] as m}
@@ -178,8 +219,8 @@
           {/if}
         {/each}
       </div>
-    </section>
-  {/if}
+    {/if}
+  </section>
 
   <p>At page size, on a card top, both ways round:</p>
   <div class="row">

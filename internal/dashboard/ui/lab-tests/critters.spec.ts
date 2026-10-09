@@ -72,3 +72,23 @@ test('the spider and the robin are here too', async ({ page }) => {
   await page.getByRole('button', { name: 'robin', exact: true }).click();
   await expect(big(page).locator('[data-layered-robin]')).toBeVisible();
 });
+
+test('the layer list holds still while parts come and go, the eyelid listed from the start', async ({ page }) => {
+  const labels = () => page.locator('.parts .controls label').allTextContents();
+  const first = await labels();
+  expect(first.map((l) => l.trim())).toContain('eyelid');
+  for (let i = 0; i < 6; i++) {
+    await page.waitForTimeout(400);
+    expect(await labels()).toEqual(first);
+  }
+});
+
+test('the spider and the robin list their layers, and hide them', async ({ page }) => {
+  await page.getByRole('button', { name: 'spider', exact: true }).click();
+  await page.getByLabel('body', { exact: true }).uncheck();
+  await expect(big(page).locator('svg.walker > image[href*="spider-body"]')).toHaveCount(0);
+  await expect(big(page).locator('svg.walker > image')).not.toHaveCount(0);
+  await page.getByRole('button', { name: 'robin', exact: true }).click();
+  await page.getByLabel('tail', { exact: true }).uncheck();
+  await expect(big(page).locator('[data-part="tail"]')).toHaveCount(0);
+});

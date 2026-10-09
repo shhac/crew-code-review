@@ -19,7 +19,6 @@ function reach(l: Exclude<Layer, { kind: 'group' }>): Point[] {
   switch (l.kind) {
     case 'image': return corners(l.x, l.y, l.x + l.width, l.y + l.height);
     case 'lid': return corners(l.at.x - l.r, l.at.y - l.r, l.at.x + l.r, l.at.y + l.r);
-    case 'patch': return corners(l.at.x - l.rx, l.at.y - l.ry, l.at.x + l.rx, l.at.y + l.ry);
     case 'legs': {
       // Each piece runs half its thickness past its joints, every way; each
       // foot is its own box.

@@ -19,6 +19,9 @@
   export let crouch = 0;
   // Mid-jump (0 to 1): the legs drawn in under the body.
   export let tuck = 0;
+  // Parts left out, for the critters lab's layer view: 'far legs', 'body',
+  // 'near legs'.
+  export let hidden: readonly string[] = [];
 
   const GROUND = 38;
   const STRIDE = 10;
@@ -63,11 +66,13 @@
   <svg class="walker" viewBox="0 0 78 40" width="78" height="40">
     <!-- The far side is the same art in shadow, so it reads as behind. -->
     <filter id={dim}><feColorMatrix values=".55 0 0 0 0  0 .55 0 0 0  0 0 .6 0 0  0 0 0 1 0" /></filter>
-    <g filter="url(#{dim})">
-      {#each far as leg, i}<Limb {leg} rest={farRest[i]} />{/each}
-    </g>
-    <image href={body} x="16" y={11 + bob + sink} width="38" height="22.3" />
-    {#each near as leg, i}<Limb {leg} rest={nearRest[i]} />{/each}
+    {#if !hidden.includes('far legs')}
+      <g filter="url(#{dim})">
+        {#each far as leg, i}<Limb {leg} rest={farRest[i]} />{/each}
+      </g>
+    {/if}
+    {#if !hidden.includes('body')}<image href={body} x="16" y={11 + bob + sink} width="38" height="22.3" />{/if}
+    {#if !hidden.includes('near legs')}{#each near as leg, i}<Limb {leg} rest={nearRest[i]} />{/each}{/if}
   </svg>
 {/if}
 
