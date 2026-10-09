@@ -13,6 +13,9 @@ export type QuadLeg = LegSpec & {
   bend: 1 | -1;
   // The far side, drawn behind and a shade darker.
   far: boolean;
+  // How thick its upper piece is drawn, where that differs from the rest of
+  // the leg: a hind leg's haunch is thick where it meets the body.
+  haunch?: number;
 };
 // stance: the share of each cycle a foot is down. A walk keeps three feet
 // down (0.75, four beats); a trot moves diagonal pairs together (about 0.5).

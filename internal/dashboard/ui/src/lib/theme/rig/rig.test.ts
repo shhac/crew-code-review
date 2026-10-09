@@ -21,8 +21,8 @@ describe('turned', () => {
 describe('rigBounds', () => {
   it('bounds an image turned inside a group', () => {
     const pose: RigPose = {
-      width: 20, height: 20, anchor: { x: 10, y: 20 },
-      layers: [{ kind: 'group', turn: turnAbout(90, { x: 0, y: 0 }), layers: [{ kind: 'image', src: '', x: 0, y: 0, width: 4, height: 2 }] }],
+      width: 20, height: 20, anchor: { x: 10, y: 20 }, scale: 1,
+      layers: [{ kind: 'group', turn: turnAbout(90, { x: 0, y: 0 }), layers: [{ kind: 'image', name: 'box', src: '', x: 0, y: 0, width: 4, height: 2 }] }],
     };
     const b = rigBounds(pose);
     expect([b.left, b.right, b.top, b.bottom].map((n) => Math.round(n * 1000) / 1000)).toEqual([-2, 0, 0, 4]);

@@ -63,3 +63,11 @@ it('handles missing main geometry without text reads', () => {
   vi.stubGlobal('document', { querySelector: () => null });
   expect(measureRenderedText()).toEqual([]);
 });
+
+it('marks cards as blocks, apart from content', () => {
+  const card = { ...box, left: 500, right: 600 };
+  const root = { querySelectorAll(s: string) {
+    return s.includes('main .surface') ? [{ getBoundingClientRect: () => card }] : [{ getBoundingClientRect: () => box }];
+  } };
+  expect(measureObstacles(root, () => [])).toEqual([{ left: 500, right: 600, top: 160, bottom: 175, block: true }, box]);
+});

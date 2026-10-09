@@ -241,6 +241,16 @@ first shipped with one stiff sprite each:
   walked so planted feet never slide; eyes blink and heads nod, turn and
   look on seeded schedules (`rig/life.ts`), held still under reduced motion.
   Each animal has a page in the critters lab (`lab/critters.html`).
+- **One animal, one scale.** Every picture of an animal (each pose and each
+  part) is exported so its eye is the same size, and its rig sets one page
+  scale for every pose, so curled up or trotting it is the same animal.
+- **Legs that join cleanly.** Legs are pieces of leg art laid along posed
+  bones on a small flat paw; each piece is drawn outlined, then again as fur
+  alone with the outline taken out, so outlines run only round a leg's
+  silhouette, not across its joints or its hip.
+- **Room to stand.** An animal may stand up to 6px past the bottom edge of a
+  card or heading above its ledge, into its empty edge, never over text,
+  controls or charts; an end-to-end test checks that on every route.
 
 ## Sequencing
 

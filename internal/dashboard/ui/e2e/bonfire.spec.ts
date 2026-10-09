@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { coveredContent } from './content';
 
 // Bonfire Night: a bonfire shelf with fireworks in the rail's free space,
 // and embers plus hedgehogs sharing a woodpile on the page's ledges. How
@@ -55,6 +56,24 @@ test('the hedgehogs come out one by one once the page is still, and one curls up
   await page.mouse.move(box.x + box.width / 2 + 40, box.y - 30);
   await page.mouse.move(box.x + box.width / 2 + 10, box.y - 10, { steps: 4 });
   await expect(hog).toHaveAttribute('data-hedgehog', 'curled');
+});
+
+test('the hedgehogs never cover text, controls or charts, wherever they wander', async ({ page }) => {
+  test.setTimeout(60_000);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  const seen: number[] = [];
+  for (const route of ['/logs', '/', '/metrics']) {
+    await page.goto(`${route}?theme=bonfire`);
+    // Still for long enough that any hedgehogs there come out.
+    await page.waitForTimeout(5000);
+    for (let i = 0; i < 6; i++) {
+      const hogs = page.locator('[data-bonfire] svg.rig');
+      seen.push(await hogs.count());
+      expect(await coveredContent(hogs)).toEqual([]);
+      await page.waitForTimeout(500);
+    }
+  }
+  expect(Math.max(...seen)).toBeGreaterThanOrEqual(2);
 });
 
 test('fireworks burst inside the rail, between the nav and the shelf', async ({ page }) => {

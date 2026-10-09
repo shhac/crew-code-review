@@ -2,10 +2,10 @@ import { describe, expect, it } from 'vitest';
 import type { RigPose } from '../rig/rig';
 import { firstShut, imagesOf, legsOf, lidsOf, rigBounds } from '../rig/test-rig';
 import { HOG, type Hog, type Mode } from './hedgehog';
-import { hogRig, type HogLook } from './hedgehog-rig';
+import { gazeAt, hogRig, type HogLook } from './hedgehog-rig';
 
 const hog = (mode: Mode, walked = 0): Hog => ({ id: 0, seed: 1, x: 0, dir: 1, mode, target: 0, until: 0, out: 0, walked });
-const look = (over: Partial<HogLook> = {}): HogLook => ({ now: 0, at: { x: 100, y: 100 }, cursor: null, still: false, ...over });
+const look = (over: Partial<HogLook> = {}): HogLook => ({ now: 0, gaze: 0, still: false, ...over });
 
 // The head's group: the one holding the eyelid's place, nested in the body's.
 const headTurn = (pose: RigPose) => {
@@ -19,19 +19,18 @@ const shutAt = () => firstShut((now) => hogRig(hog('sniff'), look({ now })))!;
 
 describe('hedgehog rig', () => {
   // Homes and spacing work from HOG, so the drawing must never reach past
-  // it, whatever its stride, sniff or glance toward the cursor.
-  it('stays inside its footprint, whatever it does and wherever the cursor is', () => {
-    const cursors = [null, { x: 140, y: 20 }, { x: 140, y: 140 }, { x: 30, y: 60 }, { x: 160, y: 98 }];
+  // it on the page, whatever its stride, sniff or glance toward the cursor.
+  it('stays inside its footprint, whatever it does and wherever it looks', () => {
     const modes: Mode[] = ['walk', 'flee', 'home', 'sniff', 'peek', 'curled'];
     const worst = { left: 0, right: 0, top: 0 };
     for (const mode of modes) {
-      for (const cursor of cursors) {
-        for (let now = 0; now < 3000; now += 15) {
-          const rig = hogRig(hog(mode, now / 100), look({ now, cursor }));
+      for (const gaze of [-14, -7, 0, 7, 14]) {
+        for (let now = 0; now < 3600; now += 15) {
+          const rig = hogRig(hog(mode, now / 30), look({ now, gaze }));
           const b = rigBounds(rig);
-          worst.left = Math.max(worst.left, rig.anchor.x - b.left);
-          worst.right = Math.max(worst.right, b.right - rig.anchor.x);
-          worst.top = Math.max(worst.top, rig.anchor.y - b.top);
+          worst.left = Math.max(worst.left, (rig.anchor.x - b.left) * rig.scale);
+          worst.right = Math.max(worst.right, (b.right - rig.anchor.x) * rig.scale);
+          worst.top = Math.max(worst.top, (rig.anchor.y - b.top) * rig.scale);
         }
       }
     }
@@ -64,18 +63,27 @@ describe('hedgehog rig', () => {
   });
 
   it('turns its head toward a cursor nearby, but only so far', () => {
-    expect(headTurn(hogRig(hog('peek'), look({ now: OPEN })))).toBe(0);
-    const above = headTurn(hogRig(hog('peek'), look({ now: OPEN, cursor: { x: 140, y: 20 } })));
-    const below = headTurn(hogRig(hog('peek'), look({ now: OPEN, cursor: { x: 140, y: 140 } })));
+    const at = { x: 100, y: 100 };
+    expect(gazeAt(hog('peek'), at, null)).toBe(0);
+    const above = gazeAt(hog('peek'), at, { x: 140, y: 20 });
+    const below = gazeAt(hog('peek'), at, { x: 140, y: 140 });
     expect(above).toBeLessThan(0);
     expect(below).toBeGreaterThan(0);
     expect(Math.abs(above)).toBeLessThanOrEqual(14);
-    expect(headTurn(hogRig(hog('peek'), look({ now: OPEN, cursor: { x: 600, y: 20 } })))).toBe(0);
+    expect(gazeAt(hog('peek'), at, { x: 600, y: 20 })).toBe(0);
+    expect(headTurn(hogRig(hog('peek'), look({ now: OPEN, gaze: above })))).toBe(above);
   });
 
   it('looks the right way when facing left', () => {
-    const left = { ...hog('peek'), dir: -1 as const };
-    expect(headTurn(hogRig(left, look({ now: OPEN, cursor: { x: 60, y: 20 } })))).toBeLessThan(0);
+    expect(gazeAt({ dir: -1 }, { x: 100, y: 100 }, { x: 60, y: 20 })).toBeLessThan(0);
+  });
+
+  it('nods gently on the move, never jumping from one step to the next', () => {
+    // A frame at a hurry (34px/s, 60 frames a second) moves it about 0.6px.
+    const turns = Array.from({ length: 300 }, (_, i) => headTurn(hogRig(hog('flee', i * 0.6), look({ now: i * 16, gaze: 10 }))));
+    expect(Math.max(...turns) - Math.min(...turns)).toBeGreaterThan(2);
+    expect(Math.max(...turns.map((t) => Math.abs(t)))).toBeLessThanOrEqual(2);
+    expect(Math.max(...turns.slice(1).map((t, i) => Math.abs(t - turns[i])))).toBeLessThan(0.5);
   });
 
   it('dips its nose to sniff, and holds still under reduced motion', () => {

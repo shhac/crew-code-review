@@ -11,22 +11,25 @@ import { between, maxBy, pick, type Rand } from '../seed';
 // cross. Everything is in ledge-local x, so a fox rides along with its card
 // as the page scrolls. design-docs/aurora/README.md has the full state table.
 
-// The space each pose takes, anchored at its bottom centre on the ledge:
-// curled and alert are the art's display sizes (design-docs/aurora/export.py),
-// the rest bound the fox as fox-rig.ts puts it together (its tests hold the
-// drawing inside these).
+// The space each pose takes on the page, anchored at its bottom centre on
+// the ledge: the box fox-rig.ts's drawing stays inside at every moment of
+// its stride, leap or sway (its tests check this).
 export const POSES = {
   curled: { width: 20, height: 16.5 },
   alert: { width: 20, height: 18.5 },
-  trot: { width: 31, height: 21 },
-  bow: { width: 33, height: 20 },
-  pounce: { width: 39, height: 24 },
+  trot: { width: 38, height: 26 },
+  bow: { width: 42, height: 26 },
+  pounce: { width: 50, height: 30 },
 } as const;
 export type Pose = keyof typeof POSES;
 
-// Wherever the fox lies or trots needs this much clear space above the ledge:
-// the dashboard's gaps between cards are about 25px.
-const CLEAR = 22;
+// Wherever the fox lies or trots needs this much clear space above the
+// ledge, counting REACH: it may stand that far up past the bottom edge of a
+// card or rule above, into their empty edges, never over content. The
+// dashboard's gaps between cards are about 25px, and the first row of cards
+// has 22px up to the heading rule.
+const CLEAR = 27;
+const REACH = 6;
 // How the ledges are sampled for clear runs; a run reaching the first or
 // last sample reaches its ledge's end.
 const RUNS = { inset: 8, step: 4 };
@@ -90,7 +93,7 @@ export type Fox = {
   // Whether this waking was the cursor's doing.
   startled: boolean;
 };
-const runs = (f: Ledge, scene: PageMap) => clearRuns(f, scene.obstacles, CLEAR, RUNS);
+const runs = (f: Ledge, scene: PageMap) => clearRuns(f, scene.obstacles, CLEAR, { ...RUNS, reach: REACH });
 const length = (r: Run) => r.hi - r.lo;
 const runAt = (f: Ledge, scene: PageMap, x: number) => runs(f, scene).find((r) => r.lo <= x && x <= r.hi) ?? null;
 const clampTo = (r: Run, x: number) => Math.max(r.lo, Math.min(r.hi, x));
@@ -235,7 +238,7 @@ const dist = (a: Point, b: Point) => Math.hypot(a.x - b.x, a.y - b.y);
 // (its centre's travel); negative when it does not fit.
 const spare = (f: Ledge, scene: PageMap, pose: Pose, x0: number, x1: number) => {
   const half = POSES[pose].width / 2;
-  return clearance(f, scene.obstacles, Math.min(x0, x1) - half, Math.max(x0, x1) + half) - POSES[pose].height;
+  return clearance(f, scene.obstacles, Math.min(x0, x1) - half, Math.max(x0, x1) + half, REACH) - POSES[pose].height;
 };
 
 // A pounce needs the run ahead and room above for the arc; it prefers the

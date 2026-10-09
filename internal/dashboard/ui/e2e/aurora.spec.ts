@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { coveredContent } from './content';
 
 // The northern lights: a winter shelf with the aurora in the rail's free
 // space, and frost plus sleeping Arctic foxes on the page's ledges. The
@@ -65,6 +66,20 @@ test('the fox twitches an ear at a passing cursor, and wakes when it lingers', a
   await expect(fox).toHaveAttribute('data-pose', 'curled');
   await page.mouse.move(x + 30, y, { steps: 2 });
   await expect(fox).not.toHaveAttribute('data-fox', 'asleep', { timeout: 5_000 });
+});
+
+test('the foxes never cover text, controls or charts', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  const seen: number[] = [];
+  for (const route of ['/', '/logs', '/metrics', '/history']) {
+    await page.goto(`${route}?theme=aurora`);
+    await expect(page.locator('.rail nav a')).toHaveCount(7);
+    await page.waitForTimeout(400);
+    const foxes = page.locator('[data-aurora] svg.rig');
+    seen.push(await foxes.count());
+    expect(await coveredContent(foxes)).toEqual([]);
+  }
+  expect(seen.every((n) => n >= 2)).toBe(true);
 });
 
 test('the aurora stays inside the rail, between the nav and the shelf', async ({ page }) => {

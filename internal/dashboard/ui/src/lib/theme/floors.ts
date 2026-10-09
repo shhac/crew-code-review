@@ -6,7 +6,9 @@ const CARD_TOPS = 'main .surface, main .queue-board, main .context section, main
 // Page headings sit on a rule; the spider walks along the rule, not the text.
 const HEADING_RULES = 'main .hero, main .page-head';
 
-export type Obstacle = { left: number; right: number; top: number; bottom: number };
+// A block is a card's own box, empty at its edges; everything else (text,
+// controls, charts) is content, never to be covered.
+export type Obstacle = { left: number; right: number; top: number; bottom: number; block?: true };
 const visibleBox = (r: Box) => r.width > 0 && r.height > 0 && [r.left, r.right, r.top, r.bottom].every(Number.isFinite);
 // Range rectangles follow rendered text (including wrapped lines), independent
 // of the element's tag. Container bounds would also block their empty space.
@@ -31,8 +33,13 @@ export function measureRenderedText(doc: Document = document): Obstacle[] {
 // Text and charts block birds even when they do not provide a ledge.
 export function measureObstacles(root: Page = document, text: () => readonly Obstacle[] = measureRenderedText): Obstacle[] {
   const boxes = [...text()];
+  // A DOMRect's sides are getters, so a block is copied field by field.
+  root.querySelectorAll(CARD_TOPS).forEach((el) => {
+    const r = el.getBoundingClientRect();
+    if (visibleBox(r)) boxes.push({ left: r.left, right: r.right, top: r.top, bottom: r.bottom, block: true });
+  });
   // Controls can paint values without DOM text nodes; retain their full bounds.
-  root.querySelectorAll(`${CARD_TOPS}, main svg, main canvas, main button, main input, main textarea, main select`).forEach((el) => {
+  root.querySelectorAll('main svg, main canvas, main button, main input, main textarea, main select').forEach((el) => {
     const r = el.getBoundingClientRect();
     if (visibleBox(r)) boxes.push(r);
   });
@@ -115,25 +122,27 @@ export function measureFloors(root: Page = document): Map<number, Ledge> {
 
 // How tall something can stand on f over the stretch x0..x1 (ledge-local):
 // up to the next ledge above, and lower wherever text, a control, a chart or
-// a card overhangs that stretch.
-export function clearance(f: Ledge, obstacles: readonly Obstacle[], x0: number, x1: number): number {
+// a card overhangs that stretch. With reach, it may also rise that far past
+// the bottom edge of a card or a ledge above, into their empty edges, but
+// never into content.
+export function clearance(f: Ledge, obstacles: readonly Obstacle[], x0: number, x1: number, reach = 0): number {
   const over = obstacles.filter((o) => o.top < f.y - 1 && o.right > f.left + x0 && o.left < f.left + x1);
-  return Math.min(f.headroom, ...over.map((o) => f.y - o.bottom));
+  return Math.min(f.headroom + reach, ...over.map((o) => f.y - o.bottom + (o.block ? reach : 0)));
 }
 
 // A stretch of a ledge, in ledge-local x.
 export type Run = { lo: number; hi: number };
 
 // The stretches of f where something height tall fits, sampled every step px
-// and kept inset px in from each end.
-export function clearRuns(f: Ledge, obstacles: readonly Obstacle[], height: number, { inset = 8, step = 4 } = {}): Run[] {
-  if (f.headroom < height) return [];
+// and kept inset px in from each end (reach as for clearance).
+export function clearRuns(f: Ledge, obstacles: readonly Obstacle[], height: number, { inset = 8, step = 4, reach = 0 } = {}): Run[] {
+  if (f.headroom + reach < height) return [];
   // Only what overhangs low enough can block; the rest is skipped per sample.
   const low = obstacles.filter((o) => f.y - o.bottom < height);
   const count = Math.max(0, Math.floor((f.right - f.left - 2 * inset) / step) + 1);
   const xs = Array.from({ length: count }, (_, i) => inset + i * step);
   return xs.reduce<Run[]>((runs, x) => {
-    if (clearance(f, low, x - step / 2, x + step / 2) < height) return runs;
+    if (clearance(f, low, x - step / 2, x + step / 2, reach) < height) return runs;
     const last = runs.at(-1);
     return last && last.hi === x - step ? [...runs.slice(0, -1), { lo: last.lo, hi: x }] : [...runs, { lo: x, hi: x }];
   }, []);

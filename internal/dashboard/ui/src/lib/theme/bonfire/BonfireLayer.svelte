@@ -6,11 +6,12 @@
   import { samePage, type Ledge, type PageMap } from '../floors';
   import Geometry from '../Geometry.svelte';
   import { ledgeScene } from '../layout';
-  import { emberColour, fanEmbers, heat, reconcileEmbers, type Ember } from './embers';
-  import type { Point } from '../pointer';
+  import type { Cursor } from '../pointer';
+  import { easeTo } from '../rig/life';
   import Rig from '../rig/Rig.svelte';
-  import { createHogs, hogPoint, PILE, reconcileHogs, restingHogs, stepHogs, type Hogs } from './hedgehog';
-  import { hogRig } from './hedgehog-rig';
+  import { emberColour, fanEmbers, heat, reconcileEmbers, type Ember } from './embers';
+  import { createHogs, hogPoint, PILE, reconcileHogs, restingHogs, stepHogs, type Hog, type Hogs } from './hedgehog';
+  import { gazeAt, hogRig } from './hedgehog-rig';
   import woodpile from './woodpile.webp';
 
   let floors: ReadonlyMap<number, Ledge> = new Map();
@@ -19,14 +20,25 @@
   let group: Hogs | null = null;
   let now = 0;
   let reduced = false;
-  let cursor: Point | null = null;
+  // How far each hedgehog's head is turned toward the cursor, eased so it
+  // turns smoothly rather than snapping.
+  let gazes: ReadonlyMap<number, number> = new Map();
   const STILL_HEAT = 0.55;
+  const GAZE_EASE = 220;
 
+  const at = (hog: Hog) => (hog.mode === 'hidden' ? null : hogPoint(hog, group?.home ?? null, scene));
   $: pile = group?.home ? floors.get(group.home.floor) : undefined;
   $: shown = (group?.hogs ?? []).flatMap((hog) => {
-    const at = hog.mode === 'hidden' ? null : hogPoint(hog, group?.home ?? null, scene);
-    return at ? [{ hog, at, pose: hogRig(hog, { now, at, cursor, still: reduced }) }] : [];
+    const point = at(hog);
+    return point ? [{ hog, point, pose: hogRig(hog, { now, gaze: gazes.get(hog.id) ?? 0, still: reduced }) }] : [];
   });
+
+  function gazing(hogs: readonly Hog[], cursor: Cursor | null, dt: number): ReadonlyMap<number, number> {
+    return new Map(hogs.map((hog) => {
+      const point = at(hog);
+      return [hog.id, easeTo(gazes.get(hog.id) ?? 0, point ? gazeAt(hog, point, cursor) : 0, dt, GAZE_EASE)];
+    }));
+  }
 
   // Reduced motion draws a still frame only after a measurement, so the
   // resting hedgehogs are placed here with everything else.
@@ -47,9 +59,9 @@
     },
     frame(time, step) {
       now = time;
-      cursor = step?.cursor ?? null;
       if (!step) return;
       group = group && stepHogs(group, scene, time, step.dt, Math.random, step.cursor);
+      gazes = gazing(group?.hogs ?? [], step.cursor, step.dt);
     },
     stroke(segment) { embers = fanEmbers(embers, floors, segment); },
   }));
@@ -77,8 +89,8 @@
       {/if}
     {/each}
   </svg>
-  {#each shown as { hog, at, pose } (hog.id)}
-    <Rig {pose} x={at.x} y={at.y} dir={hog.dir} data-hedgehog={hog.mode} data-id={hog.id} />
+  {#each shown as { hog, point, pose } (hog.id)}
+    <Rig {pose} x={point.x} y={point.y} dir={hog.dir} data-hedgehog={hog.mode} data-id={hog.id} />
   {/each}
   <!-- After the hedgehogs, so one peeking from the mouth is half behind it. -->
   {#if pile && group?.home}

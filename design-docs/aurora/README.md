@@ -110,23 +110,27 @@ A survey of every route at 1440 and 1024px wide (ledge by ledge, how tall a
 band above it is free of text, controls, charts and cards) found room in two
 places only: the page heading's rule (26 to 30px clear along most of it, more
 in places) and the first row of card tops (22px, up to the rule above). Every
-deeper card top has another card's body within a few pixels. So the fox lies
-and trots only where 22px is clear, as the hedgehog does. The other poses
-are conditional on the space where the fox is. Since 2026-10-09 the moving
-poses are drawn from parts (see "Drawn from parts" below), and their sizes are
-the box the drawing stays inside at every moment of its stride or leap, which
-`fox-rig.test.ts` checks:
+deeper card top has another card's body within a few pixels. So the fox
+first lay and trotted only where 22px was clear. Since 2026-10-09 it may stand
+6px past the bottom edge of a card or heading above, into its empty edge but
+never over content (as the hedgehogs may), and lies and trots where 27px is
+clear counting that; the first row of card tops has 22px plus that 6. An
+end-to-end test checks no fox's drawing overlaps any text, control or chart.
+The moving poses are drawn from parts (see "Drawn from parts" below), and
+their sizes are the box the drawing stays inside at every moment of its
+stride, leap or sway, which `fox-rig.test.ts` checks:
 
 | Pose | Footprint | Used for | Needs clear above it |
 | --- | --- | --- | --- |
-| curled | 20x16.5 | asleep | 22px (where it may lie) |
-| alert | 20x18.5 | the ear twitch, waking, looking up | 22px |
-| trot | 31x21 | trotting, entering, leaving, settling | 22px |
-| bow | 33x20 | the stretch, the crouch | 20px over its width |
-| pounce | 39x24 | the leap and the dig | 24px plus the hop, over the whole leap |
+| curled | 20x16.5 | asleep | 27px (where it may lie) |
+| alert | 20x18.5 | the ear twitch, waking, looking up | 27px |
+| trot | 38x26 | trotting, entering, leaving, settling | 27px |
+| bow | 42x26 | the stretch, the crouch | 26px over its width |
+| pounce | 50x30 | the leap and the dig | 30px plus the hop, over the whole leap |
 
 (As first drawn, as single pictures, they were trot 32x19, bow 26.5x23.5 and
-pounce 25x30.) Every pose is anchored at its bottom centre on the ledge and
+pounce 25x30, with the moving fox drawn a quarter smaller than the curled one;
+now every pose is the same fox at one scale.) Every pose is anchored at its bottom centre on the ledge and
 mirrored to face the way the fox is going (the art faces right). A pose that
 does not fit is skipped: no room to stretch means it gets up and trots; no
 room to pounce means no pounce.
@@ -210,19 +214,27 @@ now are, so the rules hold every frame (`foxes.ts`, on the shared
 ### Drawn from parts (added 2026-10-09)
 
 Single pictures slid along the ledge looked stiff. The tail, torso and head
-are now separate generated parts, and the four legs are drawn in code
-(`lib/theme/rig/`, shared with the hedgehogs): thin white strokes with the
-art's outline, all four behind the torso so no hip shows on its fur, the far
-pair a shade bluer. Trotting, diagonal pairs step together, driven by
-distance trotted so planted paws never slide; the head nods and the tail
-swishes with the stride. The bow tilts the body down onto forelegs reaching
+are now separate generated parts on the shared rig (`lib/theme/rig/`, as the
+hedgehogs are). Each leg is a haunch from hip to knee (thick where it meets
+the body, thicker on the hind legs), a furred lower leg to the ankle, and a
+small paw standing flat. Each piece is drawn twice, outlined and then as fur
+alone with its outline taken out, so outlines run only round the leg's
+silhouette, never across a knee or ankle; the near pair's fur is drawn over
+the torso's edge so those legs grow out of the body with no line across the
+hip. The far pair is a shade darker. Trotting, diagonal pairs step together,
+driven by distance trotted so planted paws never slide; the body bounces
+gently and the head nods and the tail swishes once a stride. The bow tilts the body down onto forelegs reaching
 forward with the tail up; the crouch lowers it; the leap arcs it nose up then
 nose down, hind legs trailing, then forelegs reaching for the snow; the dig
 puts its nose down with the forepaws scrabbling in turn. The head sits over
 the chest, with a little fur painted over where its outline would cross it.
 Its eye blinks on a schedule seeded per fox. Curled up it is still one
-picture (asleep, or looking up), breathing slowly. Reduced motion stands it
-square, head level, no blink. The workbench is `lab/critters.html`.
+picture (asleep, or looking up), breathing slowly. Every picture is exported
+so its eye is the same size, so curled up it is the same fox, and `fox-rig.ts`
+sets one page scale (1.28 page pixels per drawing unit) for every pose.
+Reduced motion stands it square, head level, no blink. The workbench is
+`lab/critters.html`: every pose side by side, the layers one by one, the art
+each is drawn from, the joints and the footprint.
 
 ### Accent
 
@@ -248,21 +260,31 @@ The first two sources were generated on 2026-10-08 by the Codex CLI
 (`gpt-5.6-terra`) through its built-in `$imagegen` path, each on a flat
 magenta `#FF00FF` background, with `design-docs/halloween/pumpkins.png`,
 `candles.png` and `design-docs/bonfire/toffee-apples.png` as style
-references. `fox-parts.png` was generated the same way on 2026-10-09, with
-`fox-sheet.png`'s trotting pose as the character reference.
+references. The fox's parts were generated the same way on 2026-10-09, with
+`fox-sheet.png`'s trotting pose as the character reference: `fox-parts.png`
+(tail, torso, head), `fox-haunch.png` (the tapered upper leg), `fox-legs.png`
+(leg pieces) and `fox-paw.png` (a small paw seen from the side). A long foot
+that read as a human foot was replaced by the paw.
 
 | Source | Shipped as (`ui/src/lib/theme/aurora/`) | Display size |
 | --- | --- | --- |
 | `winter-kit.png` | `winter-kit.webp` | 124x62 |
 | `fox-sheet.png` | `fox-curled.webp`, `fox-alert.webp` | see the pose table |
-| `fox-parts.png` | `fox-tail.webp`, `fox-torso.webp`, `fox-head.webp` | 10.5x11, 13x7.5, 10.5x10 |
+| `fox-parts.png` | `fox-tail.webp`, `fox-torso.webp`, `fox-head.webp` | 10.8x11.2, 13.1x7.6, 10.3x10 units |
+| `fox-haunch.png` | `fox-haunch.webp`, `fox-haunch-fur.webp` | 3.2 units thick at the hip |
+| `fox-legs.png` | `fox-leg.webp`, `fox-leg-fur.webp` | 1.9 units thick; the upper piece only |
+| `fox-paw.png` | `fox-paw.webp`, `fox-paw-fur.webp` | 3.5x2.25 units |
 
 The fox sheet is split into its five poses at the four widest runs of empty
-columns; every pose shares the trot pose's scale (19px tall), and only the
-two curled ones are still shipped. The parts sheet is split the same way into
-its three parts, all at one scale (the head 10px tall). Where they sit, the
-pivots, the eye, the seam patch and the hips are set in `fox-rig.ts`,
-measured against these exports; regenerated parts mean measuring again. `export.py`
+columns, and only the two curled ones are still shipped. The fox's pictures
+are in drawing units, all on one scale: each sheet's eye is measured
+(`art.py`'s `feature`, from a seed point set in `export.py`) and every picture
+is exported so its eye is 1.544 units, at 12 file pixels per unit, sharp at
+the lab's zoom. The fur versions have their outline taken out (`art.py`'s
+`fill_only`); the paw's ankle is found from the art (`ankle`). Where parts
+sit, the pivots, the eye, the seam patch, the hips and the paws' ankles are
+set in `fox-rig.ts`, measured against these exports (the lab's joints view
+shows them); regenerated parts mean measuring again. `export.py`
 reproduces every shipped file with the Halloween keying recipe, now shared
 with Bonfire's export through `design-docs/art.py` (Bonfire's files come out
 byte-identical through it).

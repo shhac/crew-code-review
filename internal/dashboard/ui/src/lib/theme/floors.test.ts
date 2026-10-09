@@ -111,4 +111,15 @@ describe('clearance', () => {
     expect(clearRuns(f, [text], 16)).toEqual([{ lo: 8, hi: 392 }]);
     expect(clearRuns(f, [], 41)).toEqual([]);
   });
+
+  it('with reach, rises into the empty edge of a card or ledge above, never into content', () => {
+    const card = { left: 100, right: 500, top: 200, bottom: 284, block: true as const };
+    expect(clearance(f, [card], 0, 50)).toBe(16);
+    expect(clearance(f, [card], 0, 50, 6)).toBe(22);
+    expect(clearance(f, [text], 90, 110, 6)).toBe(16);
+    expect(clearance(f, [], 0, 50, 6)).toBe(46);
+    expect(clearRuns(f, [card], 20)).toEqual([]);
+    expect(clearRuns(f, [card], 20, { reach: 6 })).toEqual([{ lo: 8, hi: 392 }]);
+    expect(clearRuns(f, [card, text], 20, { reach: 6 })).toEqual([{ lo: 8, hi: 96 }, { lo: 164, hi: 392 }]);
+  });
 });

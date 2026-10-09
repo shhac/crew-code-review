@@ -12,19 +12,22 @@ import { between, maxBy, type Rand } from '../seed';
 // ledge-local x, so the pile and the hedgehogs ride along with their card as
 // the page scrolls.
 
-// The woodpile's footprint, and a hedgehog's, in page pixels (the art's
-// display sizes, design-docs/bonfire/export.py, and the rig put together in
-// hedgehog-rig.ts). The pile is the taller, so a hedgehog behind it is hidden.
-export const PILE = { width: 70, height: 20 };
-export const HOG = { width: 30, height: 18 };
+// The woodpile's footprint, and a hedgehog's, in page pixels: the pile's
+// display size (design-docs/bonfire/export.py), and the box hedgehog-rig.ts's
+// drawing stays inside whatever it does (its tests check this).
+export const PILE = { width: 88, height: 25 };
+export const HOG = { width: 47, height: 26.5 };
 // Kept off the ledge's ends, and the pile kept clear of the right one.
 const INSET = 24;
-// The pile and the hedgehog stand up to this tall, so a home needs this much
-// clear space above its ledge: up to the next floor, and free of the text,
-// controls and cards that the obstacles cover. The dashboard's gaps between
-// cards are about 25px, which is what sized the art.
-const HEADROOM = 22;
-const MIN_WIDTH = 220;
+// The pile and the hedgehogs stand up to this tall, so a home needs this
+// much clear space above its ledge: up to the next floor, and free of the
+// text, controls and cards that the obstacles cover, counting REACH: they may
+// stand that far up past the bottom edge of a card or rule above, into their
+// empty edges, never over content. The dashboard's gaps between cards are
+// about 25px, and the first row of cards has 22px up to the heading rule.
+const HEADROOM = 27;
+const REACH = 6;
+const MIN_WIDTH = 260;
 // A ledge whose free stretch is shorter than this is only good for peeking.
 const MIN_ROAM = 40;
 // How finely the hedgehog's range is searched for obstacles.
@@ -52,7 +55,7 @@ export type Hogs = { home: Home | null; hogs: Hog[] };
 // Any text, chart, control or card in the band just above the ledge blocks
 // the part of the ledge under it. A heading rule qualifies only along the
 // stretch its own text leaves free.
-const blocked = (f: Ledge, scene: PageMap, x0: number, x1: number) => clearance(f, scene.obstacles, x0, x1) < HEADROOM;
+const blocked = (f: Ledge, scene: PageMap, x0: number, x1: number) => clearance(f, scene.obstacles, x0, x1, REACH) < HEADROOM;
 
 // Walks left from hi, a step at a time, until the hedgehog would stand under
 // something or reach the ledge's inset; returns how far it got.
@@ -68,7 +71,7 @@ function reachLeft(f: Ledge, scene: PageMap, hi: number): number {
 // pile never jumps to another card.
 function homeOn(id: number, f: Ledge, scene: PageMap, fresh = true): Home | null {
   const width = f.right - f.left;
-  if (width < MIN_WIDTH || f.headroom < HEADROOM) return null;
+  if (width < MIN_WIDTH || f.headroom + REACH < HEADROOM) return null;
   if (fresh && !inView(f, scene)) return null;
   const pile = width - INSET - PILE.width / 2;
   if (blocked(f, scene, pile - PILE.width / 2, pile + PILE.width / 2)) return null;
