@@ -125,8 +125,8 @@ stride, leap or sway, which `fox-rig.test.ts` checks:
 | curled | 23.5x19 | asleep | 27px (where it may lie) |
 | alert | 23.5x21.5 | the ear twitch, waking, looking up | 27px |
 | trot | 46x26.5 | trotting, entering, leaving, settling | 27px |
-| bow | 49x24.5 | the stretch, the crouch | 24.5px over its width |
-| pounce | 54x31 | the leap and the dig | 31px plus the hop, over the whole leap |
+| bow | 53.5x29.5 | the stretch, the crouch | 29.5px over its width |
+| pounce | 54x29.5 | the leap and the dig | 29.5px plus the hop, over the whole leap |
 
 (As first drawn, as single pictures, they were trot 32x19, bow 26.5x23.5 and
 pounce 25x30, with the moving fox drawn a quarter smaller than the curled one;
@@ -220,13 +220,23 @@ which is the rig's anatomy reference: the parts sit where they sat in it, the
 torso keeps its rump and chest with the legs taken off, and the legs are
 measured from its legs. (A first set of parts, generated on their own, had a
 short chunky body and a large head and tail, so no legs looked right on
-them.) The critters lab lays the drawing over the rig to compare. The legs follow a fox's: it stands on its toes, so each leg
+them.) The poses are tuned against key poses of the same fox, each drawn by
+an edit of that drawing (`fox-pose-*.png`: a trot's reach and its pass, the
+stalking crouch, the play bow, the pounce and the dig): the trot's long stride
+and high, folded lift, the crouch low with its head down and forward, the
+pounce flying near level with the hind legs stretched back. The critters lab
+lays the standing drawing, or the key pose for the mode shown, over the rig to
+compare. The legs follow a fox's: it stands on its toes, so each leg
 has three bones. A hind leg's hip is up in the rump; the thigh (a haunch,
-thick where it meets the body) runs down and forward to a knee at the belly,
-the shin back to a hock well off the ground, and a long bone near upright to
-the toes. A foreleg's shoulder is in the chest; the upper arm runs back to an
-elbow at the chest's foot, the forearm near straight down to a wrist just off
-the ground, and a short bone to the toes. The bottom bone's lean is set from
+thick where it meets the body) runs down and forward to the stifle (the true
+knee) at the belly, the shank back to the hock (the ankle: the joint that
+looks like a backward knee) well off the ground, and the long metatarsus near
+upright to the toes. The shank tapers to the hock and runs a little past it,
+so the hock shows its point rather than a rounded join. A foreleg's shoulder
+is in the chest; the upper arm runs back to the elbow at the chest's foot,
+the forearm near straight down to the wrist (the carpus, often mistaken for a
+knee) just off the ground, and the short metacarpus to the toes. The lab's
+joints view names each. The bottom bone's lean is set from
 the toes and folds further back as the paw lifts; the two above are solved
 between the hip (or shoulder) and that joint (`rig/gait.ts`). The toes are a
 compact rounded cluster standing on the ledge. Each piece is drawn twice, outlined and then as fur
@@ -287,6 +297,7 @@ replaced by the toes.
 | `winter-kit.png` | `winter-kit.webp` | 124x62 |
 | `fox-sheet.png` | `fox-curled.webp`, `fox-alert.webp` | see the pose table |
 | `fox-standing.png` | `ui/src/lab/fox-reference.webp` (the lab's overlay) | 29.3x16.8 units |
+| `fox-pose-*.png` (six key poses) | `ui/src/lab/fox-pose-*.webp` (the lab's overlays) | on the same eye scale |
 | `fox-parts-2.png` | `fox-tail.webp`, `fox-torso.webp`, `fox-head.webp` | 11.8x10.3, 15.4x7.8, 10.3x9.8 units; each placed where it sat in the reference (`art.py`'s `place`, printed by `export.py`) |
 | `fox-haunch.png` | `fox-haunch.webp`, `fox-haunch-fur.webp` | 3.2 units thick at the hip |
 | `fox-legs.png` | `fox-leg.webp`, `fox-leg-fur.webp` | 2.1 units thick; the upper piece only |

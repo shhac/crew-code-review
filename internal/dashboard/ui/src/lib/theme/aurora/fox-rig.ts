@@ -57,17 +57,19 @@ const LEG_ART: LegArt = {
 };
 const LEG_WIDTH = 2.1;
 
-// Where the legs are, as a fox's are: the hips up in the rump, each thigh
-// running down and forward to a knee at the belly, the shin back to a hock
-// well off the ground, and a long bone near upright to the toes; the
-// shoulders high in the chest, the upper arm back to an elbow at the chest's
-// foot, the forearm near straight down to a wrist just off the ground, and a
-// short bone to the toes. Those bottom bones fold back as the paw lifts. The
+// Where the legs are, as a fox's are (it stands on its toes): the hips up in
+// the rump, each thigh running down and forward to the stifle (the true
+// knee) at the belly, the shank back to the hock (the ankle, the joint that
+// looks like a backward knee) well off the ground, its point showing behind,
+// and the long metatarsus near upright to the toes; the shoulders in the
+// chest, the upper arm back to the elbow at the chest's foot, the forearm
+// near straight down to the wrist (the carpus) just off the ground, and the
+// short metacarpus to the toes. Those bottom bones fold back as the paw lifts. The
 // far pair a little behind and above the near, as they would be seen.
 // Trotting, diagonal pairs move together: near fore with far hind, far fore
 // with near hind.
-const HIND_LEG = { thigh: 2.3, shin: 2.1, bend: 1, fore: false, haunch: 2.6, reach: -1, toes: { length: 1.5, lean: 10, fold: 55 } } as const;
-const FORE_LEG = { thigh: 2.3, shin: 3.6, bend: -1, fore: true, haunch: 2.4, reach: 0.3, toes: { length: 0.7, lean: 8, fold: 75 } } as const;
+const HIND_LEG = { thigh: 2.3, shin: 2.1, bend: 1, fore: false, haunch: 2.6, heel: 0.6, reach: -1, toes: { length: 1.5, lean: 10, fold: 70 } } as const;
+const FORE_LEG = { thigh: 2.3, shin: 3.6, bend: -1, fore: true, haunch: 2.4, reach: 0.3, toes: { length: 0.7, lean: 8, fold: 100 } } as const;
 const LEGS: QuadLeg[] = [
   { ...HIND_LEG, hip: { x: 12.2, y: 11 }, beat: 0, far: true },
   { ...FORE_LEG, hip: { x: 21.9, y: 10.2 }, beat: 0.5, far: true },
@@ -76,7 +78,7 @@ const LEGS: QuadLeg[] = [
 ];
 const FAR = { name: 'far legs', far: true };
 const NEAR = { name: 'near legs', far: false };
-const TROT: Gait = { stride: 5.5, lift: 1.6, stance: 0.5 };
+const TROT: Gait = { stride: 8, lift: 3.2, stance: 0.5 };
 // Where each leg ends: on the toes' back, as high as they stand.
 const FEET = GROUND - (TOES.height - TOES.heel.y);
 
@@ -106,23 +108,27 @@ function stance(fox: RigFox, look: FoxLook): Stance {
       const body = turnAbout(0, HIND, 0, -0.3 * Math.abs(Math.sin(2 * Math.PI * phase)));
       return { body, head: 0.8 * Math.sin(2 * Math.PI * phase), tail: 5 * Math.sin(2 * Math.PI * phase), feet: (hips) => steppingFeet(LEGS, hips, walked, FEET, TROT) };
     }
+    // Each tuned against its key pose (design-docs/aurora/fox-pose-*.png,
+    // laid over the rig in the critters lab). A positive head turns the nose
+    // down; a positive tail lifts it.
     case 'stretch':
       // A play bow: the front sinks onto forelegs reaching forward.
-      return { body: turnAbout(16, HIND), head: -12, tail: -22, feet: planted(5, -0.3) };
+      return { body: turnAbout(16, HIND), head: 8, tail: 6, feet: planted(5, -0.3) };
     case 'crouch':
-      return { body: turnAbout(-4, HIND, 0, 1.6), head: 4, tail: -10, feet: planted(1, -1) };
+      // Stalking: low, head down and forward, tail low, legs gathered.
+      return { body: turnAbout(4, HIND, 0, 2.5), head: 28, tail: -22, feet: planted(1.5, -1.5) };
     case 'leap': {
       // Nose up as it springs, nose down as it lands: hind legs trail, then
       // the forelegs reach for the snow.
       const t = leapt(fox, look.now);
-      const reach = (h: Point, i: number): Point => (LEGS[i].fore ? { x: h.x + 1.5 + 2.5 * t, y: h.y + 4 + 2.5 * t } : { x: h.x - 4 + t, y: h.y + 4.5 - t });
-      return { body: turnAbout(-12 + 32 * t, HIND), head: 8 * t, tail: -20 + 25 * t, feet: (hips) => hips.map(reach) };
+      const reach = (h: Point, i: number): Point => (LEGS[i].fore ? { x: h.x + 2 + 1.5 * t, y: h.y + 3.5 + 1.5 * t } : { x: h.x - 3 - 3 * t, y: h.y + 4.5 - 3 * t });
+      return { body: turnAbout(-8 + 20 * t, HIND), head: 8 * t, tail: 10 - 15 * t, feet: (hips) => hips.map(reach) };
     }
     case 'dig': {
       // Nose in the snow, forepaws scrabbling turn about.
       const scrabble = (i: number) => Math.sin(look.now / 55 + (i === 1 ? Math.PI : 0));
       const paw = (h: Point, i: number): Point => (LEGS[i].fore ? { x: h.x + 2.5 + 1.2 * scrabble(i), y: FEET - Math.max(0, 1.4 * scrabble(i)) } : { x: h.x - 0.4, y: FEET });
-      return { body: turnAbout(10, HIND), head: 22, tail: -18 + sway, feet: (hips) => hips.map(paw) };
+      return { body: turnAbout(16, HIND), head: 38, tail: 2 + sway, feet: (hips) => hips.map(paw) };
     }
     default:
       return standing(sway);
@@ -166,8 +172,10 @@ export function foxRig(fox: RigFox, look: FoxLook): RigPose {
     ],
     guides: [
       { name: 'stands here', at: ANCHOR }, { name: 'tail root', at: turned(body, TAIL_ROOT) }, { name: 'neck', at: turned(body, NECK) },
-      { name: 'eye', at: turned(body, turned(nod, EYE)) }, ...hips.map((at) => ({ name: 'hip', at })),
-      ...legs.flatMap((l) => [{ name: 'knee', at: l.knee }, { name: 'ankle', at: l.ankle }, { name: 'toes', at: l.foot }]),
+      { name: 'eye', at: turned(body, turned(nod, EYE)) }, ...hips.map((at, i) => ({ name: LEGS[i].fore ? 'shoulder' : 'hip', at })),
+      ...legs.flatMap((l, i) => (LEGS[i].fore
+        ? [{ name: 'elbow', at: l.knee }, { name: 'wrist (carpus)', at: l.ankle }, { name: 'toes', at: l.foot }]
+        : [{ name: 'stifle (knee)', at: l.knee }, { name: 'hock (ankle)', at: l.ankle }, { name: 'toes', at: l.foot }])),
     ],
   };
 }

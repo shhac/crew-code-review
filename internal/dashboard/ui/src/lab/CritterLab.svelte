@@ -9,6 +9,12 @@
   import { onMount } from 'svelte';
   import { LEAP, POSES, poseOf, SPEED as FOX_SPEED, type Mode as FoxMode } from '../lib/theme/aurora/fox';
   import { foxRig, REFERENCE, type RigFox } from '../lib/theme/aurora/fox-rig';
+  import foxBow from './fox-pose-bow.webp';
+  import foxCrouch from './fox-pose-crouch.webp';
+  import foxDig from './fox-pose-dig.webp';
+  import foxPounce from './fox-pose-pounce.webp';
+  import foxTrotPass from './fox-pose-trot-pass.webp';
+  import foxTrotReach from './fox-pose-trot-reach.webp';
   import foxReference from './fox-reference.webp';
   import { HOG, HURRY, moving, SPEED as HOG_SPEED, type Hog, type Mode as HogMode } from '../lib/theme/bonfire/hedgehog';
   import { gazeAt, hogRig } from '../lib/theme/bonfire/hedgehog-rig';
@@ -67,9 +73,30 @@
   let separate = false;
   let guides = false;
   let footprint = true;
-  // The fox's standing drawing laid over it, which its parts and legs were
-  // measured from.
-  let reference = false;
+  // A drawing of the fox laid over it to compare: the standing one its parts
+  // and legs were measured from (where its parts sat), or a key pose drawn
+  // from it (export.py prints their sizes), stood on the ledge, centred.
+  const DRAWINGS: Record<string, { src: string; width: number; height: number; at?: Point }> = {
+    standing: { src: foxReference, width: REFERENCE.width, height: REFERENCE.height, at: REFERENCE },
+    'trot reach': { src: foxTrotReach, width: 29.67, height: 16.5 },
+    'trot pass': { src: foxTrotPass, width: 29.25, height: 16.83 },
+    crouch: { src: foxCrouch, width: 31.42, height: 10.67 },
+    bow: { src: foxBow, width: 27.33, height: 18.75 },
+    pounce: { src: foxPounce, width: 32.08, height: 16.75 },
+    dig: { src: foxDig, width: 27.08, height: 18.5 },
+  };
+  // The drawing each mode is compared with.
+  const DRAWING_OF: Record<string, string> = { trot: 'trot reach', stand: 'standing', stretch: 'bow', crouch: 'crouch', leap: 'pounce', dig: 'dig' };
+  let reference = '';
+  function setMode(m: string) {
+    mode = m;
+    if (reference) reference = DRAWING_OF[m] ?? reference;
+  }
+  const overlay = (pose: RigPose, name: string): RigPose => {
+    const d = DRAWINGS[name];
+    const at = d.at ?? { x: pose.anchor.x - d.width / 2, y: pose.anchor.y - d.height };
+    return { ...pose, layers: [{ kind: 'image', name: 'reference', src: d.src, x: at.x, y: at.y, width: d.width, height: d.height }] };
+  };
   let stage: HTMLDivElement;
 
   const hogFor = (m: string, w: number): Hog => ({ id: 0, seed: 1, x: 0, dir, mode: HOG_MODES.find((h) => h === m) ?? 'walk', target: 0, until: 0, out: 0, walked: w });
@@ -128,11 +155,12 @@
   }
 
   // The view, in the page's address: what to share to point at a frame.
-  const flags = ['still', 'guides', 'separate', 'footprint', 'reference'] as const;
+  const flags = ['still', 'guides', 'separate', 'footprint'] as const;
   let ready = false;
   $: state = new URLSearchParams({
     animal, mode, frame: String(frame), speed: String(speed), zoom: String(zoom), dir: String(dir),
-    ...Object.fromEntries(flags.flatMap((f) => ({ still, guides, separate, footprint, reference }[f] ? [[f, '1']] : []))),
+    ...Object.fromEntries(flags.flatMap((f) => ({ still, guides, separate, footprint }[f] ? [[f, '1']] : []))),
+    ...(reference ? { ref: reference } : {}),
     ...(hidden.length ? { hide: hidden.join(',') } : {}),
   });
   // Written while paused, or as it plays without the ever-changing frame.
@@ -152,7 +180,7 @@
     guides = q.has('guides');
     separate = q.has('separate');
     footprint = q.has('footprint');
-    reference = q.has('reference');
+    reference = q.get('ref') ?? '';
     hidden = q.get('hide')?.split(',') ?? [];
     // Opened at a frame, it waits there.
     playing = !q.has('frame');
@@ -189,7 +217,7 @@
     {/each}
     <span class="sep"></span>
     {#each MODES[animal] as m}
-      <button type="button" class:on={mode === m} on:click={() => (mode = m)}>{m}</button>
+      <button type="button" class:on={mode === m} on:click={() => setMode(m)}>{m}</button>
     {/each}
   </div>
   <div class="controls">
@@ -200,7 +228,14 @@
     <label><input type="checkbox" bind:checked={guides} /> joints</label>
     <label><input type="checkbox" bind:checked={separate} /> separate pieces</label>
     {#if box}<label><input type="checkbox" bind:checked={footprint} /> footprint</label>{/if}
-    {#if animal === 'fox'}<label><input type="checkbox" bind:checked={reference} /> reference</label>{/if}
+    {#if animal === 'fox'}
+      <label>drawing
+        <select bind:value={reference}>
+          <option value="">none</option>
+          {#each Object.keys(DRAWINGS) as name}<option value={name}>{name}</option>{/each}
+        </select>
+      </label>
+    {/if}
   </div>
   <div class="controls timeline">
     <button type="button" aria-label="first frame" on:click={() => toFrame(0)}>|&lt;</button>
@@ -225,7 +260,7 @@
       {#if shown}
         <Rig pose={shown} x={0} y={0} {dir} {guides} data-critter={mode} />
         {#if reference && animal === 'fox'}
-          <Rig pose={{ ...shown, layers: [{ kind: 'image', name: 'reference', src: foxReference, ...REFERENCE }] }} x={0} y={0} {dir} opacity={0.45} />
+          <Rig pose={overlay(shown, reference)} x={0} y={0} {dir} opacity={0.45} />
         {/if}
       {:else if animal === 'spider'}
         <div class="spider" class:hanging={mode === 'hang'} style="transform: scaleX({dir})" data-critter={mode}>

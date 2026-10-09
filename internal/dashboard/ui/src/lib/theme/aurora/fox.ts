@@ -18,8 +18,8 @@ export const POSES = {
   curled: { width: 23.5, height: 19 },
   alert: { width: 23.5, height: 21.5 },
   trot: { width: 46, height: 26.5 },
-  bow: { width: 49, height: 24.5 },
-  pounce: { width: 54, height: 31 },
+  bow: { width: 53.5, height: 29.5 },
+  pounce: { width: 54, height: 29.5 },
 } as const;
 export type Pose = keyof typeof POSES;
 

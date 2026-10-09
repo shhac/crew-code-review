@@ -9,9 +9,11 @@ import { cycleLength, footAt, kneeToward, type Leg, type LegSpec } from '../spid
 // legs between them (legsTo).
 //
 // An animal that walks on its toes (a fox) has a third bone in each leg:
-// from the toes up to the hock on a hind leg, to the wrist on a foreleg. Its
-// lean is set from the toes; the two bones above are solved between the hip
-// (or shoulder) and that joint. One that walks on its soles (a hedgehog), or
+// from the toes up to the hock on a hind leg (the ankle; the joint that
+// looks like a backward knee, the true knee, the stifle, being up by the
+// belly), to the wrist (the carpus) on a foreleg. Its lean is set from the
+// toes; the two bones above are solved between the hip (or shoulder) and
+// that joint. One that walks on its soles (a hedgehog), or
 // whose legs are too short to show it, has none.
 
 export type QuadLeg = LegSpec & {
@@ -24,13 +26,18 @@ export type QuadLeg = LegSpec & {
   // How thick its upper piece is drawn, where that differs from the rest of
   // the leg: a haunch is thick where it meets the body.
   haunch?: number;
+  // On a hind leg, the shank (stifle to hock) drawn tapering and run this
+  // far past the hock, so the hock shows its point (the heel bone's) rather
+  // than a rounded join.
+  heel?: number;
   // The bone up from the toes: its length, how far it leans back from
   // upright standing (degrees), and how much further it folds back as the
   // paw lifts off.
   toes?: { length: number; lean: number; fold: number };
 };
-// A leg posed: hip (or shoulder), knee (or elbow), ankle (hock or wrist; the
-// foot itself where there is no bone up from the toes), and foot.
+// A leg posed: hip (or shoulder); knee (the stifle on a hind leg, the elbow
+// on a foreleg); ankle (the hock, or the wrist; the foot itself where there
+// is no bone up from the toes); and foot.
 export type Limb = Leg & { ankle: Point };
 // stance: the share of each cycle a foot is down. A walk keeps three feet
 // down (0.75, four beats); a trot moves diagonal pairs together (about 0.5).

@@ -38,6 +38,13 @@ RES = 12
 # Where each sheet's eye is (source pixels), measured by eye: the sheet's
 # trotting fox stands for its scale.
 EYES = {'fox-sheet.png': (1187, 416), 'fox-standing.png': (1290, 330), 'fox-parts-2.png': (1800, 335)}
+# Key poses of the same fox, drawn from fox-standing.png, that the rig's
+# poses are tuned toward; the lab lays each over its mode. Where each one's
+# eye is (source pixels), measured by eye.
+KEY_POSES = {
+    'trot-reach': (1280, 322), 'trot-pass': (1274, 322), 'crouch': (1320, 534),
+    'bow': (1235, 566), 'pounce': (1294, 496), 'dig': (1242, 704),
+}
 # In drawing units: the legs' thickness below the haunch, outline included;
 # the haunch's at its thick end (the hind legs'; the forelegs draw it
 # thinner); and the toes' length. A fox stands on its toes; the leg comes
@@ -67,6 +74,11 @@ def main() -> None:
     units['fox-reference'] = export(reference, LAB, 'fox-reference', on_eye('fox-standing.png'))
     ground = np.nonzero((reference[..., 3] > 128).any(axis=1))[0].max()
     print(f'fox-reference: at {MARGIN}, {MARGIN}; ground {ground / per_unit + MARGIN:.2f}')
+    for name, seed in KEY_POSES.items():
+        path = HERE / f'fox-pose-{name}.png'
+        art = crop(keyed(path))
+        w, h = export(art, LAB, f'fox-pose-{name}', EYE / feature(path, seed) * RES)
+        print(f'fox-pose-{name}: drawing units {w / RES:.2f}x{h / RES:.2f}')
     for name, art in zip(PARTS, (crop(p) for p in poses(keyed(HERE / 'fox-parts-2.png'), len(PARTS)))):
         units[name] = export(art, OUT, name, on_eye('fox-parts-2.png'))
         k = feature(HERE / 'fox-standing.png', EYES['fox-standing.png']) / feature(HERE / 'fox-parts-2.png', EYES['fox-parts-2.png'])
