@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import type { Ledge, PageMap } from '../floors';
 import type { Cursor } from '../pointer';
-import { fixed, scene, steps } from '../test-scene';
-import { createFox, FADE, foxView, POSES, reconcileFox, restingFox, stepFox, type Fox, type Trip } from './fox';
+import { fixed, scene, seeded, steps } from '../test-scene';
+import { createFox, createFoxes, FADE, foxView, POSES, reconcileFox, reconcileFoxes, restingFox, restingFoxes, stepFox, stepFoxes, type Fox, type Foxes, type Trip } from './fox';
 
 // A heading rule with room above it, and a card top below with the 22px the
 // dashboard's first row of cards has.
@@ -14,7 +14,7 @@ const still = (x: number, y: number, at = -Infinity): Cursor => ({ x, y, at });
 const trace = (fox: Fox, s: PageMap, from: number, to: number, cursor: (t: number) => Cursor | null = () => null, rand = fixed(0.5)) =>
   steps(fox, from, to, (f, t) => stepFox(f, s, t, 50, rand, cursor(t)));
 const modes = (states: Fox[]) => states.map((f) => f.mode).filter((m, i, all) => m !== all[i - 1]);
-const asleep = (floor: number, x: number, over: Partial<Fox> = {}): Fox => ({ ...createFox(scene([[floor, floor === 1 ? rule : card]]), 0, fixed(0.5))!, floor, x, until: Infinity, ...over });
+const asleep = (floor: number, x: number, over: Partial<Fox> = {}): Fox => ({ ...createFox(scene([[floor, floor === 1 ? rule : card]]), 0, fixed(0.5))!, floor, x, target: x, from: x, until: Infinity, ...over });
 
 describe('fox placement', () => {
   it('curls up on the longest clear stretch in view', () => {
@@ -80,8 +80,10 @@ describe('fox woken by the cursor', () => {
     expect(states.at(-1)).toMatchObject({ floor: 3, mode: 'asleep' });
   });
 
-  it('skips the stretch where there is no room to stand that tall', () => {
-    const s = scene([[2, card]]);
+  it('skips the stretch where there is no room to bow', () => {
+    // Clear for its body lying down, but not for the bow's longer reach.
+    const half = POSES.bow.width / 2;
+    const s = scene([[2, card]], [{ left: card.left + 150 + half - 1, right: card.left + 150 + half + 10, top: card.y - 21, bottom: card.y - 12 }]);
     const cursor = still(card.left + 150 + 40, card.y - 8);
     expect(modes(trace(asleep(2, 150), s, 0, 4000, () => cursor)).slice(0, 3)).toEqual(['asleep', 'waking', 'trot']);
   });
@@ -226,7 +228,8 @@ describe('fox trips', () => {
 describe('fox body on the ledge', () => {
   const text = { left: 550, right: 560, top: 185, bottom: 195 };
   // The stretch clear of the text, and where its middle may go.
-  const clearOf = (x: number) => x + 16 <= text.left - rule.left - 2 || x - 16 >= text.right - rule.left + 2;
+  const half = POSES.trot.width / 2;
+  const clearOf = (x: number) => x + half <= text.left - rule.left - 2 || x - half >= text.right - rule.left + 2;
 
   it('trots and lies down with all of itself clear of what overhangs the ledge', () => {
     const s = scene([[1, rule]], [text]);
@@ -245,5 +248,126 @@ describe('fox body on the ledge', () => {
     expect(states.some((f) => f.mode === 'away')).toBe(false);
     expect(states.at(-1)).toMatchObject({ mode: 'asleep', floor: 1 });
     expect(clearOf(states.at(-1)!.x)).toBe(true);
+  });
+});
+
+describe('foxes together', () => {
+  const wide = { ...rule, left: 100, right: 900 };
+  const lower = { ...card, left: 100, right: 700, y: 400, headroom: 60 };
+  const SPACING = 120;
+  const pair = (a: Partial<Fox>, b: Partial<Fox>): Foxes => ({ target: 2, foxes: [asleep(1, 150, { id: 0, seed: 1, ...a }), asleep(1, 500, { id: 1, seed: 2, ...b })] });
+  const cursorAt = (s: PageMap, fox: Fox) => still(s.floors.get(fox.floor)!.left + fox.x + 40, s.floors.get(fox.floor)!.y - 8);
+  const groupTrace = (g: Foxes, s: PageMap, from: number, to: number, cursor: (t: number) => Cursor | null = () => null, rand: () => number = fixed(0.5)) =>
+    steps(g, from, to, (x, t) => stepFoxes(x, s, t, 50, rand, cursor(t)));
+
+  it('places three where there is room for three apart, else two', () => {
+    expect(createFoxes(scene([[1, wide], [2, lower]]), 0, fixed(0.5)).foxes).toHaveLength(3);
+    const g = createFoxes(scene([[1, { ...rule, right: 250 }]]), 0, fixed(0.5));
+    expect(g.target).toBe(2);
+    expect(g.foxes.length).toBeLessThanOrEqual(2);
+    expect(createFoxes(scene([]), 0, fixed(0.5)).foxes).toEqual([]);
+  });
+
+  it('spreads them over different ledges first, and keeps those sharing one well apart', () => {
+    const { foxes } = createFoxes(scene([[1, wide], [2, lower]]), 0, fixed(0.5));
+    expect(new Set(foxes.map((f) => f.floor))).toEqual(new Set([1, 2]));
+    const shared = foxes.filter((f) => f.floor === foxes[0].floor).map((f) => f.x);
+    shared.slice(1).forEach((x, i) => expect(Math.abs(x - shared[i])).toBeGreaterThanOrEqual(SPACING));
+    expect(new Set(foxes.map((f) => f.id)).size).toBe(foxes.length);
+    expect(new Set(foxes.map((f) => f.seed)).size).toBe(foxes.length);
+  });
+
+  it('lets only one be up at a time: another the cursor lingers by just looks up', () => {
+    const s = scene([[1, wide]]);
+    const g = pair({ mode: 'trot', target: 300, until: 0 }, {});
+    const states = groupTrace(g, s, 0, 2500, () => cursorAt(s, g.foxes[1]));
+    expect(states.every((x) => x.foxes[1].mode === 'asleep')).toBe(true);
+    expect(states.some((x) => foxView(x.foxes[1], s, 2000)?.pose === 'alert')).toBe(true);
+  });
+
+  it('puts off waking on its own while another is up', () => {
+    const s = scene([[1, wide]]);
+    const later = groupTrace(pair({ mode: 'trot', target: 300 }, { until: 100 }), s, 0, 1000).at(-1)!;
+    expect(later.foxes[1].mode).toBe('asleep');
+    expect(later.foxes[1].until).toBeGreaterThan(1000);
+  });
+
+  it('makes the others nearby look up when one is startled awake', () => {
+    const s = scene([[1, wide], [2, { ...lower, y: 700, left: 600, right: 900 }]]);
+    const g: Foxes = { target: 3, foxes: [asleep(1, 150, { id: 0 }), asleep(1, 320, { id: 1, seed: 2 }), asleep(2, 200, { id: 2, seed: 3, floor: 2 })] };
+    const states = groupTrace(g, s, 0, 2000, () => cursorAt(s, g.foxes[0]));
+    const woke = states.findIndex((x) => x.foxes[0].mode === 'waking');
+    expect(woke).toBeGreaterThan(0);
+    expect(states[woke].foxes[1].look).toBeGreaterThan(woke * 50);
+    expect(states[woke].foxes[2].look).toBe(0);
+    expect(states[woke].foxes[1].mode).toBe('asleep');
+  });
+
+  it('trots no nearer another fox than the spacing, and never past one', () => {
+    const s = scene([[1, wide]]);
+    const g = pair({}, {});
+    const cursor = (t: number) => (t < 2000 ? still(wide.left + 150 - 40, wide.y - 8) : null);
+    const states = groupTrace(g, s, 0, 20000, cursor, fixed(1));
+    expect(states.some((x) => x.foxes[0].mode === 'trot')).toBe(true);
+    states.forEach((x) => expect(Math.abs(x.foxes[0].x - x.foxes[1].x)).toBeGreaterThanOrEqual(SPACING - 1e-6));
+  });
+
+  it('never trots in to lie down near a fox on the ledge it changes to', () => {
+    const s = scene([[1, rule], [2, lower]]);
+    const g: Foxes = { target: 2, foxes: [asleep(1, 300, { id: 0 }), asleep(2, 520, { id: 1, seed: 2, floor: 2 })] };
+    const states = groupTrace(g, s, 0, 30000, () => cursorAt(s, g.foxes[0]));
+    const trip = states.find((x) => x.foxes[0].trip)?.foxes[0].trip;
+    expect(trip?.floor).toBe(2);
+    expect(Math.abs(trip!.x - 520)).toBeGreaterThanOrEqual(SPACING);
+    expect(Math.abs(trip!.entry - 520)).toBeGreaterThanOrEqual(SPACING);
+    expect(states.at(-1)!.foxes[0]).toMatchObject({ floor: 2, mode: 'asleep' });
+    states.forEach((x) => {
+      const [a, b] = x.foxes;
+      if (a.mode !== 'away' && a.floor === b.floor) expect(Math.abs(a.x - b.x)).toBeGreaterThanOrEqual(SPACING - 1e-6);
+    });
+  });
+
+  it('keeps them apart, whatever the cursor and the draws', () => {
+    const s = scene([[1, wide], [2, lower], [3, { ...lower, y: 600 }]]);
+    for (const seed of [1, 2, 3, 5]) {
+      const rand = seeded(seed);
+      const g = createFoxes(s, 0, rand);
+      const states = groupTrace(g, s, 0, 120000, (t) => still(wide.left + 400 + 300 * Math.sin(t / 3000), wide.y - 8 + 200 * Math.sin(t / 7000), t), rand);
+      for (const x of states) {
+        const shown = x.foxes.filter((f) => f.mode !== 'away');
+        shown.forEach((a, i) => shown.slice(i + 1).forEach((b) => {
+          if (a.floor === b.floor) expect(Math.abs(a.x - b.x)).toBeGreaterThanOrEqual(SPACING - 1e-6);
+        }));
+        expect(x.foxes.filter((f) => f.mode !== 'asleep').length).toBeLessThanOrEqual(1);
+      }
+    }
+  });
+
+  it('re-places one crowded by a layout change, and never grows past its target', () => {
+    const s = scene([[1, wide]]);
+    const g = pair({}, {});
+    const squeezed = reconcileFoxes({ ...g, foxes: [g.foxes[0], { ...g.foxes[1], x: 200 }] }, s, 0, fixed(0.5));
+    expect(squeezed.foxes).toHaveLength(2);
+    expect(Math.abs(squeezed.foxes[0].x - squeezed.foxes[1].x)).toBeGreaterThanOrEqual(SPACING);
+    expect(squeezed.foxes[0]).toEqual(g.foxes[0]);
+    const roomier = reconcileFoxes(g, scene([[1, wide], [2, lower], [3, { ...lower, y: 600 }]]), 0, fixed(0.5));
+    expect(roomier.foxes).toHaveLength(2);
+  });
+
+  it('puts back one it lost, up to its target, once there is room again', () => {
+    const s = scene([[1, wide]]);
+    const g = pair({}, {});
+    const cramped = reconcileFoxes(g, scene([[1, { ...rule, right: 250 }]]), 0, fixed(0.5));
+    expect(cramped.foxes).toHaveLength(1);
+    expect(reconcileFoxes(cramped, s, 10, fixed(0.5)).foxes.map((f) => f.id)).toEqual([0, 1]);
+  });
+
+  it('sleeps them all through reduced motion at their own spots, kept across a scroll', () => {
+    const s = scene([[1, wide], [2, lower]]);
+    const g = restingFoxes(s, null);
+    expect(g.foxes.length).toBe(3);
+    expect(g.foxes.every((f) => f.mode === 'asleep' && f.until === Infinity)).toBe(true);
+    const scrolled = scene([[1, { ...wide, y: 180 }], [2, { ...lower, y: 380 }]]);
+    expect(restingFoxes(scrolled, g).foxes.map((f) => [f.floor, f.x])).toEqual(g.foxes.map((f) => [f.floor, f.x]));
   });
 });

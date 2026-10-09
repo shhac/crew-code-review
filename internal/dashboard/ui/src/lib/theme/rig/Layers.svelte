@@ -19,6 +19,8 @@
         <path {d} stroke={layer.fur.fill} stroke-width={layer.width} />
       {/each}
     </g>
+  {:else if layer.kind === 'patch'}
+    <ellipse cx={layer.at.x} cy={layer.at.y} rx={layer.rx} ry={layer.ry} fill={layer.fill} />
   {:else if layer.kind === 'lid'}
     <circle data-lid cx={layer.at.x} cy={layer.at.y} r={layer.r} fill={layer.fur.fill} />
     <path d="M{layer.at.x - layer.r} {layer.at.y}h{2 * layer.r}" stroke={layer.fur.outline} stroke-width={layer.r * 0.6} />

@@ -544,10 +544,11 @@ hedgehogs sat by their pile, one still firework and motionless flames. Preview w
 January brings the northern lights: a thermos, bobble hat, mittens and cocoa on
 the rail, with the aurora rippling slowly in the rail's empty space above
 (hidden with the shelf on small screens). Frost rims the ledges, tinted by the
-aurora's colour, and glints as the cursor passes. An Arctic fox sleeps curled
-on a ledge: its ear twitches at a passing cursor, a cursor that lingers wakes
-it and it trots off to sleep elsewhere, and now and then it pounces at
-something in the snow. Reduced motion shows a still aurora and the fox asleep.
+aurora's colour, and glints as the cursor passes. Two or three Arctic foxes
+sleep curled on the ledges, well apart: an ear twitches at a passing cursor, a
+cursor that lingers wakes one and it trots off on stepping legs to sleep
+elsewhere while the others look up, and now and then one pounces at something
+in the snow. Reduced motion shows a still aurora and the foxes asleep.
 Preview with `?theme=aurora`; design notes:
 [Northern lights](design-docs/aurora/README.md).
 

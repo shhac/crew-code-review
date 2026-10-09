@@ -22,10 +22,12 @@ end-to-end suite should leave to unit tests.
 - **Frost** (`frost.ts`): a thin rim with small clusters of crystals along the
   ledges, tinted by the aurora's current colour, and a few glints that catch
   the light on their own and when the cursor passes.
-- **Arctic fox** (`fox.ts`): sleeps curled on a ledge. Its ear twitches when
-  the cursor passes; a cursor that stays close wakes it, and it stretches and
-  trots off to sleep somewhere else. Now and then, on its own, it wakes and
-  makes a mousing pounce.
+- **Arctic foxes** (`fox.ts`, drawn by `fox-rig.ts`): two, or three where
+  the page has room, each asleep curled on its own ledge or well apart on a
+  shared one. An ear twitches when the cursor passes; a cursor that stays
+  close wakes that fox, and it stretches and trots off to sleep somewhere
+  else while the others nearby look up. Now and then, on its own, one wakes
+  and makes a mousing pounce.
 
 ## Decisions
 
@@ -109,22 +111,25 @@ band above it is free of text, controls, charts and cards) found room in two
 places only: the page heading's rule (26 to 30px clear along most of it, more
 in places) and the first row of card tops (22px, up to the rule above). Every
 deeper card top has another card's body within a few pixels. So the fox lies
-and trots only where 22px is clear, as the hedgehog does, and stands 19px tall
-trotting (the hedgehog is 18). The taller poses are conditional on the space
-where the fox is:
+and trots only where 22px is clear, as the hedgehog does. The other poses
+are conditional on the space where the fox is. Since 2026-10-09 the moving
+poses are drawn from parts (see "Drawn from parts" below), and their sizes are
+the box the drawing stays inside at every moment of its stride or leap, which
+`fox-rig.test.ts` checks:
 
-| Pose | Display size | Used for | Needs clear above it |
+| Pose | Footprint | Used for | Needs clear above it |
 | --- | --- | --- | --- |
 | curled | 20x16.5 | asleep | 22px (where it may lie) |
-| alert | 20x18.5 | the ear twitch, waking | 22px |
-| trot | 32x19 | trotting, entering, leaving, settling | 22px |
-| bow | 26.5x23.5 | the stretch, the crouch | 23.5px over its width |
-| pounce | 25x30 | the leap and the dig | 30px plus the hop, over the whole leap |
+| alert | 20x18.5 | the ear twitch, waking, looking up | 22px |
+| trot | 31x21 | trotting, entering, leaving, settling | 22px |
+| bow | 33x20 | the stretch, the crouch | 20px over its width |
+| pounce | 39x24 | the leap and the dig | 24px plus the hop, over the whole leap |
 
-Every pose is anchored at its bottom centre on the ledge and mirrored to face
-the way the fox is going (the art faces right). A pose that does not fit is
-skipped: no room to stretch means it gets up and trots; no room to pounce
-means no pounce.
+(As first drawn, as single pictures, they were trot 32x19, bow 26.5x23.5 and
+pounce 25x30.) Every pose is anchored at its bottom centre on the ledge and
+mirrored to face the way the fox is going (the art faces right). A pose that
+does not fit is skipped: no room to stretch means it gets up and trots; no
+room to pounce means no pounce.
 
 ### Fox behaviour
 
@@ -171,8 +176,51 @@ keep it, since it is in viewport coordinates like the ledges.
 - **Reduced motion**: asleep, never twitching, never stepped. It keeps its
   spot across measurements while that spot stays clear, so scrolling does not
   make it jump; otherwise it lies in the middle of the best run. (The
-  hedgehog's resting pose re-chooses on every measurement; that is a
-  follow-up, not changed here.)
+  hedgehogs now keep theirs too.)
+
+### Two or three foxes (added 2026-10-09)
+
+The calendar's animal rule: at least two. They sleep apart rather than as a
+pair, because a long enough clear run for two side by side is rare.
+
+- **How many**: three where three spots 120px apart (on one ledge) or on
+  different ledges exist when they are placed, else two; fewer only when the
+  page has no room. That number is kept: a layout change re-places any fox
+  that lost its spot or now lies within 120px of another (in id order, so the
+  same fox keeps a contested spot), and may put back one that had no room,
+  but never adds beyond it, so scrolling never grows the group.
+- **Where**: ledges with no fox come first, then the longest free stretch, so
+  they spread out.
+- **Only one up at a time**: while one is awake, the others sleep on. A cursor
+  lingering by a sleeping one only makes it look up (the alert pose); its own
+  restless time is put off 4 to 9s at a time.
+- **Never near another**: a trot stops 120px short of any other fox, and never
+  passes one; a trip only leaves by an end with no fox in the way and only
+  goes in where the way from the entry to the spot keeps 120px from any fox
+  there, or where one is heading; a pounce only lands clear of them. One
+  arriving where another now lies is placed elsewhere instead.
+- **Looking up**: one startled awake makes any other asleep within 220px on
+  the page look up for 1.2 to 2s.
+
+They are stepped as a group, in a fixed order, each seeing the others as they
+now are, so the rules hold every frame.
+
+### Drawn from parts (added 2026-10-09)
+
+Single pictures slid along the ledge looked stiff. The tail, torso and head
+are now separate generated parts, and the four legs are drawn in code
+(`lib/theme/rig/`, shared with the hedgehogs): thin white strokes with the
+art's outline, all four behind the torso so no hip shows on its fur, the far
+pair a shade bluer. Trotting, diagonal pairs step together, driven by
+distance trotted so planted paws never slide; the head nods and the tail
+swishes with the stride. The bow tilts the body down onto forelegs reaching
+forward with the tail up; the crouch lowers it; the leap arcs it nose up then
+nose down, hind legs trailing, then forelegs reaching for the snow; the dig
+puts its nose down with the forepaws scrabbling in turn. The head sits over
+the chest, with a little fur painted over where its outline would cross it.
+Its eye blinks on a schedule seeded per fox. Curled up it is still one
+picture (asleep, or looking up), breathing slowly. Reduced motion stands it
+square, head level, no blink. The workbench is `lab/critters.html`.
 
 ### Accent
 
@@ -194,18 +242,25 @@ the root README and the release notes.
 
 ## Art
 
-Both sources were generated on 2026-10-08 by the Codex CLI (`gpt-5.6-terra`)
-through its built-in `$imagegen` path, each on a flat magenta `#FF00FF`
-background, with `design-docs/halloween/pumpkins.png`, `candles.png` and
-`design-docs/bonfire/toffee-apples.png` as style references.
+The first two sources were generated on 2026-10-08 by the Codex CLI
+(`gpt-5.6-terra`) through its built-in `$imagegen` path, each on a flat
+magenta `#FF00FF` background, with `design-docs/halloween/pumpkins.png`,
+`candles.png` and `design-docs/bonfire/toffee-apples.png` as style
+references. `fox-parts.png` was generated the same way on 2026-10-09, with
+`fox-sheet.png`'s trotting pose as the character reference.
 
 | Source | Shipped as (`ui/src/lib/theme/aurora/`) | Display size |
 | --- | --- | --- |
 | `winter-kit.png` | `winter-kit.webp` | 124x62 |
-| `fox-sheet.png` | `fox-curled.webp`, `fox-alert.webp`, `fox-trot.webp`, `fox-bow.webp`, `fox-pounce.webp` | see the pose table |
+| `fox-sheet.png` | `fox-curled.webp`, `fox-alert.webp` | see the pose table |
+| `fox-parts.png` | `fox-tail.webp`, `fox-torso.webp`, `fox-head.webp` | 10.5x11, 13x7.5, 10.5x10 |
 
 The fox sheet is split into its five poses at the four widest runs of empty
-columns; every pose shares the trot pose's scale (19px tall). `export.py`
+columns; every pose shares the trot pose's scale (19px tall), and only the
+two curled ones are still shipped. The parts sheet is split the same way into
+its three parts, all at one scale (the head 10px tall). Where they sit, the
+pivots, the eye, the seam patch and the hips are set in `fox-rig.ts`,
+measured against these exports; regenerated parts mean measuring again. `export.py`
 reproduces every shipped file with the Halloween keying recipe, now shared
 with Bonfire's export through `design-docs/art.py` (Bonfire's files come out
 byte-identical through it).
@@ -213,7 +268,9 @@ byte-identical through it).
 ## Verification
 
 - Unit tests for the pure models (`aurora/*.test.ts`: the fox's state table,
-  trips, pounce bounds, reconciliation and resting pose; the aurora's colour
+  trips, pounce bounds, reconciliation and resting pose; the group's count,
+  spreading, one-up-at-a-time, looking up and spacing over long random runs;
+  the rig's footprints, trot, blink and stillness; the aurora's colour
   cycle, opacity cap, rate of change and bounds; the frost's crystal heights,
   gaps under text, glint cap and timing), and for the shared `clearance`,
   `clearRuns` and `measureRailSky`.
@@ -221,9 +278,10 @@ byte-identical through it).
 - `e2e/aurora.spec.ts` against the real daemon, kept to what is deterministic
   and quick: the palette and mounting, every descendant click-through,
   `aria-hidden` and below dialogs, the aurora inside the rail sky, the ear
-  twitch and a lingering cursor waking the fox, a still scene under reduced
-  motion (the fox, the curtains and no glints, with the cursor nearby), and
-  the phone layout. Changing ledge and the pounce are timed and random, so
+  twitch and a lingering cursor waking a fox, at least two foxes on the
+  overview, a still scene under reduced motion (every fox, the curtains and no
+  glints, with the cursor nearby), and the phone layout; and the critters lab
+  tests (parts decode, the trot steps, curled has no legs). Changing ledge and the pounce are timed and random, so
   they are left to the unit tests.
 - The lab's shared shelf contract, now including `aurora` (the 760/761px and
   640px-tall boundaries).
