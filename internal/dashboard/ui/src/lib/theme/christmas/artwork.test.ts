@@ -7,27 +7,32 @@ import ChristmasShelf from './ChristmasShelf.svelte';
 import { ROBIN } from './snow';
 import { partsPose } from './parts-pose';
 
+// Every drawing is mounted; only those drawn go without visibility="hidden".
+const shown = (body: string) => [...body.matchAll(/<image [^>]*>/g)]
+  .filter(([tag]) => !tag.includes('visibility="hidden"'))
+  .map(([tag]) => tag.match(/data-part="([^"]+)"/)?.[1]);
+
 it.each(['perch', 'alert', 'flight'] as const)('renders the %s pose using layered component artwork', pose => {
   const { body } = render(RobinArt, { props: { pose } });
   expect(body).toContain('data-robin-art="layered"');
   expect(body).toContain('viewBox="0 0 128 112"');
-  expect(body).toContain('data-part="body"');
-  expect(body).toContain('data-part="tail"');
-  expect(body).toContain('data-part="head"');
+  expect(shown(body)).toContain('body');
+  expect(shown(body)).toContain('tail');
+  expect(shown(body)).toContain('head');
   expect(body).not.toMatch(/blob:|atlas-sheet|raised-wing/);
   if (pose === 'flight') {
-    expect(body).toContain('data-part="wing-up"');
-    expect(body).toContain('data-part="leg-near-tucked"');
-    expect(body).not.toContain('data-part="leg-near"');
-  } else expect(body).toContain('data-part="leg-near"');
+    expect(shown(body)).toContain('wing-up');
+    expect(shown(body)).toContain('leg-near-tucked');
+    expect(shown(body)).not.toContain('leg-near');
+  } else expect(shown(body)).toContain('leg-near');
 });
 
 it('holds the standing geometry under reduced motion, even with stale flight articulation', () => {
   const { body } = render(RobinArt, { props: { pose: 'flight', articulation: partsPose(300, 'flight'), reduced: true } });
   expect(body).toContain('data-flight-weight="0"');
   expect(body).toContain('data-head-angle="0"');
-  expect(body).toContain('data-part="leg-near"');
-  expect(body).not.toContain('data-part="wing-down"');
+  expect(shown(body)).toContain('leg-near');
+  expect(shown(body)).not.toContain('wing-down');
 });
 
 it('uses a single shared renderer at the dashboard foot anchor and preserves the shelf', () => {

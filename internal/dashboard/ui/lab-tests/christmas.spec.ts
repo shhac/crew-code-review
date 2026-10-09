@@ -116,14 +116,14 @@ test('both live robins use idle, peck, hop and all eight wing profiles, and chan
   await advance(4350);
   await expect(rig).toHaveAttribute('data-closed', 'true');
   await advance(5900);
-  const tail = await rig.locator('[data-part="tail"]').evaluate(el => el.parentElement!.getAttribute('transform'));
+  const tail = await rig.locator('[data-part="tail"]').evaluate(el => el.closest('[data-slot]')!.getAttribute('transform'));
   expect(tail).not.toContain('rotate(0 46 65)');
   await advance(6000); await advance(6420);
   await expect(rig).toHaveAttribute('data-peck-weight', '1');
   await advance(11000);
   await expect(first).toHaveAttribute('data-action', 'hop');
   await advance(11135);
-  await expect(rig.locator('[data-part="leg-near"]')).toBeAttached();
+  await expect(rig.locator('[data-part="leg-near"]:not([visibility])')).toBeAttached();
   await advance(11300);
   const origin = await first.getAttribute('data-floor');
   await advance(22300);
@@ -137,7 +137,7 @@ test('both live robins use idle, peck, hop and all eight wing profiles, and chan
       return { x: parseFloat(el.style.left), y: parseFloat(el.style.top),
         facing: Number(el.dataset.facing), rotation: Number(el.dataset.rotation) };
     }));
-    for (const id of await rig.locator('[data-part^="wing-"]').evaluateAll(els => els.map(el => el.getAttribute('data-part')!))) wingProfiles.add(id);
+    for (const id of await rig.locator('[data-part^="wing-"]:not([visibility])').evaluateAll(els => els.map(el => el.getAttribute('data-part')!))) wingProfiles.add(id);
   }
   for (const state of ['up', 'high-fall', 'forward', 'low-fall', 'down', 'low-rise', 'recovery', 'high-rise']) expect(wingProfiles.has('wing-' + state)).toBe(true);
   for (let i = 1; i < flightFrames.length - 1; i++) {

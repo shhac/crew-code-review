@@ -1,6 +1,6 @@
 <script lang="ts">
   import manifest from './robin-parts/manifest.json' with { type: 'json' };
-  import { partsPose, partsLayers, partsViewport, type PartsPose } from './parts-pose';
+  import { partsPose, partsSlotLayers, partsViewport, type PartId, type PartsPose } from './parts-pose';
 
   export let elapsed = 0;
   export let mode = 'alive';
@@ -16,27 +16,29 @@
   const urls = Object.fromEntries(Object.entries(manifest.parts).map(([id, p]) => [id, assets['./robin-parts/' + p.file]]));
   const parts = manifest.parts;
   $: pose = reduced ? partsPose(0, 'still') : poseOverride ?? partsPose(elapsed, mode);
-  $: layers = partsLayers(pose, exploded, showNeck);
+  $: slots = partsSlotLayers(pose, exploded, showNeck, hidden);
   $: viewport = fitted ? partsViewport(mode, reduced) : [0, 0, 128, 112];
 </script>
 
-{#snippet part(id: keyof typeof parts)}
+{#snippet part(id: PartId, weight: number)}
   {#if !hidden.includes(id)}
-    <image data-part={id} href={urls[id]} x={parts[id].x} y={parts[id].y} width={parts[id].width} height={parts[id].height} />
+    <image data-part={id} href={urls[id]} x={parts[id].x} y={parts[id].y} width={parts[id].width} height={parts[id].height} visibility={weight > 0 ? null : 'hidden'} />
   {/if}
 {/snippet}
 
 <svg viewBox={viewport.join(' ')} role="img" aria-label="Robin" data-layered-robin data-closed={pose.closed} data-head-angle={pose.headAngle} data-mode={mode} data-flight-weight={pose.flightMix} data-peck-weight={pose.peckMix}>
   <g transform={mirrored ? 'translate(128 0) scale(-1 1)' : ''}>
-    {#each layers as layer}
-      <g transform={layer.transform} opacity={layer.opacity ?? 1}>
-        {#if layer.nextId && layer.blend && !hidden.includes(layer.id) && !hidden.includes(layer.nextId)}
-          <g style="isolation: isolate">
-            <g opacity={1 - layer.blend} style="mix-blend-mode: plus-lighter">{@render part(layer.id)}</g>
-            <g transform={layer.nextAdjustment} opacity={layer.blend} style="mix-blend-mode: plus-lighter">{@render part(layer.nextId)}</g>
-          </g>
+    {#each slots as slot}
+      <g data-slot transform={slot.transform} opacity={slot.opacity}>
+        {#if slot.drawings.length === 1}
+          {@render part(slot.drawings[0].id, slot.drawings[0].weight)}
         {:else}
-          {@render part(layer.id)}
+          <!-- Composited only mid cross-fade, so a lone drawing paints as it would by itself. -->
+          <g style={slot.blend ? 'isolation: isolate' : null}>
+            {#each slot.drawings as drawing}
+              <g transform={drawing.adjustment} opacity={drawing.weight} style={slot.blend ? 'mix-blend-mode: plus-lighter' : null}>{@render part(drawing.id, drawing.weight)}</g>
+            {/each}
+          </g>
         {/if}
       </g>
     {/each}

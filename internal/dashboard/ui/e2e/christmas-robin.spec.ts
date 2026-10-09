@@ -55,7 +55,7 @@ test('live data updates preserve breathing and resting pecks in the shipped rend
     await page.evaluate(time => Reflect.set(window, 'robinTime', time), time);
     await rig.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
   };
-  const bodyTransform = () => rig.locator('[data-part="body"]').evaluate(el => el.parentElement!.getAttribute('transform'));
+  const bodyTransform = () => rig.locator('[data-part="body"]').evaluate(el => el.closest('[data-slot]')!.getAttribute('transform'));
   await advance(1500);
   const before = await bodyTransform();
   await page.locator('main').evaluate(el => el.setAttribute('data-live-update', '1'));

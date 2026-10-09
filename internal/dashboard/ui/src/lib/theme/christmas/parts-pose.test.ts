@@ -1,6 +1,6 @@
 import manifest from './robin-parts/manifest.json';
 import { describe, expect, it } from 'vitest';
-import { partsPose, partsLayers, partsTransforms, partsModes } from './parts-pose';
+import { mixPartsPose, partsPose, partsLayers, partsSlotLayers, partsSlots, partsTransforms, partsModes } from './parts-pose';
 import { svgMatrix, transformPoint } from './parts-affine';
 
 describe('layered robin timing', () => {
@@ -147,4 +147,45 @@ describe('layered robin timing', () => {
     }
   });
 
+});
+
+describe('layered robin slots', () => {
+  const poses = [...partsModes.flatMap(mode => [0, 50, 75, 1120, 1250, 4350, 5900, 9750].map(time => partsPose(time, mode))),
+    mixPartsPose(partsPose(0, 'still'), partsPose(50, 'flight'), .4), mixPartsPose(partsPose(0, 'alive'), partsPose(1120, 'peck'), .3)];
+  const drawnIds = (slots: ReturnType<typeof partsSlotLayers>) => slots.flatMap(slot => slot.drawings.filter(drawing => drawing.weight > 0).map(drawing => drawing.id));
+
+  it('keeps the same drawings in the same order whatever the robin is doing', () => {
+    const ids = partsSlots.flat();
+    expect(new Set(ids).size).toBe(ids.length);
+    expect([...ids].sort()).toEqual(Object.keys(manifest.parts).sort());
+    for (const pose of poses) {
+      expect(partsSlotLayers(pose).map(slot => slot.drawings.map(drawing => drawing.id))).toEqual(partsSlots);
+    }
+  });
+  it('draws exactly the layer plan, with its transforms, fades and cross-fade weights', () => {
+    for (const pose of poses) for (const exploded of [false, true]) {
+      const layers = partsLayers(pose, exploded), slots = partsSlotLayers(pose, exploded);
+      // A cross-fade adds its two drawings (plus-lighter), so their order within a slot is free.
+      expect(drawnIds(slots).sort()).toEqual(layers.flatMap(layer => [layer.id, ...(layer.nextId && layer.blend ? [layer.nextId] : [])]).sort());
+      for (const layer of layers) {
+        const slot = slots.find(each => each.drawings.some(drawing => drawing.id === layer.id))!;
+        expect(slot.transform).toBe(layer.transform);
+        expect(slot.opacity).toBe(layer.opacity ?? 1);
+        expect(slot.drawings.find(drawing => drawing.id === layer.id)!.weight).toBeCloseTo(1 - (layer.nextId && layer.blend ? layer.blend : 0), 12);
+        if (!layer.nextId || !layer.blend) continue;
+        const next = slot.drawings.find(drawing => drawing.id === layer.nextId)!;
+        expect(next.weight).toBe(layer.blend);
+        expect(next.adjustment).toBe(layer.nextAdjustment ?? '');
+      }
+    }
+  });
+  it('draws the other half of a cross-fade alone and whole when one half is hidden', () => {
+    const pose = partsPose(50, 'flight'), stroke = pose.nearWing;
+    expect(stroke.blend).toBeGreaterThan(0);
+    const near = (hidden: string[]) => partsSlotLayers(pose, false, true, hidden).find(slot => slot.drawings.some(drawing => drawing.id === 'wing-up'))!;
+    for (const hidden of [['wing-' + stroke.nextState], ['wing-' + stroke.state]]) {
+      expect(near(hidden).blend).toBe(0);
+      expect(near(hidden).drawings.filter(drawing => drawing.weight > 0)).toEqual([{ id: 'wing-' + stroke.state, weight: 1, adjustment: '' }]);
+    }
+  });
 });

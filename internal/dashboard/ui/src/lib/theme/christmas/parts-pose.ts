@@ -152,3 +152,29 @@ export function partsLayers(pose: ReturnType<typeof partsPose>, exploded = false
     ...(grounded ? [fade(layer('leg-near', t.rig, t.nearLeg), 1 - pose.flightMix)] : []),
   ];
 }
+
+// Every drawing each layer of the plan above can show, back to front. A live
+// robin mounts each drawing once and only shows or hides it: an image mounted
+// mid-play, or one whose href is swapped, paints nothing or its old picture
+// in the new place until the file arrives, a flash wherever it is uncached.
+export const partsSlots: readonly (readonly PartId[])[] = [
+  ['wing-far-up', 'wing-far-high-fall', 'wing-far-forward', 'wing-far-low-fall', 'wing-far-down', 'wing-far-low-rise', 'wing-far-recovery', 'wing-far-high-rise'],
+  ['leg-far-tucked'], ['leg-far'], ['body', 'body-peck'], ['tail'], ['neck'], ['head'], ['eyelid'], ['leg-near-tucked'], ['wing'],
+  ['wing-up', 'wing-high-fall', 'wing-forward', 'wing-low-fall', 'wing-down', 'wing-low-rise', 'wing-recovery', 'wing-high-rise'],
+  ['wing-shoulder'], ['leg-near'],
+];
+
+// The plan laid onto the fixed slots: a slot the plan leaves out, and a
+// drawing it does not use, get no weight. A hidden half of a cross-fade
+// leaves the other drawn alone, whole.
+export function partsSlotLayers(pose: ReturnType<typeof partsPose>, exploded = false, showNeck = true, hidden: readonly string[] = []) {
+  const layers = partsLayers(pose, exploded, showNeck);
+  return partsSlots.map(ids => {
+    const layer = layers.find(each => ids.includes(each.id));
+    if (!layer) return { transform: '', opacity: 0, blend: 0, drawings: ids.map(id => ({ id, weight: 0, adjustment: '' })) };
+    const blend = layer.nextId && layer.blend && !hidden.includes(layer.id) && !hidden.includes(layer.nextId) ? layer.blend : 0;
+    const weight = (id: PartId) => id === layer.id ? 1 - blend : blend && id === layer.nextId ? blend : 0;
+    return { transform: layer.transform, opacity: layer.opacity ?? 1, blend,
+      drawings: ids.map(id => ({ id, weight: weight(id), adjustment: blend && id === layer.nextId ? layer.nextAdjustment ?? '' : '' })) };
+  });
+}

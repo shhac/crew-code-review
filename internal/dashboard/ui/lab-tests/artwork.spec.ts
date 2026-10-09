@@ -32,7 +32,7 @@ for (const width of [1440, 480]) {
             return { width: rect.width, height: rect.height, viewBox: svg.getAttribute('viewBox'),
               mirror: getComputedStyle(facing).transform, foot: getComputedStyle(facing).transformOrigin,
               flight: svg.getAttribute('data-flight-weight'),
-              parts: [...el.querySelectorAll('[data-part]')].map(part => part.getAttribute('data-part')) };
+              parts: [...el.querySelectorAll('[data-part]:not([visibility])')].map(part => part.getAttribute('data-part')) };
           });
           expect(rendered.width).toBeCloseTo(44.8, 1);
           expect(rendered.height).toBeCloseTo(39.2, 1);
