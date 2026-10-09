@@ -36,20 +36,20 @@ describe('fireworks', () => {
   it('keeps every visible spark and the rocket inside the sky, whatever the draws', () => {
     const skies = [{ width: 120, height: 90 }, { width: 200, height: 150 }, { width: 200, height: 240 }];
     const extremes = Array.from({ length: 2 ** 7 }, (_, n) => Array.from({ length: 7 }, (_, bit) => (n >> bit) & 1));
-    for (const s of skies) {
-      for (const draws of extremes) {
-        const b = nextBurst(0, s, sequence(draws));
-        for (let t = b.at - 700; t < b.at + LIFE; t += 40) {
-          const trail = rocket(b, s, t);
-          if (trail) expect(Math.min(trail.y1, trail.y2) >= 0 && Math.max(trail.y1, trail.y2) <= s.height).toBe(true);
-          for (const p of sparks(b, t).filter((p) => p.opacity > 0.1)) {
-            for (const [x, y] of [[p.x, p.y], [p.tx, p.ty]]) {
-              expect({ x, y, inside: x >= 0 && x <= s.width && y >= 0 && y <= s.height }).toMatchObject({ inside: true });
-            }
-          }
-        }
-      }
-    }
+    // Gathered and checked once: an expect per point made this the suite's
+    // slowest test by far.
+    const escaped = skies.flatMap((s) => extremes.flatMap((draws) => {
+      const b = nextBurst(0, s, sequence(draws));
+      const times = Array.from({ length: Math.ceil((LIFE + 700) / 40) }, (_, i) => b.at - 700 + i * 40);
+      return times.flatMap((t) => {
+        const trail = rocket(b, s, t);
+        const ends = trail ? [[trail.x, trail.y1], [trail.x, trail.y2]] : [];
+        const points = sparks(b, t).filter((p) => p.opacity > 0.1).flatMap((p) => [[p.x, p.y], [p.tx, p.ty]]);
+        return [...ends.filter(([, y]) => y < 0 || y > s.height), ...points.filter(([x, y]) => x < 0 || x > s.width || y < 0 || y > s.height)]
+          .map(([x, y]) => ({ sky: s, draws, t, x, y }));
+      });
+    }));
+    expect(escaped).toEqual([]);
   });
 
   it('climbs as a rocket before it bursts', () => {
