@@ -43,6 +43,7 @@ const FOOT = 0.9;
 // How far the head turns toward a cursor, and from how far it notices one.
 const LOOK = 14;
 const LOOK_REACH = 160;
+const DIP = 18;
 
 export type HogLook = { now: number; at: Point; cursor: Point | null; still: boolean };
 
@@ -62,7 +63,9 @@ function lookAt(hog: Hog, look: HogLook): number {
 // sniffing, or toward a cursor.
 function headAngle(hog: Hog, look: HogLook, phase: number): number {
   if (look.still) return 0;
-  if (hog.mode === 'sniff') return 14 + 3 * Math.sin(look.now / 45) + lookAt(hog, look) / 3;
+  // Capped so the nose, dipped and turned toward a cursor below, stays
+  // inside the hedgehog's footprint (HOG).
+  if (hog.mode === 'sniff') return Math.min(DIP, 14 + 3 * Math.sin(look.now / 45) + lookAt(hog, look) / 3);
   if (moving(hog.mode)) return 2 * Math.sin(4 * Math.PI * phase);
   return lookAt(hog, look);
 }

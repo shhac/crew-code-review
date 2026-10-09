@@ -204,6 +204,53 @@ describe('hedgehog behaviour', () => {
   });
 });
 
+describe('hedgehogs keeping apart', () => {
+  const s = scene([[1, card]]);
+  const visible = (g: Hogs) => g.hogs.filter((h) => h.mode !== 'hidden');
+  const apart = (g: Hogs) => {
+    const xs = visible(g).map((h) => h.x).sort((a, b) => a - b);
+    return xs.slice(1).every((x, i) => x - xs[i] >= SPACING - 1e-6);
+  };
+
+  it('never walks up to one peeking from the mouth, and one that cannot get out goes back in', () => {
+    const g = createHogs(s, 0, fixed(0.5));
+    const home = g.home!;
+    const start: Hogs = {
+      home,
+      hogs: [
+        { ...g.hogs[0], mode: 'peek', x: home.pile - PILE.width / 2 + 2, until: 1400 },
+        { ...g.hogs[1], mode: 'walk', x: home.hi - 34, target: home.hi - 4, dir: 1 },
+        { ...g.hogs[2], mode: 'hidden', until: 99999 },
+      ],
+    };
+    const states = trace(start, s, 0, 6000, null);
+    expect(states.every(apart)).toBe(true);
+  });
+
+  it('stops a walk short of a neighbour even on its last step', () => {
+    const g = createHogs(s, 0, fixed(0.5));
+    const start: Hogs = {
+      home: g.home,
+      hogs: [
+        { ...g.hogs[0], mode: 'walk', x: 200, target: 220.5, dir: 1 },
+        { ...g.hogs[1], mode: 'walk', x: 260, target: 256, dir: -1 },
+        { ...g.hogs[2], mode: 'hidden', until: 99999 },
+      ],
+    };
+    expect(trace(start, s, 0, 3000, null).every(apart)).toBe(true);
+  });
+
+  it('keeps them apart with a cursor about, curling and fleeing, whatever the draws', () => {
+    for (const seed of [4, 9, 16, 30]) {
+      const rand = seeded(seed);
+      const cursor = (t: number): Cursor => ({ x: card.left + 300 + 250 * Math.sin(t / 2500), y: card.y - 10 + 40 * Math.sin(t / 900), at: t % 9000 < 3000 ? t : 0 });
+      const states = steps(createHogs(s, 0, rand), 0, 120000, (g, t) => stepHogs(g, s, t, 50, rand, cursor(t)));
+      expect(states.flatMap((g) => g.hogs).some((h) => h.mode === 'curled')).toBe(true);
+      expect(states.every(apart)).toBe(true);
+    }
+  });
+});
+
 describe('reduced motion', () => {
   const s = scene([[1, card]]);
 

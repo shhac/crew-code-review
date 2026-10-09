@@ -159,9 +159,10 @@ export function createFox(scene: PageMap, now: number, rand: Rand, others: reado
 
 // Reduced motion: asleep, and kept where it lay while that spot stays clear,
 // so a scroll never moves it; otherwise in the middle of a free stretch.
-export function restingFox(scene: PageMap, previous: Fox | null, others: readonly Fox[] = [], self: Self = previous ?? fresh(0)): Fox | null {
+// Placed afresh, it keeps clear of `avoid` (by default the same others).
+export function restingFox(scene: PageMap, previous: Fox | null, others: readonly Fox[] = [], self: Self = previous ?? fresh(0), avoid: readonly Fox[] = others): Fox | null {
   if (previous && staysPut(previous, scene, others)) return asleepAt(self, previous.floor, previous.x, 0, Infinity, previous.dir);
-  const spot = maxBy(spots(scene, claims(others)), (s) => length(s.room));
+  const spot = maxBy(spots(scene, claims(avoid)), (s) => length(s.room));
   return spot ? asleepAt(self, spot.floor, (spot.room.lo + spot.room.hi) / 2, 0, Infinity) : null;
 }
 
@@ -176,16 +177,16 @@ function staysPut(fox: Fox, scene: PageMap, others: readonly Fox[]): boolean {
 
 // After a layout change. A fox out of sight keeps its trip (checked when it
 // arrives). Otherwise it stays on its ledge, whatever it is doing, while the
-// stretch under it is still clear and no other fox is too close, pulled back
-// inside it if that shrank; if not, it is placed asleep somewhere new,
-// without animation. Leaving, it only ever goes at a ledge's end: if that
+// stretch under it is still clear and no other fox is too close to it or to
+// the way it is going, pulled back inside it if that shrank; if not, it is
+// placed asleep somewhere new, clear of `avoid`, without animation. Leaving, it only ever goes at a ledge's end: if that
 // end is now covered, it trots to where the run stops instead and settles.
-export function reconcileFox(fox: Fox, scene: PageMap, now: number, rand: Rand, others: readonly Fox[] = []): Fox | null {
+export function reconcileFox(fox: Fox, scene: PageMap, now: number, rand: Rand, others: readonly Fox[] = [], avoid: readonly Fox[] = others): Fox | null {
   if (fox.mode === 'away') return fox;
   const f = scene.floors.get(fox.floor);
   const run = f && runAt(f, scene, clampTo({ lo: RUNS.inset, hi: f.right - f.left - RUNS.inset }, fox.x));
-  const crowded = !clearOf(claims(others), fox.floor, fox.x, fox.x);
-  if (!f || !run || length(run) < 2 * HALF || crowded) return createFox(scene, now, rand, others, fox);
+  const crowded = !clearOf(claims(others), fox.floor, fox.x, fox.target);
+  if (!f || !run || length(run) < 2 * HALF || crowded) return createFox(scene, now, rand, avoid, fox);
   // Coming or going, it is at the run's end; otherwise all of it is on the run.
   const room = fox.mode === 'exit' || fox.mode === 'enter' ? run : body(run);
   const kept = { ...fox, x: clampTo(room, fox.x), target: clampTo(room, fox.target), from: clampTo(room, fox.from) };

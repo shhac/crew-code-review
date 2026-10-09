@@ -125,4 +125,37 @@ describe('foxes together', () => {
     const scrolled = scene([[1, { ...wide, y: 180 }], [2, { ...lower, y: 380 }]]);
     expect(restingFoxes(scrolled, g).foxes.map((f) => [f.floor, f.x])).toEqual(g.foxes.map((f) => [f.floor, f.x]));
   });
+
+  it('never trots through one placed afresh by a layout change, nor lies down by it', () => {
+    // Fox 1 is trotting toward fox 0 when text covers fox 0's spot.
+    const g: Foxes = { target: 2, foxes: [asleep(1, 150, { id: 0 }), asleep(1, 600, { id: 1, seed: 2, mode: 'trot', target: 270, dir: -1 })] };
+    const s = scene([[1, wide]], [{ left: 230, right: 270, top: 185, bottom: 195 }]);
+    const later = reconcileFoxes(g, s, 0, fixed(0.2));
+    const states = groupTrace(later, s, 0, 20000);
+    states.forEach((x) => {
+      const [a, b] = x.foxes;
+      if (a.floor === b.floor && a.mode !== 'away' && b.mode !== 'away') expect(Math.abs(a.x - b.x)).toBeGreaterThanOrEqual(SPACING - 1e-6);
+    });
+    const order = (x: Foxes) => Math.sign(x.foxes[0].x - x.foxes[1].x);
+    expect(new Set(states.map(order)).size).toBe(1);
+  });
+
+  it('keeps them apart through layout changes too, whatever the draws', () => {
+    const layouts = [scene([[1, wide], [2, lower]]), scene([[1, wide], [2, lower]], [{ left: 300, right: 500, top: 185, bottom: 195 }]), scene([[1, { ...wide, right: 600 }], [2, lower]])];
+    for (const seed of [1, 2, 3]) {
+      const rand = seeded(seed);
+      const run = Array.from({ length: 24 }, (_, k) => k).reduce<{ g: Foxes; all: Foxes[] }>(({ g, all }, k) => {
+        const s = layouts[k % layouts.length];
+        const placed = reconcileFoxes(g, s, k * 5000, rand);
+        const states = groupTrace(placed, s, k * 5000, k * 5000 + 4950, (t) => still(wide.left + 400 + 300 * Math.sin(t / 3000), wide.y - 8, t), rand);
+        return { g: states.at(-1)!, all: [...all, ...states] };
+      }, { g: createFoxes(layouts[0], 0, rand), all: [] });
+      for (const x of run.all) {
+        const shown = x.foxes.filter((f) => f.mode !== 'away');
+        shown.forEach((a, i) => shown.slice(i + 1).forEach((b) => {
+          if (a.floor === b.floor) expect(Math.abs(a.x - b.x)).toBeGreaterThanOrEqual(SPACING - 1e-6);
+        }));
+      }
+    }
+  });
 });

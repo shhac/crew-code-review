@@ -28,7 +28,9 @@ daemon's local time.
   without cursor movement they peek out one at a time, then walk and sniff
   along their ledge for 20 to 40s each before going home. A cursor moving
   within 80px of one makes it curl into a ball until things have been quiet
-  for 2.5s, then it hurries home. They never change ledge.
+  for 2.5s, then it hurries home. They never change ledge. A sniffing head,
+dipped and turned toward a cursor below, turns at most 18 degrees, which keeps
+the drawing inside its 30x18 footprint (the rig's tests check this).
 
 ## Decisions
 
@@ -51,10 +53,13 @@ bodies and gaps, 144px), else two; decided when they move in, and kept while
 the home is kept. Rules that keep them apart, a body (30px) and a 6px gap:
 
 - Only one at the pile's mouth at a time, and none comes out while another is
-  coming in; one peeking ducks back in for one coming home.
+  coming in; one peeking ducks back in for one coming home. One peeking
+  counts as standing at the mouth, so nobody walks up to it, and if it finds
+  no room clear of the others it goes back in.
 - A walk picks its spot between its nearest neighbours; one that finds
   another in its way sniffs where it stands instead.
-- One going home waits behind another rather than walking through it.
+- One going home waits behind another rather than walking through it. Every
+  step is checked for room, the last one onto a spot included.
 - One that flees sends any between it and the pile hurrying home ahead of
   it, so the way in is clear.
 - After a layout change that shrinks the range, one crowded onto another is

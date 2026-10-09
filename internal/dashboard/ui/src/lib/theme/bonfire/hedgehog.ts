@@ -139,9 +139,10 @@ const near = (hog: Hog, home: Home, scene: PageMap, cursor: Cursor | null, now: 
 const curl = (hog: Hog, now: number, rand: Rand): Hog => ({ ...hog, mode: 'curled', until: now + between(rand, 3000, 4500) });
 
 // The stretch of the range a hedgehog may wander in: between its nearest
-// neighbours on either side, keeping its distance from both.
+// neighbours on either side, keeping its distance from both. One peeking
+// stands at the mouth, so it counts.
 function lane(hog: Hog, home: Home, others: readonly Hog[]): { lo: number; hi: number } {
-  const out = others.filter(onLedge);
+  const out = others.filter(visible);
   const left = out.filter((o) => o.x <= hog.x).map((o) => o.x + SPACING);
   const right = out.filter((o) => o.x > hog.x).map((o) => o.x - SPACING);
   return { lo: Math.max(home.lo, ...left), hi: Math.min(home.hi, ...right) };
@@ -154,16 +155,19 @@ function wander(hog: Hog, home: Home, others: readonly Hog[], now: number, rand:
   return { ...hog, mode: 'walk', target, dir: target < hog.x ? -1 : 1 };
 }
 
-// Out of the pile: wander off, unless there is nowhere to wander.
+// Out of the pile: wander off, unless there is nowhere to wander, or no room
+// clear of the others; then back in.
 function emerge(hog: Hog, home: Home, others: readonly Hog[], now: number, rand: Rand): Hog {
-  if (home.hi - home.lo < MIN_ROAM || lane(hog, home, others).hi < home.lo) return hide(hog, home, now + 4 * STILL);
+  const room = lane(hog, home, others);
+  if (home.hi - home.lo < MIN_ROAM || room.hi - room.lo < 4) return hide(hog, home, now + 4 * STILL);
   return wander({ ...hog, out: now }, home, others, now, rand);
 }
 
 // How far it may go toward its target before it would come within SPACING
-// of a hedgehog in the way (one out on the ledge, not at the pile's mouth).
+// of a hedgehog in the way (one peeking from the mouth included: it ducks
+// back in for one coming home).
 function clearAhead(hog: Hog, others: readonly Hog[], step: number): number {
-  const ahead = others.filter((o) => onLedge(o) && (o.x - hog.x) * hog.dir > 0).map((o) => Math.abs(o.x - hog.x) - SPACING);
+  const ahead = others.filter((o) => visible(o) && (o.x - hog.x) * hog.dir > 0).map((o) => Math.abs(o.x - hog.x) - SPACING);
   return Math.max(0, Math.min(step, ...ahead));
 }
 
@@ -175,11 +179,11 @@ function travel(hog: Hog, home: Home, others: readonly Hog[], now: number, dt: n
   const step = (hog.mode === 'flee' ? HURRY : SPEED) * dt / 1000;
   const gap = hog.target - hog.x;
   const dir = gap < 0 ? -1 : 1;
-  if (Math.abs(gap) <= step) {
+  const moved = clearAhead({ ...hog, dir }, others, Math.min(step, Math.abs(gap)));
+  if (moved === Math.abs(gap)) {
     if (hog.mode !== 'walk') return hide(hog, home, now + 4 * STILL);
-    return { ...hog, x: hog.target, walked: hog.walked + Math.abs(gap), mode: 'sniff', until: now + between(rand, 1500, 4000) };
+    return { ...hog, x: hog.target, walked: hog.walked + moved, mode: 'sniff', until: now + between(rand, 1500, 4000) };
   }
-  const moved = clearAhead({ ...hog, dir }, others, step);
   if (moved === 0 && hog.mode === 'walk') return { ...hog, mode: 'sniff', until: now + between(rand, 1500, 4000) };
   return { ...hog, x: hog.x + dir * moved, walked: hog.walked + moved, dir };
 }

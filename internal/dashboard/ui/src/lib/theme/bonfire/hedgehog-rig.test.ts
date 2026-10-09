@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { RigPose } from '../rig/rig';
-import { firstShut, imagesOf, legsOf, lidsOf } from '../rig/test-rig';
-import type { Hog, Mode } from './hedgehog';
+import { firstShut, imagesOf, legsOf, lidsOf, rigBounds } from '../rig/test-rig';
+import { HOG, type Hog, type Mode } from './hedgehog';
 import { hogRig, type HogLook } from './hedgehog-rig';
 
 const hog = (mode: Mode, walked = 0): Hog => ({ id: 0, seed: 1, x: 0, dir: 1, mode, target: 0, until: 0, out: 0, walked });
@@ -18,6 +18,28 @@ const OPEN = 3900;
 const shutAt = () => firstShut((now) => hogRig(hog('sniff'), look({ now })))!;
 
 describe('hedgehog rig', () => {
+  // Homes and spacing work from HOG, so the drawing must never reach past
+  // it, whatever its stride, sniff or glance toward the cursor.
+  it('stays inside its footprint, whatever it does and wherever the cursor is', () => {
+    const cursors = [null, { x: 140, y: 20 }, { x: 140, y: 140 }, { x: 30, y: 60 }, { x: 160, y: 98 }];
+    const modes: Mode[] = ['walk', 'flee', 'home', 'sniff', 'peek', 'curled'];
+    const worst = { left: 0, right: 0, top: 0 };
+    for (const mode of modes) {
+      for (const cursor of cursors) {
+        for (let now = 0; now < 3000; now += 15) {
+          const rig = hogRig(hog(mode, now / 100), look({ now, cursor }));
+          const b = rigBounds(rig);
+          worst.left = Math.max(worst.left, rig.anchor.x - b.left);
+          worst.right = Math.max(worst.right, b.right - rig.anchor.x);
+          worst.top = Math.max(worst.top, rig.anchor.y - b.top);
+        }
+      }
+    }
+    expect(worst.left).toBeLessThanOrEqual(HOG.width / 2);
+    expect(worst.right).toBeLessThanOrEqual(HOG.width / 2);
+    expect(worst.top).toBeLessThanOrEqual(HOG.height);
+  });
+
   it('stands on four legs with every foot on the ledge', () => {
     const feet = legsOf(hogRig(hog('sniff'), look())).map((l) => l.foot.y);
     expect(feet).toHaveLength(4);

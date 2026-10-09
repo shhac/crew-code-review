@@ -186,9 +186,10 @@ pair, because a long enough clear run for two side by side is rare.
 - **How many**: three where three spots 120px apart (on one ledge) or on
   different ledges exist when they are placed, else two; fewer only when the
   page has no room. That number is kept: a layout change re-places any fox
-  that lost its spot or now lies within 120px of another (in id order, so the
-  same fox keeps a contested spot), and may put back one that had no room,
-  but never adds beyond it, so scrolling never grows the group.
+  that lost its spot, or now lies or is heading within 120px of another (in
+  id order, so the same fox keeps a contested spot), clear of every other fox
+  and where each is going, and may put back one that had no room, but never
+  adds beyond it, so scrolling never grows the group.
 - **Where**: ledges with no fox come first, then the longest free stretch, so
   they spread out.
 - **Only one up at a time**: while one is awake, the others sleep on. A cursor

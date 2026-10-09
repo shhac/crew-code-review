@@ -25,23 +25,26 @@ export function createFoxes(scene: PageMap, now: number, rand: Rand): Foxes {
 }
 
 // Each kept where it can be, in id order so the same fox wins a crowded
-// spot every time; then any missing placed afresh, up to the target and
-// never beyond it, so scrolling never adds foxes.
-function regroup(group: Foxes, keep: (fox: Fox, others: Fox[]) => Fox | null, place: (others: Fox[], id: number) => Fox | null): Foxes {
-  const kept = placeInTurn<Fox, Fox>(group.foxes, keep);
+// spot every time; one that must move is placed clear of every other fox,
+// those still to come as they were, so it lands in nobody's way. Then any
+// missing placed afresh, up to the target and never beyond it, so scrolling
+// never adds foxes.
+type Keep = (fox: Fox, settled: Fox[], all: Fox[]) => Fox | null;
+function regroup(group: Foxes, keep: Keep, place: (others: Fox[], id: number) => Fox | null): Foxes {
+  const kept = placeInTurn<Fox, Fox>(group.foxes, (fox, settled) => keep(fox, settled, [...settled, ...group.foxes.filter((o) => o.id > fox.id)]));
   const missing = Array.from({ length: group.target }, (_, id) => id).filter((id) => !kept.some((f) => f.id === id));
   const added = placeAll(missing, (others, id) => place([...kept, ...others], id));
   return { ...group, foxes: [...kept, ...added].sort((a, b) => a.id - b.id) };
 }
 
 export function reconcileFoxes(group: Foxes, scene: PageMap, now: number, rand: Rand): Foxes {
-  return regroup(group, (fox, others) => reconcileFox(fox, scene, now, rand, others), (others, id) => createFox(scene, now, rand, others, fresh(id)));
+  return regroup(group, (fox, settled, all) => reconcileFox(fox, scene, now, rand, settled, all), (others, id) => createFox(scene, now, rand, others, fresh(id)));
 }
 
 // Reduced motion: all asleep, each kept where it lay where it still can be.
 export function restingFoxes(scene: PageMap, previous: Foxes | null): Foxes {
   const group = previous ?? { target: createFoxes(scene, 0, () => 0.5).target, foxes: [] };
-  return regroup(group, (fox, others) => restingFox(scene, fox, others), (others, id) => restingFox(scene, null, others, fresh(id)));
+  return regroup(group, (fox, settled, all) => restingFox(scene, fox, settled, fox, all), (others, id) => restingFox(scene, null, others, fresh(id)));
 }
 
 const foxPoint = (fox: Fox, scene: PageMap): Point | null => {
