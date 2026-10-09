@@ -1,9 +1,12 @@
-import { cycleLength, footAt, kneeToward, type Leg, type LegSpec, type Point } from '../spidergait';
+import type { Point } from '../pointer';
+import { cycleLength, footAt, kneeToward, type Leg, type LegSpec } from '../spidergait';
 
 // A four-legged animal's legs: the spider's stepping (spidergait.ts), driven
 // by distance walked so a planted foot never slides, with each knee bending
 // the way that animal's does and a gait setting how long feet stay down.
-// In the drawing's own coordinates: x right, y down, facing right.
+// In the drawing's own coordinates: x right, y down, facing right. A rig
+// moves the hips with the body, picks where the feet go, then solves the
+// knees between them (legsTo).
 
 export type QuadLeg = LegSpec & {
   // Fore knees bend forward (1), hind hocks back (-1).
@@ -15,17 +18,18 @@ export type QuadLeg = LegSpec & {
 // down (0.75, four beats); a trot moves diagonal pairs together (about 0.5).
 export type Gait = { stride: number; lift: number; stance: number };
 
-const legTo = (spec: QuadLeg, hip: Point, foot: Point): Leg => ({ hip, knee: kneeToward(hip, foot, spec.thigh, spec.shin, spec.bend), foot });
+export const fore = (spec: QuadLeg) => spec.bend === 1;
 
-export function walkingLegs(specs: readonly QuadLeg[], walked: number, ground: number, gait: Gait): Leg[] {
-  const phase = walked / cycleLength(gait.stride, gait.stance);
-  return specs.map((s) => legTo(s, s.hip, footAt(s, phase, ground, gait.stride, gait.lift, gait.stance)));
-}
+// How far through its stride cycle an animal is: what its feet step to, and
+// what its body's bob and nod keep time with.
+export const gaitPhase = (walked: number, gait: Gait) => walked / cycleLength(gait.stride, gait.stance);
+
+export const steppingFeet = (specs: readonly QuadLeg[], hips: readonly Point[], walked: number, ground: number, gait: Gait): Point[] =>
+  specs.map((s, i) => footAt({ ...s, hip: hips[i] }, gaitPhase(walked, gait), ground, gait.stride, gait.lift, gait.stance));
 
 // Stood still: every foot down at its resting reach.
-export const standingLegs = (specs: readonly QuadLeg[], ground: number): Leg[] =>
-  specs.map((s) => legTo(s, s.hip, { x: s.hip.x + s.reach, y: ground }));
+export const restingFeet = (specs: readonly QuadLeg[], hips: readonly Point[], ground: number): Point[] =>
+  specs.map((s, i) => ({ x: hips[i].x + s.reach, y: ground }));
 
-// Legs reaching from moved hips (a body tilted or lifted) to chosen feet.
-export const reachingLegs = (specs: readonly QuadLeg[], hips: readonly Point[], feet: readonly Point[]): Leg[] =>
-  specs.map((s, i) => legTo(s, hips[i], feet[i]));
+export const legsTo = (specs: readonly QuadLeg[], hips: readonly Point[], feet: readonly Point[]): Leg[] =>
+  specs.map((s, i) => ({ hip: hips[i], knee: kneeToward(hips[i], feet[i], s.thigh, s.shin, s.bend), foot: feet[i] }));

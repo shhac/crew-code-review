@@ -1,7 +1,8 @@
-import type { Point } from '../spidergait';
-import { standingLegs, walkingLegs, type Gait, type QuadLeg } from '../rig/gait';
+import type { Point } from '../pointer';
+import { clamp } from '../spidergait';
+import { gaitPhase, legsTo, restingFeet, steppingFeet, type Gait, type QuadLeg } from '../rig/gait';
 import { blinking, breath } from '../rig/life';
-import { turnAbout, turned, type Fur, type Layer, type RigPose } from '../rig/rig';
+import { legLayers, lidLayers, stillPicture, turnAbout, turned, type Frame, type Fur, type Layer, type RigPose } from '../rig/rig';
 import { moving, type Hog } from './hedgehog';
 import ballArt from './hedgehog-ball.webp';
 import bodyArt from './hedgehog-body.webp';
@@ -12,10 +13,9 @@ import headArt from './hedgehog-head.webp';
 // their front, and four short legs drawn in code beneath. Facing right, on
 // the ledge at ANCHOR.
 
-const WIDTH = 34;
-const HEIGHT = 20;
 const GROUND = 18.3;
 const ANCHOR = { x: 17, y: GROUND };
+const FRAME: Frame = { width: 34, height: 20, anchor: ANCHOR };
 const BODY = { x: 2, y: 1, width: 20.5, height: 15 };
 const HEAD = { x: 17.5, y: 5.6, width: 13, height: 8.5 };
 const NECK = { x: 20, y: 11 };
@@ -46,7 +46,6 @@ const LOOK_REACH = 160;
 
 export type HogLook = { now: number; at: Point; cursor: Point | null; still: boolean };
 
-const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
 const degrees = (rad: number) => (rad * 180) / Math.PI;
 
 // The head's turn toward the cursor, in the drawing's own frame (facing
@@ -68,33 +67,22 @@ function headAngle(hog: Hog, look: HogLook, phase: number): number {
   return lookAt(hog, look);
 }
 
-function curledUp(hog: Hog, look: HogLook): RigPose {
-  const squash = look.still ? 1 : 1 + 0.04 * breath(hog.seed, look.now, 2600);
-  const x = ANCHOR.x - BALL.width / 2, y = GROUND - BALL.height;
-  return {
-    width: WIDTH, height: HEIGHT, anchor: ANCHOR,
-    layers: [{ kind: 'group', turn: turnAbout(0, { x: ANCHOR.x, y: GROUND }), scaleY: squash, layers: [{ kind: 'image', src: ballArt, x, y, ...BALL }] }],
-  };
-}
-
 export function hogRig(hog: Hog, look: HogLook): RigPose {
-  if (hog.mode === 'curled') return curledUp(hog, look);
-  const phase = hog.walked / (WALK.stride / WALK.stance);
+  if (hog.mode === 'curled') return stillPicture(FRAME, { src: ballArt, ...BALL }, look.still ? 1 : 1 + 0.04 * breath(hog.seed, look.now, 2600));
+  const phase = gaitPhase(hog.walked, WALK);
   const walking = moving(hog.mode) && !look.still;
-  const body = turnAbout(hog.mode === 'sniff' && !look.still ? 2 : 0, { x: ANCHOR.x, y: GROUND }, 0, walking ? -0.35 * Math.abs(Math.sin(4 * Math.PI * phase)) : 0);
-  const specs = LEGS.map((s) => ({ ...s, hip: turned(body, s.hip) }));
-  const legs = walking ? walkingLegs(specs, hog.walked, GROUND - FOOT, WALK) : standingLegs(specs, GROUND - FOOT);
-  const shut = !look.still && blinking(hog.seed, look.now);
+  // A little nose-down while sniffing; a bob with each step.
+  const tilt = hog.mode === 'sniff' && !look.still ? 2 : 0;
+  const bob = walking ? -0.35 * Math.abs(Math.sin(4 * Math.PI * phase)) : 0;
+  const body = turnAbout(tilt, ANCHOR, 0, bob);
+  const hips = LEGS.map((s) => turned(body, s.hip));
+  const legs = legsTo(LEGS, hips, walking ? steppingFeet(LEGS, hips, hog.walked, GROUND - FOOT, WALK) : restingFeet(LEGS, hips, GROUND - FOOT));
   const head: Layer = {
     kind: 'group', turn: turnAbout(headAngle(hog, look, phase), NECK),
-    layers: [{ kind: 'image', src: headArt, ...HEAD }, ...(shut ? [{ kind: 'lid' as const, at: EYE, r: 0.95, fur: FACE }] : [])],
+    layers: [{ kind: 'image', src: headArt, ...HEAD }, ...lidLayers(!look.still && blinking(hog.seed, look.now), EYE, 0.95, FACE)],
   };
   return {
-    width: WIDTH, height: HEIGHT, anchor: ANCHOR,
-    layers: [
-      { kind: 'legs', legs: legs.filter((_, i) => LEGS[i].far), fur: FAR_FUR, ...LEG },
-      { kind: 'legs', legs: legs.filter((_, i) => !LEGS[i].far), fur: NEAR_FUR, ...LEG },
-      { kind: 'group', turn: body, layers: [head, { kind: 'image', src: bodyArt, ...BODY }] },
-    ],
+    ...FRAME,
+    layers: [...legLayers(LEGS, legs, { near: NEAR_FUR, far: FAR_FUR }, LEG), { kind: 'group', turn: body, layers: [head, { kind: 'image', src: bodyArt, ...BODY }] }],
   };
 }

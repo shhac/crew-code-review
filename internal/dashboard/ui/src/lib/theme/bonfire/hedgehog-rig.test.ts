@@ -1,15 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import type { Layer, RigPose } from '../rig/rig';
+import type { RigPose } from '../rig/rig';
+import { firstShut, imagesOf, legsOf, lidsOf } from '../rig/test-rig';
 import type { Hog, Mode } from './hedgehog';
 import { hogRig, type HogLook } from './hedgehog-rig';
 
 const hog = (mode: Mode, walked = 0): Hog => ({ id: 0, seed: 1, x: 0, dir: 1, mode, target: 0, until: 0, out: 0, walked });
 const look = (over: Partial<HogLook> = {}): HogLook => ({ now: 0, at: { x: 100, y: 100 }, cursor: null, still: false, ...over });
 
-const flat = (layers: readonly Layer[]): Layer[] => layers.flatMap((l) => (l.kind === 'group' ? [l, ...flat(l.layers)] : [l]));
-const legs = (pose: RigPose) => flat(pose.layers).flatMap((l) => (l.kind === 'legs' ? l.legs : []));
-const lids = (pose: RigPose) => flat(pose.layers).filter((l) => l.kind === 'lid');
-const images = (pose: RigPose) => flat(pose.layers).flatMap((l) => (l.kind === 'image' ? [l.src] : []));
 // The head's group: the one holding the eyelid's place, nested in the body's.
 const headTurn = (pose: RigPose) => {
   const body = pose.layers.find((l) => l.kind === 'group');
@@ -18,18 +15,18 @@ const headTurn = (pose: RigPose) => {
 };
 // A moment with the eye open, and one with it shut, for seed 1.
 const OPEN = 3900;
-const shutAt = () => Array.from({ length: 4000 }, (_, t) => t).find((t) => lids(hogRig(hog('sniff'), look({ now: t }))).length > 0)!;
+const shutAt = () => firstShut((now) => hogRig(hog('sniff'), look({ now })))!;
 
 describe('hedgehog rig', () => {
   it('stands on four legs with every foot on the ledge', () => {
-    const feet = legs(hogRig(hog('sniff'), look())).map((l) => l.foot.y);
+    const feet = legsOf(hogRig(hog('sniff'), look())).map((l) => l.foot.y);
     expect(feet).toHaveLength(4);
     expect(new Set(feet).size).toBe(1);
     expect(feet[0]).toBeLessThan(hogRig(hog('sniff'), look()).anchor.y);
   });
 
   it('steps its legs as it walks, lifting one foot at a time', () => {
-    const at = (walked: number) => legs(hogRig(hog('walk', walked), look()));
+    const at = (walked: number) => legsOf(hogRig(hog('walk', walked), look()));
     expect(at(1)).not.toEqual(at(0));
     const ground = Math.max(...at(0).map((l) => l.foot.y));
     for (const walked of [0.3, 1.1, 2.0, 2.9]) {
@@ -38,10 +35,10 @@ describe('hedgehog rig', () => {
   });
 
   it('blinks now and then, and never under reduced motion', () => {
-    expect(lids(hogRig(hog('sniff'), look({ now: OPEN })))).toHaveLength(0);
+    expect(lidsOf(hogRig(hog('sniff'), look({ now: OPEN })))).toHaveLength(0);
     const t = shutAt();
     expect(t).toBeDefined();
-    expect(lids(hogRig(hog('sniff'), look({ now: t, still: true })))).toHaveLength(0);
+    expect(lidsOf(hogRig(hog('sniff'), look({ now: t, still: true })))).toHaveLength(0);
   });
 
   it('turns its head toward a cursor nearby, but only so far', () => {
@@ -62,13 +59,13 @@ describe('hedgehog rig', () => {
   it('dips its nose to sniff, and holds still under reduced motion', () => {
     expect(headTurn(hogRig(hog('sniff'), look({ now: OPEN })))).toBeGreaterThan(5);
     expect(headTurn(hogRig(hog('sniff'), look({ now: OPEN, still: true })))).toBe(0);
-    expect(legs(hogRig(hog('walk', 1.3), look({ still: true })))).toEqual(legs(hogRig(hog('sniff'), look({ still: true }))));
+    expect(legsOf(hogRig(hog('walk', 1.3), look({ still: true })))).toEqual(legsOf(hogRig(hog('sniff'), look({ still: true }))));
   });
 
   it('is a ball when curled up, breathing', () => {
     const pose = hogRig(hog('curled'), look());
-    expect(legs(pose)).toHaveLength(0);
-    expect(images(pose)).toHaveLength(1);
+    expect(legsOf(pose)).toHaveLength(0);
+    expect(imagesOf(pose)).toHaveLength(1);
     const squash = (now: number) => {
       const g = hogRig(hog('curled'), look({ now })).layers[0];
       return g.kind === 'group' ? g.scaleY : NaN;

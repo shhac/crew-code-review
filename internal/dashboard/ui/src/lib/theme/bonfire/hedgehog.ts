@@ -1,4 +1,5 @@
 import { clearance, inView, type Ledge, type PageMap } from '../floors';
+import { inTurn, placeInTurn } from '../group';
 import type { Cursor, Point } from '../pointer';
 import { between, maxBy, type Rand } from '../seed';
 
@@ -33,8 +34,8 @@ const STILL = 2500;
 const PEEK = 1400;
 const NEAR = 80;
 const STARTLED = 120;
-const SPEED = 16;
-const HURRY = 34;
+export const SPEED = 16;
+export const HURRY = 34;
 
 // Hedgehogs keep at least this far apart, body to body.
 const GAP = 6;
@@ -103,6 +104,8 @@ const hide = (hog: Hog, home: Home, until: number): Hog => ({ ...hog, mode: 'hid
 const headHome = (hog: Hog, home: Home, mode: 'home' | 'flee'): Hog => ({ ...hog, mode, target: home.hi, dir: 1 });
 const clampTo = (home: Home, x: number) => Math.max(home.lo, Math.min(home.hi, x));
 const visible = (hog: Hog) => hog.mode !== 'hidden';
+// Out on the ledge: neither in the pile nor peeking from its mouth.
+const onLedge = (hog: Hog) => hog.mode !== 'hidden' && hog.mode !== 'peek';
 const homeward = (hog: Hog) => hog.mode === 'home' || hog.mode === 'flee';
 
 export const createHogs = (scene: PageMap, now: number, rand: Rand): Hogs => movedIn(chooseHome(scene), now, rand);
@@ -113,12 +116,12 @@ export const createHogs = (scene: PageMap, now: number, rand: Rand): Hogs => mov
 export function reconcileHogs(group: Hogs, scene: PageMap, now: number, rand: Rand): Hogs {
   const home = chooseHome(scene, group.home);
   if (!home || !sameHome(home, group.home)) return movedIn(home, now, rand);
-  const hogs = group.hogs.reduce<Hog[]>((placed, hog) => {
-    if (hog.mode === 'hidden' || hog.mode === 'peek') return [...placed, hog];
+  const hogs = placeInTurn<Hog, Hog>(group.hogs, (hog, placed) => {
+    if (!onLedge(hog)) return hog;
     const kept = { ...hog, x: clampTo(home, hog.x), target: clampTo(home, hog.target) };
-    const crowded = placed.some((o) => o.mode !== 'hidden' && o.mode !== 'peek' && Math.abs(o.x - kept.x) < SPACING);
-    return [...placed, crowded ? hide(kept, home, now + STILL) : kept];
-  }, []);
+    const crowded = placed.some((o) => onLedge(o) && Math.abs(o.x - kept.x) < SPACING);
+    return crowded ? hide(kept, home, now + STILL) : kept;
+  });
   return { home, hogs };
 }
 
@@ -138,7 +141,7 @@ const curl = (hog: Hog, now: number, rand: Rand): Hog => ({ ...hog, mode: 'curle
 // The stretch of the range a hedgehog may wander in: between its nearest
 // neighbours on either side, keeping its distance from both.
 function lane(hog: Hog, home: Home, others: readonly Hog[]): { lo: number; hi: number } {
-  const out = others.filter((o) => visible(o) && o.mode !== 'peek');
+  const out = others.filter(onLedge);
   const left = out.filter((o) => o.x <= hog.x).map((o) => o.x + SPACING);
   const right = out.filter((o) => o.x > hog.x).map((o) => o.x - SPACING);
   return { lo: Math.max(home.lo, ...left), hi: Math.min(home.hi, ...right) };
@@ -160,7 +163,7 @@ function emerge(hog: Hog, home: Home, others: readonly Hog[], now: number, rand:
 // How far it may go toward its target before it would come within SPACING
 // of a hedgehog in the way (one out on the ledge, not at the pile's mouth).
 function clearAhead(hog: Hog, others: readonly Hog[], step: number): number {
-  const ahead = others.filter((o) => visible(o) && o.mode !== 'peek' && (o.x - hog.x) * hog.dir > 0).map((o) => Math.abs(o.x - hog.x) - SPACING);
+  const ahead = others.filter((o) => onLedge(o) && (o.x - hog.x) * hog.dir > 0).map((o) => Math.abs(o.x - hog.x) - SPACING);
   return Math.max(0, Math.min(step, ...ahead));
 }
 
@@ -213,17 +216,13 @@ function stepHog(hog: Hog, home: Home, others: readonly Hog[], scene: PageMap, n
 export function stepHogs(group: Hogs, scene: PageMap, now: number, dt: number, rand: Rand, cursor: Cursor | null): Hogs {
   const home = group.home;
   if (!home) return group;
-  const hogs = group.hogs.reduce<Hog[]>((all, _, i) => {
-    const hog = all[i];
-    const next = stepHog(hog, home, all.filter((_, j) => j !== i), scene, now, dt, rand, cursor);
-    const fled = hog.mode !== 'flee' && next.mode === 'flee';
-    return all.map((o, j) => {
-      if (j === i) return next;
-      const inWay = fled && (o.mode === 'walk' || o.mode === 'sniff' || o.mode === 'home') && o.x > next.x;
-      return inWay ? headHome(o, home, 'flee') : o;
-    });
-  }, group.hogs);
-  return { home, hogs };
+  const step = (hog: Hog, others: Hog[]) => stepHog(hog, home, others, scene, now, dt, rand, cursor);
+  const hurry = (before: Hog, after: Hog, other: Hog) => {
+    const fled = before.mode !== 'flee' && after.mode === 'flee';
+    const inWay = (other.mode === 'walk' || other.mode === 'sniff' || other.mode === 'home') && other.x > after.x;
+    return fled && inWay ? headHome(other, home, 'flee') : other;
+  };
+  return { home, hogs: inTurn(group.hogs, step, hurry) };
 }
 
 // The modes in which a hedgehog is on the move, and so steps.
@@ -235,7 +234,8 @@ export const moving = (mode: Mode) => mode === 'walk' || mode === 'home' || mode
 export function restingHogs(scene: PageMap, previous: Hogs | null): Hogs {
   const home = chooseHome(scene, previous?.home ?? null);
   if (!home) return { home, hogs: [] };
-  const count = previous && sameHome(home, previous.home) && previous.hogs.length ? previous.hogs.length : countFor(home);
+  const kept = previous && sameHome(home, previous.home) ? previous.hogs.length : 0;
+  const count = kept || countFor(home);
   const hogs = Array.from({ length: count }, (_, id): Hog => {
     const x = home.hi - 10 - id * SPACING;
     const fits = x >= home.lo;

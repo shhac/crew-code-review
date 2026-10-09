@@ -1,11 +1,9 @@
 <script lang="ts">
   // One level of a rig's layers, in order; a group draws its own inside it.
   import Layers from './Layers.svelte';
-  import { legPath, transformOf, type Layer } from './rig';
+  import { legPath, OUTLINE, transformOf, type Layer } from './rig';
 
   export let layers: readonly Layer[];
-  // About the art's own outline at display size, so drawn legs match it.
-  const OUTLINE = 0.45;
 </script>
 
 {#each layers as layer}

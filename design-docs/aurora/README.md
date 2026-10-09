@@ -203,7 +203,8 @@ pair, because a long enough clear run for two side by side is rare.
   the page look up for 1.2 to 2s.
 
 They are stepped as a group, in a fixed order, each seeing the others as they
-now are, so the rules hold every frame.
+now are, so the rules hold every frame (`foxes.ts`, on the shared
+`lib/theme/group.ts`; one fox's night stays in `fox.ts`).
 
 ### Drawn from parts (added 2026-10-09)
 

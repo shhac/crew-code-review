@@ -61,7 +61,7 @@ the home is kept. Rules that keep them apart, a body (30px) and a 6px gap:
   tucked back into the pile.
 
 They are stepped as a group, in a fixed order, each seeing the others as they
-now are. Reduced motion sits them in a row by the pile, spaced, and keeps the
+now are (`lib/theme/group.ts`, shared with the foxes). Reduced motion sits them in a row by the pile, spaced, and keeps the
 row across scrolls.
 
 **Drawn from parts (added 2026-10-09).** The first version slid one walking

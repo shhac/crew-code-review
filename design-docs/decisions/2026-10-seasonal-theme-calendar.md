@@ -229,7 +229,8 @@ first shipped with one stiff sprite each:
   all (decided from the animals' own footprints, once, when the group is
   placed, so scrolling never grows it). Fewer, even none, only when the page's
   geometry cannot host them safely. They keep their distance from each other,
-  so no two ever overlap. A theme may make an exception in its own note where
+  so no two ever overlap: a group is stepped and placed one animal at a time,
+  each seeing the others as they now are (`lib/theme/group.ts`). A theme may make an exception in its own note where
   the idea needs one animal (a single predator and its prey, say).
 - **Drawn from parts, with legs and faces that move.** Not one image per pose
   slid along the ledge, and not generated walk-cycle frames (the spider's

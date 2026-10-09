@@ -44,21 +44,19 @@ const NEAR = 64;
 const LINGER = 1500;
 const WAKE = 500;
 const STRETCH = 1100;
-const SPEED = 40;
+export const SPEED = 40;
 export const FADE = 14;
 // Settling, it turns about twice.
 const TURN = 300;
 const SETTLE = 3 * TURN;
 const CROUCH = 500;
-const LEAP = 600;
+export const LEAP = 600;
 const LEAP_LENGTH = 36;
 const MAX_HOP = 12;
 const MIN_HOP = 4;
 const DIG = 900;
-// Foxes on one ledge lie at least this far apart, centre to centre; one
-// startled wakes those within LOOK_REACH on the page enough to look up.
+// Foxes on one ledge lie at least this far apart, centre to centre.
 const SPACING = 120;
-const LOOK_REACH = 220;
 
 export type Mode = 'asleep' | 'waking' | 'stretch' | 'trot' | 'exit' | 'away' | 'enter' | 'settle' | 'crouch' | 'leap' | 'dig';
 // Where a fox changing ledge is going: the end of the ledge it trots in from,
@@ -113,7 +111,7 @@ const pagePoint = (f: Ledge, x: number, lift = 0): Point => ({ x: f.left + x, y:
 
 // Who a fox is, kept across every change of place.
 type Self = Pick<Fox, 'id' | 'seed' | 'walked'>;
-const fresh = (id: number): Self => ({ id, seed: id + 1, walked: 0 });
+export const fresh = (id: number): Self => ({ id, seed: id + 1, walked: 0 });
 
 function asleepAt(self: Self, floor: number, x: number, now: number, restless: number, dir: 1 | -1 = 1): Fox {
   return { ...self, look: 0, floor, x, dir, mode: 'asleep', until: now + restless, target: x, from: x, hop: 0, trip: null, ear: 0, earRest: 0, near: null, startled: false };
@@ -123,8 +121,7 @@ function asleepAt(self: Self, floor: number, x: number, now: number, restless: n
 // trot or a leap will take them, and where a trip will bring them in.
 type Claim = { floor: number; x: number };
 const claims = (others: readonly Fox[]): Claim[] => others.flatMap((o) => [
-  ...(o.mode === 'away' ? [] : [{ floor: o.floor, x: o.x }]),
-  ...(o.mode === 'away' ? [] : [{ floor: o.floor, x: o.target }]),
+  ...(o.mode === 'away' ? [] : [{ floor: o.floor, x: o.x }, { floor: o.floor, x: o.target }]),
   ...(o.trip ? [{ floor: o.trip.floor, x: o.trip.entry }, { floor: o.trip.floor, x: o.trip.x }] : []),
 ]);
 // Whether the stretch from a to b, a fox's body included, keeps SPACING from
@@ -163,12 +160,18 @@ export function createFox(scene: PageMap, now: number, rand: Rand, others: reado
 // Reduced motion: asleep, and kept where it lay while that spot stays clear,
 // so a scroll never moves it; otherwise in the middle of a free stretch.
 export function restingFox(scene: PageMap, previous: Fox | null, others: readonly Fox[] = [], self: Self = previous ?? fresh(0)): Fox | null {
-  const f = previous && scene.floors.get(previous.floor);
-  const run = f && previous && runAt(f, scene, previous.x);
-  const kept = previous && previous.mode !== 'away' && run && within(body(run), previous.x) && clearOf(claims(others), previous.floor, previous.x, previous.x);
-  if (previous && kept) return asleepAt(self, previous.floor, previous.x, 0, Infinity, previous.dir);
+  if (previous && staysPut(previous, scene, others)) return asleepAt(self, previous.floor, previous.x, 0, Infinity, previous.dir);
   const spot = maxBy(spots(scene, claims(others)), (s) => length(s.room));
   return spot ? asleepAt(self, spot.floor, (spot.room.lo + spot.room.hi) / 2, 0, Infinity) : null;
+}
+
+// Whether a fox can lie where it is: all of it on a clear run, and no other
+// fox too close.
+function staysPut(fox: Fox, scene: PageMap, others: readonly Fox[]): boolean {
+  if (fox.mode === 'away') return false;
+  const f = scene.floors.get(fox.floor);
+  const run = f && runAt(f, scene, fox.x);
+  return !!run && within(body(run), fox.x) && clearOf(claims(others), fox.floor, fox.x, fox.x);
 }
 
 // After a layout change. A fox out of sight keeps its trip (checked when it
@@ -194,7 +197,7 @@ export function reconcileFox(fox: Fox, scene: PageMap, now: number, rand: Rand, 
 export type FoxView = Point & { pose: Pose; dir: 1 | -1; opacity: number };
 
 // How far through its leap the fox is, 0 to 1.
-export const leapt = (fox: Fox, now: number) => Math.max(0, Math.min(1, 1 - (fox.until - now) / LEAP));
+export const leapt = (fox: Pick<Fox, 'until'>, now: number) => Math.max(0, Math.min(1, 1 - (fox.until - now) / LEAP));
 
 // Leaving, it fades over the last FADE px before its ledge's end; entering,
 // over the first FADE px from the other's.
@@ -214,7 +217,7 @@ export function foxView(fox: Fox, scene: PageMap, now: number): FoxView | null {
   return { ...pagePoint(f, fox.x, lift), pose: poseOf(fox, now), dir: turns % 2 ? flip(fox.dir) : fox.dir, opacity: fade(fox) };
 }
 
-function poseOf(fox: Fox, now: number): Pose {
+export function poseOf(fox: Pick<Fox, 'mode' | 'ear' | 'look'>, now: number): Pose {
   switch (fox.mode) {
     case 'asleep': return fox.ear > now || fox.look > now ? 'alert' : 'curled';
     case 'waking': return 'alert';
@@ -266,11 +269,12 @@ function depart(fox: Fox, scene: PageMap, now: number, rand: Rand, cursor: Curso
   if (exit !== undefined && way) return { ...fox, mode: 'exit', target: exit, dir: sign(exit - fox.x), trip: way.trip };
   // Along its own run, stopping SPACING short of the nearest fox each way.
   const room = body(run);
-  const blocks = taken.filter((c) => c.floor === fox.floor);
-  const limit = (d: -1 | 1) => (d < 0
-    ? Math.max(room.lo, ...blocks.filter((c) => c.x < fox.x).map((c) => c.x + SPACING))
-    : Math.min(room.hi, ...blocks.filter((c) => c.x > fox.x).map((c) => c.x - SPACING)));
-  const reachTo = (d: -1 | 1) => Math.abs(limit(d) - fox.x);
+  const xs = taken.filter((c) => c.floor === fox.floor).map((c) => c.x);
+  const lane = {
+    lo: Math.max(room.lo, ...xs.filter((x) => x < fox.x).map((x) => x + SPACING)),
+    hi: Math.min(room.hi, ...xs.filter((x) => x > fox.x).map((x) => x - SPACING)),
+  };
+  const reachTo = (d: -1 | 1) => (d < 0 ? fox.x - lane.lo : lane.hi - fox.x);
   const sides = ([-1, 1] as const).filter((d) => reachTo(d) >= MIN_MOVE);
   const side = choose(sides, (d, from) => Math.abs(f.left + fox.x + d * MIN_MOVE - from.x));
   if (!side) return settle(fox, now);
@@ -311,6 +315,15 @@ function notice(fox: Fox, f: Ledge, now: number, cursor: Cursor | null): Fox {
   return passing ? { ...fox, near, ear: now + EAR, earRest: now + EAR + EAR_REST } : { ...fox, near };
 }
 
+// Up from waking: woken by the cursor, a stretch if there is room to bow;
+// woken on its own, a crouch for a pounce if there is one to make. Null
+// when neither, and it simply departs.
+function rise(fox: Fox, f: Ledge, scene: PageMap, now: number, taken: readonly Claim[]): Fox | null {
+  if (fox.startled) return spare(f, scene, 'bow', fox.x, fox.x) >= 0 ? { ...fox, mode: 'stretch', until: now + STRETCH } : null;
+  const leap = pounce(fox, f, scene, taken);
+  return leap && { ...fox, mode: 'crouch', until: now + CROUCH, target: leap.target, hop: leap.hop, dir: sign(leap.target - fox.x) };
+}
+
 // Whether a fox is up and about: anything but asleep where it lies.
 const up = (fox: Fox) => fox.mode !== 'asleep';
 
@@ -331,12 +344,9 @@ export function stepFox(fox: Fox, scene: PageMap, now: number, dt: number, rand:
       if (now < fox.until) return next;
       return busy ? { ...next, until: now + between(rand, 4000, 9000) } : wake(next, now, false);
     }
-    case 'waking': {
+    case 'waking':
       if (now < fox.until) return fox;
-      if (fox.startled) return spare(f, scene, 'bow', fox.x, fox.x) >= 0 ? { ...fox, mode: 'stretch', until: now + STRETCH } : depart(fox, scene, now, rand, cursor, taken);
-      const leap = pounce(fox, f, scene, taken);
-      return leap ? { ...fox, mode: 'crouch', until: now + CROUCH, target: leap.target, hop: leap.hop, dir: sign(leap.target - fox.x) } : depart(fox, scene, now, rand, cursor, taken);
-    }
+      return rise(fox, f, scene, now, taken) ?? depart(fox, scene, now, rand, cursor, taken);
     case 'stretch':
       return now < fox.until ? fox : depart(fox, scene, now, rand, cursor, taken);
     case 'crouch':
@@ -380,66 +390,3 @@ function stillOpen(trip: Trip, scene: PageMap): boolean {
   const run = runAt(g, scene, trip.entry);
   return !!run && ends(g, run).includes(trip.entry) && run.lo <= trip.x && trip.x <= run.hi;
 }
-
-// The foxes on the page: how many to keep (two, or three where the page had
-// room for three when they were placed), and each one.
-export type Foxes = { target: number; foxes: Fox[] };
-
-// Placed one after another, each away from those before it.
-function placeAll(count: number, place: (others: Fox[], id: number) => Fox | null, ids: readonly number[] = []): Fox[] {
-  return Array.from({ length: count }, (_, i) => ids[i] ?? i).reduce<Fox[]>((placed, id) => {
-    const fox = place(placed, id);
-    return fox ? [...placed, fox] : placed;
-  }, []);
-}
-
-export function createFoxes(scene: PageMap, now: number, rand: Rand): Foxes {
-  const three = placeAll(3, (others, id) => createFox(scene, now, rand, others, fresh(id)));
-  const target = three.length === 3 ? 3 : 2;
-  return { target, foxes: three.slice(0, target) };
-}
-
-// Each kept where it can be, in id order so the same fox wins a crowded
-// spot every time; then any missing placed afresh, up to the target and
-// never beyond it, so scrolling never adds foxes.
-function regroup(group: Foxes, keep: (fox: Fox, others: Fox[]) => Fox | null, place: (others: Fox[], id: number) => Fox | null): Foxes {
-  const kept = group.foxes.reduce<Fox[]>((placed, fox) => {
-    const next = keep(fox, placed);
-    return next ? [...placed, next] : placed;
-  }, []);
-  const ids = Array.from({ length: group.target }, (_, i) => i).filter((id) => !kept.some((f) => f.id === id));
-  const added = placeAll(group.target - kept.length, (others, id) => place([...kept, ...others], id), ids);
-  return { ...group, foxes: [...kept, ...added].sort((a, b) => a.id - b.id) };
-}
-
-export function reconcileFoxes(group: Foxes, scene: PageMap, now: number, rand: Rand): Foxes {
-  return regroup(group, (fox, others) => reconcileFox(fox, scene, now, rand, others), (others, id) => createFox(scene, now, rand, others, fresh(id)));
-}
-
-// Reduced motion: all asleep, each kept where it lay where it still can be.
-export function restingFoxes(scene: PageMap, previous: Foxes | null): Foxes {
-  const group = previous ?? { target: createFoxes(scene, 0, () => 0.5).target, foxes: [] };
-  return regroup(group, (fox, others) => restingFox(scene, fox, others), (others, id) => restingFox(scene, null, others, fresh(id)));
-}
-
-// One step for all of them, each in turn seeing the others as they now are.
-// One startled awake makes the others asleep within LOOK_REACH look up.
-export function stepFoxes(group: Foxes, scene: PageMap, now: number, dt: number, rand: Rand, cursor: Cursor | null): Foxes {
-  const foxes = group.foxes.reduce<Fox[]>((all, _, i) => {
-    const fox = all[i];
-    const next = stepFox(fox, scene, now, dt, rand, cursor, all.filter((_, j) => j !== i));
-    const roused = fox.mode === 'asleep' && next.mode === 'waking' && next.startled;
-    const at = roused ? foxPoint(next, scene) : null;
-    return all.map((o, j) => {
-      if (j === i) return next;
-      const there = at && o.mode === 'asleep' ? foxPoint(o, scene) : null;
-      return at && there && dist(at, there) <= LOOK_REACH ? { ...o, look: now + between(rand, 1200, 2000) } : o;
-    });
-  }, group.foxes);
-  return { ...group, foxes };
-}
-
-const foxPoint = (fox: Fox, scene: PageMap): Point | null => {
-  const f = scene.floors.get(fox.floor);
-  return f ? pagePoint(f, fox.x) : null;
-};

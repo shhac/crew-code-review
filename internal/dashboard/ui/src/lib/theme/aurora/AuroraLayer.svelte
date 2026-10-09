@@ -8,8 +8,9 @@
   import { ledgeScene } from '../layout';
   import Rig from '../rig/Rig.svelte';
   import { STILL } from './aurora';
-  import { createFoxes, foxView, reconcileFoxes, restingFoxes, stepFoxes, type Foxes } from './fox';
+  import { foxView } from './fox';
   import { foxRig } from './fox-rig';
+  import { createFoxes, reconcileFoxes, restingFoxes, stepFoxes, type Foxes } from './foxes';
   import { catchLight, frostColour, glintPath, reconcileRime, shine, type Rime } from './frost';
 
   let floors: ReadonlyMap<number, Ledge> = new Map();
@@ -21,7 +22,7 @@
 
   $: shown = (group?.foxes ?? []).flatMap((fox) => {
     const view = foxView(fox, scene, now);
-    return view ? [{ fox, view, pose: foxRig(fox, view, { now, still: reduced }) }] : [];
+    return view ? [{ fox, view, pose: foxRig(fox, { now, still: reduced }) }] : [];
   });
   $: colour = frostColour(reduced ? STILL : now);
 
