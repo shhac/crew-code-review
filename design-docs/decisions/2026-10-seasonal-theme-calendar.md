@@ -240,7 +240,9 @@ first shipped with one stiff sprite each:
   (`lib/theme/rig/`, on the spider's `spidergait.ts`), driven by distance
   walked so planted feet never slide; eyes blink and heads nod, turn and
   look on seeded schedules (`rig/life.ts`), held still under reduced motion.
-  Each animal has a page in the critters lab (`lab/critters.html`).
+  Each animal has a page in the critters lab (`lab/critters.html`), driven
+  by numbered frames (60 a second) so a frame number, or the page's address,
+  names one drawing exactly when talking about it.
 - **One animal, one scale.** Every picture of an animal (each pose and each
   part) is exported so its eye is the same size, and its rig sets one page
   scale for every pose, so curled up or trotting it is the same animal.

@@ -20,6 +20,38 @@ test.beforeEach(async ({ page }) => {
   await expect(big(page)).toBeVisible();
 });
 
+const frameShown = (page: Page) => page.locator('output[data-frame]').getAttribute('data-frame');
+
+test('a frame named in the address draws the same thing every time, paused there', async ({ page }) => {
+  await page.goto('/lab/critters.html#animal=fox&mode=trot&frame=214');
+  await expect(big(page)).toBeVisible();
+  expect(await frameShown(page)).toBe('214');
+  const first = await legBones(page);
+  await page.waitForTimeout(300);
+  expect(await legBones(page)).toEqual(first);
+  await page.reload();
+  await expect(big(page)).toBeVisible();
+  expect(await legBones(page)).toEqual(first);
+});
+
+test('stepping a frame moves the pose on and the address with it', async ({ page }) => {
+  await page.goto('/lab/critters.html#animal=fox&mode=trot&frame=214');
+  await expect(big(page)).toBeVisible();
+  const at214 = await legBones(page);
+  await page.getByRole('button', { name: 'forward a frame' }).click();
+  expect(await frameShown(page)).toBe('215');
+  expect(await legBones(page)).not.toEqual(at214);
+  await expect.poll(() => page.evaluate(() => location.hash)).toContain('frame=215');
+  await page.keyboard.press('ArrowLeft');
+  expect(await frameShown(page)).toBe('214');
+  expect(await legBones(page)).toEqual(at214);
+});
+
+test('the frame counts on while it plays, past any loop', async ({ page }) => {
+  const first = Number(await frameShown(page));
+  await expect.poll(async () => Number(await frameShown(page))).toBeGreaterThan(first + 30);
+});
+
 test('every part of the hedgehog decodes', async ({ page }) => {
   const sizes = await decoded(page);
   expect(sizes.length).toBeGreaterThanOrEqual(3);

@@ -1,7 +1,7 @@
 <script lang="ts">
   // Every seasonal animal, large, on a floor, with the dials that matter for
-  // judging them: what each is doing, speed, zoom, a pause and scrub to
-  // inspect a single pose, and for those drawn from parts, the parts: hide
+  // judging them: what each is doing, speed, zoom, a timeline of numbered
+  // frames to inspect a single pose and talk about it, and for those drawn from parts, the parts: hide
   // any, see each alone, mark the joints and the footprint placement allows.
   // The cursor over the big stage is passed on, so heads turning toward it
   // can be checked. Each animal keeps its own lab too (spider.html,
@@ -54,8 +54,13 @@
   let playing = true;
   let still = false;
   let dir: 1 | -1 = 1;
-  let walked = 0;
-  let now = 0;
+  // Time runs in whole frames, 60 a second, and everything drawn follows
+  // from the frame number (with the animal, mode and speed), so one number
+  // names one drawing exactly: the page's address carries it, to share.
+  const FPS = 60;
+  // The timeline shows at least a minute, and stretches to any later frame.
+  const SPAN = 60 * FPS;
+  let frame = 0;
   let cursor: Point | null = null;
   let gaze = 0;
   let hidden: string[] = [];
@@ -79,8 +84,12 @@
     return null;
   };
 
+  $: now = (frame * 1000) / FPS;
+  $: walking = animal === 'hedgehog' ? moving(hogFor(mode, 0).mode) : animal === 'fox' ? mode === 'trot' : animal === 'spider' && mode === 'walk';
+  // Walking, its stride follows from the time, at its pace from frame 0.
+  $: pace = animal === 'hedgehog' && mode === 'flee' ? (speed * HURRY) / HOG_SPEED : speed;
+  $: walked = walking ? (pace * now) / 1000 : 0;
   $: hog = hogFor(mode, walked);
-  $: walking = animal === 'hedgehog' ? moving(hog.mode) : animal === 'fox' ? mode === 'trot' : animal === 'spider' && mode === 'walk';
   $: pose = rigFor(animal, mode, now, walked, gaze);
   $: shown = pose && keepParts(pose, (name) => !hidden.includes(name));
   // Every layer the animal ever draws, whatever it is doing, so the list
@@ -107,22 +116,71 @@
     cursor = { x: (e.clientX - (r.left + r.width / 2)) / zoom, y: (e.clientY - (r.bottom - 60)) / zoom };
   }
 
+  const toFrame = (n: number) => {
+    frame = Math.max(0, Math.round(n));
+  };
+  // Paused, the arrow keys step a frame (ten with shift).
+  function key(e: KeyboardEvent) {
+    if (playing || e.target instanceof HTMLInputElement) return;
+    const by = e.shiftKey ? 10 : 1;
+    if (e.key === 'ArrowRight') toFrame(frame + by);
+    if (e.key === 'ArrowLeft') toFrame(frame - by);
+  }
+
+  // The view, in the page's address: what to share to point at a frame.
+  const flags = ['still', 'guides', 'separate', 'footprint', 'reference'] as const;
+  let ready = false;
+  $: state = new URLSearchParams({
+    animal, mode, frame: String(frame), speed: String(speed), zoom: String(zoom), dir: String(dir),
+    ...Object.fromEntries(flags.flatMap((f) => ({ still, guides, separate, footprint, reference }[f] ? [[f, '1']] : []))),
+    ...(hidden.length ? { hide: hidden.join(',') } : {}),
+  });
+  // Written while paused, or as it plays without the ever-changing frame.
+  $: if (ready && !playing) history.replaceState(null, '', `#${state}`);
+
+  function restore(hash: string) {
+    const q = new URLSearchParams(hash.replace(/^#/, ''));
+    const a = ANIMALS.find((x) => x === q.get('animal'));
+    if (!a) return;
+    choose(a);
+    mode = MODES[a].find((m) => m === q.get('mode')) ?? mode;
+    toFrame(Number(q.get('frame') ?? 0));
+    speed = Number(q.get('speed') ?? speed);
+    zoom = Number(q.get('zoom') ?? zoom);
+    dir = q.get('dir') === '-1' ? -1 : 1;
+    still = q.has('still');
+    guides = q.has('guides');
+    separate = q.has('separate');
+    footprint = q.has('footprint');
+    reference = q.has('reference');
+    hidden = q.get('hide')?.split(',') ?? [];
+    // Opened at a frame, it waits there.
+    playing = !q.has('frame');
+  }
+
   onMount(() => {
-    const loop = { frame: 0, last: performance.now() };
+    restore(location.hash);
+    ready = true;
+    const loop = { request: 0, last: performance.now(), carry: 0 };
     const tick = (time: number) => {
       const dt = Math.min(100, time - loop.last);
       if (playing) {
-        now += dt;
-        if (walking) walked += speed * (hog.mode === 'flee' && animal === 'hedgehog' ? HURRY / HOG_SPEED : 1) * dt / 1000;
+        loop.carry += dt;
+        const whole = Math.floor((loop.carry * FPS) / 1000);
+        loop.carry -= (whole * 1000) / FPS;
+        frame += whole;
       }
       gaze = easeTo(gaze, still ? 0 : gazeAt(hog, { x: 0, y: 0 }, cursor), dt, GAZE_EASE);
       loop.last = time;
-      loop.frame = requestAnimationFrame(tick);
+      loop.request = requestAnimationFrame(tick);
     };
-    loop.frame = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(loop.frame);
+    loop.request = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(loop.request);
   });
 </script>
+
+<!-- A link pasted into an open lab changes only the address's # part. -->
+<svelte:window on:keydown={key} on:hashchange={() => restore(location.hash)} />
 
 <div class="lab">
   <div class="controls">
@@ -137,17 +195,24 @@
   <div class="controls">
     <label>speed {speed}px/s <input type="range" min="0" max="80" bind:value={speed} /></label>
     <label>zoom {zoom}x <input type="range" min="1" max="12" bind:value={zoom} /></label>
-    <!-- Showing where in a loop it is, never writing back while it plays: a
-         bound slider would clamp the clock at its maximum. -->
-    <label>step <input type="range" min="0" max="40" step="0.1" value={walked % 40} disabled={playing} on:input={(e) => (walked = Number(e.currentTarget.value))} /></label>
-    <label>time <input type="range" min="0" max="12000" step="10" value={now % 12000} disabled={playing} on:input={(e) => (now = Number(e.currentTarget.value))} /></label>
-    <button type="button" on:click={() => (playing = !playing)}>{playing ? 'pause' : 'play'}</button>
     <button type="button" on:click={() => (dir = dir === 1 ? -1 : 1)}>face {dir === 1 ? 'left' : 'right'}</button>
     <label><input type="checkbox" bind:checked={still} /> reduced motion</label>
     <label><input type="checkbox" bind:checked={guides} /> joints</label>
     <label><input type="checkbox" bind:checked={separate} /> separate pieces</label>
     {#if box}<label><input type="checkbox" bind:checked={footprint} /> footprint</label>{/if}
     {#if animal === 'fox'}<label><input type="checkbox" bind:checked={reference} /> reference</label>{/if}
+  </div>
+  <div class="controls timeline">
+    <button type="button" aria-label="first frame" on:click={() => toFrame(0)}>|&lt;</button>
+    <button type="button" aria-label="back a frame" on:click={() => { playing = false; toFrame(frame - 1); }}>&lt;</button>
+    <button type="button" on:click={() => (playing = !playing)}>{playing ? 'pause' : 'play'}</button>
+    <button type="button" aria-label="forward a frame" on:click={() => { playing = false; toFrame(frame + 1); }}>&gt;</button>
+    <!-- Showing the frame, never writing it back as it plays: a bound
+         slider would clamp it at the slider's end. -->
+    <input class="scrub" type="range" min="0" max={Math.max(SPAN, frame)} step="1" value={frame} aria-label="frame" on:input={(e) => { playing = false; toFrame(Number(e.currentTarget.value)); }} />
+    <label>frame <input class="number" type="number" min="0" step="1" value={frame} aria-label="frame number" on:change={(e) => { playing = false; toFrame(Number(e.currentTarget.value)); }} /></label>
+    <output data-frame={frame}>{(now / 1000).toFixed(3)}s at {FPS} fps{#if walking}, stride {walked.toFixed(2)}px{/if}</output>
+    {#if !playing}<span class="hint">paused: arrow keys step a frame, shift for ten; the address bar links here</span>{/if}
   </div>
 
   <!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -168,7 +233,7 @@
         </div>
       {:else}
         <div class="robin" data-critter={mode} style="left: {(viewport[0] - ROBIN.x) * ROBIN.scale}px; top: {(viewport[1] - ROBIN.y) * ROBIN.scale}px; width: {viewport[2] * ROBIN.scale}px; height: {viewport[3] * ROBIN.scale}px">
-          <LayeredRobin elapsed={now % 12000} {mode} reduced={still} mirrored={dir === -1} exploded={separate} {guides} {hidden} />
+          <LayeredRobin elapsed={now} {mode} reduced={still} mirrored={dir === -1} exploded={separate} {guides} {hidden} />
         </div>
       {/if}
     </div>
@@ -234,7 +299,7 @@
           </div>
         {:else}
           <div class="robin" style="left: {(viewport[0] - ROBIN.x) * ROBIN.scale}px; top: {(viewport[1] - ROBIN.y) * ROBIN.scale}px; width: {viewport[2] * ROBIN.scale}px; height: {viewport[3] * ROBIN.scale}px">
-            <LayeredRobin elapsed={now % 12000} {mode} reduced={still} mirrored={d === -1} />
+            <LayeredRobin elapsed={now} {mode} reduced={still} mirrored={d === -1} />
           </div>
         {/if}
       </div>
@@ -247,6 +312,10 @@
   .controls { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
   .controls .on { outline: 2px solid var(--accent); }
   .sep { width: 12px; }
+  .timeline .scrub { flex: 1; min-width: 200px; }
+  .timeline .number { width: 6em; }
+  .timeline output { font-variant-numeric: tabular-nums; }
+  .hint { font-size: 12px; opacity: .65; }
   .stage { position: relative; height: 380px; background: var(--paper-2); border-radius: 12px; overflow: hidden; }
   .floor { position: absolute; left: 0; right: 0; bottom: 60px; border-top: 2px solid var(--line-strong); }
   .big { position: absolute; left: 50%; bottom: 60px; width: 0; height: 0; transform-origin: 0 0; }
