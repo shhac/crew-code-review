@@ -107,23 +107,31 @@ So everything the hares do day to day fits 27px, as the fox and the hedgehog
 do, and rearing up to box needs a taller, wide stretch, which the heading
 rules give on most routes:
 
-| Pose | Used for | Footprint (target) | Needs clear above it |
-| --- | --- | --- | --- |
-| graze | grazing, nibbling, sitting tight | about 34x20 | 27px |
-| sit | sitting up alert, ears up; the stand-off; reduced motion | about 30x27 | 27px |
-| lope | the slow hop | about 40x24 | 27px |
-| bound | running, the chase, bolting, coming and going | about 48x22 | 27px |
-| leap | the flight between ledges | the bound's | the arc's swept box (below) |
-| freeze | crouched low, ears up | about 36x26 | 27px |
-| box | reared up on the hind feet, striking | about 24x40 | 40px over the pair |
+| Pose | Used for | Footprint | Behind, ahead | Needs clear above it |
+| --- | --- | --- | --- | --- |
+| graze | grazing, nibbling | 44x26 | 18, 22 | 27px |
+| alert | crouched, ears up: the freeze, and sitting where there is no tall room | 36x27 | 18, 18 | 27px |
+| lope | the slow hop, coming up to box | 37x27 | 18, 18.5 | 27px |
+| bound | running: the chase, bolting, coming and going | 47x26 | 23.5, 21 | 27px |
+| leap | the flight between ledges | 51x25 | 25.5, 18.5 | the arc's swept box (below) |
+| sit | sitting up tall, ears up: alert, the stand-off, reduced motion | 42x38 | 21, 14 | 40px |
+| box | reared up on the long hind feet, striking | 40x39 | 20, 8 | 40px over the pair |
 
-Ears up is what makes the sit and the freeze tall; they are drawn up but
-tilted back a little, as a relaxed hare's are, so the head and ears stay
-inside 27px. Running and leaping, the ears lie back along the back, so the
-bound is long and low. The box is the only pose over 27px. As for the fox,
-every footprint is the box the drawing stays inside at every moment of its
-motion, checked by the rig's tests, and every pose is anchored at its bottom
-centre on the ledge, mirrored to face the way it is going.
+Ears up is what makes a hare tall: the reference stands 34px with them, as
+tall as it is long. So day to day it crouches (the alert pose, the freeze
+drawing's posture) with its ears up but tilted back, and only sits up tall
+where 40px are clear; running and leaping, the ears lie back along the back,
+so the bound is long and low. Under 27px those poses are 25 to 27px tall: a
+hare 33px nose to tail at 1.5 page pixels per drawing unit, the fox's scale.
+As for the fox, every footprint is the box the drawing stays inside at every
+moment of its motion (every way the head turns included), checked by the
+rig's tests, and every pose is anchored at its bottom centre on the ledge,
+mirrored to face the way it is going. Each pose also has its reach behind
+and ahead of where it stands, which the spacing rules use: reared up a hare
+is mostly behind its own feet (8px ahead), and sitting up its haunches are.
+Its feet rest a pixel above the ledge's edge, on the rule's line: on the
+config page a row of tabs starts a fraction of a pixel above the heading's
+bottom edge, and nothing is ever drawn into it.
 
 ### Two or three
 
@@ -137,9 +145,14 @@ its spot but never adds one beyond it.
 
 They are stepped in turn in a fixed order (`lib/theme/group.ts`), each seeing
 the others as they now are. Grazing and sitting, no two stand within 64px of
-each other, centre to centre (a bound's footprint plus a gap). Boxing is the
-one exception: two rearing hares face each other 28px apart, which their
-narrow box footprints allow without overlapping.
+each other, centre to centre (a bound's footprint plus a gap), and none lopes
+onto a stretch a trail is using. The bout is the one exception: two face each
+other 37px apart to box, which their reaches ahead allow without overlapping
+(8 and 8 reared up; a lope's 18.5 and a sitting jill's 14 as he comes up; a
+reared jack's 8 and her bound's 23.5 behind as she bolts). A hare left closer
+than 64px to another, by a bout the cursor broke off, does not graze there:
+it lopes away to make room, or with nowhere to go sits on facing the other.
+After the second box she sits watching while he lopes off past 64px.
 
 ### What a hare does
 
@@ -148,15 +161,15 @@ scroll. Its modes:
 
 | Mode | Pose | What it does | Ends when | Then |
 | --- | --- | --- | --- | --- |
-| graze | graze | nibbles, head down, ears half back | 2 to 6s | sit, or a lope of 20 to 80px along its run, clear of the others |
-| sit | sit | sits up, ears up, looks about | 1.5 to 3s | graze |
+| graze | graze | nibbles, head down, ears half back, the jaw working, an ear flicking | 2 to 6s | sit, or a lope of 20 to 80px along its run, clear of the others |
+| sit | sit, or alert without tall room | sits up, ears up, looks about | 1.5 to 3s | graze (or makes room, above) |
 | lope | lope | the slow hop, 22px/s | it reaches its target | graze |
 | run | bound | bounds along a trail (below) | the trail ends | sit |
 | leap | leap | flies an arc between ledges on a trail | it lands | run |
 | exit / away / enter | bound, fading | off a ledge's end and back in at another's | as the fox's | run |
 | box | box | reared up facing the other, forepaws striking in turn | 2.5 to 4s | the bout goes on (below) |
-| freeze | freeze | crouched low, ears up, head toward the cursor | 0.7 to 1.1s | bolt if the cursor is still within 200px, else sit |
-| standoff | sit | sits up facing the other | 1.5 to 2.5s | graze |
+| freeze | alert | crouched low, ears up, head toward the cursor | 0.7 to 1.1s | bolt if the cursor is still within 200px, else sit |
+| standoff | sit, or alert | sits up facing the other | 1.5 to 2.5s | graze |
 
 ### The courtship bout: box, then chase
 
@@ -167,8 +180,8 @@ The calendar's order, and how it fits a page that rarely has room to rear:
    ledge lopes toward her. One on another ledge first makes a trip to hers
    (below), ending 64px or more from her. With no way there, no bout.
 2. **Box, where there is room.** If the stretch round the two of them, a
-   pair of box footprints 28px apart plus a margin each side (100px in all),
-   has 40px clear, he comes to 28px from her, they turn to face each other,
+   pair of box footprints 37px apart plus 20px each side (117px in all),
+   has 40px clear, he comes to 37px from her, they turn to face each other,
    rear up and box, her forepaws striking, his parrying, for 2.5 to 4s.
    Otherwise he stops 72px from her and there is no box.
 3. **The chase.** She bolts away from him, bounding; he follows on her trail;
@@ -179,7 +192,7 @@ The calendar's order, and how it fits a page that rarely has room to rear:
 4. **The end.** Where the trail ends (her budget spent, or a dead end: a run
    stopping short of an obstacle or a bystander, with no leap and no ledge
    end), she turns to face him. If there is box room there they box again,
-   then he lopes 40 to 80px away; otherwise a stand-off, both sat up facing,
+   then he lopes off past 64px; otherwise a stand-off, both sat up facing,
    then they graze. Boxing at the end of a chase is how a cornered jill
    fends him off; there is never a third round.
 
@@ -227,8 +240,10 @@ whole swept area is clear, not just its two ends.
   across and at most 60px up or down; a landing spot must be 64px from every
   other hare and from where each is going.
 - **The arc.** A parabola from take-off to landing that rises `hop` above the
-  higher of the two (6 to 14px, the most that fits), flown at the trail's
-  pace.
+  higher of the two (2 to 14px, the most that fits), flown at the trail's
+  pace. Under a heading rule 22px above the cards, a leap's 25px box leaves
+  only 3px of hop: across the gaps between first-row cards a hare skims low,
+  as a bounding hare clears a ditch, rather than arcing high.
 - **The swept box.** The bound's footprint (the leap's drawing stays inside
   it at every moment of the flight, which the rig's tests check), sampled
   every 4px along the arc. At every sample it must be clear of the page's
@@ -252,10 +267,13 @@ whole swept area is clear, not just its two ends.
 ### A layout change
 
 The page map changes on scroll, resize and mutation, as for every theme. A
-chase or a bolt in progress ends: each hare on it that is on a ledge keeps
-its place while the clear run under it holds its footprint and no other hare
-is within 64px, and sits up there; one mid-leap is handled as above; one away
-is placed sitting at a new spot. Any other hare keeps its ledge and mode
+chase or a bolt goes on while the rest of its trail still holds: every ledge
+still there, every run still on a clear run, every leap still clear (so a
+scroll that keeps the trail in view does not stop a chase). Otherwise it
+ends: each hare on it that is on a ledge keeps its place while the clear run
+under it holds its footprint and no other hare is within 64px, and sits up
+there; one mid-leap is handled as above; one away is placed sitting at a new
+spot. A bout survives a layout change that keeps its hares where they are. Any other hare keeps its ledge and mode
 while the run under it still holds its footprint, pulled inside the run if it
 shrank (a box needs its 40px still clear or becomes a stand-off); if not, it
 is placed sitting at a new spot. A ledge scrolled out of view keeps its hare;
@@ -324,10 +342,10 @@ additively, for the hares now and April's rabbit next:
   its hind pair together and its forefeet one after the other; the slow hop
   sets the forefeet one then the other and the hind pair together, with no
   flight.
-- `flightOf`: whether every foot is off the ground at a moment of the cycle,
-  and how far through that flight; and `flightLift`, the body's rise then, a
-  parabola, so a gait with a flight phase carries its body up off the ground
-  and down again by itself.
+- `flightsOf` and `flightAt`: the stretches of the cycle with no foot down,
+  and how far through one a moment is; and `flightLift`, the body's rise
+  then, a parabola, so a gait with a flight phase carries its body up off the
+  ground and down again by itself.
 - `onSoles`: toe walkers let down onto their whole foot, the bone up from the
   toes laid flat behind them by a given amount (0 on its toes, 1 sole down
   from the hock to the toes): how a hare or rabbit sits.
@@ -338,24 +356,34 @@ Hare-only tuning (strides, stances, timings, reaches) stays in
 ### The rig
 
 - **Parts.** Cut from one drawing of the hare standing square
-  (`hare-standing.png`) by image edits: the body (closed where the legs were,
-  the tail on it), the head (a soft unoutlined back edge where it sits over
-  the body), the ears (a pair, a soft unoutlined base under the head). The
-  ears turn about their base: up, tilted back a little, sitting and freezing;
-  laid back along the back running; flicking now and then grazing.
+  (`hare-standing.png`) by image edits: the body (the torso with its tail,
+  chest and neck, closed where the legs and the round hind thigh were), the
+  head (a soft unoutlined back edge where it sits over the neck), the ears (a
+  pair, a soft unoutlined base under the head). The ears turn about their
+  base: up, tilted back, crouched and sitting, held steady in the world as
+  the head turns toward a cursor; laid back along the back running and
+  leaping; flicking now and then grazing.
 - **Legs.** Four legs on the shared rig, each a toe walker with three bones as
-  the fox's: a hind leg hip, stifle, hock, toes, its thigh a thick haunch and
-  its shank tapering to a sharp hock; a foreleg shoulder, elbow, wrist, toes,
-  long and slim. The hind leg's long foot is the bone up from the toes, drawn
-  with its own piece of art (a new optional `LegArt.hindFoot`, additive in
-  `rig/rig.ts`), and let down flat sitting (`onSoles`). Every piece drawn
+  the fox's: a hind leg hip, stifle, hock, toes, its thigh a thick haunch
+  (3.8 units at the hip, so it makes the rump's round thigh, which moves with
+  the leg) and its shank tapering to a sharp hock; a foreleg shoulder, elbow,
+  wrist, toes, long and slim. The hind leg's long foot is the bone up from the
+  toes, drawn with the leg piece, its toes the hind toes' piece, and let down
+  flat sitting, grazing, crouched and boxing (`onSoles`); in a leap it
+  streams out behind in line with the shank. No shared rig change was
+  needed: a first plan for a separate long-foot piece was dropped when the
+  generated one came out as a foot with an ankle. Every piece drawn
   outlined, then as fur alone, the near pair's fur over the body's edge.
-- **Gaits.** Grazing it lopes (the slow hop); running it half-bounds, the
-  hind feet landing together ahead of the forefeet's prints, with a flight
-  phase stretched out after the hind feet push off. The body pitches with the
-  stride, nose down as the forefeet take the landing and up as the hind feet
-  drive, and the head steadies against it. In a leap it flies stretched out,
-  forelegs reaching, hind legs trailing, then gathers to land.
+- **Gaits.** Grazing it lopes (the slow hop: forefeet then the hind pair, no
+  flight, the body low and arching). Running it half-bounds: forefeet one
+  after the other, then the hind pair together landing ahead of where the
+  forefeet were set (the rig's tests follow the prints), then a long flight
+  after the hind feet push off, through which the swinging feet are drawn out
+  toward the bound-reach drawing, hind legs trailing and forelegs reaching,
+  and the body rises and falls (`flightLift`). The body is carried lower
+  than standing, pitches with the stride, nose down as the forefeet take the
+  landing and up as the hind feet drive, and the head steadies against it.
+  In a leap it flies stretched out, nose up leaving and down landing.
 - **Key poses** drawn as edits of the reference: sit, lope, bound reach (the
   flight, stretched out), bound gather (the hind feet swinging past the
   fore), box, freeze, bolt (the push-off), each laid over its mode in the
@@ -405,9 +433,14 @@ stifle, hock and long foot.
 
 - `hare-parts.png`: the hare cut into body, head (a soft, unoutlined back
   edge) and ears (a pair, a soft base). Its body left the chest and neck
-  off, so the shipped body comes from `hare-torso.png` instead, a second
-  edit asked for the torso with its chest and the whole neck, the neck's top
-  a soft unoutlined tuft under the head.
+  off, so a second edit (`hare-torso.png`) asked for the torso with its
+  chest and the whole neck, the neck's top a soft unoutlined tuft under the
+  head. That one kept the round hind thigh drawn on the rump, whose outline
+  showed as a ball under the belly whenever the legs swung back, so a third
+  (`hare-torso-2.png`, shipped) took the thigh off too: the leg's own thick
+  thigh piece makes the haunch, and moves with it. That edit came out about
+  15% larger, so `export.py` fits it to the first torso's shape (0.86) to put
+  it on the reference's scale.
 - `hare-limbs.png`: five pieces from its own legs, in a row: a thigh piece
   thick at the hip, a leg bone, a hind foot with its heel turned up (not
   used: it reads as a foot and an ankle, the long foot is a leg bone
@@ -426,9 +459,9 @@ stifle, hock and long foot.
 | --- | --- | --- |
 | `daffodils.png` | `ui/src/lib/theme/hares/daffodils.webp` | 57x88 |
 | `hare-standing.png` | `ui/src/lab/hare-reference.webp` (the lab's overlay) | 22.5x22.42 units |
-| `hare-torso.png` | `hare-body.webp` | 20.42x10.42 units at (1, 7.21) |
+| `hare-torso-2.png` (fitted to `hare-torso.png`) | `hare-body.webp` | 20.25x11 units at (1, 6.72) |
 | `hare-parts.png` | `hare-head.webp`, `hare-ears.webp` | 6.83x6.58 at (16.6, 5.99); 5.83x7.42 at (14.44, 1.14) |
-| `hare-limbs.png` | `hare-thigh`, `hare-leg`, `hare-hind-toes`, `hare-fore-toes` (`.webp`, each with `-fur`) | thigh 2.4 units thick at the hip, leg 1.15 thick, toes 2.6 and 1.7 long |
+| `hare-limbs.png` | `hare-thigh`, `hare-leg`, `hare-hind-toes`, `hare-fore-toes` (`.webp`, each with `-fur`) | thigh exported 2.4 units thick at the hip and drawn 3.8 (hind) or 1.6 (fore), leg 1.15 (drawn 1.25), toes 2.6 and 1.7 long |
 | `hare-pose-*.png` | `ui/src/lab/hare-pose-*.webp` (the lab's overlays) | on the same eye scale |
 
 The hare's pictures are in drawing units, all on one scale: each sheet's eye
@@ -452,21 +485,30 @@ design-docs/hares/export.py`).
   on clear runs, never under text, caps, seeded stability, still under
   reduced motion); the trail and leap planner (`trail.test.ts`: the swept box
   clear at every sample, never through a ledge line or a card, landings clear
-  of others, followers never within their lag); the hare and the group
-  (`hare.test.ts`, `hares.test.ts`: the mode table, the bout's order, box only
-  with room, freeze then bolt, reconciliation, never two within 64px except
-  boxing, long random runs); the rig (`hare-rig.test.ts`: every pose inside
-  its footprint over its whole cycle, feet and long hind feet never below the
-  ledge, the half-bound's hind pair together and landing ahead of the
-  forefeet's prints, a flight phase, the soles flat sitting and on the toes
-  running, blink, still under reduced motion).
-- `e2e/hares.spec.ts` against the real daemon: palette and mounting, every
-  descendant click-through, `aria-hidden`, below dialogs, at least two hares
-  on the overview, freeze then bolt at a cursor, nothing over content on
-  every route, a still scene under reduced motion, the phone layout.
-- The critters lab: the hare registered with its modes, speeds, footprints,
-  rig and drawings; its lab tests (parts decode, the bound steps, the sit
-  stands on its soles, drawings laid over each mode).
+  of others, budgets, dead ends, going away where no leap is clear, a trip
+  stopping on its ledge); the group (`hares.test.ts`, on the page in
+  `fixtures.ts`: placing the pair on a box spot, the bout's order, boxing face
+  to face 37px apart, no box without room, freeze then bolt, relaxing when the
+  cursor goes, reconciliation, reduced motion, and long random runs with a
+  cursor now and then in which no two drawn hares ever overlap, with and
+  without room to box; run with `HARE_SEEDS=1,2,...` for more, forty seeds
+  each were checked); the rig (`hare-rig.test.ts`: every pose inside its
+  footprint and its reach either side over its whole motion and every head
+  turn, nothing below the ledge, the half-bound's forefeet one after the
+  other then the hind pair together landing ahead of the forefeet's prints, a
+  flight, the slow hop with none, the soles flat sitting, grazing, crouched
+  and boxing and on the toes running, ears back running, blink, still under
+  reduced motion, no jumps between frames).
+- `e2e/hares.spec.ts` against the real daemon: mounting (and the palette,
+  once the month is switched on), every descendant click-through,
+  `aria-hidden`, below dialogs, at least two hares on the overview, freeze
+  then bolt at a cursor, nothing over content on every route at 1440 (each
+  sampled six times, so chases are caught) and on two at 1024, a still
+  scene under reduced motion, the phone layout.
+- The critters lab: the hare registered (`lab/critters/hare.ts`) with its
+  modes, speeds, footprints, rig and drawings; `lab-tests/hares.spec.ts`
+  (every part decodes, the bound steps, still under reduced motion, each
+  mode's drawing laid over it).
 - Looking: lab screenshots of every mode through its cycle, and the real page
   at 1440 and 1024, another route and a phone.
 
