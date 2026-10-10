@@ -9,14 +9,13 @@
   // too (spider.html, robin-parts.html).
   import { onMount } from 'svelte';
   import type { Point } from '../lib/theme/pointer';
+  import { GAZE_EASE } from '../lib/theme/rig/gaze';
   import { easeTo } from '../lib/theme/rig/life';
   import Rig from '../lib/theme/rig/Rig.svelte';
   import { drawingsOf, gazeOf, paceOf, posesOf, type Critter } from './critters/critter';
   import { CRITTERS, critterNamed } from './critters/registry';
   import { drawingFor, overlay } from './drawings';
   import { allPartNames, keepParts, partArt } from './rig-parts';
-
-  const GAZE_EASE = 220;
 
   let critter: Critter = CRITTERS[0];
   let mode = critter.modes[0];
