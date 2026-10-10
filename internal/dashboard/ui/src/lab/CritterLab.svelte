@@ -4,52 +4,23 @@
   // frames to inspect a single pose and talk about it, and for those drawn from parts, the parts: hide
   // any, see each alone, mark the joints and the footprint placement allows.
   // The cursor over the big stage is passed on, so heads turning toward it
-  // can be checked. Each animal keeps its own lab too (spider.html,
-  // robin-parts.html).
+  // can be checked. The animals are those in critters/registry.ts, each
+  // known here only by what it says of itself there. Each keeps its own lab
+  // too (spider.html, robin-parts.html).
   import { onMount } from 'svelte';
-  import { LEAP, POSES, poseOf, SPEED as FOX_SPEED, type Mode as FoxMode } from '../lib/theme/aurora/fox';
-  import { foxRig, type RigFox } from '../lib/theme/aurora/fox-rig';
-  import { HOG, HURRY, moving, SPEED as HOG_SPEED, type Hog, type Mode as HogMode } from '../lib/theme/bonfire/hedgehog';
-  import { gazeAt, hogRig } from '../lib/theme/bonfire/hedgehog-rig';
-  import LayeredRobin from '../lib/theme/christmas/LayeredRobin.svelte';
-  import { partsModes, partsViewport } from '../lib/theme/christmas/parts-pose';
-  import robinManifest from '../lib/theme/christmas/robin-parts/manifest.json' with { type: 'json' };
-  import Spider from '../lib/theme/halloween/Spider.svelte';
-  import spiderBody from '../lib/theme/halloween/spider-body.webp';
-  import spiderHanging from '../lib/theme/halloween/spider-hanging.webp';
-  import spiderShin from '../lib/theme/halloween/leg-shin.webp';
-  import spiderThigh from '../lib/theme/halloween/leg-thigh.webp';
   import type { Point } from '../lib/theme/pointer';
   import { easeTo } from '../lib/theme/rig/life';
-  import type { RigPose } from '../lib/theme/rig/rig';
   import Rig from '../lib/theme/rig/Rig.svelte';
-  import { drawingFor, drawingsOf, overlay } from './drawings';
+  import { drawingsOf, gazeOf, paceOf, posesOf, type Critter } from './critters/critter';
+  import { CRITTERS, critterNamed } from './critters/registry';
+  import { drawingFor, overlay } from './drawings';
   import { allPartNames, keepParts, partArt } from './rig-parts';
 
-  type Animal = 'hedgehog' | 'fox' | 'spider' | 'robin';
-  const ANIMALS: Animal[] = ['hedgehog', 'fox', 'spider', 'robin'];
-  // What each can be shown doing. The fox's alert is asleep but looking up.
-  const HOG_MODES: HogMode[] = ['walk', 'flee', 'sniff', 'peek', 'curled'];
-  const FOX_MODES: { label: string; mode: FoxMode; look?: number }[] = [
-    { label: 'trot', mode: 'trot' }, { label: 'stand', mode: 'settle' }, { label: 'stretch', mode: 'stretch' }, { label: 'crouch', mode: 'crouch' },
-    { label: 'leap', mode: 'leap' }, { label: 'dig', mode: 'dig' }, { label: 'asleep', mode: 'asleep' }, { label: 'alert', mode: 'asleep', look: Infinity },
-  ];
-  const SPIDER_MODES = ['walk', 'hang', 'crouch', 'jump'];
-  const MODES: Record<Animal, string[]> = { hedgehog: HOG_MODES, fox: FOX_MODES.map((m) => m.label), spider: SPIDER_MODES, robin: partsModes };
-  const SPEEDS: Record<Animal, number> = { hedgehog: HOG_SPEED, fox: FOX_SPEED, spider: 26, robin: 0 };
-  // The robin's drawing is 128x112 at 0.35 on the page, standing at (64, 100).
-  const ROBIN = { scale: 0.35, x: 64, y: 100 };
-  const robinArt = import.meta.glob<string>('../lib/theme/christmas/robin-parts/*.webp', { eager: true, query: '?url', import: 'default' });
-  // The spider's layers, as Spider.svelte names them, and its art.
-  const SPIDER_PARTS = ['far legs', 'body', 'near legs'];
-  const SPIDER_ART = [{ name: 'body', src: spiderBody }, { name: 'thigh', src: spiderThigh }, { name: 'shin', src: spiderShin }, { name: 'hanging', src: spiderHanging }];
-  const ROBIN_PARTS = Object.keys(robinManifest.parts);
-  const ROBIN_ART = Object.entries(robinManifest.parts).map(([name, part]) => ({ name, src: robinArt[`../lib/theme/christmas/robin-parts/${part.file}`] }));
   const GAZE_EASE = 220;
 
-  let animal: Animal = 'hedgehog';
-  let mode = 'walk';
-  let speed = HOG_SPEED;
+  let critter: Critter = CRITTERS[0];
+  let mode = critter.modes[0];
+  let speed = critter.speed;
   let zoom = 6;
   let playing = true;
   let still = false;
@@ -71,48 +42,34 @@
   let reference = '';
   function setMode(m: string) {
     mode = m;
-    reference = drawingFor(animal, m, reference);
+    reference = drawingFor(drawingsOf(critter), m, reference);
   }
-  $: drawings = drawingsOf(animal);
+  $: drawings = drawingsOf(critter);
+  $: rig = critter.kind === 'rig' ? critter : null;
+  $: view = critter.kind === 'view' ? critter : null;
   let stage: HTMLDivElement;
 
-  const hogFor = (m: string, w: number): Hog => ({ id: 0, seed: 1, x: 0, dir, mode: HOG_MODES.find((h) => h === m) ?? 'walk', target: 0, until: 0, out: 0, walked: w });
-  const foxFor = (m: string, w: number, t: number): RigFox => {
-    const pick = FOX_MODES.find((f) => f.label === m) ?? FOX_MODES[0];
-    // A leap replays every 0.9s: its flight, then a moment landed.
-    return { mode: pick.mode, walked: w, seed: 1, until: t - (t % 900) + LEAP, ear: 0, look: pick.look ?? 0 };
-  };
-  const rigFor = (a: Animal, m: string, t: number, w: number, g: number): RigPose | null => {
-    if (a === 'hedgehog') return hogRig(hogFor(m, w), { now: t, gaze: g, still });
-    if (a === 'fox') return foxRig(foxFor(m, w, t), { now: t, still });
-    return null;
-  };
-
   $: now = (frame * 1000) / FPS;
-  $: walking = animal === 'hedgehog' ? moving(hogFor(mode, 0).mode) : animal === 'fox' ? mode === 'trot' : animal === 'spider' && mode === 'walk';
+  $: walking = critter.walking.includes(mode);
   // Walking, its stride follows from the time, at its pace from frame 0.
-  $: pace = animal === 'hedgehog' && mode === 'flee' ? (speed * HURRY) / HOG_SPEED : speed;
+  $: pace = paceOf(critter, mode, speed);
   $: walked = walking ? (pace * now) / 1000 : 0;
-  $: hog = hogFor(mode, walked);
-  $: pose = rigFor(animal, mode, now, walked, gaze);
+  $: moment = { mode, now, walked };
+  $: pose = rig && rig.pose(moment, { gaze, still });
   $: shown = pose && keepParts(pose, (name) => !hidden.includes(name));
   // Every layer the animal ever draws, whatever it is doing, so the list
   // holds still while a part comes and goes (an eyelid, mid-blink).
-  const posesOf = (a: Animal): RigPose[] => MODES[a].flatMap((m) => Array.from({ length: 120 }, (_, i) => i).flatMap((i) => {
-    const each = rigFor(a, m, i * 40, i * 0.5, 0);
-    return each ? [each] : [];
-  }));
-  $: everyPose = posesOf(animal);
-  $: parts = animal === 'spider' ? SPIDER_PARTS : animal === 'robin' ? ROBIN_PARTS : allPartNames(everyPose);
-  $: art = animal === 'spider' ? SPIDER_ART : animal === 'robin' ? ROBIN_ART : [...new Map(everyPose.flatMap(partArt).map((a) => [a.name, a])).values()];
+  $: everyPose = rig ? posesOf(rig) : [];
+  $: parts = view ? view.parts : allPartNames(everyPose);
+  $: art = view ? view.art : [...new Map(everyPose.flatMap(partArt).map((a) => [a.name, a])).values()];
   // The box placement allows this pose on the page.
-  $: box = animal === 'fox' ? POSES[poseOf(foxFor(mode, walked, now), now)] : animal === 'hedgehog' ? HOG : null;
-  $: viewport = partsViewport(mode, still);
+  $: box = rig && rig.box(moment);
+  $: apart = view ? view.apart(mode) : 'pieces';
 
-  function choose(a: Animal) {
-    animal = a;
-    mode = MODES[a][0];
-    speed = SPEEDS[a];
+  function choose(c: Critter) {
+    critter = c;
+    mode = c.modes[0];
+    speed = c.speed;
     hidden = [];
     reference = '';
   }
@@ -136,7 +93,7 @@
   const flags = ['still', 'guides', 'separate', 'footprint'] as const;
   let ready = false;
   $: state = new URLSearchParams({
-    animal, mode, frame: String(frame), speed: String(speed), zoom: String(zoom), dir: String(dir),
+    animal: critter.name, mode, frame: String(frame), speed: String(speed), zoom: String(zoom), dir: String(dir),
     ...Object.fromEntries(flags.flatMap((f) => ({ still, guides, separate, footprint }[f] ? [[f, '1']] : []))),
     ...(reference ? { ref: reference } : {}),
     ...(hidden.length ? { hide: hidden.join(',') } : {}),
@@ -146,10 +103,10 @@
 
   function restore(hash: string) {
     const q = new URLSearchParams(hash.replace(/^#/, ''));
-    const a = ANIMALS.find((x) => x === q.get('animal'));
-    if (!a) return;
-    choose(a);
-    mode = MODES[a].find((m) => m === q.get('mode')) ?? mode;
+    const c = critterNamed(q.get('animal'));
+    if (!c) return;
+    choose(c);
+    mode = c.modes.find((m) => m === q.get('mode')) ?? mode;
     toFrame(Number(q.get('frame') ?? 0));
     speed = Number(q.get('speed') ?? speed);
     zoom = Number(q.get('zoom') ?? zoom);
@@ -176,7 +133,7 @@
         loop.carry -= (whole * 1000) / FPS;
         frame += whole;
       }
-      gaze = easeTo(gaze, still ? 0 : gazeAt(hog, { x: 0, y: 0 }, cursor), dt, GAZE_EASE);
+      gaze = easeTo(gaze, still ? 0 : gazeOf(critter, dir, cursor), dt, GAZE_EASE);
       loop.last = time;
       loop.request = requestAnimationFrame(tick);
     };
@@ -190,11 +147,11 @@
 
 <div class="lab">
   <div class="controls">
-    {#each ANIMALS as a}
-      <button type="button" class:on={animal === a} on:click={() => choose(a)}>{a}</button>
+    {#each CRITTERS as c}
+      <button type="button" class:on={critter === c} on:click={() => choose(c)}>{c.name}</button>
     {/each}
     <span class="sep"></span>
-    {#each MODES[animal] as m}
+    {#each critter.modes as m}
       <button type="button" class:on={mode === m} on:click={() => setMode(m)}>{m}</button>
     {/each}
   </div>
@@ -240,14 +197,8 @@
         {#if drawings[reference]}
           <Rig pose={overlay(shown, drawings[reference])} x={0} y={0} {dir} opacity={0.45} />
         {/if}
-      {:else if animal === 'spider'}
-        <div class="spider" class:hanging={mode === 'hang'} style="transform: scaleX({dir})" data-critter={mode}>
-          <Spider moving={playing && mode === 'walk'} hanging={mode === 'hang'} walked={walked} crouch={mode === 'crouch' ? 1 : 0} tuck={mode === 'jump' ? 1 : 0} {hidden} />
-        </div>
-      {:else}
-        <div class="robin" data-critter={mode} style="left: {(viewport[0] - ROBIN.x) * ROBIN.scale}px; top: {(viewport[1] - ROBIN.y) * ROBIN.scale}px; width: {viewport[2] * ROBIN.scale}px; height: {viewport[3] * ROBIN.scale}px">
-          <LayeredRobin elapsed={now} {mode} reduced={still} mirrored={dir === -1} exploded={separate} {guides} {hidden} />
-        </div>
+      {:else if view}
+        <svelte:component this={view.View} {mode} {now} {walked} {dir} {playing} {still} {guides} {separate} {hidden} marked />
       {/if}
     </div>
   </div>
@@ -268,33 +219,30 @@
           </figure>
         {/each}
       </div>
-    {:else if separate && animal === 'spider' && mode !== 'hang'}
+    {:else if separate && view && apart === 'pieces'}
       <div class="row pieces">
         {#each parts as name}
           <figure>
             <div class="spot" style="scale: {Math.max(2, zoom / 2)}">
-              <div class="spider"><Spider walked={walked} crouch={mode === 'crouch' ? 1 : 0} tuck={mode === 'jump' ? 1 : 0} hidden={parts.filter((n) => n !== name)} /></div>
+              <svelte:component this={view.View} {mode} {now} {walked} dir={1} playing={false} {still} guides={false} separate={false} hidden={parts.filter((n) => n !== name)} />
             </div>
             <figcaption>{name}</figcaption>
           </figure>
         {/each}
       </div>
     {/if}
-    {#if separate && animal === 'robin'}<p>The robin's pieces are pulled apart on the stage above.</p>{/if}
+    {#if separate && apart === 'stage'}<p>The {critter.name}'s pieces are pulled apart on the stage above.</p>{/if}
     <p>The art each part is drawn from, at its file's own size:</p>
     <div class="art">
       {#each art as { name, src }}
         <figure><img {src} alt="" /><figcaption>{name}</figcaption></figure>
       {/each}
     </div>
-    {#if pose}
+    {#if rig && pose}
       <p>Every pose at the same scale, three times page size, so the animal stays the same size whatever it does:</p>
       <div class="row lineup">
-        {#each MODES[animal] as m}
-          {@const each = rigFor(animal, m, 1300, 1.3, 0)}
-          {#if each}
-            <figure><div class="spot" style="scale: 3"><Rig pose={each} x={0} y={0} /></div><figcaption>{m}</figcaption></figure>
-          {/if}
+        {#each rig.modes as m}
+          <figure><div class="spot" style="scale: 3"><Rig pose={rig.pose({ mode: m, now: 1300, walked: 1.3 }, { gaze: 0, still })} x={0} y={0} /></div><figcaption>{m}</figcaption></figure>
         {/each}
       </div>
     {/if}
@@ -304,16 +252,10 @@
   <div class="row">
     {#each [1, -1] as const as d}
       <div class="spot">
-        {#if pose}
-          <Rig pose={rigFor(animal, mode, now, walked, 0) ?? pose} x={0} y={0} dir={d} />
-        {:else if animal === 'spider'}
-          <div class="spider" class:hanging={mode === 'hang'} style="transform: scaleX({d})">
-            <Spider moving={playing && mode === 'walk'} hanging={mode === 'hang'} walked={walked} crouch={mode === 'crouch' ? 1 : 0} tuck={mode === 'jump' ? 1 : 0} />
-          </div>
-        {:else}
-          <div class="robin" style="left: {(viewport[0] - ROBIN.x) * ROBIN.scale}px; top: {(viewport[1] - ROBIN.y) * ROBIN.scale}px; width: {viewport[2] * ROBIN.scale}px; height: {viewport[3] * ROBIN.scale}px">
-            <LayeredRobin elapsed={now} {mode} reduced={still} mirrored={d === -1} />
-          </div>
+        {#if rig && pose}
+          <Rig pose={rig.pose(moment, { gaze: 0, still })} x={0} y={0} dir={d} />
+        {:else if view}
+          <svelte:component this={view.View} {mode} {now} {walked} dir={d} {playing} {still} guides={false} separate={false} hidden={[]} />
         {/if}
       </div>
     {/each}
@@ -333,12 +275,6 @@
   .floor { position: absolute; left: 0; right: 0; bottom: 60px; border-top: 2px solid var(--line-strong); }
   .big { position: absolute; left: 50%; bottom: 60px; width: 0; height: 0; transform-origin: 0 0; }
   .footprint { position: absolute; outline: .2px dashed var(--accent); opacity: .6; }
-  /* The spider's walking box has its feet at y 38 of 40; hanging, its silk is
-     tied 4px down its strip, here hung from 60px up. */
-  .spider { position: absolute; left: -39px; top: -38px; transform-origin: 39px 0; }
-  .spider.hanging { left: -31px; top: -60px; transform-origin: 31px 0; }
-  .robin { position: absolute; }
-  .robin :global(svg) { width: 100%; height: 100%; display: block; }
   .row { display: flex; align-items: flex-end; flex-wrap: wrap; gap: 60px; padding: 30px 40px 0; border-bottom: 2px solid var(--line-strong); }
   .pieces, .lineup { gap: 24px 90px; padding-top: 70px; }
   .spot { position: relative; width: 40px; height: 0; transform-origin: 0 0; }

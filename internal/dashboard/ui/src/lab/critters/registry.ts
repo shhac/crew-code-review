@@ -1,0 +1,12 @@
+// Every animal the critters lab shows, in the order of its buttons; the
+// first is shown when the page opens. Adding one is its own module beside
+// these and a line here.
+import type { Critter } from './critter';
+import { fox } from './fox';
+import { hedgehog } from './hedgehog';
+import { robin } from './robin';
+import { spider } from './spider';
+
+export const CRITTERS: readonly Critter[] = [hedgehog, fox, spider, robin];
+
+export const critterNamed = (name: string | null): Critter | undefined => CRITTERS.find((c) => c.name === name);
