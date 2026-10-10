@@ -95,7 +95,7 @@ export type Self = Pick<Hare, 'id' | 'seed' | 'walked'>;
 export const fresh = (id: number): Self => ({ id, seed: id + 1, walked: 0 });
 
 // Whether the stretch round x has room to sit up tall (or box) there.
-export const tallAt = (f: Ledge, scene: PageMap, x: number, width: number) => roomOver(f, scene, HARE, x - width / 2, x + width / 2) >= TALL;
+const tallAt = (f: Ledge, scene: PageMap, x: number, width: number) => roomOver(f, scene, HARE, x - width / 2, x + width / 2) >= TALL;
 
 export function sittingAt(self: Self, f: Ledge, floor: number, x: number, scene: PageMap, now: number, rand: Rand, dir: 1 | -1 = 1): Hare {
   return { ...self, floor, x, dir, mode: 'graze', until: now + between(rand, 2000, 6000), target: x, tall: tallAt(f, scene, x, POSES.sit.width) };
