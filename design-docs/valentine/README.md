@@ -252,11 +252,11 @@ the eye that blinks and aims), no halo, no torch.
 
 ### The ledges: petals and spent arrows
 
-- **Petals** (`petals.ts`): drawn only where `clearRuns(f, obstacles, 5)`
+- **Petals** (`petals.ts`): drawn only where `clearRuns(f, obstacles, 7)`
   says the ledge is clear (8px in from the ends), so never under a heading's
   text, on card tops and heading rules alike. Ledges are cut into 70px
   slots; just under half of them, seeded by ledge id, hold one to three
-  petals lying on the ledge, each a curled teardrop about 5 by 2.5px, turned
+  petals lying on the ledge, each a curled teardrop 6 to 8px long, turned
   up to 25 degrees, in one of three rose reds with a darker edge. At most 36
   on a page, shared out a ledge at a time (as the frost's glints are). They
   are still, and the same under reduced motion. Drawn in code: at this size
