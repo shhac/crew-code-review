@@ -165,16 +165,20 @@ class EyeScale:
     drawing units across, written at res file pixels per unit, and the
     theme's rig sets how big a unit is on the page. eyes says where each
     sheet's eye is (source pixels, measured by eye). Drawing units are the
-    reference's, moved by margin so a frame round it has a margin."""
+    reference's, moved by margin so a frame round it has a margin. measure
+    says how big the feature is in a sheet, given where it is: feature (a
+    dark blob) by default, or another where an eye cannot be told from the
+    fur round it (a bumblebee's, in its black head)."""
 
-    def __init__(self, here: Path, eyes: dict[str, tuple[int, int]], eye: float, res: int, margin: int = 1):
-        self.here, self.eyes, self.eye, self.res, self.margin = here, eyes, eye, res, margin
+    def __init__(self, here: Path, eyes: dict[str, tuple[int, int]], eye: float, res: int, margin: int = 1,
+                 measure: Callable[[Path, tuple[int, int]], float] = feature):
+        self.here, self.eyes, self.eye, self.res, self.margin, self.measure = here, eyes, eye, res, margin, measure
         self.standing = np.zeros((0, 0, 4), np.uint8)
         self.standing_sheet = ''
 
     def px(self, sheet: str, seed: tuple[int, int] | None = None) -> float:
         """The eye's size in a sheet's own pixels."""
-        return feature(self.here / sheet, seed or self.eyes[sheet])
+        return self.measure(self.here / sheet, seed or self.eyes[sheet])
 
     def on_eye(self, sheet: str) -> float:
         """File pixels to each of a sheet's pixels."""
@@ -203,7 +207,7 @@ class EyeScale:
         for pose, seed in seeds.items():
             name = f'{prefix}{pose}'
             path = self.here / f'{name}.png'
-            eye = feature(path, seed)
+            eye = self.measure(path, seed)
             size = export(crop(key(path)), out, name, self.eye / eye * self.res)
             print(f'{name}: eye {eye:.1f}px; drawing units {self.units(size)}')
 
