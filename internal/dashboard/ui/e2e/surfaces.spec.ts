@@ -75,3 +75,42 @@ for (const width of [1440, 1024]) {
     }
   });
 }
+
+// Every gap's ends are its ledges' ends, as drawn, and a side gap's column
+// is clear of content.
+const gapErrors = (page: Page) => page.evaluate(() => {
+  const floors = new Map([...document.querySelectorAll('.geometry [data-floor-id]')].map((g) => {
+    const line = g.querySelector('.floor')!;
+    return [g.getAttribute('data-floor-id'), { left: Number(line.getAttribute('x1')), right: Number(line.getAttribute('x2')), y: Number(line.getAttribute('y1')) }];
+  }));
+  return [...document.querySelectorAll('.geometry [data-gap-kind=side]')].flatMap((g) => {
+    const id = g.getAttribute('data-gap-id')!;
+    const [, a, b] = /^(\d+)r-(\d+)l$/.exec(id) ?? [];
+    const [from, to] = [...g.querySelectorAll('.gap-end')].map((c) => Number(c.getAttribute('cx')));
+    return floors.get(a)?.right === from && floors.get(b)?.left === to ? [] : [`${id} is not between its ledges`];
+  });
+});
+
+for (const width of [1440, 1024]) {
+  test(`gaps sit between neighbouring ledges at ${width}px`, async ({ page }, info) => {
+    await page.setViewportSize({ width, height: 900 });
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    const seen: Record<string, string[]> = {};
+    for (const path of ['/', '/metrics', '/config']) {
+      await page.goto(`${path}?theme=halloween&theme-debug=1`);
+      await expect(page.locator('.geometry [data-gap-id]').first()).toBeAttached();
+      if (path === '/metrics') await expect(page.locator('.metric-kpis > div')).toHaveCount(6);
+      if (path === '/config') await expect(page.locator('main .surface').first()).toBeVisible();
+      await expect.poll(() => gapErrors(page), { message: path }).toEqual([]);
+      expect(await coveredContent(page.locator('.geometry [data-gap-kind=side]'), 'rect.gap'), path).toEqual([]);
+      seen[path] = await page.locator('.geometry [data-gap-id]').evaluateAll((gs) => gs.map((g) => `${g.getAttribute('data-gap-kind')}${g.hasAttribute('data-court') ? ' court' : ''}`));
+      if (path !== '/') await page.screenshot({ path: info.outputPath(`gaps${path.replace('/', '-')}-${width}.png`) });
+    }
+    // The survey's gaps: a gutter on the overview, the KPI and chart gutters
+    // (courts all) on metrics, and the config page's band cut by its tabs.
+    expect(seen['/metrics'].filter((k) => k === 'side court')).toHaveLength(5);
+    expect(seen['/'].filter((k) => k === 'side court')).toHaveLength(1);
+    expect(seen['/config']).toEqual(['under']);
+    await expect(page.locator('.geometry [data-gap-kind=under] .hatched').first()).toBeAttached();
+  });
+}

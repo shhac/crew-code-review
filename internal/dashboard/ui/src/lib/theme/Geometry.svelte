@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { measurePage, wallRuns, walls, type Ledge, type PageMap } from './floors';
+  import { measurePage, wallRuns, walls, type Ledge, type PageMap, type Run } from './floors';
+  import { courts, endId, gapRuns, measureGaps, type Gap } from './gaps';
   import { measureRailAir, measureRailSky, watchRailSky, type Sky } from './sky';
   export let floors: ReadonlyMap<number, Ledge>;
 
@@ -22,6 +23,20 @@
   const BONK = 34;
   const sidesOf = (p: PageMap) => walls(p).map((w) => ({ w, runs: wallRuns(w, p, BONK) }));
   $: sides = page ? sidesOf(page) : [];
+  // A side gap's column is drawn this far down at most; an under gap's band
+  // is hatched where bunting this deep (14px) would not hang clear.
+  const COLUMN = 40;
+  const HANG = 14;
+  const blocked = (g: Gap, runs: readonly Run[]): Run[] => {
+    const edges = [0, ...runs.flatMap((r) => [r.lo, r.hi]), g.to.x - g.from.x];
+    return edges.flatMap((lo, i) => (i % 2 === 0 && edges[i + 1] - lo > 4 ? [{ lo, hi: edges[i + 1] }] : []));
+  };
+  const gapsOf = (p: PageMap) => {
+    const gaps = measureGaps(p);
+    const court = new Set(courts(p, gaps).map((g) => g.id));
+    return gaps.map((g) => ({ g, court: court.has(g.id), out: g.kind === 'under' ? blocked(g, gapRuns(g, p.obstacles, HANG)) : [] }));
+  };
+  $: gaps = page ? gapsOf(page) : [];
 
   onMount(() => {
     const el = shown ? shelf() : null;
@@ -44,6 +59,31 @@
       {/each}
       <line class="wall" x1={w.x} y1={w.top} x2={w.x} y2={w.bottom} />
       <text class:end={w.side > 0} x={w.x + 3 * w.side} y={w.top + 24}>{w.side < 0 ? 'l' : 'r'}</text>
+    </g>
+  {/each}
+  <defs>
+    <pattern id="geometry-hatch" width="4" height="4" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+      <line class="hatch" x1="0" y1="0" x2="0" y2="4" />
+    </pattern>
+  </defs>
+  {#each gaps as { g, court, out } (g.id)}
+    {@const depth = g.kind === 'side' ? Math.min(g.bottom, g.top + COLUMN) - g.top : g.bottom - g.top}
+    <g data-gap-id={g.id} data-gap-kind={g.kind} data-court={court ? '' : undefined}>
+      <rect class="gap" x={g.from.x} y={g.top} width={g.to.x - g.from.x} height={depth} />
+      {#if g.kind === 'side'}
+        <line class="gap" x1={g.from.x} y1={g.from.y} x2={g.to.x} y2={g.to.y} />
+        <circle class="gap-end" cx={g.from.x} cy={g.from.y} r="3" />
+        <circle class="gap-end" cx={g.to.x} cy={g.to.y} r="3" />
+        <text class="gap end" x={g.from.x - 3} y={g.from.y + 12}>{endId(g.from)}</text>
+        <text class="gap" x={g.to.x + 3} y={g.to.y + 12}>{endId(g.to)}</text>
+        <!-- Written down the gutter, which is clear by definition. -->
+        <text class="gap down" transform="translate({(g.from.x + g.to.x) / 2 - 3} {g.top + 6}) rotate(90)">{court ? `court ${g.from.ledge}|${g.to.ledge}` : `${g.id} · step`} {Math.round(g.step)} · {Math.round(g.bottom - g.top)}</text>
+      {:else}
+        {#each out as r (r.lo)}
+          <rect class="hatched" x={g.from.x + r.lo} y={g.top} width={r.hi - r.lo} height={Math.min(HANG, depth)} />
+        {/each}
+        <text class="gap end" x={g.to.x - 4} y={g.top + 10}>{g.id} · {Math.round(g.step)}</text>
+      {/if}
     </g>
   {/each}
   {#if sky}
@@ -69,6 +109,13 @@
   .wall-run { fill: #bd9cff; opacity: .12; }
   .sky { fill: none; stroke: #78c8ff; stroke-width: 1; stroke-dasharray: 4 3; }
   .rail-air { fill: none; stroke: #9be29b; stroke-width: 1; stroke-dasharray: 2 4; }
+  rect.gap { fill: none; stroke: #ffd27a; stroke-width: 1; stroke-dasharray: 3 3; }
+  line.gap { stroke: #ffd27a; }
+  .gap-end { fill: none; stroke: #ffd27a; stroke-width: 1; }
+  .hatched { fill: url(#geometry-hatch); }
+  .hatch { stroke: #ffd27a; stroke-dasharray: none; opacity: .6; }
+  text.gap { fill: #ffd27a; }
+  text.down { font-size: 9px; }
   text { fill: #78c8ff; font: 10px ui-monospace, monospace; }
   .end { text-anchor: end; }
 </style>
