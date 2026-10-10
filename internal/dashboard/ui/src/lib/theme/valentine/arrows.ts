@@ -1,4 +1,5 @@
 import { clearance, type Ledge, type Obstacle } from '../floors';
+import { clamp, degrees, rad } from '../math';
 import { hash } from '../seed';
 
 // Arrows the cupids have shot, stuck in the ledges they hit, and the hearts
@@ -37,8 +38,7 @@ export type Stuck = { key: string; floor: number; x: number; slant: number; at: 
 // (dx, dy, down positive): it stands back along its flight, kept short of
 // lying flat.
 export function slantOf(dx: number, dy: number): number {
-  const lean = (Math.atan2(-dx, Math.max(0.001, dy)) * 180) / Math.PI;
-  return Math.max(-MAX_SLANT, Math.min(MAX_SLANT, lean));
+  return clamp(degrees(Math.atan2(-dx, Math.max(0.001, dy))), -MAX_SLANT, MAX_SLANT);
 }
 
 // The angle a spent arrow is drawn at: its slant, quivering about its tip
@@ -97,7 +97,7 @@ export function hearts(b: Burst, now: number): Heart[] {
   const out = 1 - (1 - t) ** 3;
   return Array.from({ length: HEARTS }, (_, i) => {
     const spread = ((i + 0.5) / HEARTS - 0.5) * 2;
-    const angle = ((spread * 40 + (hash(b.seed * 13 + i) - 0.5) * 20) * Math.PI) / 180;
+    const angle = rad(spread * 40 + (hash(b.seed * 13 + i) - 0.5) * 20);
     const reach = 10 + 8 * hash(b.seed * 29 + i);
     return {
       dx: Math.sin(angle) * reach * out,

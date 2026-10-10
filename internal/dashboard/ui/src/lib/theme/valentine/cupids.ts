@@ -3,7 +3,7 @@ import { fromLedge, progress, toLedge } from '../anchored';
 import { arcFrom, heading, lengthOf, quadratic, samples, type Arc } from '../curves';
 import { inView, type Box, type Ledge, type Obstacle, type PageMap } from '../floors';
 import { inTurn, placeIds, regroup, troupeSize } from '../group';
-import { apart } from '../math';
+import { apart, degrees } from '../math';
 import type { Cursor, Point } from '../pointer';
 import type { Rand } from '../seed';
 import { land, landable, prune, reconcileStuck, slantOf, burstsLeft, type Burst, type Stuck } from './arrows';
@@ -93,7 +93,7 @@ export function arrowAt(page: PageMap, f: Flying, now: number): (Point & { angle
   if (!arc) return null;
   const t = progress(f, now);
   const h = heading(arc, t);
-  return { ...quadratic(arc, t), angle: (Math.atan2(h.y, h.x) * 180) / Math.PI };
+  return { ...quadratic(arc, t), angle: degrees(Math.atan2(h.y, h.x)) };
 }
 
 // The box an arrow takes with its tip at p, pointing along h: the shaft
@@ -141,7 +141,7 @@ function shotTo(air: Air, at: Point, f: Ledge, x: number, shield: readonly Box[]
   for (const k of RISES) {
     const arc = { from, via: { x: mid.x, y: Math.min(from.y, to.y) - k * span - 6 }, to };
     const h = heading(arc, 0);
-    const aim = (Math.atan2(h.y, h.x * dir) * 180) / Math.PI;
+    const aim = degrees(Math.atan2(h.y, h.x * dir));
     if (aim < AIMS.lo || aim > AIMS.hi) continue;
     if (clearArc(air, arc, f, shield)) return { arc, aim, dir };
   }
