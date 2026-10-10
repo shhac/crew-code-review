@@ -1,4 +1,4 @@
-import { around } from '../air';
+import { around, type Air } from '../air';
 import { cubic, samples, type Curve } from '../curves';
 import type { Box, Ledge, Reach } from '../floors';
 import { apart, clamp01, mix, smooth } from '../math';
@@ -13,12 +13,13 @@ import type { Point } from '../pointer';
 // Routes are kept relative to the ledge the flight belongs to, so a scroll
 // carries a bird in the air with its card.
 
-// Whether a box is in air, or past an exit: the surfaces and bird kits'
-// check, handed in. Exits are the window's right edge, its top, and the
-// rail's edge when the rail is a column (null otherwise).
+// Whether a box is in air, or past an exit (airspace.ts's skyOf, on the
+// surfaces kit). Exits are the window's right edge, its top, and the rail's
+// edge when the rail is a column (null otherwise); `air` is the kit's own
+// view of it, for its lanes.
 export type Clear = (box: Box) => boolean;
 export type Exits = { left: number | null; right: number };
-export type Sky = { clear: Clear; exits: Exits };
+export type Sky = { clear: Clear; exits: Exits; air: Air };
 export type Way = 'left' | 'right' | 'top';
 
 // A flight's ledge, its curves in that ledge's local space (x from its left

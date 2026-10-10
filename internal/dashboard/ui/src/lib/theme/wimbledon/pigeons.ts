@@ -116,8 +116,9 @@ function wayOut(p: Pigeon, from: number, others: readonly Pigeon[], scene: PageM
 // A bird already in the air, which another flight must wait for.
 const airborne = (others: readonly Pigeon[]) => others.some((o) => o.flight !== null);
 
-export function createFlock(scene: PageMap, sky: Sky, now: number, rand: Rand): Flock {
-  const three = placeIds<Pigeon>([0, 1, 2], (others, id) => placePigeon(scene, sky, others, fresh(id), now, rand));
+// Placed fresh, keeping off any stretches given (a court cued for a rally).
+export function createFlock(scene: PageMap, sky: Sky, now: number, rand: Rand, avoid: readonly Claim[] = []): Flock {
+  const three = placeIds<Pigeon>([0, 1, 2], (others, id) => placePigeon(scene, sky, others, fresh(id), now, rand, avoid));
   const target = troupeSize(three);
   return { target, pigeons: three.slice(0, target), lastFlush: -Infinity, hawk: createHawk(now, rand) };
 }

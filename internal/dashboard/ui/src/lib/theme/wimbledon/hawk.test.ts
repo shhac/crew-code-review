@@ -4,7 +4,7 @@ import type { Box, Obstacle, PageMap } from '../floors';
 import { seeded } from '../test-scene';
 import { flying, lengthOfTrack, reachAt } from './flight';
 import {
-  AGAIN, createHawk, FIRST, GAP, GLIDE, SIGHTED, SPEED, hawkAt, hawkRemeasured, hawkView, laneClear, OFF_APART, planSweep, RETRY, RETURN, RETURN_APART, rowsOf, simulate, stepHawk, type Plan,
+  AGAIN, createHawk, FIRST, GAP, GLIDE, SIGHTED, SPEED, hawkAt, hawkRemeasured, hawkView, laneFor, OFF_APART, planSweep, RETRY, RETURN, RETURN_APART, rowsOf, simulate, stepHawk, type Plan,
 } from './hawk';
 import { board, EXITS, overview, side, testSky } from './fixtures';
 import { ENVELOPES, fresh, POSES, standing, type Pigeon } from './pigeon';
@@ -35,13 +35,16 @@ const grow = (b: Box, by: number): Box => ({ left: b.left - by, right: b.right +
 
 describe("the hawk's sweep", { timeout: 30_000 }, () => {
   it('finds the rows: ledges side by side with tops within 2px', () => {
-    expect(rowsOf(PAGE).map((r) => r.floors)).toEqual([[1], [2, 3], [4]]);
+    expect(rowsOf(PAGE).map((r) => r.ledges)).toEqual([[1], [2, 3], [4]]);
   });
 
   it('has a lane 4px over the first row, closed by anything in the band', () => {
-    expect(laneClear(board, SKY)).toBe(true);
+    const row = rowsOf(PAGE).find((r) => r.id === 2)!;
+    expect(laneFor(row, SKY)).toMatchObject({ y: board.y - 4 });
     const chart: Obstacle = { left: 1100, right: 1200, top: 150, bottom: 172 };
-    expect(laneClear(board, testSky(overview([chart])))).toBe(false);
+    expect(laneFor(row, testSky(overview([chart])))).toBeNull();
+    // With no rail column (a phone) there is no way in for it at all.
+    expect(laneFor(row, testSky(PAGE, ['right', 'top']))).toBeNull();
   });
 
   it('plans a sweep whose every frame keeps every bird in air and 6px from every other', () => {
@@ -79,7 +82,7 @@ describe("the hawk's sweep", { timeout: 30_000 }, () => {
     const plan = planSweep(FLOCK, page, testSky(page), 0, seeded(3))!;
     expect(plan.dir).toBe(-1);
     // With no rail column there is no way out to the left either.
-    expect(planSweep(FLOCK, page, testSky(page, { left: null, right: 1440 }), 0, seeded(3))).toBeNull();
+    expect(planSweep(FLOCK, page, testSky(page, ['right', 'top']), 0, seeded(3))).toBeNull();
   });
 
   it('leaves pigeons on rows with no way out looking up until it has passed', () => {
@@ -128,7 +131,7 @@ describe("the hawk's sweep", { timeout: 30_000 }, () => {
     // It starts out of sight, half a second before it comes in past the
     // exit, while the pigeons already see it coming.
     const lead = (SPEED * SIGHTED) / 1000;
-    expect(board.left + first.x + (plan.dir > 0 ? GLIDE.half : -GLIDE.half)).toBeCloseTo(plan.dir > 0 ? EXITS.left! - 1 - lead : EXITS.right + 1 + lead);
+    expect(board.left + first.x + (plan.dir > 0 ? GLIDE.half : -GLIDE.half)).toBeCloseTo(plan.dir > 0 ? EXITS.left! - lead : EXITS.right + lead);
     const ys = Array.from({ length: 50 }, (_, i) => hawkAt(plan, plan.start + i * 40)!.y);
     expect(Math.max(...ys)).toBeLessThanOrEqual(-3);
     expect(Math.min(...ys)).toBeGreaterThanOrEqual(-5);

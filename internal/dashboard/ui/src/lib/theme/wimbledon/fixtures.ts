@@ -1,8 +1,9 @@
 // Pages and air shared by summer tennis's tests: the overview at 1440, its
 // heading's text ending at y 135 and the first row of cards at 182, with
 // the band of air between them the pigeons fly out along.
-import { meets } from '../air';
+import type { Exit } from '../air';
 import type { Box, Ledge, Obstacle, PageMap } from '../floors';
+import { skyOf } from './airspace';
 import type { Exits, Sky } from './flight';
 
 export const MAIN: Box = { left: 236, right: 1440, top: 0, bottom: 1600 };
@@ -27,23 +28,9 @@ export const overview = (extra: readonly Obstacle[] = [], floors: [number, Ledge
 // The exits at 1440: the rail's edge (main's left) and the window's right.
 export const EXITS: Exits = { left: MAIN.left, right: 1440 };
 
-// A stand-in for the kits' air check: what of a box is inside main and the
-// window must keep GAP from content and stay out of every card's box but
-// its bottom 6px, and nothing goes below the window; anything wholly past
-// the rail's edge, the window's right edge or its top is out, and fine.
-const GAP = 4;
-const REACH = 6;
-export function testSky(page: PageMap, exits: Exits = EXITS): Sky {
-  const clear = (box: Box) => {
-    if (box.bottom > page.height) return false;
-    const inside = { left: Math.max(box.left, exits.left ?? (page.main?.left ?? 0)), right: Math.min(box.right, exits.right), top: Math.max(box.top, 0), bottom: box.bottom };
-    if (inside.left >= inside.right || inside.top >= inside.bottom) return true;
-    return !page.obstacles.some((o) => meets(inside, o.block
-      ? { left: o.left, right: o.right, top: o.top, bottom: o.bottom - REACH }
-      : { left: o.left - GAP, right: o.right + GAP, top: o.top - GAP, bottom: o.bottom + GAP }));
-  };
-  return { clear, exits };
-}
+// The air a page gives the birds (airspace.ts's skyOf, on the surfaces
+// kit), with all three exits unless told otherwise.
+export const testSky = (page: PageMap, wanted?: readonly Exit[]): Sky => skyOf(page, wanted);
 
 // The pigeon's envelopes, as the model has them.
 export { ENVELOPES as PIGEON_ENVELOPES } from './pigeon';

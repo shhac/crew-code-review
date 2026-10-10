@@ -34,7 +34,7 @@ describe('pigeon flights', { timeout: 30_000 }, () => {
     expect(escapeFrom(2, board, 300, 700, ENV, SKY)!.way).toBe('left');
     expect(escapeFrom(2, board, 300, 400, ENV, SKY)!.way).toBe('right');
     // With no rail column there is no way out to the left, so it goes right.
-    const phone = testSky(PAGE, { left: null, right: 1440 });
+    const phone = testSky(PAGE, ['right', 'top']);
     expect(escape(2, board, 300, 'left', ENV, phone)).toBeNull();
     expect(escapeFrom(2, board, 300, 700, ENV, phone)!.way).toBe('right');
   });

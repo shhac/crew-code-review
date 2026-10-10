@@ -181,7 +181,8 @@ describe('the rally', { timeout: 30_000 }, () => {
   it('claims the court while it plays, and ends at once if the page changes under it', () => {
     const rand = seeded(4);
     const r: Rally = { next: Infinity, play: serve(COURT, PAGE, 0, rand)! };
-    expect(claimsOf(r, PAGE)).toEqual([{ floor: 2, lo: 12, hi: 704 }, { floor: 3, lo: 0, hi: 372 - 12 }]);
+    // Its bounce spots and the room an out ball rolls on: no further.
+    expect(claimsOf(r, PAGE)).toEqual([{ floor: 2, lo: 704 - 140 - 38 - 3, hi: 704 }, { floor: 3, lo: 0, hi: 140 + 38 + 3 }]);
     expect(remeasured(r, PAGE, 10, rand)).toBe(r);
     const covered = pageWith([{ left: 290, right: 1386, top: 170, bottom: 196 }]);
     expect(remeasured(r, covered, 10, rand).play).toBeNull();

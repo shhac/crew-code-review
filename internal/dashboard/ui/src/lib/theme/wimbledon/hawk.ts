@@ -1,4 +1,4 @@
-import { around, meets } from '../air';
+import { around, laneOf, meets, rowsOf, type Lane, type Row } from '../air';
 import type { Box, Ledge, PageMap, Reach } from '../floors';
 import { inView } from '../floors';
 import { between, type Rand } from '../seed';
@@ -43,20 +43,10 @@ export const GAP = 6;
 // Frames the sweep is simulated at.
 const FRAME = 1000 / 60;
 
-// Ledges side by side whose tops are within 2px of each other, none
-// overlapping another, named by the leftmost.
-export type Row = { id: number; floors: readonly number[]; y: number };
-const SAME_ROW = 2;
-export function rowsOf(page: PageMap): Row[] {
-  const ledges = [...page.floors].sort(([, a], [, b]) => a.left - b.left);
-  const rows = ledges.reduce<{ ids: number[]; members: Ledge[] }[]>((acc, [id, f]) => {
-    const home = acc.find((r) => Math.abs(r.members[0].y - f.y) <= SAME_ROW && r.members.every((m) => m.right <= f.left || f.right <= m.left));
-    if (!home) return [...acc, { ids: [id], members: [f] }];
-    return acc.map((r) => (r === home ? { ids: [...r.ids, id], members: [...r.members, f] } : r));
-  }, []);
-  return rows.map((r) => ({ id: r.ids[0], floors: r.ids, y: Math.min(...r.members.map((m) => m.y)) }));
-}
-export const rowOf = (rows: readonly Row[], floor: number) => rows.find((r) => r.floors.includes(floor));
+// The rows of ledges (the surfaces kit's rowsOf: level within 2px, side by
+// side, named by the leftmost), and the one a ledge is in.
+export { rowsOf, type Row };
+export const rowOf = (rows: readonly Row[], floor: number) => rows.find((r) => r.ledges.includes(floor));
 
 // A sweep: along the row (its leftmost ledge's local space), from `from`
 // to `to` with its belly line `y` above the ledge, going dir, starting at
@@ -68,27 +58,24 @@ export type Plan = {
   takeoffs: readonly Takeoff[]; alerts: readonly number[]; returns: readonly { id: number; at: number }[];
 };
 
-// Where its belly line is across the page from the rail's edge (the
-// window's left with no rail column) to past the window's right edge,
-// row-local.
-function span(row: Ledge, sky: Sky): { from: number; to: number } {
-  const left = sky.exits.left ?? 0;
-  return { from: left - GLIDE.half - 1 - row.left, to: sky.exits.right + GLIDE.half + 1 - row.left };
-}
-
 // The pigeons see it coming before it is in the window: it starts this
 // long out of sight, and their take-offs count from when they see it.
 export const SIGHTED = 500;
 const LEAD = (SPEED * SIGHTED) / 1000;
 
-// Whether the glide's envelope swept along the lane at ABOVE over the row
-// stays in air from one exit to the other.
-export function laneClear(row: Ledge, sky: Sky): boolean {
-  const { from, to } = span(row, sky);
-  const steps = Math.ceil((to - from) / 4);
-  const box = (x: number): Box => glideBox(row, -ABOVE, x);
-  return Array.from({ length: steps + 1 }, (_, i) => from + ((to - from) * i) / steps).every((x, i, xs) => sky.clear(i ? join(box(xs[i - 1]), box(x)) : box(x)));
+// The glide's box, its 1px rise and fall included, as the lane is checked
+// with it.
+const SWEPT: Reach = { half: GLIDE.half, up: GLIDE.up + BOB, down: GLIDE.down + BOB };
+
+// The lane ABOVE over the row (the surfaces kit's laneOf): from behind the
+// rail to past the window's right edge with the glide's box in air all the
+// way. A sweep needs both ends to be exits, so there is none on a phone,
+// where the rail is not a column and the hawk would appear in view.
+export function laneFor(row: Row, sky: Sky): Lane | null {
+  if (sky.exits.left === null) return null;
+  return laneOf(sky.air, row, ABOVE, SWEPT);
 }
+
 // The glide's box with its belly line `y` above the row's ledge and its
 // middle at x (row-local), its rise and fall included.
 const glideBox = (row: Ledge, y: number, x: number): Box => ({ left: row.left + x - GLIDE.half, right: row.left + x + GLIDE.half, top: row.y + y - GLIDE.up - BOB, bottom: row.y + y + GLIDE.down + BOB });
@@ -160,18 +147,21 @@ export function simulate(plan: Plan, pigeons: readonly Pigeon[], page: PageMap, 
 // the simulation finds any box out of air or two birds too close.
 export function planOn(row: Row, dir: 1 | -1, pigeons: readonly Pigeon[], page: PageMap, sky: Sky, start: number, rand: Rand): Plan | null {
   const first = page.floors.get(row.id);
-  if (!first || !laneClear(first, sky)) return null;
-  const { from: lo, to: hi } = span(first, sky);
+  const lane = laneFor(row, sky);
+  if (!first || !lane) return null;
+  // Row-local, from the row's first ledge: starting out of sight, LEAD
+  // short of where it comes in.
+  const [lo, hi] = [lane.from - first.left, lane.to - first.left];
   const [from, to] = dir > 0 ? [lo - LEAD, hi] : [hi + LEAD, lo];
   const way = dir > 0 ? 'right' : 'left';
-  const onRow = pigeons.filter((p) => row.floors.includes(p.floor));
+  const onRow = pigeons.filter((p) => row.ledges.includes(p.floor));
   const routes = onRow.map((p) => ({ p, route: escapeOf(p, page, way, sky) }));
   if (routes.some((r) => !r.route)) return null;
-  const others = pigeons.filter((p) => !row.floors.includes(p.floor));
+  const others = pigeons.filter((p) => !row.ledges.includes(p.floor));
   const end = endOf(from, to, start);
   const plan = (takeoffs: Takeoff[], alerts: number[]): Plan => {
     const returns = takeoffs.reduce<{ id: number; at: number }[]>((acc, t) => [...acc, { id: t.id, at: acc.length ? acc[acc.length - 1].at + between(rand, RETURN_APART[0], RETURN_APART[1]) : end + between(rand, RETURN[0], RETURN[1]) }], []);
-    return { row: row.id, y: -ABOVE, dir, start, from, to, end, takeoffs, alerts, returns };
+    return { row: row.id, y: lane.y - first.y, dir, start, from, to, end, takeoffs, alerts, returns };
   };
   // Those on its row go in turn, the one farthest from where it comes in
   // first (the one with the clearest way out); where that leaves one near
@@ -208,14 +198,13 @@ function escapeOf(p: Pigeon, page: PageMap, way: 'left' | 'right', sky: Sky): Ro
 export function planSweep(pigeons: readonly Pigeon[], page: PageMap, sky: Sky, now: number, rand: Rand): Plan | null {
   if (!pigeons.length || !pigeons.every(grounded)) return null;
   const rows = rowsOf(page);
-  const watched = rows.filter((r) => pigeons.some((p) => r.floors.includes(p.floor) && inView(page.floors.get(p.floor)!, page)));
+  const watched = rows.filter((r) => pigeons.some((p) => r.ledges.includes(p.floor) && inView(page.floors.get(p.floor)!, page)));
   return watched.reduce<Plan | null>((found, row) => {
-    if (found) return found;
-    const first = page.floors.get(row.id)!;
-    const { from, to } = span(first, sky);
-    const xs = pigeons.filter((p) => row.floors.includes(p.floor)).map((p) => pageX(p, page));
-    const nearLeft = Math.min(...xs.map((x) => x - (first.left + from)));
-    const nearRight = Math.min(...xs.map((x) => first.left + to - x));
+    const lane = found ? null : laneFor(row, sky);
+    if (!lane) return found;
+    const xs = pigeons.filter((p) => row.ledges.includes(p.floor)).map((p) => pageX(p, page));
+    const nearLeft = Math.min(...xs.map((x) => x - lane.from));
+    const nearRight = Math.min(...xs.map((x) => lane.to - x));
     const dirs: (1 | -1)[] = nearLeft >= nearRight ? [1, -1] : [-1, 1];
     return dirs.reduce<Plan | null>((p, dir) => p ?? planOn(row, dir, pigeons, page, sky, now, rand), null);
   }, null);

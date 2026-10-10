@@ -243,8 +243,9 @@ function finish(play: Play, t: Table, page: PageMap, from: Point, start: number,
 
 function outShot(play: Play, t: Table, page: PageMap, from: Point, start: number, rand: Rand): Seg[] | null {
   const s = play.to;
-  const far = t.ends[s];
-  const x = s === 0 ? far + OUT_ROOM : far - OUT_ROOM;
+  // Deep: at the far end of the bounce spots, or short of the card's end
+  // by the room the bounces and the roll need, whichever is nearer.
+  const x = s === 0 ? Math.max(t.sides[0].lo, t.ends[0] + OUT_ROOM) : Math.min(t.sides[1].hi, t.ends[1] - OUT_ROOM);
   if (s === 0 ? x > t.net.lo - SPOT_NEAR : x < t.net.hi + SPOT_NEAR) return null;
   const ground = groundOf(t, s);
   const to = { x, y: ground };
@@ -378,12 +379,17 @@ export function ballOf(r: Rally, page: PageMap, now: number): Ball | null {
 
 // The ledge the ball and its bounces take while it plays, as claims: no
 // pigeon walks or lands there.
-export function claimsOf(r: Rally, page: PageMap): Claim[] {
-  const t = r.play && tableOf(r.play.court, page);
-  if (!r.play || !t) return [];
+export const claimsOf = (r: Rally, page: PageMap): Claim[] => (r.play ? courtClaims(r.play.court, page) : []);
+
+// The ledge a rally on this court would take: each card's top from the net
+// out past its farthest bounce spot by the room an out ball's bounces and
+// roll take.
+export function courtClaims(court: CourtPair, page: PageMap): Claim[] {
+  const t = tableOf(court, page);
+  if (!t) return [];
   return [
-    { floor: r.play.court.left, lo: t.ends[0], hi: t.net.lo },
-    { floor: r.play.court.right, lo: 0, hi: t.ends[1] - t.right },
+    { floor: court.left, lo: Math.max(t.ends[0], t.sides[0].lo - OUT_ROOM) - R, hi: t.net.lo },
+    { floor: court.right, lo: 0, hi: Math.min(t.ends[1], t.sides[1].hi + OUT_ROOM) - t.right + R },
   ];
 }
 

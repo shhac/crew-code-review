@@ -139,4 +139,4 @@ export function specksOf(p: Puff, now: number): Speck[] {
 }
 
 // The puffs still showing at now.
-export const livePuffs = (puffs: readonly Puff[], now: number) => puffs.filter((p) => now - p.at < PUFF);
+export const livePuffs = <P extends Puff>(puffs: readonly P[], now: number): P[] => puffs.filter((p) => now - p.at < PUFF);
