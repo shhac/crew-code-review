@@ -37,17 +37,16 @@ test('the aurora stays inside the rail, between the nav and the shelf', async ({
   await page.goto('/?theme=aurora');
   const sky = page.locator('.aurora-shelf .sky');
   await expect(sky.locator('.curtain')).toHaveCount(3);
-  const bounds = await sky.evaluate((el) => {
+  // Polled: the viewer chip fills in after the page loads and lifts the
+  // shelf, and the sky is remeasured on the next frame, before it is ever
+  // painted. A read between the two saw the sky 4px over the nav.
+  await expect.poll(() => sky.evaluate((el) => {
     const r = el.getBoundingClientRect();
     const rail = document.querySelector('.rail')!.getBoundingClientRect();
     const nav = document.querySelector('.rail nav')!.getBoundingClientRect();
     const stage = el.parentElement!.querySelector('.stage')!.getBoundingClientRect();
-    return { left: r.left - rail.left, right: rail.right - r.right, belowNav: r.top - nav.bottom, aboveStage: stage.top - r.bottom };
-  });
-  expect(bounds.left).toBeGreaterThanOrEqual(0);
-  expect(bounds.right).toBeGreaterThanOrEqual(0);
-  expect(bounds.belowNav).toBeGreaterThan(0);
-  expect(bounds.aboveStage).toBeGreaterThanOrEqual(0);
+    return { left: r.left >= rail.left, right: r.right <= rail.right, belowNav: r.top > nav.bottom, aboveStage: r.bottom <= stage.top };
+  })).toEqual({ left: true, right: true, belowNav: true, aboveStage: true });
 });
 
 test('reduced motion stills the sky and the frost', async ({ page }) => {
