@@ -263,9 +263,8 @@ describe('a layout change mid-run', () => {
     expect(new Set(after.hares.map((h) => h.id)).size).toBe(after.hares.length);
   });
 
-  // Bug: reconcileHares keeps each hare's `tall` from before the change, so
-  // the pair, now a stand-off, still sits up 38px tall under a chart 32px
-  // above the ledge.
+  // Once a bug: the pair, now a stand-off, kept their `tall` from before and
+  // sat up 38px tall under a chart 32px above the ledge.
   it('turns a box that lost its tall room into a stand-off, the bout over, clear of the chart', () => {
     const { g, now } = first((x) => x.hares.filter((h) => h.mode === 'box').length === 2);
     const [a, b] = g.hares.filter((h) => h.mode === 'box');
@@ -318,10 +317,10 @@ describe('reduced motion', () => {
     for (const v of views) expect(v.pose).toBe(v.y === HEADING.y ? 'sit' : 'alert');
   });
 
-  // Bug: restingHares places a hare that must move (one of a boxing pair,
-  // too close to the other to sit) clear only of those placed before it,
-  // so it can land on a later hare's spot and push that one, grazing
-  // calmly, somewhere new. The foxes and rabbits place it clear of all.
+  // Once a bug: a hare that must move (one of a boxing pair, too close to
+  // the other to sit) was placed clear only of those placed before it, so
+  // it could land on a later hare's spot and push that one, grazing calmly,
+  // somewhere new.
   it('sits them all still at once when it comes on mid-run, those grazing or sitting where they were', () => {
     const scene = page();
     const moments: Hares[] = [];
