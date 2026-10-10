@@ -78,7 +78,7 @@ test('identity stays at the pre-change holly and theme-none positions at every b
     expect(baseline).not.toBeNull();
     await page.goto('/lab/scene.html?theme=christmas&clock=manual');
     const rectangles = [];
-    for (const theme of ['christmas', 'halloween', 'none']) {
+    for (const theme of ['christmas', 'halloween', 'none', 'valentine']) {
       await page.locator('label', { hasText: /^theme/ }).locator('select').selectOption(theme);
       const decoration = page.locator('.rail > .theme-shelf');
       if (theme !== 'none') {
@@ -96,6 +96,7 @@ test('identity stays at the pre-change holly and theme-none positions at every b
     expect(rectangles[0], `Christmas vs original holly at ${context}`).toEqual(baseline);
     expect(rectangles[0], `Christmas vs Halloween at ${context}`).toEqual(rectangles[1]);
     expect(rectangles[0], `Christmas vs theme-none at ${context}`).toEqual(rectangles[2]);
+    expect(rectangles[0], `Christmas vs Valentine's at ${context}`).toEqual(rectangles[3]);
   }
   expect(api).toEqual([]);
 });

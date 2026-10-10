@@ -1,4 +1,4 @@
 import type { Scene } from '../scenes';
+import ValentineShelf from './ValentineShelf.svelte';
 
-// Not drawn yet: the set shows nothing until its parts are named here.
-export default {} satisfies Scene;
+export default { Shelf: ValentineShelf } satisfies Scene;
