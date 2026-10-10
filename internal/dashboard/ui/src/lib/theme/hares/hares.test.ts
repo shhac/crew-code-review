@@ -306,7 +306,7 @@ describe('reduced motion', () => {
   // too close to the other to sit) clear only of those placed before it,
   // so it can land on a later hare's spot and push that one, grazing
   // calmly, somewhere new. The foxes and rabbits place it clear of all.
-  it.fails('sits them all still at once when it comes on mid-run, those grazing or sitting where they were', () => {
+  it('sits them all still at once when it comes on mid-run, those grazing or sitting where they were', () => {
     const scene = page();
     const moments: Hares[] = [];
     run(createHares(scene, 0, seeded(1)), scene, 0, 40_000, seeded(2), () => null, (g, now) => {

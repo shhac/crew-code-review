@@ -1,5 +1,5 @@
 import { inView, type PageMap } from '../floors';
-import { fillTo, inTurn, keepInTurn, placeIds, placeInTurn, troupeSize } from '../group';
+import { fillTo, inTurn, keepInTurn, placeIds, regroup, troupeSize } from '../group';
 import { bodyOf, clampTo, runAt, runsOf } from '../ledges';
 import { clamp } from '../math';
 import type { Cursor, Point } from '../pointer';
@@ -166,17 +166,20 @@ function clamped(h: Hare, scene: PageMap): Hare | null {
 
 // Reduced motion: every hare sat up, still, kept where it sat while that
 // spot stays clear, so a scroll never moves it; else in the middle of a
-// free stretch.
+// free stretch clear of every other hare (those still to come as they
+// were, so it never lands on one).
 export function restingHares(scene: PageMap, previous: Hares | null): Hares {
   const target = previous?.target ?? createHares(scene, 0, () => 0.5).target;
-  const ids = Array.from({ length: target }, (_, id) => id);
-  const hares = placeInTurn<number, Hare>(ids, (id, placed) => {
-    const before = previous?.hares.find((h) => h.id === id);
-    const kept = before && clamped(before, scene);
-    const here = kept && kept.x === before.x && holds(kept, scene, placed) ? kept : placeHare(scene, 0, () => 0.5, placed, fresh(id), true);
-    return here && sitUp({ ...here, mode: 'sit' }, scene, 0, () => 0.5);
-  }).map((h) => ({ ...h, until: Infinity }));
-  return { target, hares, runs: [], bout: null, nextBout: Infinity };
+  const still = (h: Hare): Hare => ({ ...sitUp({ ...h, mode: 'sit' }, scene, 0, () => 0.5), until: Infinity });
+  const place = (others: Hare[], id: number) => {
+    const here = placeHare(scene, 0, () => 0.5, others, fresh(id), true);
+    return here && still(here);
+  };
+  const keep = (before: Hare, settled: Hare[], all: Hare[]) => {
+    const kept = clamped(before, scene);
+    return kept && kept.x === before.x && holds(kept, scene, settled) ? still(kept) : place(all, before.id);
+  };
+  return { target, hares: regroup(previous?.hares ?? [], target, keep, place), runs: [], bout: null, nextBout: Infinity };
 }
 
 // --- Drawing -------------------------------------------------------------
