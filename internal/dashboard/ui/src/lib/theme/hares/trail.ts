@@ -70,7 +70,7 @@ export type PlanOptions = {
 // on the page where it stands, for a leap to fly clear of.
 export type Claim = Stretch & { box?: Box };
 
-export const segLength = (s: Segment) => (s.kind === 'run' ? Math.abs(s.to - s.from) : s.length);
+const segLength = (s: Segment) => (s.kind === 'run' ? Math.abs(s.to - s.from) : s.length);
 // How a hare on a trail stands on the ledges.
 const walkerOf = (opts: PlanOptions): Walker => ({ clear: opts.clear, reach: REACH, half: opts.body.half, spacing: opts.spacing });
 
