@@ -4,9 +4,10 @@
 import type { Critter } from './critter';
 import { fox } from './fox';
 import { hedgehog } from './hedgehog';
+import { rabbit } from './rabbit';
 import { robin } from './robin';
 import { spider } from './spider';
 
-export const CRITTERS: readonly Critter[] = [hedgehog, fox, spider, robin];
+export const CRITTERS: readonly Critter[] = [hedgehog, fox, spider, robin, rabbit];
 
 export const critterNamed = (name: string | null): Critter | undefined => CRITTERS.find((c) => c.name === name);
