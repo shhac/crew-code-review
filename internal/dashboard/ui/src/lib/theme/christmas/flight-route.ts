@@ -1,15 +1,17 @@
+import { meets } from '../air';
+import { parabola } from '../curves';
+import type { Obstacle } from '../floors';
+import { clamp, clamp01, degrees, mixPoint, smooth } from '../math';
 import type { Point } from '../pointer';
 import type { Scene } from './robin';
-import type { Obstacle } from '../floors';
 
 type Arc = { from: Point; to: Point; rise: number };
 export type FlightCurve = { from: Point; control1: Point; control2: Point; to: Point };
-export const arcPoint = (leg: Arc, t: number): Point => ({
-  x: leg.from.x + (leg.to.x - leg.from.x) * t,
-  y: leg.from.y + (leg.to.y - leg.from.y) * t - 4 * leg.rise * t * (1 - t),
-});
+export const arcPoint = (leg: Arc, t: number): Point => parabola(leg.from, leg.to, leg.rise, t);
 const length = (leg: Arc) => Math.hypot(leg.to.x - leg.from.x, leg.to.y - leg.from.y) + leg.rise;
-const lerp = (a: Point, b: Point, t = .5): Point => ({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t });
+const lerp = (a: Point, b: Point, t = .5): Point => mixPoint(a, b, t);
+// By de Casteljau, the construction clearFlight splits a curve's hull with,
+// rather than curves.ts's cubic, which rounds differently.
 export function curvePoint(curve: FlightCurve, t: number): Point {
   if (t <= 0) return curve.from;
   if (t >= 1) return curve.to;
@@ -33,7 +35,7 @@ function distances(curve: FlightCurve): number[] {
 export const routeLength = (route: readonly FlightCurve[]) => route.reduce((sum, curve) => sum + distances(curve)[64], 0);
 
 function routeLocation(route: readonly FlightCurve[], progress: number): { curve: FlightCurve; t: number } {
-  let distance = Math.max(0, Math.min(1, progress)) * routeLength(route);
+  let distance = clamp01(progress) * routeLength(route);
   for (const curve of route) {
     const table = distances(curve), span = table[64];
     if (distance <= span) {
@@ -64,9 +66,8 @@ export function routeFacing(route: readonly FlightCurve[], progress: number): 1 
 }
 export function routeTilt(route: readonly FlightCurve[], progress: number): number {
   const tangent = routeTangent(route, progress);
-  const pitch = Math.atan2(tangent.y, Math.abs(tangent.x)) * 180 / Math.PI;
-  const join = Math.min(1, Math.max(0, Math.min(progress, 1 - progress) / .1));
-  return routeFacing(route, progress) * Math.max(-20, Math.min(20, pitch)) * join * join * (3 - 2 * join);
+  const pitch = degrees(Math.atan2(tangent.y, Math.abs(tangent.x)));
+  return routeFacing(route, progress) * clamp(pitch, -20, 20) * smooth(Math.min(progress, 1 - progress) / .1);
 }
 
 // Each small interval encloses the entire curve, including its exact extremum.
@@ -83,7 +84,7 @@ export function clearArc(leg: Arc, scene: Scene, side: number, height: number): 
     const top = Math.min(a.y, b.y, vertex > start && vertex < end ? arcPoint(leg, vertex).y : Infinity) - height;
     const box = { left: Math.min(a.x, b.x) - side, right: Math.max(a.x, b.x) + side, top, bottom: Math.max(a.y, b.y) };
     if (box.left < 0 || box.right > scene.width || box.top < 0 || box.bottom > scene.height
-      || scene.obstacles.some(o => box.left < o.right && box.right > o.left && box.top < o.bottom && box.bottom > o.top)) return false;
+      || scene.obstacles.some(o => meets(box, o))) return false;
   }
   return true;
 }
@@ -99,7 +100,7 @@ export function clearFlight(route: readonly FlightCurve[], scene: Scene): boolea
     const box = curveBounds(curve);
     if (!Object.values(box).every(Number.isFinite)) return false;
     if (box.left >= 0 && box.right <= scene.width && box.top >= 0 && box.bottom <= scene.height
-      && !scene.obstacles.some(o => box.left < o.right && box.right > o.left && box.top < o.bottom && box.bottom > o.top)) return true;
+      && !scene.obstacles.some(o => meets(box, o))) return true;
     if (depth === 12) return false;
     // A Bézier curve stays inside its control hull. Subdivide that hull for
     // continuous clearance checks, rather than checking only sampled pixels.
