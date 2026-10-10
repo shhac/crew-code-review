@@ -1,6 +1,10 @@
 # Village fête (2026-10-10)
 
-**Status**: pre-production draft (decisions settled, not built).
+**Status**: being built. Done: the shelf, the wasp's parts and their
+export, the bunting's pure model. Waiting
+on the phase C kits: the shared gaps and rail air (c-surfaces) for the
+bunting's layer and the wasps' air, and the insect rig (c-insects) for the
+wasp's wings, legs and antennae. Not switched on yet.
 
 **Pins**: written against `b45e997`. Code-internal.
 
@@ -531,9 +535,10 @@ built-in `$imagegen` path, each on a flat magenta `#FF00FF` background, with
 `design-docs/aurora/winter-kit.png`, `design-docs/bonfire/toffee-apples.png`
 and `design-docs/halloween/pumpkins.png` as style references (and the
 hedgehog's and fox's standing drawings for the wasp's outline weight).
-Every wasp picture after the reference is an edit of it. Nothing is exported,
-cut or shipped yet; the owner writes `export.py` on `design-docs/art.py` once
-the rig is settled.
+Every wasp picture after the reference is an edit of it. `export.py`
+reproduces every shipped file (`uv run design-docs/fete/export.py`), and
+prints where each part sat in the reference, every size below, and the two
+places on the table the wasps use.
 
 | Source | Size | What | Prompt, in short |
 | --- | --- | --- | --- |
@@ -543,6 +548,37 @@ the rig is settled.
 | `wasp-pose-cruise.png` | 1536x1024 | key pose: flee, return | edit: fast flight, body near level, wings open and swept back, legs drawn up under the body |
 | `wasp-pose-land.png` | 1536x1024 | key pose: land, take off | edit: just above a surface, body about 25 degrees up, wings raised high, all six legs reaching down with tarsi spread |
 | `wasp-pose-feed.png` | 1536x1024 | key pose: feed | edit: standing on six feet, front lowered, head bowed with mandibles at the surface, antennae tips touching it, wings folded |
+| `wasp-parts.png` | 2172x724 | the rig's parts | edit of `wasp-standing.png`: taken apart into four pieces in a row at the reference's size and angle: the gaster with its petiole (the stripes completed where the wings lay), the mesosoma with all six legs taken off and its underside closed, the head without its antennae (two small sockets left) and with a soft unoutlined back edge, and the folded wings on their own |
+| `wasp-wing.png` | 1536x1024 | the open wing | edit of `wasp-pose-hover.png`: only the near open wing (fore and hind wing as one surface) at the angle it has there, with its hinge knob |
+
+Both edits (made 2026-10-10, as above) came back usable at the first try.
+Laid back over the reference by `export.py` they line up (looked at as an
+overlay): the head and folded wings exactly, the thorax a little smaller
+than the reference's dome and the gaster about a drawing unit shorter, which
+reads as the same wasp.
+
+The table's places, measured by eye on `fete-table.png` and written in
+`export.py`: the middle of the cake's sugared top (905, 185) with a half-width
+of 235 source pixels, and the top of the blackcurrant jar's lid (1712, 396),
+half-width 70. On the stage (`fete/table.ts`) the cake's top is at (76.1,
+11.9), half-width 23, and the jar's lid at (155.2, 32.5), half-width 6.9.
+
+| Source | Shipped as | Display size |
+| --- | --- | --- |
+| `fete-table.png` | `fete-table.webp` | 168x59.5, at twice that, standing on a code-drawn cloth with a scalloped hem (`FeteShelf.svelte`) |
+| `wasp-standing.png` | `ui/src/lab/wasp-reference.webp` (the lab's overlay) | 29.6x14.1 units |
+| `wasp-pose-*.png` (four key poses) | `ui/src/lab/wasp-pose-*.webp` (the lab's overlays) | on the same eye scale |
+| `wasp-parts.png` | `wasp-gaster.webp`, `wasp-thorax.webp`, `wasp-head.webp`, `wasp-wing-folded.webp` | 12.1x6.1, 7.4x6.1, 4.8x6.8, 13.1x2.6 units, at (1.72, 3.97), (13.17, 1.20), (19.65, 2.73), (4.26, 1.92) |
+| `wasp-wing.png` | `wasp-wing.webp` | 21.9x13.3 units on the hover pose's eye scale, hinge at (20.71, 12.10) of its box |
+
+The shipped files are under `ui/src/lib/theme/fete/` unless named. Every
+wasp picture is exported so its eye is 2 drawing units, at 12 file pixels per
+unit. The eye is measured as the square root of the area of the dark grey
+inside its outline (`export.py`'s `iris`): art.py's `feature` follows dark
+pixels, and on a wasp they run from the eye's outline into the whole black
+thorax. The parts are placed by matching their pattern of yellow and black
+(`matched`), since a black or striped part's outline alone fits anywhere
+inside the wasp.
 
 What was looked at and kept: the shelf art reads at shelf size, with the
 cake's flat sugared top clear for a landing (the rosette's tails dip a few

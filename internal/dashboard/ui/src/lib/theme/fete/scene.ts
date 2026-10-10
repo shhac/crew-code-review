@@ -1,4 +1,6 @@
 import type { Scene } from '../scenes';
+import FeteShelf from './FeteShelf.svelte';
 
-// Not drawn yet: the set shows nothing until its parts are named here.
-export default {} satisfies Scene;
+// The bunting layer and the wasps come once the shared gaps and rail air
+// land (design-docs/fete/README.md).
+export default { Shelf: FeteShelf } satisfies Scene;
