@@ -350,6 +350,62 @@ while building:
   path, and a `<g data-shell>` per shell (two paths), so the e2e content
   check can look at each shell on its own.
 
+### The gulls' behaviour model
+
+Pure, with tests, before the rig: `gull-poses.ts` (the footprints, the
+note's numbers until the rig test pins the real ones), `swoop.ts` (the pass
+point, the route and its clearance), `gull.ts` (one gull) and `gulls.ts`
+(the group). Settled while building:
+
+- **One point for every pose.** A gull is placed by its body's middle,
+  `LIFT` (14px) above its feet on a ledge; ground footprints stand on the
+  feet, air footprints reach about the middle. A route is the middle's path.
+- **Air** is `air.ts`'s (the cupids'): `airOf`'s bounds, taken on a bare
+  page so it does not work out hover spots for every point of the page (a
+  gull never hovers), minus the page's obstacles widened by `GAP`. New
+  routes keep to the part of `main` in view; a flight under way is checked
+  against all of `main` after a scroll.
+- **Touching a ledge.** The run, the climb from it and the flare onto a
+  ledge dip a few pixels into the empty top edge of the card under that
+  ledge (the take-off pose's feet, the flight pose's lowered wings as it
+  lifts off). Those legs are checked against a page where that one card's
+  box starts 15px lower (`DIP`); text, controls and charts in it count as
+  ever. Ignoring the card altogether let a climb cut across a card's
+  corner.
+- **The flare** starts 15px up and 26px back from touchdown (its 30px), high
+  enough that the flight pose just before it clears the card it lands on.
+- **The dive.** As decided, plus a fourth, steep stoop (40px back, 80px up)
+  for air that is only a narrow column (a side margin); it is still aimed
+  within 35 degrees of the cursor. Up to six pass points are tried, nearest
+  the cursor first; the first wholly clear route through one wins. Of the
+  gulls that could go, the one with the shortest route (its walk counted)
+  goes.
+- **Taking off.** The first three spots within a 60px walk with room to take
+  off (the 18px run on a clear run, 40px clear over 56px ahead) are tried,
+  each with two climbs: rising straight away, or flying out level first
+  (over the rest of its own card) and coming round into the dive. A gull
+  that must walk is `ready`: it struts there (the strut pose) and plans
+  afresh from there; if the cursor has moved meanwhile it stands down, and
+  if no route is clear now it gives the long call instead.
+- **Landing.** Its home spot first, then the spots nearest the end of the
+  pull-up, on a 24px grid of the clear runs in view, 100px from the others
+  and 80px from the cursor, with the 40px column behind; up to four are
+  tried. It lands facing the way it flies and keeps that facing through the
+  touchdown and the call; turning to the cursor (the 1.2s rule) comes after.
+  Landing already facing the cursor's side would have cut the landing spots
+  by half for a turn the stand gives a moment later.
+- **The cooldown waits.** A cursor resting within 30s of the last swoop is
+  not called at; the swoop comes when the 30s are up if the cursor is still
+  resting there. Calling at once would spend the resting place on the lesser
+  reaction.
+- **Planning cost.** About 20ms for a plan on a 1440-wide page, once per
+  resting place for each free gull; the checks a plan repeats (each ledge's
+  runs, the columns, each flare) are worked out once per plan.
+- **Touch** (unresolved): `ledgeScene` keeps the last pointer position for
+  touch as well as mouse and pen, so a finger lifted and left would count as
+  a resting cursor. The gulls cannot tell; a shared fix (a cursor that knows
+  it hovers) is for `layout.ts`, and is reported rather than worked round.
+
 ## Research: the herring gull
 
 The British breeding adult, *Larus argentatus argenteus*.
