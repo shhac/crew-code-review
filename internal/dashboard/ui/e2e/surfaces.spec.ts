@@ -114,3 +114,25 @@ for (const width of [1440, 1024]) {
     await expect(page.locator('.geometry [data-gap-kind=under] .hatched').first()).toBeAttached();
   });
 }
+
+const exitsShown = (page: Page) => page.locator('.geometry [data-exit]').evaluateAll((gs) => gs.map((g) => g.getAttribute('data-exit')));
+
+test('the air is main in view, with exits right, top and behind the rail where the page has them', async ({ page }, info) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.goto('/?theme=halloween&theme-debug=1');
+  await expect(page.locator('.geometry [data-air] rect')).toBeAttached();
+  const main = await rectOf(page, 'main');
+  const air = await drawn(page, '.geometry [data-air] rect');
+  expect(air).toEqual({ left: main.left + 6, top: 6, right: 1440 - 6, bottom: 900 - 6 });
+  expect(await exitsShown(page)).toEqual(['right', 'top', 'rail']);
+  expect(await page.locator('.geometry [data-exit=rail] line').getAttribute('x1')).toBe(String(main.left));
+  await page.screenshot({ path: info.outputPath('exits-1440.png') });
+
+  // On a phone the rail is stacked above main: no way out behind it, and
+  // none out of the top until the rail has scrolled away.
+  await page.setViewportSize({ width: 390, height: 900 });
+  await expect.poll(() => exitsShown(page)).toEqual(['right']);
+  await page.evaluate(() => window.scrollTo(0, 600));
+  await expect.poll(() => exitsShown(page)).toEqual(['right', 'top']);
+});

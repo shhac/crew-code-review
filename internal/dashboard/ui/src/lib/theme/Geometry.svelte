@@ -1,9 +1,12 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import { boundsOf, EXITS, type Lane } from './air';
   import { measurePage, wallRuns, walls, type Ledge, type PageMap, type Run } from './floors';
   import { courts, endId, gapRuns, measureGaps, type Gap } from './gaps';
   import { measureRailAir, measureRailSky, watchRailSky, type Sky } from './sky';
   export let floors: ReadonlyMap<number, Ledge>;
+  // A month's lanes, which depend on its fliers' footprints.
+  export let lanes: readonly Lane[] = [];
 
   // Drawn only on request (?theme-debug=1), whichever theme is showing.
   const shown = new URLSearchParams(location.search).get('theme-debug') === '1';
@@ -37,6 +40,10 @@
     return gaps.map((g) => ({ g, court: court.has(g.id), out: g.kind === 'under' ? blocked(g, gapRuns(g, p.obstacles, HANG)) : [] }));
   };
   $: gaps = page ? gapsOf(page) : [];
+  // main's air in view, and the exits this page has for fliers. Chevrons
+  // are drawn at these fractions along each exit.
+  $: bounds = page ? boundsOf(page, EXITS) : null;
+  const MARKS = [0.25, 0.5, 0.75];
 
   onMount(() => {
     const el = shown ? shelf() : null;
@@ -86,6 +93,43 @@
       {/if}
     </g>
   {/each}
+  {#if page && bounds?.exits}
+    {@const { view, exits } = bounds}
+    <g data-air>
+      <rect class="air" x={view.left} y={view.top} width={view.right - view.left} height={view.bottom - view.top} />
+      <text class="air end" x={view.right - 4} y={view.bottom - 4}>air {Math.round(view.right - view.left)}x{Math.round(view.bottom - view.top)}</text>
+    </g>
+    {#if exits.right !== undefined}
+      <g data-exit="right">
+        {#each MARKS as f (f)}
+          <path class="exit" d="M {exits.right - 10} {page.height * f - 5} l 5 5 l -5 5" />
+        {/each}
+      </g>
+    {/if}
+    {#if exits.top !== undefined}
+      <g data-exit="top">
+        {#each MARKS as f (f)}
+          <path class="exit" d="M {view.left + (view.right - view.left) * f - 5} {exits.top + 10} l 5 -5 l 5 5" />
+        {/each}
+      </g>
+    {/if}
+    {#if exits.rail !== undefined}
+      <g data-exit="rail">
+        <line class="exit" x1={exits.rail} y1={0} x2={exits.rail} y2={page.height} />
+        {#each MARKS as f (f)}
+          <path class="exit" d="M {exits.rail + 10} {page.height * f - 5} l -5 5 l 5 5" />
+        {/each}
+      </g>
+    {/if}
+  {/if}
+  {#each lanes as l (l.id)}
+    <!-- Only the part in sight: behind the rail and past the window are not. -->
+    {@const from = Math.max(l.from, bounds?.exits?.rail ?? 0)}
+    <g data-lane-id={l.id}>
+      <line class="lane" x1={from} y1={l.y} x2={Math.min(l.to, page?.width ?? l.to)} y2={l.y} />
+      <text class="lane" x={from + 4} y={l.y - 3}>lane {l.row} +{l.above}</text>
+    </g>
+  {/each}
   {#if sky}
     <g data-sky>
       <rect class="sky" x={sky.left} y={sky.top} width={sky.width} height={sky.height} />
@@ -116,6 +160,12 @@
   .hatch { stroke: #ffd27a; stroke-dasharray: none; opacity: .6; }
   text.gap { fill: #ffd27a; }
   text.down { font-size: 9px; }
+  rect.air { fill: none; stroke: #f2a7d8; stroke-width: 1; stroke-dasharray: 6 4; }
+  text.air { fill: #f2a7d8; }
+  .exit { fill: none; stroke: #f2a7d8; stroke-width: 1.5; }
+  line.exit { stroke-width: 1; stroke-dasharray: 6 4; }
+  line.lane { stroke: #9be29b; stroke-dasharray: 8 4; }
+  text.lane { fill: #9be29b; }
   text { fill: #78c8ff; font: 10px ui-monospace, monospace; }
   .end { text-anchor: end; }
 </style>
