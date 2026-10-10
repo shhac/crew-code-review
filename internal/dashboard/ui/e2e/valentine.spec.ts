@@ -1,13 +1,14 @@
 import { expect, test, type Page } from '@playwright/test';
 import { coveredContent } from './content';
+import { CATCH_UP } from './seasonal';
 
 // Valentine's: a shelf of chocolates, a rose and a card, rose petals on the
 // ledges, and cupids hovering in the page's open air that shoot at a still
-// cursor. Flits, dodges and the airspace rules over long runs are timed and
+// cursor. What every set keeps is seasonal.spec.ts's; this is Valentine's
+// own. Flits, dodges and the airspace rules over long runs are timed and
 // random, so the models' unit tests cover those; this checks the page as a
 // browser lays it out.
 
-const CUPID_PARTS = 'image, path';
 const cupids = (page: Page) => page.locator('[data-valentine] svg.rig');
 
 // Every box a cupid's drawing covers that falls inside a card's own box:
@@ -34,42 +35,6 @@ async function watchShot(page: Page) {
   }
   return seen;
 }
-
-test('the daemon-resolved valentine set decorates the page: its palette, shelf, petals and at least two cupids', async ({ page }) => {
-  await page.route('**/api/config', async (route) => {
-    const response = await route.fetch();
-    const config = await response.json();
-    config.theme = 'valentine';
-    await route.fulfill({ response, json: config });
-  });
-  await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto('/');
-  await expect(page.locator('[data-valentine]')).toBeAttached();
-  await expect(page.locator('.valentine-shelf')).toBeVisible();
-  await expect(page.locator('html')).toHaveAttribute('data-theme', 'valentine');
-  expect(await page.locator('.brand em').evaluate((el) => getComputedStyle(el).color)).toBe('rgb(244, 143, 184)');
-  await expect(page.locator('[data-valentine] .petal').first()).toBeAttached();
-  await expect.poll(() => cupids(page).count()).toBeGreaterThanOrEqual(2);
-});
-
-test('nothing valentine takes pointer events, and it all sits below dialogs', async ({ page }) => {
-  await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto('/?theme=valentine');
-  const cupid = page.locator('[data-cupid][data-id="0"]');
-  await expect(cupid).toBeVisible();
-  const catching = await page.locator('[data-valentine], [data-valentine] *, .valentine-shelf, .valentine-shelf *').evaluateAll((els) =>
-    els.filter((el) => getComputedStyle(el).pointerEvents !== 'none').map((el) => el.tagName + '.' + el.getAttribute('class')),
-  );
-  expect(catching).toEqual([]);
-  const landsOnDecoration = await cupid.evaluate((el) => {
-    const r = el.getBoundingClientRect();
-    return !!document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2)?.closest('[data-valentine], .valentine-shelf');
-  });
-  expect(landsOnDecoration).toBe(false);
-  expect(Number(await page.locator('[data-valentine]').evaluate((el) => getComputedStyle(el).zIndex))).toBeLessThan(50);
-  await expect(page.locator('[data-valentine]')).toHaveAttribute('aria-hidden', 'true');
-  await expect(page.locator('.valentine-shelf')).toHaveAttribute('aria-hidden', 'true');
-});
 
 test('a cupid shoots at a still cursor, into a ledge, and neither arrow nor hearts cover anything', async ({ page }) => {
   test.setTimeout(60_000);
@@ -98,44 +63,25 @@ test('a cursor whipping past a cupid makes it dodge', async ({ page }) => {
   await expect(cupid).toHaveAttribute('data-cupid', 'dodge', { timeout: 1000 });
 });
 
-test('the cupids never cover text, controls, charts or cards', async ({ page }) => {
-  await page.setViewportSize({ width: 1440, height: 900 });
-  const seen: number[] = [];
-  for (const route of ['/', '/logs', '/metrics', '/history']) {
-    await page.goto(`${route}?theme=valentine`);
-    await expect(page.locator('.rail nav a')).toHaveCount(7);
-    await page.waitForTimeout(400);
-    seen.push(await cupids(page).count());
-    expect(await coveredContent(cupids(page), CUPID_PARTS)).toEqual([]);
-    expect(await overCards(page)).toEqual([]);
+test('the cupids keep out of the cards, wide and on a phone', async ({ page }) => {
+  for (const [width, routes] of [[1440, ['/', '/logs', '/metrics', '/history']], [390, ['/', '/metrics']]] as const) {
+    await page.setViewportSize({ width, height: 900 });
+    for (const route of routes) {
+      await page.goto(`${route}?theme=valentine`);
+      await expect(page.locator('.rail nav a')).toHaveCount(7);
+      await page.waitForTimeout(CATCH_UP);
+      expect(await overCards(page), `${width} ${route}`).toEqual([]);
+    }
   }
-  expect(seen.every((n) => n >= 2)).toBe(true);
 });
 
-test('reduced motion shows still cupids that never shoot', async ({ page }) => {
+test('reduced motion never shoots at a still cursor', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/?theme=valentine');
   await expect.poll(() => cupids(page).count()).toBeGreaterThanOrEqual(2);
-  await expect(page.locator('.rail nav a')).toHaveCount(7);
-  await page.waitForTimeout(500);
-  const scene = () => cupids(page).evaluateAll((els) => els.map((el) => [el.getAttribute('data-cupid'), el.getAttribute('data-pose'), el.getBoundingClientRect().toJSON(), el.innerHTML]));
-  const before = await scene();
-  expect(new Set(before.map(([mode, pose]) => `${mode} ${pose}`))).toEqual(new Set(['hover hover']));
-  await page.mouse.move(640, 260, { steps: 3 });
+  await page.mouse.move(680, 280);
+  await page.mouse.move(620, 230, { steps: 4 });
   await page.waitForTimeout(2500);
-  expect(await scene()).toEqual(before);
   await expect(page.locator('[data-valentine] [data-arrow]')).toHaveCount(0);
-});
-
-test('a phone keeps the page decorations, hides the shelf, and its cupids stay clear', async ({ page }) => {
-  await page.setViewportSize({ width: 390, height: 900 });
-  for (const route of ['/', '/metrics']) {
-    await page.goto(`${route}?theme=valentine`);
-    await expect(page.locator('[data-valentine]')).toBeAttached();
-    await expect(page.locator('.valentine-shelf')).toBeHidden();
-    await page.waitForTimeout(400);
-    expect(await coveredContent(cupids(page), CUPID_PARTS)).toEqual([]);
-    expect(await overCards(page)).toEqual([]);
-  }
 });

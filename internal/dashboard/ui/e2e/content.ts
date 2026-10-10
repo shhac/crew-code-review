@@ -5,8 +5,9 @@ import type { Locator } from '@playwright/test';
 // an animal may stand into their empty edges. `parts` picks what in each
 // element is drawn (its pictures, by default; a bow's strokes too, say); an
 // element that is itself one of them (an arrow, a heart) counts whole.
-export function coveredContent(animals: Locator, parts = 'image'): Promise<string[]> {
-  return animals.evaluateAll((els, parts) => {
+// slack is how far a drawing may reach into content and still not count.
+export function coveredContent(animals: Locator, parts = 'image', slack = 0): Promise<string[]> {
+  return animals.evaluateAll((els, [parts, slack]) => {
     const main = document.querySelector('main');
     if (!main) return [];
     const content: { name: string; r: DOMRect }[] = [];
@@ -18,11 +19,11 @@ export function coveredContent(animals: Locator, parts = 'image'): Promise<strin
       for (const r of Array.from(range.getClientRects())) content.push({ name: `text "${node.textContent.trim().slice(0, 20)}"`, r });
     }
     main.querySelectorAll('svg, canvas, button, input, textarea, select').forEach((el) => content.push({ name: el.tagName.toLowerCase(), r: el.getBoundingClientRect() }));
-    const overlap = (a: DOMRect, b: DOMRect) => a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom && b.width > 0 && b.height > 0;
+    const overlap = (a: DOMRect, b: DOMRect) => a.left < b.right - slack && b.left < a.right - slack && a.top < b.bottom - slack && b.top < a.bottom - slack && b.width > 0 && b.height > 0;
     return els.flatMap((el) => {
       const drawn = el.matches(parts) ? [el] : Array.from(el.querySelectorAll(parts));
       const pictures = drawn.map((i) => i.getBoundingClientRect());
       return content.filter((c) => pictures.some((p) => overlap(p, c.r))).map((c) => `${el.getAttribute('data-id') ?? el.tagName.toLowerCase()} over ${c.name}`);
     });
-  }, parts);
+  }, [parts, slack] as const);
 }

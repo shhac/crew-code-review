@@ -1,18 +1,8 @@
 import { expect, test, type Page } from '@playwright/test';
+import { accentOf, serveTheme } from './seasonal';
 
 // The seasonal decorations are drawn OVER the page, so the one property that
 // matters is that they never get between a person and what they clicked.
-
-// The fixture pins dashboard.theme to none; these pretend the daemon resolved
-// a set, as it would by the calendar or by config.
-async function serveTheme(page: Page, active: string) {
-  await page.route('**/api/config', async (route) => {
-    const response = await route.fetch();
-    const config = await response.json();
-    config.theme = active;
-    await route.fulfill({ response, json: config });
-  });
-}
 
 // What a click at the centre of each decoration would actually land on.
 async function hitsUnder(page: Page, selector: string) {
@@ -24,8 +14,6 @@ async function hitsUnder(page: Page, selector: string) {
     }),
   );
 }
-
-const accentOf = (page: Page) => page.locator('.brand em').evaluate((el) => getComputedStyle(el).color);
 
 test('the daemon-resolved theme decorates the page and takes its palette', async ({ page }) => {
   await serveTheme(page, 'halloween');

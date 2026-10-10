@@ -1,47 +1,20 @@
-import { expect, test, type Page } from '@playwright/test';
-import { coveredContent } from './content';
+import { expect, test } from '@playwright/test';
+import { landsOnDecoration, SETS } from './seasonal';
 
 // Bonfire Night: a bonfire shelf with fireworks in the rail's free space,
-// and embers plus hedgehogs sharing a woodpile on the page's ledges. How
-// their legs and heads move is covered by the rig's unit tests and the lab.
+// and embers plus hedgehogs sharing a woodpile on the page's ledges. What
+// every set keeps is seasonal.spec.ts's; this is the bonfire's own. How
+// the hedgehogs' legs and heads move is covered by the rig's unit tests
+// and the lab.
 
-async function serveBonfire(page: Page) {
-  await page.route('**/api/config', async (route) => {
-    const response = await route.fetch();
-    const config = await response.json();
-    config.theme = 'bonfire';
-    await route.fulfill({ response, json: config });
-  });
-}
+const BONFIRE = SETS.find((s) => s.theme === 'bonfire')!;
 
-const accentOf = (page: Page) => page.locator('.brand em').evaluate((el) => getComputedStyle(el).color);
-
-test('the daemon-resolved bonfire theme decorates the page and takes its palette', async ({ page }) => {
-  await serveBonfire(page);
-  await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto('/');
-  await expect(page.locator('[data-bonfire]')).toBeAttached();
-  await expect(page.locator('.bonfire-shelf')).toBeVisible();
-  await expect(page.locator('html')).toHaveAttribute('data-theme', 'bonfire');
-  expect(await accentOf(page)).toBe('rgb(244, 194, 91)');
-  await expect(page.locator('[data-woodpile]')).toBeVisible();
-});
-
-test('nothing bonfire takes pointer events, and clicks pass through the woodpile', async ({ page }) => {
+test('clicks pass through the woodpile', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/?theme=bonfire');
-  await expect(page.locator('[data-woodpile]')).toBeVisible();
-  // Out of the pile, so its drawing is checked too.
-  await expect(page.locator('[data-hedgehog]').first()).toBeAttached({ timeout: 15_000 });
-  const catching = await page.locator('[data-bonfire], [data-bonfire] *, .bonfire-shelf, .bonfire-shelf *').evaluateAll((els) =>
-    els.filter((el) => getComputedStyle(el).pointerEvents !== 'none').map((el) => el.tagName + '.' + el.getAttribute('class')),
-  );
-  expect(catching).toEqual([]);
-  const landsOnDecoration = await page.locator('[data-woodpile]').evaluate((el) => {
-    const r = el.getBoundingClientRect();
-    return !!document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2)?.closest('[data-bonfire], .bonfire-shelf');
-  });
-  expect(landsOnDecoration).toBe(false);
+  const pile = page.locator('[data-woodpile]');
+  await expect(pile).toBeVisible();
+  expect(await landsOnDecoration(pile, BONFIRE)).toBe(false);
 });
 
 test('the hedgehogs come out one by one once the page is still, and one curls up at a nearby cursor', async ({ page }) => {
@@ -56,26 +29,6 @@ test('the hedgehogs come out one by one once the page is still, and one curls up
   await page.mouse.move(box.x + box.width / 2 + 40, box.y - 30);
   await page.mouse.move(box.x + box.width / 2 + 10, box.y - 10, { steps: 4 });
   await expect(hog).toHaveAttribute('data-hedgehog', 'curled');
-});
-
-test('the hedgehogs never cover text, controls or charts, wherever they wander', async ({ page }) => {
-  // Three routes, each waited on and measured six times: measuring every
-  // text range is slow on a busy machine.
-  test.setTimeout(150_000);
-  await page.setViewportSize({ width: 1440, height: 900 });
-  const seen: number[] = [];
-  for (const route of ['/logs', '/', '/metrics']) {
-    await page.goto(`${route}?theme=bonfire`);
-    // Still for long enough that any hedgehogs there come out.
-    await page.waitForTimeout(5000);
-    for (let i = 0; i < 6; i++) {
-      const hogs = page.locator('[data-bonfire] svg.rig');
-      seen.push(await hogs.count());
-      expect(await coveredContent(hogs)).toEqual([]);
-      await page.waitForTimeout(500);
-    }
-  }
-  expect(Math.max(...seen)).toBeGreaterThanOrEqual(2);
 });
 
 test('fireworks burst inside the rail, between the nav and the shelf', async ({ page }) => {
@@ -98,26 +51,19 @@ test('fireworks burst inside the rail, between the nav and the shelf', async ({ 
   expect(bounds.aboveStage).toBeGreaterThanOrEqual(0);
 });
 
-test('reduced motion shows a still bonfire scene', async ({ page }) => {
+test('reduced motion stills the fire and the fireworks', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/?theme=bonfire');
-  const hogs = page.locator('[data-hedgehog]');
-  await expect.poll(() => hogs.count()).toBeGreaterThanOrEqual(2);
-  const sat = async () => ({ modes: await hogs.evaluateAll((els) => els.map((el) => el.getAttribute('data-hedgehog'))), boxes: await hogs.evaluateAll((els) => els.map((el) => el.getBoundingClientRect().toJSON())) });
-  const before = await sat();
-  expect(new Set(before.modes)).toEqual(new Set(['sniff']));
   await expect(page.locator('.bonfire-shelf .sky line')).toHaveCount(20);
   expect(await page.locator('.bonfire-shelf .tongue').first().evaluate((el) => getComputedStyle(el).animationName)).toBe('none');
-  await page.waitForTimeout(3000);
-  expect(await sat()).toEqual(before);
+  await expect.poll(() => page.locator('[data-hedgehog]').count()).toBeGreaterThanOrEqual(2);
   await expect(page.locator('[data-bonfire] [data-lid]')).toHaveCount(0);
 });
 
-test('a phone keeps the page decorations and hides the shelf and its fireworks', async ({ page }) => {
+test('a phone draws no fireworks at all', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 900 });
   await page.goto('/metrics?theme=bonfire');
   await expect(page.locator('[data-bonfire]')).toBeAttached();
-  await expect(page.locator('.bonfire-shelf')).toBeHidden();
   await expect(page.locator('.bonfire-shelf .sky')).toHaveCount(0);
 });
