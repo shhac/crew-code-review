@@ -5,8 +5,8 @@ import { clamp } from '../math';
 import type { Cursor, Point } from '../pointer';
 import { between, type Rand } from '../seed';
 import { alarm, bolt } from './alarm';
-import { advanceBout, boxRoom, endChase, startBout, type Bout } from './bout';
-import { CHASE_GAP, fresh, HALF, HARE, holds, placeHare, sittingAt, sitUp, stepHare, TALL, type Hare } from './hare';
+import { advanceBout, boxRoom, COURTING, endChase, startBout, type Bout } from './bout';
+import { CHASE_GAP, fresh, HALF, HARE, holds, placeHare, sittingAt, sitUp, stepHare, TALL, type Hare, type Mode } from './hare';
 import type { HarePose } from './hare-rig';
 import { advanceRuns, memberOf, pagePoint, placeOf, runOf, sAt, trailHolds, update, type Run } from './runs';
 import { claimsOf, placeOn } from './trail';
@@ -113,9 +113,14 @@ export function reconcileHares(group: Hares, scene: PageMap, now: number, rand: 
   const boxOk = boxing.length === 2 && boxing[0].floor === boxing[1].floor && boxRoom(scene, boxing[0].floor, boxing[0].x, boxing[1].x);
   const fixed = boxing.length && !boxOk ? hares.map((h) => (h.mode === 'box' ? { ...h, mode: 'standoff' as const, until: now + 1500 } : h)) : hares;
   const boutKept = group.bout && !dropped.length && added.length === 0 ? group.bout : null;
-  const settled = boutKept ? fixed : fixed.map((h) => (h.mode === 'approach' || h.mode === 'arrived' || h.mode === 'boxed' ? sitUp(h, scene, now, rand) : h));
+  const settled = boutKept ? fixed : fixed.map((h) => (LEFT_WAITING.includes(h.mode) ? sitUp(h, scene, now, rand) : h));
   return { ...group, hares: settled, runs, bout: boutKept && boxing.length && !boxOk ? null : boutKept };
 }
+
+// With its bout dropped, a hare coming up to box or done boxing has nothing
+// left to go on to, so it sits up. A pair still boxing has kept its room
+// (any without it is already a stand-off) and is left to box.
+const LEFT_WAITING: readonly Mode[] = COURTING.filter((m) => m !== 'box');
 
 const partnerOf = (group: Hares, h: Hare) => (group.bout ? (h.id === group.bout.jill ? group.bout.jack : group.bout.jill) : null);
 

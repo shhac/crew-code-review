@@ -3,6 +3,7 @@ import { apart, sign } from '../math';
 import type { Cursor, Point } from '../pointer';
 import { between, type Rand } from '../seed';
 import { BOLT_SPEED, sitUp, type Hare } from './hare';
+import { breakBout } from './bout';
 import type { Hares } from './hares';
 import { claimsBut, grounded, pagePoint, placeOf, planning, update, type Run } from './runs';
 import { plan } from './trail';
@@ -35,7 +36,7 @@ export function alarm(group: Hares, scene: PageMap, now: number, rand: Rand, cur
   if (!cursor || now - cursor.at >= MOVING) return group;
   const triggered = group.hares.some((h) => grounded(group, h) && near(middleOf(group, h, scene), cursor, NEAR));
   if (!triggered) return group;
-  const stopped = group.runs.filter((r) => r.members.every((m) => grounded(group, group.hares.find((h) => h.id === m.id)!)));
+  const stopped = group.runs.filter((r) => group.hares.filter((h) => r.members.some((m) => m.id === h.id)).every((h) => grounded(group, h)));
   const onRuns = new Set(stopped.flatMap((r) => r.members.map((m) => m.id)));
   const busy = new Set(group.runs.filter((r) => !stopped.includes(r)).flatMap((r) => r.members.map((m) => m.id)));
   const hares = group.hares.map((h) => {
@@ -43,9 +44,9 @@ export function alarm(group: Hares, scene: PageMap, now: number, rand: Rand, cur
     const settled = onRuns.has(h.id) ? settle(group, h) : h;
     return onRuns.has(h.id) || near(middleOf(group, h, scene), cursor, FREEZE_REACH) ? freeze(settled, now, rand) : h;
   });
-  const boutBroken = group.bout && hares.some((h) => (h.id === group.bout!.jill || h.id === group.bout!.jack) && h.mode === 'freeze');
-  const calmed = boutBroken ? hares.map((h) => (h.mode === 'approach' || h.mode === 'arrived' || h.mode === 'box' || h.mode === 'boxed' ? { ...h, mode: 'sit' as const, until: now + 1500 } : h)) : hares;
-  return { ...group, hares: calmed, runs: group.runs.filter((r) => !stopped.includes(r)), bout: boutBroken ? null : group.bout };
+  const bout = group.bout;
+  const boutBroken = !!bout && hares.some((h) => (h.id === bout.jill || h.id === bout.jack) && h.mode === 'freeze');
+  return { ...group, hares: boutBroken ? breakBout(hares, now) : hares, runs: group.runs.filter((r) => !stopped.includes(r)), bout: boutBroken ? null : bout };
 }
 
 // A hare taken off its trail where it is on it.

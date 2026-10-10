@@ -2,7 +2,7 @@ import type { PageMap } from '../floors';
 import { bodyOf, clampTo, roomOver, runAt } from '../ledges';
 import { sign } from '../math';
 import { between, type Rand } from '../seed';
-import { BOX_GAP, BOX_SPAN, CHASE_GAP, CHASE_SPEED, HALF, HARE, SPACING, TALL, type Hare } from './hare';
+import { BOX_GAP, BOX_SPAN, CHASE_GAP, CHASE_SPEED, HALF, HARE, SPACING, TALL, type Hare, type Mode } from './hare';
 import type { Hares } from './hares';
 import { claimsBut, planning, update, type Member, type Run } from './runs';
 import { plan } from './trail';
@@ -19,6 +19,19 @@ const CHASE = { budget: 900, ledges: 3 };
 // The jill, the jack coming to her, and whether this is their first box or
 // the one where a chase ended.
 export type Bout = { jill: number; jack: number; round: 1 | 2 };
+
+// A hare taking part in a bout: coming up to box, boxing, or done boxing.
+export const COURTING: readonly Mode[] = ['approach', 'arrived', 'box', 'boxed'];
+
+// The bout's two hares, as they now are.
+function boutPair(group: Hares, bout: Bout): { jill: Hare; jack: Hare } | null {
+  const jill = group.hares.find((h) => h.id === bout.jill);
+  const jack = group.hares.find((h) => h.id === bout.jack);
+  return jill && jack ? { jill, jack } : null;
+}
+
+// A bout broken off: those in it sit up a moment where they are.
+export const breakBout = (hares: readonly Hare[], now: number): Hare[] => hares.map((h) => (COURTING.includes(h.mode) ? { ...h, mode: 'sit', until: now + 1500 } : h));
 
 // Whether two hares at a and b on ledge floor could rear up and box there.
 export function boxRoom(scene: PageMap, floor: number, a: number, b: number): boolean {
@@ -68,8 +81,9 @@ function trip(group: Hares, scene: PageMap, now: number, rand: Rand): Hares {
 // She bolts away from him along a trail, he follows, and a second jack
 // behind him on the ledge follows him. Cornered, it is a stand-off instead.
 function startChase(group: Hares, scene: PageMap, now: number, rand: Rand, bout: Bout): Hares {
-  const jill = group.hares.find((h) => h.id === bout.jill)!;
-  const jack = group.hares.find((h) => h.id === bout.jack)!;
+  const pair = boutPair(group, bout);
+  if (!pair) return group;
+  const { jill, jack } = pair;
   const side = sign(jill.x - jack.x);
   const second = group.hares.filter((h) => h.id !== jill.id && h.id !== jack.id && h.floor === jill.floor && sign(jack.x - h.x) === side && sameRun(scene, jack, h, group.hares));
   const followers = [jack, ...second.slice(0, 1)];
@@ -95,9 +109,9 @@ function standoff(group: Hares, now: number, rand: Rand, a: Hare, b: Hare): Hare
 // up to her again; else a stand-off. There is never a third round.
 export function endChase(group: Hares, scene: PageMap, now: number, rand: Rand): Hares {
   const bout = group.bout;
-  if (!bout) return group;
-  const jill = group.hares.find((h) => h.id === bout.jill)!;
-  const jack = group.hares.find((h) => h.id === bout.jack)!;
+  const pair = bout && boutPair(group, bout);
+  if (!bout || !pair) return group;
+  const { jill, jack } = pair;
   const side = sign(jill.x - jack.x);
   const target = jill.x - side * BOX_GAP;
   if (bout.round === 2 || jill.floor !== jack.floor || !boxRoom(scene, jill.floor, jill.x, target)) return standoff(group, now, rand, jill, jack);
@@ -107,9 +121,9 @@ export function endChase(group: Hares, scene: PageMap, now: number, rand: Rand):
 // The bout moves on as its hares get where they were going.
 export function advanceBout(group: Hares, scene: PageMap, now: number, rand: Rand): Hares {
   const bout = group.bout;
-  if (!bout) return group;
-  const jill = group.hares.find((h) => h.id === bout.jill)!;
-  const jack = group.hares.find((h) => h.id === bout.jack)!;
+  const pair = bout && boutPair(group, bout);
+  if (!bout || !pair) return group;
+  const { jill, jack } = pair;
   if (jack.mode === 'arrived') {
     if (Math.abs(jack.x - jill.x) > BOX_GAP + 1e-6 || !boxRoom(scene, jill.floor, jill.x, jack.x)) {
       return bout.round === 2 ? standoff(group, now, rand, jill, jack) : startChase(update(group, { ...jack, mode: 'sit', until: Infinity }), scene, now, rand, bout);

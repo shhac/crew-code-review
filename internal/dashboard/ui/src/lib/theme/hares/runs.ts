@@ -3,7 +3,7 @@ import { reachOf, type PageMap } from '../floors';
 import { pageAt, runAt } from '../ledges';
 import type { Point } from '../pointer';
 import type { Rand } from '../seed';
-import { claimsOfHares, HARE, POSES, SPACING, type Hare, type Mode } from './hare';
+import { claimsOfHares, HARE, POSES, SPACING, type Hare } from './hare';
 import { arcPoint, claimsOf, placeOn, segmentsWithStart, sweptClear, type Claim, type PlanOptions, type Place, type Trail } from './trail';
 
 // The trails the hares are running: who is on each, how far along it each
@@ -71,7 +71,7 @@ export const planning = (claims: Claim[], extra: { budget: number; ledges: numbe
 // handed back, finished, for their hares to stop.
 export function advanceRuns<G extends Troupe>(group: G, dt: number): { group: G; finished: Run[] } {
   const moved = group.runs.map((r) => ({ ...r, at: Math.min(r.trail.length, r.at + (r.speed * dt) / 1000) }));
-  const hares = group.hares.map((h) => {
+  const hares = group.hares.map((h): Hare => {
     const before = runOf(group, h.id);
     const after = moved.find((r) => r.members.some((m) => m.id === h.id));
     if (!before || !after) return h;
@@ -80,7 +80,7 @@ export function advanceRuns<G extends Troupe>(group: G, dt: number): { group: G;
     const step = sAt(after, m) - sAt(before, memberOf(before, h.id));
     const place = placeOn(after.trail, sAt(after, m));
     const at = place.kind === 'run' ? { floor: place.floor, x: place.x, target: place.x, dir: place.dir } : {};
-    return { ...h, ...at, mode: 'run' as Mode, walked: h.walked + step };
+    return { ...h, ...at, mode: 'run', walked: h.walked + step };
   });
   const finished = moved.filter((r) => r.at >= r.trail.length);
   return { group: { ...group, hares, runs: moved.filter((r) => r.at < r.trail.length) }, finished };
