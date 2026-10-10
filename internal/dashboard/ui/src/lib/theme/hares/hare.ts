@@ -134,6 +134,12 @@ function lane(hare: Hare, f: Ledge, scene: PageMap, others: readonly Hare[], tra
 
 const graze = (hare: Hare, now: number, rand: Rand): Hare => ({ ...hare, mode: 'graze', until: now + between(rand, 2000, 6000), target: hare.x });
 
+// Sat up and looking about a while, tall where there is room.
+export function sitUp(hare: Hare, scene: PageMap, now: number, rand: Rand): Hare {
+  const f = scene.floors.get(hare.floor);
+  return { ...hare, mode: 'sit', until: now + between(rand, 1500, 3000), tall: !!f && tallAt(f, scene, hare.x, POSES.sit.width) };
+}
+
 // Moving toward its target at speed.
 const toward = (hare: Hare, speed: number, dt: number): Hare => towardTarget(hare, (speed * dt) / 1000);
 
