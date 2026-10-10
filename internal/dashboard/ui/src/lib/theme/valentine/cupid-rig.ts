@@ -2,6 +2,7 @@ import { clamp, degrees, mixPoint, rad, smooth } from '../math';
 import type { Point } from '../pointer';
 import { blinking } from '../rig/life';
 import { lidLayers, limbLayers, turnAbout, turned, type DrawnLeg, type Fur, type Layer, type LimbArt, type RigPose, type Turn } from '../rig/rig';
+import { jointBeside } from '../rig/limb';
 import { wingLayer, wingStroke, type Stroke } from '../rig/wings';
 import armFurArt from './cupid-arm-fur.webp';
 import armArt from './cupid-arm.webp';
@@ -101,20 +102,10 @@ export type CupidLook = { now: number; still: boolean };
 const along = (from: Point, deg: number, length: number): Point => ({ x: from.x + Math.cos(rad(deg)) * length, y: from.y + Math.sin(rad(deg)) * length });
 const angleOf = (from: Point, to: Point) => degrees(Math.atan2(to.y - from.y, to.x - from.x));
 
-// The joint between two bones from a to b, on the given side of the line
-// from a to b (1 its right, as the page turns, -1 its left); straight when b
-// is out of reach.
-function joint(a: Point, b: Point, first: number, second: number, side: 1 | -1): Point {
-  const d = Math.min(Math.hypot(b.x - a.x, b.y - a.y), first + second - 1e-6);
-  const toward = angleOf(a, b);
-  const cos = clamp((first * first + d * d - second * second) / (2 * first * d || 1), -1, 1);
-  return along(a, toward + side * (Math.acos(cos) * 180) / Math.PI, first);
-}
-
 // A limb from its root to its end: the middle joint bent to one side, the
 // end piece (fist or foot) turned to `paw`.
 function limb(root: Point, end: Point, first: number, second: number, side: 1 | -1, paw: number): DrawnLeg['limb'] {
-  const knee = joint(root, end, first, second, side);
+  const knee = jointBeside(root, end, first, second, side);
   return { hip: root, knee, ankle: end, foot: end, paw };
 }
 const arm = (l: DrawnLeg['limb']): DrawnLeg => ({ limb: l, art: ARM_ART, width: ARM.width, haunch: ARM.width, fore: true, taper: false });

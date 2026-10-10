@@ -63,7 +63,7 @@ export const footAt = (spec: LegSpec, phase: number, ground: number, stride: num
 
 // The two knees that join a thigh at the hip to a shin at the foot. A foot
 // out of reach straightens the leg toward it rather than tearing it off.
-function knees(hip: Point, foot: Point, thigh: number, shin: number): [Point, Point] {
+export function knees(hip: Point, foot: Point, thigh: number, shin: number): [Point, Point] {
   const dx = foot.x - hip.x;
   const dy = foot.y - hip.y;
   // Clamped both ways: a foot out of reach straightens the leg, and a foot
