@@ -133,12 +133,12 @@ export function coveredBy(page: Page, set: SeasonalSet, what: readonly Covers[])
   return coveredContent(page, what.flatMap((w) => drawn[w]), SLACK);
 }
 
-// How long the ledges take to catch up with the page once it has settled:
-// on a phone the rail stacks above main and grows as the config and the feed
-// arrive, which only the once-a-second remeasure notices (b-groups' R3b fix
-// makes the layout watch the rail too, with its own test). The contract is
-// about the page at rest, so it looks after that.
-export const CATCH_UP = 1500;
+// How long the ledges take to catch up with the page once it has settled.
+// On a phone the rail stacks above main and grows as the config and the feed
+// arrive; that used to wait for the once-a-second remeasure, and this was
+// 1.5s, but the layout watches the rail's box now (phone-rail.spec.ts), so a
+// few frames do. The contract is about the page at rest, so it looks after.
+export const CATCH_UP = 300;
 
 // Looks at a page a few times over a couple of seconds, so moves in
 // progress are caught too, returning everything ever covered.
