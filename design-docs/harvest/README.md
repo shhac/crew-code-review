@@ -256,6 +256,17 @@ reshuffles it.
   crow has been within 40px of it for 20s (somebody has scattered more). The
   straw is never eaten.
 - **Reduced motion**: all the grain is drawn, none eaten.
+- *As built* (`chaff.ts`, drawn by `HarvestLayer.svelte`): each stalk is a
+  thin filled four-sided shape lying with its low end on the ledge, so
+  stalks of different widths share one path; a ledge draws two straw paths
+  (one per tone), one for the nodes and a small group per grain. A stalk's
+  tilt is held under the 3px cap for its length and width (a 9px stalk 1.6
+  wide lies within 9 degrees of flat). Stalks are placed anywhere in their
+  14px slot, not near its start, and a third have a second crossing them:
+  set at regular steps they read as stitching. The grain lies in clusters
+  1.9px apart. The grain's return is tracked per grain: when it was eaten,
+  and since when no crow has been within 40px (`regrow`, given every crow's
+  page point each frame).
 
 ### Crow behaviour
 
