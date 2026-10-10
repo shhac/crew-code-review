@@ -110,6 +110,14 @@ describe('a hare on its own', () => {
     expect(next.until).toBeGreaterThan(100);
   });
 
+  it('sits on crouched where something above now leaves no room to sit up tall', () => {
+    const other = { ...hare(360), id: 1 };
+    // Text 32px over the rule where it stands: room to sit, none to sit up.
+    const low = dashboardPage([{ left: 600, right: 660, top: 100, bottom: 128 }]);
+    const next = stepHare(hare(330, { mode: 'standoff', until: 0, tall: true }), low, 100, 16, fixed(0.5), [other]);
+    expect(next).toMatchObject({ mode: 'sit', tall: false });
+  });
+
   it('never lopes within SPACING of a neighbour on its ledge', () => {
     const others = [{ ...hare(760), id: 1 }, { ...hare(960), id: 2 }];
     const rand = seeded(3);

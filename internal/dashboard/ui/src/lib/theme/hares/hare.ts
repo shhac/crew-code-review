@@ -173,7 +173,7 @@ function makeRoom(hare: Hare, f: Ledge, scene: PageMap, others: readonly Hare[],
   const target = clampTo(room, nearest.x + away * (SPACING + 2));
   const clear = !others.some((o) => o.id !== nearest.id && o.floor === hare.floor && Math.abs(o.x - target) < SPACING);
   if (Math.abs(target - nearest.x) >= SPACING && clear) return { ...hare, mode: 'lope', target, dir: away };
-  return { ...hare, mode: 'sit', until: now + between(rand, 1500, 2500), dir: sign(nearest.x - hare.x) };
+  return { ...hare, mode: 'sit', until: now + between(rand, 1500, 2500), dir: sign(nearest.x - hare.x), tall: tallHere(hare, scene) };
 }
 
 // One step of a hare's own doings, given the others and the stretches the
