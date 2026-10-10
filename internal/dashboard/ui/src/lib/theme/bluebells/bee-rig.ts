@@ -89,8 +89,14 @@ const FAR_BEAT: WingBeat = { ...BEAT, front: BEAT.front + 8, back: BEAT.back + 8
 // ghosts are drawn flattened about the hinge, as a level circle is seen
 // from a little above.
 const STROKE_FLAT = 0.55;
-// How far a bonk throws her nose up, degrees.
+// How far a bonk throws her nose up (degrees), how fast she swings and how
+// soon it dies away (s).
 const KNOCK = 25;
+const KNOCK_HZ = 3;
+const KNOCK_SETTLE = 0.3;
+// Knocked, her wings check their forward sweep: the stroke's front end is
+// drawn this much further back, so the head meets the wall, not the blur.
+const KNOCKED_STROKE = -40;
 // Nose up hovering, nearly level at her cruising speed (page px/s).
 export const PITCHING: Pitching = { hover: -38, cruise: -8, speed: 70 };
 
@@ -143,10 +149,11 @@ function hold(b: RigBee, now: number): Hold {
       return { pitch, bob: hoverBob(b.seed, now, 0.8, 1.3), abdomen: -6 * hang + 2, head: 8 * hang, legs: (hips) => airLegs(LEGS, hips, { hang, reach: 0, pitch }) };
     }
     case 'bonk': {
-      // Knocked back off a wall: nose up 25 degrees, settling in a damped
-      // swing at 3Hz, legs splayed, the abdomen swinging down.
+      // Knocked back off a wall: level as she meets it, then nose up 25
+      // degrees a twelfth of a second later, settling in a damped swing at
+      // 3Hz; legs splayed, the abdomen swinging down.
       const t = (b.knocked ?? 0) / 1000;
-      const pitch = -KNOCK * Math.exp(-t / 0.25) * Math.cos(2 * Math.PI * 3 * t);
+      const pitch = -KNOCK * (Math.exp(-t / KNOCK_SETTLE) * Math.sin(2 * Math.PI * KNOCK_HZ * t)) / Math.exp(-1 / (4 * KNOCK_HZ) / KNOCK_SETTLE);
       return { pitch, bob: 0, abdomen: -8, head: 4, legs: (hips) => airLegs(LEGS, hips, { hang: 1, reach: 0.5, pitch }) };
     }
     case 'land': {
@@ -166,10 +173,11 @@ const farWings = image('far wings', wingsArt, WINGS, true);
 const blurWing = (picture: Layer): BlurWing => ({ picture, hinge: HINGE, axis: WING_AXIS, length: WING_LENGTH });
 
 // One side's wings: folded along the back, fading out as the blur fades in.
-function wingsOf(far: boolean, beating: number): Layer[] {
+function wingsOf(far: boolean, beating: number, knocked: boolean): Layer[] {
   const picture = far ? farWings : nearWings;
   const folded: Layer = { kind: 'group', turn: turnAbout(far ? FAR_TILT : 0, HINGE), opacity: beating > 0 ? 1 - beating : undefined, layers: [picture] };
-  const blur = wingBlur(blurWing(picture), far ? FAR_BEAT : BEAT, beating, far ? 'far wing blur' : 'wing blur');
+  const beat = far ? FAR_BEAT : BEAT;
+  const blur = wingBlur(blurWing(picture), knocked ? { ...beat, front: beat.front + KNOCKED_STROKE } : beat, beating, far ? 'far wing blur' : 'wing blur');
   const flat: Layer[] = blur.length ? [{ kind: 'group', turn: turnAbout(0, HINGE), foreshorten: STROKE_FLAT, layers: blur }] : [];
   return beating >= 1 ? flat : [folded, ...flat];
 }
@@ -207,7 +215,7 @@ export function beeRig(bee: RigBee, look: BeeLook): RigPose {
   return {
     ...FRAME,
     layers: [
-      { kind: 'group', turn: body, layers: wingsOf(true, beating) },
+      { kind: 'group', turn: body, layers: wingsOf(true, beating, b.pose === 'bonk') },
       ...legs.far,
       { kind: 'group', turn: body, layers: [{ kind: 'group', turn: nod, layers: antenna('far antenna', turnedBy(FAR_ANTENNA, lean)) }] },
       {
@@ -219,7 +227,7 @@ export function beeRig(bee: RigBee, look: BeeLook): RigPose {
       },
       ...legs.near,
       pollen(limbs),
-      { kind: 'group', turn: body, layers: wingsOf(false, beating) },
+      { kind: 'group', turn: body, layers: wingsOf(false, beating, b.pose === 'bonk') },
     ],
     guides: [
       { name: 'thorax (moves here)', at: at(ANCHOR) }, { name: 'waist (petiole)', at: at(WAIST) }, { name: 'neck', at: at(NECK) },
@@ -241,7 +249,7 @@ export const REACH: Record<BeePose, Reach> = {
   hover: { behind: 10.75, ahead: 9.75, up: 11.75, down: 13.25 },
   fly: { behind: 12, ahead: 11.5, up: 11, down: 12.5 },
   land: { behind: 11.75, ahead: 10.75, up: 8.5, down: 9.25 },
-  bonk: { behind: 12.25, ahead: 12.25, up: 9, down: 10.5 },
+  bonk: { behind: 12.25, ahead: 10.75, up: 9.75, down: 10.5 },
 };
 
 // Where her collar is in a pose, for the lab to line a key pose up by.

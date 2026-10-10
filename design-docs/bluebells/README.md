@@ -1,6 +1,6 @@
 # Bluebell wood (2026-10-10)
 
-**Status**: being built (shelf and moss built; bees in progress).
+**Status**: built; switched on for May once activated (see the calendar).
 
 **Pins**: written against `ea7e9d5`. Code-internal; the page measurements
 below were taken on the running preview at that commit.
@@ -644,15 +644,31 @@ visitable), `footprints.ts`, `bee.ts` (one bee's state table) and `bees.ts`
   needs the flying footprint clear for 30px plus the bee's own length in
   front of the wall, more than the 54px margin at 1440 holds. The bee takes
   the longest of 30, 24, 18 and 12px that is open.
-- **Contact is the antennae's.** The bonk pose (added to the rig: nose up
-  25 degrees, settling in a damped swing at 3Hz, legs splayed) reaches
-  12.25px ahead of the thorax with its antennae, further than the head. A
-  bonk ends with the antennae a pixel into the card's side, the head 4px
-  short of it: as the research says, a bumblebee often touches first with
-  its antennae.
+- **The bonk pose** is the rig's own (added for May: legs splayed, the
+  abdomen swinging down, the knock below). The model's contact distance is
+  the bonk footprint's reach ahead less a pixel.
 - **No banking.** Seen from the side, a bee rolling into a turn shows
   nothing a page can draw; the turn shows in its facing and its pitch with
   speed (the rig's), so the model gives no bank.
+- **The rail's air and the walls come from the surfaces kit.** The rail's
+  air is `measureRailAir` (the sky down through the shelf) widened to
+  main's left edge, used while the sky above the shelf is 60px or more;
+  the rail does not scroll and the page's measuring does not see it, so the
+  layer looks at it again every second and tells the bees when it moved.
+  The walls a bee may bonk are `walls(page)` with `wallRuns` at the bonk's
+  depth (its box front to back, 24.5px, and the 8px bounce), kept 16px from
+  a card's top and bottom: at 8 a bonk could land on a card's rounded
+  corner, where the side it meets is not there.
+- **Contact, as drawn.** At the moment of contact the knock is level (it
+  swings nose up a twelfth of a second later, to 25 degrees, settling at
+  3Hz), and the wing blur's forward sweep is drawn 40 degrees further back
+  while knocked: at full stroke the front ghost wing reached 2px past the
+  head, so it, not the head, met the wall. Contact puts the drawing's
+  front within half a pixel of the card's side, measured on the page.
+- **Test cues** (`?theme-cue=`, the surfaces kit's): `bonk` makes the first
+  bee leave its flower after half a second and bonk at its next choice,
+  once; `shelf` puts the shelf first among its choices. Without a cue
+  nothing changes. The month spec drives both and checks every frame.
 - **A page still loading.** A bee the group could not place when it was
   made (no flowers yet: the page's cards had not arrived) is put on a
   flower at the first measurement that has one, rather than waiting out an

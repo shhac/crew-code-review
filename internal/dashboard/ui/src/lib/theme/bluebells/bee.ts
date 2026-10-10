@@ -3,7 +3,7 @@ import { apart, clamp, mixPoint, smooth } from '../math';
 import type { Cursor, Point } from '../pointer';
 import { between, type Rand } from '../seed';
 import { clear, type BeeAir } from './beeair';
-import { approaches, fitsAt, frameAt, hoverSpot, lastBell, onPage, perchSpot, spotIn, visitable, type Flower, type Spot } from './flowers';
+import { approaches, fitsAt, frameAt, hoverSpot, lastBell, onPage, perchSpot, SHELF_KEY, spotIn, visitable, type Flower, type Spot } from './flowers';
 import { boxAt, CONTACT, FOOTPRINTS, type Pose } from './footprints';
 import { along, flyReach, holdRoute, originOf, placeRoute, plan, routeOf, type Frame, type Route } from './route';
 
@@ -76,6 +76,7 @@ const CRAWL_SPEED = 10;
 const MAX_CRAWL = 8;
 const VISITS = 3;
 const SHIVER = 400;
+const CUED_REST = 500;
 const TAKEOFF = 250;
 const HOVER = [400, 1200] as const;
 const DAZE = 700;
@@ -127,8 +128,13 @@ export type Context = {
   cursor: Cursor | null;
   bonks: readonly WallSide[];
   mayBonk: boolean;
+  // A test's cue (`?theme-cue=`): a bonk at the next choice, or the shelf
+  // first among the flowers.
+  cue?: Cue;
   mayDodge: boolean;
 };
+
+export type Cue = 'bonk' | 'shelf' | null;
 
 // A card side a bee may fly into: its card, x, the side its air is on, and
 // the stretches (px down from the card's top) where a bonk and its bounce
@@ -283,6 +289,9 @@ function perched(b: Bee, flower: Flower | undefined, ctx: Context, now: number, 
   if (here && cursor && moving(cursor, now) && ctx.mayDodge && now >= b.calm && apart(here, cursor) < STARTLE) {
     return takeOff({ ...b, startled: { x: cursor.x, y: cursor.y } }, flower, ctx, now, rand);
   }
+  // Cued to bonk, it does not wait out its time on the flower.
+  const restless = ctx.cue === 'bonk' && now - b.since >= CUED_REST;
+  if (restless) return timed(b, 'shiver', now, SHIVER);
   if (now < b.until || !flower) return b;
   const next = b.bell + 1;
   const up = next <= lastBell(flower) && b.visited < VISITS ? flower.bells[next] : null;
@@ -329,7 +338,8 @@ function hovering(b: Bee, ctx: Context, now: number, rand: Rand): Bee {
   if (cursor && moving(cursor, now) && ctx.mayDodge && now >= b.calm && apart(here, cursor) < DODGE_REACH) return dodge(b, ctx, now, cursor);
   if (now < b.until) return b;
   const stuckSince = Number.isFinite(b.stuck) ? b.stuck : now;
-  const bonked = ctx.mayBonk && rand() < 1 / 8 && !(cursor && apart(here, cursor) < 120) ? bonkFrom(b, ctx, here, now) : null;
+  const chance = ctx.cue === 'bonk' ? 1 : 1 / 8;
+  const bonked = ctx.mayBonk && rand() < chance && !(cursor && apart(here, cursor) < 120) ? bonkFrom(b, ctx, here, now) : null;
   if (bonked) return bonked;
   const visit = visitFrom(b, ctx, here, now, rand, b.fled);
   if (visit) return { ...visit, stuck: -Infinity, fled: null };
@@ -353,7 +363,8 @@ function visitFrom(b: Bee, ctx: Context, here: Point, now: number, rand: Rand, a
     const cos = h ? (d.x * h.x + d.y * h.y) / ((Math.hypot(d.x, d.y) || 1) * (Math.hypot(h.x, h.y) || 1)) : 0;
     return [{ f, w: (1 / (apart(p, here) + NEAR)) * (cos >= 0.5 ? AHEAD : 1) }];
   });
-  const order = weightedOrder(candidates, rand).slice(0, TRIES);
+  const shelfFirst = (x: { f: Flower }) => (ctx.cue === 'shelf' && x.f.key === SHELF_KEY ? 0 : 1);
+  const order = weightedOrder(candidates, rand).sort((x, y) => shelfFirst(x) - shelfFirst(y)).slice(0, TRIES);
   const also = [...ctx.others, ...restingCursor(ctx.cursor, now)];
   for (const { f } of order) {
     const sides = approaches(ctx.air, f, 0, also).sort((x, y) => apart(onPage(page, x) ?? here, here) - apart(onPage(page, y) ?? here, here));

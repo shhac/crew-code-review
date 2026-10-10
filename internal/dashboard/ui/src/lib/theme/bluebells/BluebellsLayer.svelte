@@ -6,17 +6,20 @@
   // under reduced motion as at any other time, and the bees perch still.
   // The layer takes no pointer events.
   import { onMount } from 'svelte';
-  import { samePage, type Ledge, type PageMap } from '../floors';
+  import { cueOf } from '../cue';
+  import { samePage, type Box, type Ledge, type PageMap } from '../floors';
   import Geometry from '../Geometry.svelte';
   import { ledgeScene, placeTroupe } from '../layout';
   import type { Cursor } from '../pointer';
   import { easeGazes, gazeFrom } from '../rig/gaze';
   import Rig from '../rig/Rig.svelte';
+  import { measureRailAir, measureRailSky } from '../sky';
   import { CLUMPS, CUSHIONS } from './art';
   import type { BeeView } from './bee';
   import { ANCHOR, beeRig, EYE, SCALE } from './bee-rig';
-  import { beeAirOf } from './beeair';
+  import { beeAirOf, railRoom } from './beeair';
   import { beeViews, boxesOf, createBees, meadowOf, reconcileBees, restingBees, stepBees, type Bees, type Meadow } from './bees';
+  import { bonksOf } from './bonks';
   import clump0 from './clump-0.webp';
   import clump1 from './clump-1.webp';
   import clump2 from './clump-2.webp';
@@ -31,6 +34,11 @@
   // Perched or hovering, a bee's antennae lean toward a cursor within 120px.
   const gaze = gazeFrom({ eye: EYE, anchor: ANCHOR, scale: SCALE, look: 15, reach: 120 });
   const LOOKING = new Set(['perch', 'shiver', 'hover', 'approach']);
+  // A test's cue: a bonk at the first bee's next choice, or the shelf first.
+  const CUE = cueOf(['bonk', 'shelf'] as const);
+  // The rail does not scroll and the page's measuring does not see it, so
+  // its air is looked at again this often, and the bees told if it moved.
+  const RAIL_EVERY = 1000;
 
   let floors: ReadonlyMap<number, Ledge> = new Map();
   let page: PageMap = { floors, obstacles: [], width: 0, height: 0 };
@@ -40,6 +48,8 @@
   let now = 0;
   let reduced = false;
   let gazes: ReadonlyMap<number, number> = new Map();
+  let rail: { room: Box | null; shelf: Box | null } = { room: null, shelf: null };
+  let railAt = -Infinity;
 
   $: shown = group ? beeViews(group, page, now) : [];
   $: dipped = new Set(shown.flatMap(({ view }) => (view.on ? [view.on.flower] : [])));
@@ -48,6 +58,18 @@
   function gazing(list: readonly { b: { id: number }; view: BeeView }[], cursor: Cursor | null, dt: number): ReadonlyMap<number, number> {
     return easeGazes(list, (v) => v.b.id, (v) => (LOOKING.has(v.view.mode) ? gaze(v.view.dir, v.view, cursor) : 0), gazes, dt);
   }
+
+  const rectBox = (r: DOMRect): Box => ({ left: r.left, right: r.right, top: r.top, bottom: r.bottom });
+  // The rail's air the bees may use, and the shelf's flowers in it: none
+  // with the shelf hidden or its sky too short.
+  function railNow(measured: PageMap): typeof rail {
+    const el = document.querySelector<HTMLElement>('.bluebells-shelf');
+    const room = railRoom(measureRailSky(el), measureRailAir(el), measured);
+    const art = el?.querySelector('[data-bluebell-shelf]');
+    return { room, shelf: room && art ? rectBox(art.getBoundingClientRect()) : null };
+  }
+  const sameRail = (a: typeof rail, b: typeof rail) => JSON.stringify(a) === JSON.stringify(b);
+  const meadowFor = (measured: PageMap) => meadowOf(beeAirOf(measured, rail.room), flowersOf(wood, rail.shelf), bonksOf(measured), CUE);
 
   // Leaving reduced motion brings fresh bees; entering it perches these
   // ones where they are.
@@ -59,11 +81,24 @@
       page = measured;
       floors = measured.floors;
       wood = growMoss(floors, measured.obstacles);
-      meadow = meadowOf(beeAirOf(measured), flowersOf(wood, null));
-      group = troupe.place(group, meadow, samePage(measured, previous), time, reduced);
+      const railed = railNow(measured);
+      const same = samePage(measured, previous) && sameRail(railed, rail);
+      rail = railed;
+      railAt = time;
+      meadow = meadowFor(measured);
+      group = troupe.place(group, meadow, same, time, reduced);
     },
     frame(time, step) {
       now = time;
+      if (time - railAt >= RAIL_EVERY) {
+        railAt = time;
+        const railed = railNow(page);
+        if (!sameRail(railed, rail)) {
+          rail = railed;
+          meadow = meadowFor(page);
+          group = troupe.place(group, meadow, false, time, reduced);
+        }
+      }
       if (!step || !meadow || !group) return;
       group = stepBees(group, meadow, time, step.dt, Math.random, step.cursor);
       gazes = gazing(beeViews(group, page, time), step.cursor, step.dt);

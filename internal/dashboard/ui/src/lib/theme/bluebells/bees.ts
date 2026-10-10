@@ -4,7 +4,7 @@ import { apart } from '../math';
 import type { Cursor } from '../pointer';
 import { maxBy, type Rand } from '../seed';
 import { clear, type BeeAir } from './beeair';
-import { awayBee, beeView, boxOf, perchOn, placedBee, stepBee, where, type Bee, type Context, type Flowers, type WallSide } from './bee';
+import { awayBee, beeView, boxOf, perchOn, placedBee, stepBee, where, type Bee, type Context, type Cue, type Flowers, type WallSide } from './bee';
 import { fitsAt, frameAt, hoverSpot, onPage, perchSpot, roomAt, visitable, type Flower } from './flowers';
 import { grow } from './footprints';
 import { flyReach, originOf, placeRoute, routeFrom, samplesOf, stillClear } from './route';
@@ -14,7 +14,7 @@ import { flyReach, originOf, placeRoute, routeFrom, samplesOf, stillClear } from
 // every 30s). design-docs/bluebells/README.md has the contract.
 
 // What the bees are placed and stepped against, measured with the page.
-export type Meadow = { air: BeeAir; flowers: Flowers; bonks: readonly WallSide[] };
+export type Meadow = { air: BeeAir; flowers: Flowers; bonks: readonly WallSide[]; cue?: Cue };
 
 export type Bees = {
   // How many to keep: two, or three where the page had room when they were
@@ -37,7 +37,7 @@ const HOLD = 500;
 const FIRST = 1000;
 const STAGGER = 1700;
 
-export const meadowOf = (air: BeeAir, flowers: readonly Flower[], bonks: readonly WallSide[] = []): Meadow => ({ air, flowers: new Map(flowers.map((f) => [f.key, f])), bonks });
+export const meadowOf = (air: BeeAir, flowers: readonly Flower[], bonks: readonly WallSide[] = [], cue: Cue = null): Meadow => ({ air, flowers: new Map(flowers.map((f) => [f.key, f])), bonks, cue });
 
 const hoverAt = (m: Meadow, f: Flower) => onPage(m.air.page, hoverSpot(f, 0));
 const facingMiddle = (m: Meadow, f: Flower): 1 | -1 => {
@@ -109,7 +109,9 @@ export function stepBees(group: Bees, m: Meadow, now: number, dt: number, rand: 
       air: m.air, flowers: m.flowers, cursor, bonks: m.bonks,
       claimed: new Set(others.flatMap((o) => (o.flower ? [o.flower] : []))),
       get others() { memo.boxes = memo.boxes ?? shields(others, page, now, true); return memo.boxes; },
-      mayBonk: now - bonked.at >= BONK_EVERY && !others.some((o) => o.bonk),
+      // A cued bonk comes at once, once.
+      mayBonk: (m.cue === 'bonk' && bonked.at === -Infinity && b.id === 0) || (now - bonked.at >= BONK_EVERY && !others.some((o) => o.bonk)),
+      cue: b.id === 0 && !(m.cue === 'bonk' && bonked.at > -Infinity) ? m.cue : null,
       mayDodge: !others.some((o) => o.mode === 'dodge'),
     };
     const next = stepBee(b, ctx, now, dt, rand);

@@ -126,6 +126,24 @@ describe('the bees', () => {
     expect(final).toBeDefined();
   });
 
+  it('bonk at the first chance when a test cues it, once, and visit the shelf first when that is cued', { timeout: 30000 }, () => {
+    const m = meadowOn();
+    const card = m.air.page.floors.get(2)!;
+    const wall: WallSide = { floor: 2, x: card.left, side: -1, top: card.y, runs: [{ lo: 40, hi: 200 }] };
+    const cued = { ...m, bonks: [wall], cue: 'bonk' as const };
+    const bonks: number[] = [];
+    run(createBees(cued, 0, seeded(16)), cued, 20000, () => null, 0, seeded(17), (g, t) => {
+      if (g.bees[0].mode === 'bounce' && !bonks.some((at) => t - at < 300)) bonks.push(t);
+    });
+    expect(bonks.length).toBe(1);
+    const shelf = { ...m, cue: 'shelf' as const };
+    const visits = new Set<string>();
+    run(createBees(shelf, 0, seeded(18)), shelf, 20000, () => null, 0, seeded(19), (g) => {
+      if (g.bees[0].mode === 'perch' && g.bees[0].flower) visits.add(g.bees[0].flower);
+    });
+    expect(visits.has(SHELF_KEY)).toBe(true);
+  });
+
   it('ride with their flowers on a scroll, and are put on a flower at once when content comes under them', () => {
     const m = meadowOn();
     const g = createBees(m, 0, seeded(8));
