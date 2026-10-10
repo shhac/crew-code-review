@@ -102,6 +102,15 @@
   --rule: #e8709f;
 }
 
+/* Optic yellow for summer tennis, the ball's colour: clear of the default
+   lime, the warning amber and Bonfire's gold. */
+:root[data-theme="wimbledon"] {
+  --accent: #dde85a;
+  --accent-edge: rgba(221, 232, 90, .3);
+  --accent-ring: rgba(221, 232, 90, .35);
+  --rule: #dde85a;
+}
+
 /* The sea on a postcard for the seaside: a deeper, bluer blue than the info
    ink's pale sky, and clear of the aurora's teal and the summer pinks. */
 :root[data-theme="seaside"] {
