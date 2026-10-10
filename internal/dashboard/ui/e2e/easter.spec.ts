@@ -16,6 +16,24 @@ async function hiddenEgg(page: Page) {
   return egg;
 }
 
+async function serveEaster(page: Page) {
+  await page.route('**/api/config', async (route) => {
+    const response = await route.fetch();
+    const config = await response.json();
+    config.theme = 'easter';
+    await route.fulfill({ response, json: config });
+  });
+}
+
+test('the daemon-resolved easter theme decorates the page and takes its palette', async ({ page }) => {
+  await serveEaster(page);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/');
+  await expect(page.locator(overlay)).toBeAttached();
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'easter');
+  expect(await page.locator('.brand em').evaluate((el) => getComputedStyle(el).color)).toBe('rgb(196, 168, 242)');
+});
+
 test('the easter set mounts its shelf, its eggs, its counter and two or three rabbits', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/?theme=easter');

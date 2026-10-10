@@ -59,6 +59,15 @@ that twitch an ear at a passing cursor, wake and trot off on stepping legs
 when the cursor lingers (the others looking up), and sometimes pounce.
 Reduced motion keeps a still scene.
 
+April now has an Easter egg hunt (`dashboard.theme` `easter`, on by default
+under `auto` from 1 to 30 April). The rail shows a basket of painted eggs and
+chicks; painted eggs peep from the ends of the page's ledges and pop up when
+the cursor passes close, counted found/total beside the brand for the
+session only (nothing is stored; a reload starts a new hunt); and two or
+three rabbits sit, groom and hop on stepping legs, sit up at a passing
+cursor, thump and bolt when it lingers, and now and then leave a new egg.
+Reduced motion keeps a still scene.
+
 Seasonal scenes now measure the page through one shared snapshot, and each
 creature decides how much headroom it needs instead of inheriting the
 spider's. Halloween and Christmas render exactly as before. The

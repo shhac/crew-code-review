@@ -16,16 +16,18 @@ const (
 	ThemeBonfire   = "bonfire"
 	ThemeChristmas = "christmas"
 	ThemeAurora    = "aurora"
+	ThemeEaster    = "easter"
 )
 
 // Themes are the valid values of dashboard.theme.
-var Themes = []string{ThemeAuto, ThemeNone, ThemeHalloween, ThemeBonfire, ThemeChristmas, ThemeAurora}
+var Themes = []string{ThemeAuto, ThemeNone, ThemeHalloween, ThemeBonfire, ThemeChristmas, ThemeAurora, ThemeEaster}
 
 // seasonalThemes is what auto picks, by month. A set lives here once it
 // should switch itself on for its season; one that should only ever be
 // chosen by hand belongs in Themes alone.
 var seasonalThemes = map[time.Month]string{
 	time.January:  ThemeAurora,
+	time.April:    ThemeEaster,
 	time.October:  ThemeHalloween,
 	time.November: ThemeBonfire,
 	time.December: ThemeChristmas,

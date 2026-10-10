@@ -6,6 +6,7 @@
 the other ten months and the geometry consolidation were not started. Revised
 the same day after a read-only review by Codex (`gpt-5.6-terra`), which
 corrected two claims about the code and tightened the refactor's contract.
+Since built: April (Easter egg hunt, 2026-10-10).
 
 ## The problem
 
@@ -59,7 +60,7 @@ all twelve. Easter can fall in late March; an April-long egg hunt still works.
   ledge in bounding leaps. When the cursor comes near they freeze with ears
   up, then bolt.
 
-### April: Easter egg hunt
+### April: Easter egg hunt (built)
 
 - **Shelf**: a basket, chicks.
 - **Ledges**: eggs tucked into ledge ends, revealed on hover, with a found/total
@@ -67,7 +68,8 @@ all twelve. Easter can fall in late March; an April-long egg hunt still works.
   is persisted, a reload starts a new hunt, and it stays `aria-hidden` like
   the rest of the overlay.
 - **Animal**: a rabbit hops between ledges and sometimes leaves a new hidden
-  egg behind it.
+  egg behind it. Built as two or three European rabbits; sources and method
+  are in `design-docs/easter/`.
 
 ### May: Bluebell wood
 

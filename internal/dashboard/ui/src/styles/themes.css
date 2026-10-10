@@ -44,6 +44,22 @@
   background-attachment: fixed;
 }
 
+/* Spring lilac for the Easter egg hunt, clear of the default lime, the info
+   blue and the warning amber. */
+:root[data-theme="easter"] {
+  --accent: #c4a8f2;
+  --accent-edge: rgba(196, 168, 242, .3);
+  --accent-ring: rgba(196, 168, 242, .35);
+  --rule: #c4a8f2;
+}
+
+/* A faint spring morning, low in the corner by the basket, behind
+   everything. */
+:root[data-theme="easter"] body {
+  background-image: radial-gradient(ellipse 45% 40% at 0% 100%, rgba(170, 220, 120, .06), transparent 70%);
+  background-attachment: fixed;
+}
+
 /* Shared click-through scene, below dialogs (50). */
 .seasonal-overlay { position: fixed; inset: 0; z-index: 40; pointer-events: none; overflow: hidden; }
 :root[data-theme="christmas"] {

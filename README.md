@@ -510,8 +510,8 @@ deliberately.
 - **Logs**: a live tail of the daemon's own log.
 
 **Seasonal themes.** `dashboard.theme` adds decorations to the dashboard: `auto` (the
-default) switches a set on in its season: the northern lights in January, Halloween in October, Bonfire Night in November and Christmas throughout December. `none` turns
-decorations off, and naming a set (`aurora`, `halloween`, `bonfire` or `christmas`) forces it on. They are purely cosmetic and
+default) switches a set on in its season: the northern lights in January, an Easter egg hunt in April, Halloween in October, Bonfire Night in November and Christmas throughout December. `none` turns
+decorations off, and naming a set (`aurora`, `easter`, `halloween`, `bonfire` or `christmas`) forces it on. They are purely cosmetic and
 never block a click. Reduced-motion users get the decorations without the
 animation. To preview a set whatever the date, add `?theme=halloween` to the
 URL.
@@ -551,6 +551,17 @@ elsewhere while the others look up, and now and then one pounces at something
 in the snow. Reduced motion shows a still aurora and the foxes asleep.
 Preview with `?theme=aurora`; design notes:
 [Northern lights](design-docs/aurora/README.md).
+
+April is an Easter egg hunt: a basket of painted eggs with three chicks on
+the rail. Eggs are tucked into the ends of the page's ledges, only their tops
+peeping over the edge; passing the cursor close to one makes it pop up, and a
+small found/total counter by the brand keeps score. The hunt is never saved:
+a reload starts a new one. Two or three European rabbits sit on the ledges
+twitching their noses, groom, and hop about on stepping legs; a cursor
+passing makes one sit up, one that lingers makes it thump and bolt for cover,
+and now and then one nudges a new egg into a ledge end. Reduced motion shows
+the rabbits sitting still and the hunt as it stands. Preview with
+`?theme=easter`; design notes: [Easter egg hunt](design-docs/easter/README.md).
 
 
 Queue add/reorder/promote are also available as JSON endpoints
