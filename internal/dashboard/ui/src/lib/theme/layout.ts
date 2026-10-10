@@ -4,14 +4,20 @@ import { observePointer, pointerTracker, type Cursor, type Segment } from './poi
 
 // Both seasonal scenes invalidate layout on the same dashboard changes.
 // Callers decide when to measure; invalidations never read layout themselves.
+// On a phone the rail stacks above main, so the rail changing height moves
+// every ledge with nothing in main changing; its size is watched too.
 export function observeLayout(changed: () => void): () => void {
   const observer = new MutationObserver(changed);
   const main = document.querySelector('main');
   if (main) observer.observe(main, { subtree: true, childList: true, attributes: true, characterData: true });
+  const resized = new ResizeObserver(changed);
+  const rail = document.querySelector('.rail');
+  if (rail) resized.observe(rail);
   addEventListener('scroll', changed, { capture: true, passive: true });
   addEventListener('resize', changed);
   return () => {
     observer.disconnect();
+    resized.disconnect();
     removeEventListener('scroll', changed, true);
     removeEventListener('resize', changed);
   };
