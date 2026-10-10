@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { clearance, clearRuns, measureFloors, samePage } from './floors';
+import { clearance, clearRuns, measureFloors, reachOf, samePage } from './floors';
 import { fits } from './spiderwalk/model';
 
 // measureFloors only needs querySelectorAll and rects, so a fake page stands
@@ -121,5 +121,11 @@ describe('clearance', () => {
     expect(clearRuns(f, [card], 20)).toEqual([]);
     expect(clearRuns(f, [card], 20, { reach: 6 })).toEqual([{ lo: 8, hi: 392 }]);
     expect(clearRuns(f, [card, text], 20, { reach: 6 })).toEqual([{ lo: 8, hi: 96 }, { lo: 164, hi: 392 }]);
+  });
+});
+
+describe('reachOf', () => {
+  it('stands a walker on its anchor, half its width either way and its height up', () => {
+    expect(reachOf({ width: 30, height: 24 })).toEqual({ half: 15, up: 24, down: 0 });
   });
 });

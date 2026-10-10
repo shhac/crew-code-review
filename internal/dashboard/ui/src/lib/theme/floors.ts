@@ -8,8 +8,14 @@ const HEADING_RULES = 'main .hero, main .page-head';
 
 // A block is a card's own box, empty at its edges; everything else (text,
 // controls, charts) is content, never to be covered.
-export type Obstacle = { left: number; right: number; top: number; bottom: number; block?: true };
-const visibleBox = (r: Box) => r.width > 0 && r.height > 0 && [r.left, r.right, r.top, r.bottom].every(Number.isFinite);
+export type Box = { left: number; right: number; top: number; bottom: number };
+export type Obstacle = Box & { block?: boolean };
+// How far a drawing reaches from its anchor: either way across (it is
+// mirrored to face both ways), up and down.
+export type Reach = { half: number; up: number; down: number };
+// A walker's footprint stands on its anchor, so nothing of it hangs below.
+export const reachOf = (size: { width: number; height: number }): Reach => ({ half: size.width / 2, up: size.height, down: 0 });
+const visibleBox = (r: Bounds) => r.width > 0 && r.height > 0 && [r.left, r.right, r.top, r.bottom].every(Number.isFinite);
 // Range rectangles follow rendered text (including wrapped lines), independent
 // of the element's tag. Container bounds would also block their empty space.
 export function measureRenderedText(doc: Document = document): Obstacle[] {
@@ -57,8 +63,8 @@ const SAME_EDGE = 8;
 export type Ledge = Floor & { room: number; headroom: number; kind?: 'card' | 'heading' };
 
 // What measuring needs from the page: the document, or a fake one in tests.
-type Box = { left: number; right: number; top: number; bottom: number; width: number; height: number };
-type Measurable = { getBoundingClientRect(): Box; children?: ArrayLike<Measurable>; matches?(selector: string): boolean };
+type Bounds = Box & { width: number; height: number };
+type Measurable = { getBoundingClientRect(): Bounds; children?: ArrayLike<Measurable>; matches?(selector: string): boolean };
 type Page = { querySelectorAll(selectors: string): { forEach(visit: (el: Measurable) => void): void } };
 
 const ids = new WeakMap<Measurable, number>();
@@ -76,13 +82,13 @@ const overlaps = (a: Floor, b: Floor) => Math.abs(a.y - b.y) < SAME_EDGE && span
 const headroom = (f: Floor, all: Floor[]) => Math.min(Infinity, ...all.filter((g) => g.y < f.y && spans(f, g)).map((g) => f.y - g.y));
 
 // The clear space on a heading rule is what its own content leaves free.
-function roomInside(el: Measurable, r: Box): number {
+function roomInside(el: Measurable, r: Bounds): number {
   const kids = Array.from(el.children ?? [], (k) => k.getBoundingClientRect().bottom);
   return kids.length === 0 ? r.height : r.bottom - Math.max(...kids);
 }
 
 // The clear space on a card top runs up to the nearest thing above it.
-function roomAbove(f: Floor, blocks: Box[]): number {
+function roomAbove(f: Floor, blocks: Bounds[]): number {
   const above = blocks.filter((b) => b.bottom <= f.y + 1 && spans(f, b)).map((b) => b.bottom);
   // Above-screen cards still leave real clearance over the visible card.
   return above.length ? f.y - Math.max(...above) : Infinity;
@@ -94,7 +100,7 @@ export function measureFloors(root: Page = document): Map<number, Ledge> {
   const floors = new Map<number, Floor>();
   const rooms = new Map<number, number>();
   const kinds = new Map<number, Ledge['kind']>();
-  const blocks: Box[] = [];
+  const blocks: Bounds[] = [];
   const add = (el: Measurable, edge: 'top' | 'bottom') => {
     const r = el.getBoundingClientRect();
     if (r.width < MIN_WIDTH || r.height === 0) return;
