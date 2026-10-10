@@ -1,6 +1,6 @@
 import { measurePage, samePage, type PageMap } from './floors';
 import { sceneLoop } from './lifecycle';
-import { observePointer, pointerTracker, type Cursor, type Segment } from './pointer';
+import { hovering, observePointer, pointerTracker, type Cursor, type Segment } from './pointer';
 import type { Rand } from './seed';
 
 // Both seasonal scenes invalidate layout on the same dashboard changes.
@@ -77,7 +77,7 @@ export function ledgeScene(scene: LedgeScene): () => void {
   const changed = () => { pointer.reset(); dirty = true; loop.invalidate(); };
   const stopWatching = watchPage(changed, () => ({ scene: page, at: measuredAt }));
   const stopPointer = observePointer((e) => {
-    if (reduced || document.hidden) { forget(); return; }
+    if (reduced || document.hidden || !hovering(e)) { forget(); return; }
     cursor = { x: e.clientX, y: e.clientY, at: performance.now() };
     if (dirty) { pointer.reset(); return; }
     const stroke = pointer.move(e, performance.now());

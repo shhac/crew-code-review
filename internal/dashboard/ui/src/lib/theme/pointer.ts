@@ -10,13 +10,15 @@ export function distance(p: Point, a: Point, b: Point): number {
   return Math.hypot(p.x - a.x - t * dx, p.y - a.y - t * dy);
 }
 type Input = { pointerId: number; pointerType: string; buttons: number; pressure: number; clientX: number; clientY: number };
+// The themes' cursor is a mouse or pen hovering: never a finger, a press or a
+// drag, which would leave a cursor resting where the finger lifted.
+export const hovering = (e: Input) => ['mouse', 'pen'].includes(e.pointerType) && e.buttons === 0 && e.pressure === 0 && Number.isFinite(e.clientX + e.clientY);
 export function pointerTracker() {
   let origin: (Point & { id: number; type: string }) | null = null;
   return {
     reset() { origin = null; },
     move(e: Input, at: number): Segment | null {
-      if (!['mouse', 'pen'].includes(e.pointerType) || e.buttons !== 0 || e.pressure !== 0
-        || !Number.isFinite(e.clientX + e.clientY)) { origin = null; return null; }
+      if (!hovering(e)) { origin = null; return null; }
       const previous = origin;
       origin = { x: e.clientX, y: e.clientY, id: e.pointerId, type: e.pointerType };
       if (!previous || previous.id !== e.pointerId || previous.type !== e.pointerType || (previous.x === origin.x && previous.y === origin.y)) return null;

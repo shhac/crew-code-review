@@ -110,7 +110,7 @@ describe('ledgeScene', () => {
       frames.clear();
       due.forEach((f) => f(time));
     };
-    const move = (x: number) => listeners.get('pointermove')?.({ pointerType: 'mouse', pointerId: 1, buttons: 0, pressure: 0, clientX: x, clientY: 10 });
+    const move = (x: number, extra = {}) => listeners.get('pointermove')?.({ pointerType: 'mouse', pointerId: 1, buttons: 0, pressure: 0, clientX: x, clientY: 10, ...extra });
     const fire = (name: string) => listeners.get(name)?.({});
     const preference = (still: boolean) => { media.matches = still; media.change(); };
     return { seen, steps, stop, run, move, fire, preference };
@@ -135,6 +135,24 @@ describe('ledgeScene', () => {
     expect(s.seen.filter((e) => e === 'stroke')).toHaveLength(1);
     s.move(50);
     expect(s.seen.filter((e) => e === 'stroke')).toHaveLength(2);
+    s.stop();
+  });
+
+  it('takes only a hovering mouse or pen as the cursor, so a lifted finger leaves none behind', () => {
+    const s = stage();
+    s.run(16);
+    s.move(10);
+    s.run(32);
+    expect(s.steps.at(-1)?.cursor).toMatchObject({ x: 10 });
+    for (const extra of [{ pointerType: 'touch' }, { buttons: 1 }, { pointerType: 'pen', pressure: 0.4 }]) {
+      s.move(10);
+      s.move(60, extra);
+      s.run(48);
+      expect(s.steps.at(-1)?.cursor, JSON.stringify(extra)).toBeNull();
+    }
+    s.move(70, { pointerType: 'pen' });
+    s.run(64);
+    expect(s.steps.at(-1)?.cursor).toMatchObject({ x: 70 });
     s.stop();
   });
 
