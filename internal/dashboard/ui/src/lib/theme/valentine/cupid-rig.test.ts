@@ -41,10 +41,7 @@ describe('cupid rig', () => {
   // must never reach past them, whatever the moment of its wingbeat, swing,
   // bob or draw, and wherever it is looking.
   for (const pose of POSES) {
-    // Bug: hovering with its head turned fully up (gaze -12) the head
-    // reaches 28.14px above the anchor, past FOOTPRINTS.hover.up (28).
-    const known = pose === 'hover' ? it.fails : it;
-    known(`stays inside its footprint while it does ${pose}`, () => {
+    it(`stays inside its footprint while it does ${pose}`, () => {
       const box = FOOTPRINTS[poseFootprint(pose)];
       const worst = { half: 0, up: 0, down: 0 };
       for (const r of variants(pose)) {

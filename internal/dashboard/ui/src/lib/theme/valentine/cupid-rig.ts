@@ -78,6 +78,9 @@ const BOW = 4.8;
 const BRACED = 1.3;
 const DRAWN = 2.1;
 const ARROW = 8;
+// How far back the head tips to look up at a cursor, at most: any further
+// and it reaches past the top of the hover footprint.
+const LOOK_UP = -8;
 
 // What the cupid is doing, as far as the drawing cares.
 export type CupidPose = 'hover' | 'flight' | 'draw' | 'aim' | 'loose' | 'dodge';
@@ -240,7 +243,7 @@ function hold(c: RigCupid, now: number): Hold {
       };
     default:
       return {
-        body: turnAbout(lean, ANCHOR), stroke: hover, head: c.gaze,
+        body: turnAbout(lean, ANCHOR), stroke: hover, head: Math.max(LOOK_UP, c.gaze),
         near: hanging, nearHangs: true, far: holdingBow, aim: 0, bend: BRACED, drawing: false, arrow: false, legs: { swing: 15 + kick, bend: 45 + kick },
       };
   }
