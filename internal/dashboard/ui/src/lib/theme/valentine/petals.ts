@@ -1,5 +1,6 @@
 import { shareOut } from '../decor';
 import { clearRuns, type Ledge, type Obstacle, type Run } from '../floors';
+import { rad } from '../math';
 import { hash } from '../seed';
 
 // A few rose petals lying along the ledges, seeded per ledge id and in
@@ -50,9 +51,21 @@ export function scatterPetals(floors: ReadonlyMap<number, Ledge>, obstacles: rea
 }
 
 // A curled teardrop about 5 by 2.5 lying on the ledge, its round end at x,
-// pointed end leaning the way it is turned, in ledge-local units.
+// pointed end leaning the way it is turned, in ledge-local units. It turns
+// about a point just above the line, which tips one end below it, so it is
+// then lifted until nothing of it, its outline included, hangs over what is
+// under the ledge (a curve stays inside its control points, so they bound
+// it).
 const SHAPE = [[-2.5, 0], [-2.6, -2.4], [1, -3.2], [2.6, -0.9], [1.2, -0.2], [-0.8, 0], [-2.5, 0]] as const;
+const PIVOT = -0.6;
+const OUTLINE = 0.25;
 export function petalPath(p: Petal): string {
-  const [start, ...rest] = SHAPE.map(([x, y]) => `${(x * p.size).toFixed(2)} ${(y * p.size).toFixed(2)}`);
+  const cos = Math.cos(rad(p.angle)), sin = Math.sin(rad(p.angle));
+  const turned = SHAPE.map(([x, y]) => {
+    const dx = x * p.size, dy = y * p.size - PIVOT;
+    return { x: dx * cos - dy * sin, y: dx * sin + dy * cos + PIVOT };
+  });
+  const lift = Math.max(0, ...turned.map((q) => q.y + OUTLINE));
+  const [start, ...rest] = turned.map((q) => `${q.x.toFixed(2)} ${(q.y - lift).toFixed(2)}`);
   return `M${start}C${rest.slice(0, 3).join(' ')}C${rest.slice(3).join(' ')}Z`;
 }

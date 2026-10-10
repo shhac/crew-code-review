@@ -65,7 +65,7 @@
       {#if f && ps.length}
         <g transform="translate({f.left} {f.y})">
           {#each ps as p (p.key)}
-            <path class="petal" transform="translate({p.x} 0) rotate({p.angle} 0 -.6)" d={petalPath(p)} fill={p.fill} stroke={EDGE} />
+            <path class="petal" transform="translate({p.x} 0)" d={petalPath(p)} fill={p.fill} stroke={EDGE} />
           {/each}
         </g>
       {/if}

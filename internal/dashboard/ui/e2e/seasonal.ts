@@ -81,11 +81,7 @@ export const ROUTES = ['/', '/history', '/metrics', '/leaderboard', '/config', '
 // other parts. Each is a bug to fix: its check runs as an expected failure,
 // so it says when the bug is gone, and the contract holds everywhere else.
 export type Known = { theme: string; width: Width; route: string; what: 'animals' | 'parts'; bug: string };
-const PETALS_IN_TABS = 'rose petals lie 1.3px down across the ledge on top of the config tabs, into the buttons';
 export const KNOWN: readonly Known[] = [
-  { theme: 'valentine', width: 1440, route: '/config', what: 'parts', bug: PETALS_IN_TABS },
-  { theme: 'valentine', width: 1024, route: '/config', what: 'parts', bug: PETALS_IN_TABS },
-  { theme: 'valentine', width: 390, route: '/config', what: 'parts', bug: PETALS_IN_TABS },
   {
     theme: 'bonfire', width: 390, route: '/config', what: 'animals',
     bug: "a sniffing hedgehog's lowered head reaches 4px below its ledge, into the config tabs under it",

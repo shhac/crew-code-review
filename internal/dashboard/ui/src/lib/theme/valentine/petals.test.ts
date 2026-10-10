@@ -42,4 +42,15 @@ describe('petals', () => {
     expect(Math.min(...ys)).toBeGreaterThanOrEqual(-6);
     expect(Math.max(...ys)).toBeLessThanOrEqual(0);
   });
+
+  it('never hang below the ledge, outline and all, however they are turned', () => {
+    const floors = new Map(Array.from({ length: 12 }, (_, i) => [i + 1, ledge(0, 1400, 100 + i * 60)] as const));
+    const petals = [...scatterPetals(floors, []).values()].flat();
+    expect(new Set(petals.map((p) => Math.round(p.angle))).size).toBeGreaterThan(5);
+    for (const p of petals) {
+      const ys = petalPath(p).match(/-?\d+\.\d+/g)!.map(Number).filter((_, i) => i % 2 === 1);
+      // The outline is 0.5 wide, so its middle stays a quarter above.
+      expect(Math.max(...ys)).toBeLessThanOrEqual(-0.25);
+    }
+  });
 });
