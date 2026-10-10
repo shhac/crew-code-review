@@ -34,7 +34,7 @@ it('observes dashboard changes passively and removes every subscription', () => 
   expect(observe).toHaveBeenCalledWith(main, { subtree: true, childList: true, attributes: true, characterData: true });
   expect(add).toHaveBeenCalledWith('scroll', changed, { capture: true, passive: true });
   // A phone's rail sits above main: its height moves every ledge.
-  expect(sized).toHaveBeenCalledWith(rail);
+  expect(sized).toHaveBeenCalledWith(rail, { box: 'border-box' });
   resize?.();
   expect(changed).toHaveBeenCalledTimes(2);
   stop();
