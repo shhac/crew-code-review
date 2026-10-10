@@ -81,10 +81,10 @@ and there is rarely any.
   exemption is the arrow's tip at the very end, 3px into the card whose top
   edge it lands in. Arcs are tried at a few heights (a quarter of the
   distance first) and the first clear one is shot.
-- **Landing points**: only ledges in view, where `clearRuns` finds 24px
-  clear with the walkers' 6px reach, at least 16px in from a ledge's end and
-  12px inside the run: room for the stuck arrow (it stands up to 11px out of
-  the ledge) and for its hearts (they rise up to 22px and spread 14px each
+- **Landing points**: only ledges in view, at least 16px in from a ledge's
+  end, where `clearance` finds 24px clear (with the walkers' 6px reach)
+  over the 17px either side of the point: room for the stuck arrow (it stands up to 11px out of
+  the ledge) and for its hearts (they rise up to 21px and spread 17px each
   way). So an arrow never lands in a card's middle, a chart or text, and its
   hearts never cover any.
 - **Layout changes**: on every measurement each cupid's spot is re-checked.
@@ -170,9 +170,11 @@ lift on the downstroke only and pitch the body up and down with each beat,
 spreading the tail against it. A cupid is drawn upright, so:
 
 - **Hover**: the body upright, leaning back about 8 degrees. The near wing
-  sweeps from high behind the shoulder forward and down to about level with
-  it and back, an arc of about 75 degrees on a stroke plane tipped about 30
-  degrees from level. On the downstroke the wing is broad; on the upstroke
+  sweeps from high behind the shoulder down and back to about level with
+  it and up again, an arc of about 75 degrees. (A level stroke plane, as a
+  hummingbird's, would carry an upright cupid's wings forward across its
+  face at page size; behind the back, tipped well up from level, is the
+  nearest that reads.) On the downstroke the wing is broad; on the upstroke
   it is turned edge-on, drawn narrower (squashed across its width to 55%),
   and the tip rides a little higher coming back than going forward, so it
   traces a flattened figure-eight. The far wing beats with it, behind the
@@ -255,7 +257,7 @@ the eye that blinks and aims), no halo, no torch.
   text, on card tops and heading rules alike. Ledges are cut into 70px
   slots; just under half of them, seeded by ledge id, hold one to three
   petals lying on the ledge, each a curled teardrop about 5 by 2.5px, turned
-  up to 40 degrees, in one of three rose reds with a darker edge. At most 36
+  up to 25 degrees, in one of three rose reds with a darker edge. At most 36
   on a page, shared out a ledge at a time (as the frost's glints are). They
   are still, and the same under reduced motion. Drawn in code: at this size
   a path is crisper than a picture.
@@ -308,9 +310,46 @@ config notes in `config.example.json`, `internal/config/starter.json` and
 
 ## Art
 
-To be filled in as the art is generated: sources, provenance (Codex CLI,
-`gpt-5.6-terra`, built-in `$imagegen`), the shipped files and their display
-sizes, and every anchor measured from the art.
+Every source was generated on 2026-10-10 by the Codex CLI
+(`gpt-5.6-terra`) through its built-in `$imagegen` path, with
+`design-docs/aurora/fox-standing.png`, `design-docs/aurora/winter-kit.png`,
+`design-docs/bonfire/toffee-apples.png` and
+`design-docs/halloween/pumpkins.png` as style references. The shelf art is
+on flat blue `#0000FF`, the cupid's on flat green `#00FF00` (see "Colours
+near magenta"). The cupid starts from one drawing, `cupid-reference.png`:
+the cupid hovering side on, facing right, holding its bow upright in front.
+A first prompt, which asked for a sash wrapped round the hips, was refused
+by the generator; the second asked for a tunic. Every other cupid image is
+an edit of that drawing:
+
+- `cupid-parts.png`: the body with its arms, legs, head and wings taken off
+  and closed where they were, the head with a soft unoutlined neck edge,
+  and the near wing.
+- `cupid-limbs.png`: an arm piece, a fist, a thigh piece, a shin piece and a
+  foot seen from the side, cut from its own limbs.
+- `cupid-pose-flit.png`, `-aim.png`, `-release.png`, `-dodge.png`: the key
+  poses (hovering is the reference itself).
+
+| Source | Shipped as | Display size |
+| --- | --- | --- |
+| `valentine-kit.png` | `ui/src/lib/theme/valentine/valentine-kit.webp` | 100x70, written at twice that |
+| `cupid-reference.png` | `ui/src/lab/cupid-reference.webp` (the lab's overlay) | 19x25.17 units |
+| `cupid-pose-*.png` | `ui/src/lab/cupid-pose-*.webp` (the lab's overlays) | on the same eye scale; `export.py` prints each one's eye, which the lab lines up with the rig's |
+| `cupid-parts.png` | `cupid-body.webp`, `cupid-head.webp`, `cupid-wing.webp` | 10.33x12.58 at (5.64, 8.9), 11.58x11 at (6.32, 1.03), 8.33x11.17 at (1.3, 5) |
+| `cupid-limbs.png` | `cupid-arm.webp`, `cupid-hand.webp`, `cupid-thigh.webp`, `cupid-shin.webp`, `cupid-foot.webp`, each with a `-fur` version | arm 2 units thick, fist 2.08 tall, thigh 2.83 and shin 2.17 thick, foot 3.17 long |
+
+The cupid's pictures are in drawing units, all on one scale: each sheet's
+eye is measured (`art.py`'s `feature`, from a seed point set in
+`export.py`) and every picture is exported so its eye is 1.6 units, at 12
+file pixels per unit. The body is placed where it sat in the reference by
+matching its tunic's red, the head by its pale skin and curls (`art.py`'s
+`place`, with a mask); both were checked by laying them over the
+reference. The wing is placed by hand, since in the reference the near wing
+is partly behind the quiver and the far wing. Where the shoulders, hips,
+neck, wing roots, jaw and eye are, and the fist's and foot's heels, are set
+in `cupid-rig.ts`, measured against these exports on a unit grid; the lab's
+joints view shows them. Regenerated art means measuring again.
+`uv run design-docs/valentine/export.py` reproduces every shipped file.
 
 ## Verification
 
