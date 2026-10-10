@@ -5,7 +5,7 @@
   import { onMount } from 'svelte';
   import { samePage, type Ledge, type PageMap } from '../floors';
   import Geometry from '../Geometry.svelte';
-  import { ledgeScene } from '../layout';
+  import { ledgeScene, placeTroupe } from '../layout';
   import type { Cursor } from '../pointer';
   import { easeTo } from '../rig/life';
   import Rig from '../rig/Rig.svelte';
@@ -36,27 +36,21 @@
     }));
   }
 
-  // Reduced motion draws a still frame only after a measurement, so the
-  // sitting hares are placed here with everything else.
-  function placeHares(current: Hares | null, previous: PageMap, time: number): Hares {
-    if (reduced) return restingHares(scene, current);
-    if (!current) return createHares(scene, time, Math.random);
-    return samePage(scene, previous) ? current : reconcileHares(current, scene, time, Math.random);
-  }
+  // Leaving reduced motion brings fresh hares; entering it sits these ones
+  // where they are.
+  const troupe = placeTroupe({ create: createHares, reconcile: reconcileHares, resting: restingHares });
 
   // Two greens for the grass, two blue-greens for the shoots, so the blades
   // of a tuft read as separate.
   const green = (shoot: boolean, tone: number) => (shoot ? (tone < 0.5 ? '#4f8a52' : '#62a065') : tone < 0.5 ? '#6fa83c' : '#8cc152');
 
   onMount(() => ledgeScene({
-    // Leaving reduced motion brings fresh hares; entering it keeps these
-    // ones' spots, which placeHares settles them into.
-    motion(still) { reduced = still; if (!still) group = null; },
+    motion(still) { reduced = still; group = troupe.motion(group, still); },
     measured(page, previous, time) {
       scene = page;
       floors = page.floors;
       meadows = reconcileMeadows(floors, page.obstacles, meadows);
-      group = placeHares(group, previous, time);
+      group = troupe.place(group, page, samePage(page, previous), time, reduced);
     },
     frame(time, step) {
       now = time;

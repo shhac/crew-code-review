@@ -8,7 +8,7 @@
   import { airOf, around, type Air } from '../air';
   import { samePage, type Ledge, type PageMap } from '../floors';
   import Geometry from '../Geometry.svelte';
-  import { ledgeScene } from '../layout';
+  import { ledgeScene, placeTroupe } from '../layout';
   import Rig from '../rig/Rig.svelte';
   import ArrowArt from './ArrowArt.svelte';
   import { HEART_PATH, hearts, opacity, STUCK_LENGTH, wobble } from './arrows';
@@ -31,24 +31,18 @@
   $: shown = group ? views(group, page, now) : [];
   $: arrow = group?.flying ? arrowAt(page, group.flying, now) : null;
 
-  // Reduced motion draws a still frame only after a measurement, so the
-  // cupids are placed here with everything else.
-  function place(current: Cupids | null, next: Air, previous: PageMap, time: number): Cupids {
-    if (reduced) return restingCupids(next, current);
-    if (!current) return createCupids(next, time, Math.random);
-    return samePage(next.page, previous) ? current : reconcileCupids(current, next, time, Math.random);
-  }
+  // Leaving reduced motion brings fresh cupids; entering it keeps these
+  // ones' spots.
+  const troupe = placeTroupe({ create: createCupids, reconcile: reconcileCupids, resting: restingCupids });
 
   onMount(() => ledgeScene({
-    // Leaving reduced motion brings fresh cupids; entering it keeps these
-    // ones' spots, which place settles them into.
-    motion(still) { reduced = still; if (!still) group = null; },
+    motion(still) { reduced = still; group = troupe.motion(group, still); },
     measured(measured, previous, time) {
       page = measured;
       floors = measured.floors;
       petals = scatterPetals(floors, measured.obstacles);
       air = airOf(measured, SPOT);
-      group = place(group, air, previous, time);
+      group = troupe.place(group, air, samePage(measured, previous), time, reduced);
     },
     frame(time, step) {
       now = time;

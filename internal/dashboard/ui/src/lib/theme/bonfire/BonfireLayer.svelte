@@ -5,7 +5,7 @@
   import { onMount } from 'svelte';
   import { samePage, type Ledge, type PageMap } from '../floors';
   import Geometry from '../Geometry.svelte';
-  import { ledgeScene } from '../layout';
+  import { ledgeScene, placeTroupe } from '../layout';
   import type { Cursor } from '../pointer';
   import { easeTo } from '../rig/life';
   import Rig from '../rig/Rig.svelte';
@@ -40,22 +40,17 @@
     }));
   }
 
-  // Reduced motion draws a still frame only after a measurement, so the
-  // resting hedgehogs are placed here with everything else.
-  function placeHogs(current: Hogs | null, previous: PageMap, time: number): Hogs {
-    if (reduced) return restingHogs(scene, current);
-    if (!current) return createHogs(scene, time, Math.random);
-    return samePage(scene, previous) ? current : reconcileHogs(current, scene, time, Math.random);
-  }
+  // Either way reduced motion switches, the hedgehogs start afresh; reduced
+  // motion then keeps them put.
+  const troupe = placeTroupe({ create: createHogs, reconcile: reconcileHogs, resting: restingHogs, freshOnEnter: true });
 
   onMount(() => ledgeScene({
-    // Either way the group starts afresh; reduced motion then keeps it put.
-    motion(still) { reduced = still; group = null; },
+    motion(still) { reduced = still; group = troupe.motion(group, still); },
     measured(page, previous, time) {
       scene = page;
       floors = page.floors;
       embers = reconcileEmbers(floors, embers);
-      group = placeHogs(group, previous, time);
+      group = troupe.place(group, page, samePage(page, previous), time, reduced);
     },
     frame(time, step) {
       now = time;

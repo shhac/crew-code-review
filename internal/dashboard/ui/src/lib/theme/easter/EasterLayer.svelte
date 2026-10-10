@@ -6,7 +6,7 @@
   import { onMount } from 'svelte';
   import { samePage, type Ledge, type PageMap } from '../floors';
   import Geometry from '../Geometry.svelte';
-  import { ledgeScene } from '../layout';
+  import { ledgeScene, placeTroupe } from '../layout';
   import type { Cursor, Point } from '../pointer';
   import { easeTo } from '../rig/life';
   import Rig from '../rig/Rig.svelte';
@@ -46,13 +46,9 @@
     return [{ rabbit, view, pose: rabbitRig(drawn, { now, gaze: gazes.get(rabbit.id) ?? 0, still: reduced }) }];
   });
 
-  // Reduced motion draws a still frame only after a measurement, so the
-  // sitting rabbits are placed here with everything else.
-  function placeRabbits(current: Rabbits | null, previous: PageMap, time: number): Rabbits {
-    if (reduced) return restingRabbits(scene, current);
-    if (!current) return createRabbits(scene, time, Math.random);
-    return samePage(scene, previous) ? current : reconcileRabbits(current, scene, time, Math.random);
-  }
+  // Leaving reduced motion lets fresh rabbits loose; entering it sits these
+  // ones where they are.
+  const troupe = placeTroupe({ create: createRabbits, reconcile: reconcileRabbits, resting: restingRabbits });
 
   // Each head turns toward a cursor close by, eased so it never snaps.
   function look(rabbits: readonly Rabbit[], cursor: Cursor | null, dt: number): ReadonlyMap<number, number> {
@@ -82,14 +78,12 @@
   }
 
   onMount(() => ledgeScene({
-    // Leaving reduced motion lets fresh rabbits loose; entering it keeps
-    // these ones' spots, which placeRabbits sits them in.
-    motion(still) { reduced = still; if (!still) group = null; },
+    motion(still) { reduced = still; group = troupe.motion(group, still); },
     measured(page, previous, time) {
       scene = page;
       floors = page.floors;
       hunt = hideEggs(hunt, page);
-      group = placeRabbits(group, previous, time);
+      group = troupe.place(group, page, samePage(page, previous), time, reduced);
       spot = measureBrand();
     },
     frame(time, moving) {

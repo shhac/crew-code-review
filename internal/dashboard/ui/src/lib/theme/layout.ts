@@ -1,6 +1,7 @@
 import { measurePage, samePage, type PageMap } from './floors';
 import { sceneLoop } from './lifecycle';
 import { observePointer, pointerTracker, type Cursor, type Segment } from './pointer';
+import type { Rand } from './seed';
 
 // Both seasonal scenes invalidate layout on the same dashboard changes.
 // Callers decide when to measure; invalidations never read layout themselves.
@@ -82,4 +83,32 @@ export function ledgeScene(scene: LedgeScene): () => void {
     if (stroke) scene.stroke(stroke);
   }, forget);
   return () => { loop.stop(); stopPointer(); stopWatching(); };
+}
+
+// How a layer's troupe of animals is made, kept and stilled. scene is what
+// they are placed against: the page map, or what a layer makes of it.
+export type TroupeModel<T, S> = {
+  create(scene: S, now: number, rand: Rand): T;
+  reconcile(group: T, scene: S, now: number, rand: Rand): T;
+  resting(scene: S, previous: T | null): T;
+  // Entering reduced motion starts afresh too, rather than stilling these
+  // ones where they are.
+  freshOnEnter?: boolean;
+};
+
+// The troupe's part in the ledge scene's cycle, the same for every layer.
+export function placeTroupe<T, S>(model: TroupeModel<T, S>, rand: Rand = Math.random) {
+  return {
+    // Leaving reduced motion brings a fresh troupe; entering it keeps this
+    // one, which place then stills where it is.
+    motion: (current: T | null, still: boolean): T | null => (!still || model.freshOnEnter ? null : current),
+    // Reduced motion draws a still frame only after a measurement, so the
+    // resting troupe is placed here with everything else. same: the page is
+    // as it was, so the troupe stays as it is.
+    place(current: T | null, scene: S, same: boolean, time: number, reduced: boolean): T {
+      if (reduced) return model.resting(scene, current);
+      if (!current) return model.create(scene, time, rand);
+      return same ? current : model.reconcile(current, scene, time, rand);
+    },
+  };
 }

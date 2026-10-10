@@ -5,7 +5,7 @@
   import { onMount } from 'svelte';
   import { samePage, type Ledge, type PageMap } from '../floors';
   import Geometry from '../Geometry.svelte';
-  import { ledgeScene } from '../layout';
+  import { ledgeScene, placeTroupe } from '../layout';
   import Rig from '../rig/Rig.svelte';
   import { STILL } from './aurora';
   import { foxView } from './fox';
@@ -26,23 +26,17 @@
   });
   $: colour = frostColour(reduced ? STILL : now);
 
-  // Reduced motion draws a still frame only after a measurement, so the
-  // sleeping foxes are placed here with everything else.
-  function placeFoxes(current: Foxes | null, previous: PageMap, time: number): Foxes {
-    if (reduced) return restingFoxes(scene, current);
-    if (!current) return createFoxes(scene, time, Math.random);
-    return samePage(scene, previous) ? current : reconcileFoxes(current, scene, time, Math.random);
-  }
+  // Leaving reduced motion wakes fresh foxes; entering it lets these ones
+  // sleep where they lie.
+  const troupe = placeTroupe({ create: createFoxes, reconcile: reconcileFoxes, resting: restingFoxes });
 
   onMount(() => ledgeScene({
-    // Leaving reduced motion wakes fresh foxes; entering it keeps these ones'
-    // spots, which placeFoxes settles them into.
-    motion(still) { reduced = still; if (!still) group = null; },
+    motion(still) { reduced = still; group = troupe.motion(group, still); },
     measured(page, previous, time) {
       scene = page;
       floors = page.floors;
       rime = reconcileRime(floors, page.obstacles, rime);
-      group = placeFoxes(group, previous, time);
+      group = troupe.place(group, page, samePage(page, previous), time, reduced);
     },
     frame(time, step) {
       now = time;
