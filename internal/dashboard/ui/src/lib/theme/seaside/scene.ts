@@ -1,4 +1,4 @@
 import type { Scene } from '../scenes';
+import SeasideLayer from './SeasideLayer.svelte';
 
-// Not drawn yet: the set shows nothing until its parts are named here.
-export default {} satisfies Scene;
+export default { Layer: SeasideLayer } satisfies Scene;
