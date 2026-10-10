@@ -2,11 +2,13 @@
 
 **Date**: 2026-10-08
 **Pins**: written against `b903337`. Code-internal; nothing external to pin.
-**Status**: proposed. October (Halloween) and December (Christmas) were built;
-the other ten months and the geometry consolidation were not started. Revised
-the same day after a read-only review by Codex (`gpt-5.6-terra`), which
-corrected two claims about the code and tightened the refactor's contract.
-Since built: April (Easter egg hunt, 2026-10-10).
+**Status**: being built month by month; a month's heading below says
+"(built)" once it is switched on. When first written, October (Halloween) and
+December (Christmas) were built and the other ten months and the geometry
+consolidation were not started. Revised the same day after a read-only
+review by Codex (`gpt-5.6-terra`), which corrected two claims about the code
+and tightened the refactor's contract. Since built: February (Valentine's,
+2026-10-10), April (Easter egg hunt, 2026-10-10).
 
 ## The problem
 
@@ -41,7 +43,7 @@ all twelve. Easter can fall in late March; an April-long egg hunt still works.
   another ledge. Now and then it makes a mousing pounce on its own. The aurora
   ripples slowly in the header band.
 
-### February: Valentine's
+### February: Valentine's (built)
 
 - **Shelf**: a box of chocolates, a single rose, a heart-shaped card.
 - **Ledges**: a few rose petals, plus spent arrows stuck in ledge edges that
@@ -50,7 +52,9 @@ all twelve. Easter can fall in late March; an April-long egg hunt still works.
   still, one draws and aims at it, then fires along an arc into the nearest
   ledge, where the arrow pops into a few hearts. A fast-moving cursor makes
   them dodge. Arrows land in ledges only, never in a card, chart or text.
-  Hovering is a new rest state; the robin only perches.
+  Hovering is a new rest state; the robin only perches. Two or three cupids,
+  by the group rule. The first fliers on the rig; their airspace contract and
+  sources are in `design-docs/valentine/`.
 
 ### March: Mad March hares
 

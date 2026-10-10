@@ -510,8 +510,8 @@ deliberately.
 - **Logs**: a live tail of the daemon's own log.
 
 **Seasonal themes.** `dashboard.theme` adds decorations to the dashboard: `auto` (the
-default) switches a set on in its season: the northern lights in January, an Easter egg hunt in April, Halloween in October, Bonfire Night in November and Christmas throughout December. `none` turns
-decorations off, and naming a set (`aurora`, `easter`, `halloween`, `bonfire` or `christmas`) forces it on. They are purely cosmetic and
+default) switches a set on in its season: the northern lights in January, Valentine's in February, an Easter egg hunt in April, Halloween in October, Bonfire Night in November and Christmas throughout December. `none` turns
+decorations off, and naming a set (`aurora`, `valentine`, `easter`, `halloween`, `bonfire` or `christmas`) forces it on. They are purely cosmetic and
 never block a click. Reduced-motion users get the decorations without the
 animation. To preview a set whatever the date, add `?theme=halloween` to the
 URL.
@@ -551,6 +551,16 @@ elsewhere while the others look up, and now and then one pounces at something
 in the snow. Reduced motion shows a still aurora and the foxes asleep.
 Preview with `?theme=aurora`; design notes:
 [Northern lights](design-docs/aurora/README.md).
+
+February is Valentine's: a box of chocolates, a single rose and a
+heart-shaped card on the rail, and a few rose petals along the ledges. Two or
+three cupids hover in the page's open air, never over text, controls, charts
+or cards, and now and then flit to another spot. When the cursor goes still,
+one draws its bow, aims and shoots: the arrow arcs into the ledge nearest the
+cursor, pops into a few hearts and stays stuck there, wobbling, before it
+fades. A cursor whipping past makes a cupid dodge. Reduced motion shows the
+cupids hovering still. Preview with `?theme=valentine`; design notes:
+[Valentine's](design-docs/valentine/README.md).
 
 April is an Easter egg hunt: a basket of painted eggs with three chicks on
 the rail. Eggs are tucked into the ends of the page's ledges, only their tops

@@ -346,7 +346,7 @@ test('each theme shelf sits above identity and hides on cramped rails', async ({
     const { scenes } = await import(registry);
     return Object.keys(scenes).filter((name) => scenes[name].Shelf);
   });
-  expect(shelved).toEqual(expect.arrayContaining(['halloween', 'bonfire', 'christmas', 'aurora']));
+  expect(shelved).toEqual(expect.arrayContaining(['halloween', 'bonfire', 'christmas', 'aurora', 'valentine']));
   for (const theme of shelved) {
     await test.step(`${theme} shelf`, async () => {
       await page.setViewportSize({ width: 1440, height: 900 });

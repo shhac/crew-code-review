@@ -59,6 +59,15 @@ that twitch an ear at a passing cursor, wake and trot off on stepping legs
 when the cursor lingers (the others looking up), and sometimes pounce.
 Reduced motion keeps a still scene.
 
+February now has its own theme, Valentine's (`dashboard.theme` `valentine`,
+on by default under `auto` throughout February). The rail shows a box of
+chocolates, a single rose and a heart-shaped card; the page gets a few rose
+petals along the ledges and two or three cupids hovering in its open air,
+clear of text, controls, charts and cards, who flit between spots, shoot an
+arrow into the ledge nearest a cursor that goes still (it pops into hearts
+and stays stuck a while, wobbling), and dodge a cursor whipping past.
+Reduced motion keeps a still scene.
+
 April now has an Easter egg hunt (`dashboard.theme` `easter`, on by default
 under `auto` from 1 to 30 April). The rail shows a basket of painted eggs and
 chicks; painted eggs peep from the ends of the page's ledges and pop up when

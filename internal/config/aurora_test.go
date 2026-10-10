@@ -16,7 +16,7 @@ func TestAuroraCalendarAndOverrides(t *testing.T) {
 			{time.Date(2027, 1, 1, 0, 0, 0, 0, zone), ThemeAurora},
 			{time.Date(2027, 1, 15, 22, 0, 0, 0, zone), ThemeAurora},
 			{time.Date(2027, 1, 31, 23, 59, 0, 0, zone), ThemeAurora},
-			{time.Date(2027, 2, 1, 0, 0, 0, 0, zone), ThemeNone},
+			{time.Date(2027, 2, 1, 0, 0, 0, 0, zone), ThemeValentine},
 		} {
 			if got := (Config{Dashboard: DashboardSettings{Theme: theme}}).DashboardTheme(tc.at); got != tc.want {
 				t.Fatalf("%q at %v: %q, want %q", theme, tc.at, got, tc.want)

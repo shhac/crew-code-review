@@ -17,7 +17,7 @@ it('has a scene for every theme name and nothing else', async () => {
 it('draws nothing for none and keeps the finished sets whole', async () => {
   const { sceneOf } = await load();
   expect(sceneOf('none')).toEqual({});
-  for (const name of ['halloween', 'bonfire', 'christmas', 'aurora'] as const) {
+  for (const name of ['halloween', 'bonfire', 'christmas', 'aurora', 'valentine'] as const) {
     expect(sceneOf(name).Shelf).toBeTypeOf('function');
     expect(sceneOf(name).Layer).toBeTypeOf('function');
   }

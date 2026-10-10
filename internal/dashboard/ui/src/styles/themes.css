@@ -44,6 +44,21 @@
   background-attachment: fixed;
 }
 
+/* Rose pink for Valentine's, a cool pink kept apart from the bad ink's
+   salmon and the default lime. */
+:root[data-theme="valentine"] {
+  --accent: #f48fb8;
+  --accent-edge: rgba(244, 143, 184, .3);
+  --accent-ring: rgba(244, 143, 184, .35);
+  --rule: #f48fb8;
+}
+
+/* A faint rose glow high in the page's far corner, behind everything. */
+:root[data-theme="valentine"] body {
+  background-image: radial-gradient(ellipse 50% 40% at 100% 0%, rgba(244, 120, 170, .06), transparent 70%);
+  background-attachment: fixed;
+}
+
 /* Spring lilac for the Easter egg hunt, clear of the default lime, the info
    blue and the warning amber. */
 :root[data-theme="easter"] {

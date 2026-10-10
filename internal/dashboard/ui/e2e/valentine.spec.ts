@@ -35,12 +35,19 @@ async function watchShot(page: Page) {
   return seen;
 }
 
-test('the valentine set decorates the page: its shelf, petals and at least two cupids', async ({ page }) => {
+test('the daemon-resolved valentine set decorates the page: its palette, shelf, petals and at least two cupids', async ({ page }) => {
+  await page.route('**/api/config', async (route) => {
+    const response = await route.fetch();
+    const config = await response.json();
+    config.theme = 'valentine';
+    await route.fulfill({ response, json: config });
+  });
   await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto('/?theme=valentine');
+  await page.goto('/');
   await expect(page.locator('[data-valentine]')).toBeAttached();
   await expect(page.locator('.valentine-shelf')).toBeVisible();
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'valentine');
+  expect(await page.locator('.brand em').evaluate((el) => getComputedStyle(el).color)).toBe('rgb(244, 143, 184)');
   await expect(page.locator('[data-valentine] .petal').first()).toBeAttached();
   await expect.poll(() => cupids(page).count()).toBeGreaterThanOrEqual(2);
 });
