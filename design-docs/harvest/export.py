@@ -30,7 +30,7 @@ from PIL import Image
 from scipy import ndimage
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from art import EyeScale, crop, cut, export, export_with_fur, keyed, lum, opaque, place, poses, rescaled, rows  # noqa: E402
+from art import MARGIN, EyeScale, crop, cut, export, export_with_fur, keyed, lum, opaque, place, poses, rescaled, rows  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
 OUT = HERE.parents[1] / 'internal/dashboard/ui/src/lib/theme/harvest'
@@ -61,6 +61,10 @@ WING_LENGTH = 0.95
 # included, and the foot's length, claws included, in drawing units; and
 # where on the foot (fractions of its box) the tarsus comes down.
 TARSUS = 0.85
+# The feathered drumstick (crow-drumstick.png, its feathered end at the
+# knee, its bare end at the intertarsal joint), as thick as the trousers
+# where they leave the belly in the reference (about 52px).
+DRUMSTICK = 1.6
 FOOT = 5.6
 HEEL = (0.34, 0.12)
 
@@ -81,6 +85,20 @@ def iris(path: Path, seed: tuple[int, int]) -> float:
     return float(max(xs.max() - xs.min() + 1, ys.max() - ys.min() + 1))
 
 
+def eye_at(path: Path, seed: tuple[int, int]) -> tuple[float, float]:
+    """The middle of the eye in a cropped, exported picture, in its drawing
+    units: where the lab lines a key pose up with the rig's eye."""
+    rgba = keyed(path)
+    ys, xs = np.nonzero(brown(rgba))
+    near = (xs - seed[0]) ** 2 + (ys - seed[1]) ** 2 < 60 ** 2
+    cx, cy = (xs[near].min() + xs[near].max()) / 2, (ys[near].min() + ys[near].max()) / 2
+    seen = rgba[..., 3] > 8
+    top = max(0, np.nonzero(seen.any(axis=1))[0].min() - MARGIN)
+    left = max(0, np.nonzero(seen.any(axis=0))[0].min() - MARGIN)
+    per_unit = iris(path, seed) / EYE
+    return (cx - left) / per_unit, (cy - top) / per_unit
+
+
 def bill_and_eye(rgba: np.ndarray) -> np.ndarray:
     """The grey bill and the brown eye: what the head is matched by, as its
     black outline alone fits all along the neck."""
@@ -93,6 +111,33 @@ def ink(rgba: np.ndarray) -> np.ndarray:
     """The black line work: the folded wing lies inside the body's
     silhouette, so it is matched by its own lines."""
     return opaque(rgba) & (lum(rgba) < 22)
+
+
+def defringed(rgba: np.ndarray) -> np.ndarray:
+    """A black bird's picture with the magenta its soft edges kept taken out:
+    the keying's despill leaves a cut edge's half-clear feathers purple
+    where the background showed through, which on a black crow reads as a
+    pink fringe. Those (red and blue well above green) are drawn the dark
+    of its feathers instead."""
+    r, g, b = (rgba[..., i].astype(int) for i in range(3))
+    fringe = np.minimum(r, b) - g > 25
+    out = rgba.copy()
+    out[fringe, :3] = (34, 40, 52)
+    return out
+
+
+def crow_keyed(path: Path) -> np.ndarray:
+    return defringed(keyed(path))
+
+
+def underside(rgba: np.ndarray) -> np.ndarray:
+    """A wing's underside from its upper side: its colours drawn a third of
+    the way toward a mid grey-brown, the outline kept."""
+    out = rgba.copy()
+    feathers = lum(rgba) > 30
+    grey = np.array([88, 86, 84], dtype=np.float32)
+    out[feathers, :3] = (rgba[feathers, :3].astype(np.float32) * 0.65 + grey * 0.35).astype(np.uint8)
+    return out
 
 
 def tip_at(art: np.ndarray, whole: np.ndarray) -> tuple[int, int]:
@@ -192,7 +237,12 @@ def crow(check: Path | None) -> None:
     scale = EyeScale(HERE, EYES, EYE, RES, measure=iris)
     scale.reference('crow-standing.png', LAB, 'crow-reference')
     scale.key_poses('crow-pose-', KEY_POSES, LAB)
-    sheet = keyed(HERE / 'crow-parts.png')
+    ex, ey = eye_at(HERE / 'crow-standing.png', EYES['crow-standing.png'])
+    print(f'crow-reference: eye at {ex + scale.margin:.2f}, {ey + scale.margin:.2f}')
+    for pose, seed in KEY_POSES.items():
+        ex, ey = eye_at(HERE / f'crow-pose-{pose}.png', seed)
+        print(f'crow-pose-{pose}: eye at {ex:.2f}, {ey:.2f}')
+    sheet = crow_keyed(HERE / 'crow-parts.png')
     parts = {name: art for row, names in zip(rows(sheet, 2), CROW_ROWS) for name, art in cut(row, names).items()}
     masks = {'crow-head': bill_and_eye, 'crow-body': ink, 'crow-wing-folded': ink, 'crow-tail': None}
     scale.parts(parts, 'crow-parts.png', OUT, masks=masks)
@@ -205,11 +255,20 @@ def crow(check: Path | None) -> None:
     # The spread wing: both pieces on one scale, so that from the arm's root
     # to the hand's tip, less the gap they were drawn apart by, it is the
     # wing's true length.
-    arm, hand = (crop(p) for p in poses(keyed(HERE / 'crow-wing.png'), 2))
-    k = WING_LENGTH * length * RES / (arm.shape[1] + hand.shape[1])
+    # The rig's wings are drawn span up the picture, leading edge right
+    # (rig/wings.ts), so the sheet's pieces, drawn shoulder left and leading
+    # edge up, are turned a quarter left and mirrored. A crow's underwing is
+    # as black, a little greyer and flatter in its shading, so the underside
+    # is the upper side greyed rather than another drawing.
+    arm, hand = (np.ascontiguousarray(np.fliplr(np.rot90(crop(p)))) for p in poses(crow_keyed(HERE / 'crow-wing.png'), 2))
+    k = WING_LENGTH * length * RES / (arm.shape[0] + hand.shape[0])
     for name, art in [('crow-wing-arm', arm), ('crow-wing-hand', hand)]:
         w, h = export(art, OUT, name, k)
-        print(f'{name}: {w / RES:.2f}x{h / RES:.2f} units')
+        export(underside(art), OUT, f'{name}-under', k)
+        print(f'{name}: {w / RES:.2f}x{h / RES:.2f} units, span up')
+    drumstick = crop(crow_keyed(HERE / 'crow-drumstick.png'))
+    w, h = export_with_fur(drumstick, OUT, 'crow-drumstick', DRUMSTICK * RES / drumstick.shape[0])
+    print(f'crow-drumstick: {w / RES:.2f}x{h / RES:.2f} units')
     # The legs: the tarsus at its thickness, and the feet at the foot's
     # length, the curled one on the same scale as the open one.
     tarsus, foot, curled = (crop(p) for p in poses(keyed(HERE / 'crow-limbs.png'), 3))

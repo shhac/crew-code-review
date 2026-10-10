@@ -13,12 +13,13 @@ import { done, flightAt, type Flight } from './flight';
 // scroll; flying, it is in viewport coordinates. A pure model: the group
 // (crows.ts) decides when it leaves and where it comes back to.
 
-// What the crow needs of a ledge: room for its stand pose (27px, reaching
+// What the crow needs of a ledge: room for its stand pose (27.5px, reaching
 // 6px into a card's empty edge above), its body's half width either side
-// of its feet, and 60px between it and another crow, centre to centre.
-export const WALKER: Walker = { clear: 27, reach: 6, half: 20, spacing: 60 };
+// of its feet, and 60px between it and another crow, centre to centre
+// (crow-rig.ts measures the stand, its turned head included).
+export const WALKER: Walker = { clear: 27.5, reach: 6, half: 20, spacing: 60 };
 // Its bill reaches the ground this far ahead of its feet pecking.
-export const BILL = 14;
+export const BILL = 12;
 export const WALK = 20;
 export const SIDLE = 45;
 // How far a walk or a sidle goes at most.

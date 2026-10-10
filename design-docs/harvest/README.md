@@ -361,6 +361,48 @@ building, each within the rules above:
   (gaze within 160px), the layer through `placeTroupe`, the debug overlay,
   the `?theme-cue=scatter` cue for e2e, and the SETS row.
 
+### The rig as built (on the bird kit, 2026-10-10)
+
+`crow-rig.ts` puts the crow together on `rig/bird.ts` and `rig/wings.ts`
+as the kit's test gull does, its numbers from the reference (`export.py`'s
+printed placements); `crow-rig.test.ts` samples every pose's whole motion
+and `src/lab/critters/crow.ts` shows it with every key pose laid over its
+mode (lab spec `lab-tests/crow.spec.ts`).
+
+- **Scale**: a page pixel to a drawing unit; the reference's crown stands
+  26.5 above the ledge.
+- **Legs**: femur 2.5 (hidden), the feathered drumstick 2.4 (its own piece,
+  `crow-drumstick.png`, a further edit: feathered at the knee, bare at the
+  intertarsal joint), the tarsus 3.9 leaning 16 degrees, the foot 5.6 long.
+  The walk is the kit's bird walk (each foot down 0.6 of the stride), the
+  head bob's thrust 0.45 of a step; a sidle is the same walk at a longer
+  stride.
+- **Peck**: the body tips 24 to 34 degrees forward over its legs,
+  crouching half a unit so neither leg overreaches, the head turning down
+  and the tail lifting; the bill strikes 12 ahead of the feet (the model's
+  `BILL`), within a unit of the ledge.
+- **Gaze**: at most 14 degrees down toward a cursor but only 2 up, so the
+  crown stays inside the stand box.
+- **Flight**: the standing body tips 22 degrees forward to fly level, the
+  head held level against it, and back up through the flare, so no pose
+  jumps from the one before. The kit's flare sweeps the wings so far
+  forward that a crow's long wings covered its head, so it sweeps 30
+  degrees less. Pitched up, the long tail is lifted to stay off the ledge.
+  The tail was moved 1.6 units in from the reference: the body as cut is
+  shorter behind than the reference's, and in flight, with the folded wing
+  put away, a gap showed.
+- **Wings**: the spread wing's pieces are turned to the kit's span-up
+  drawing in `export.py`, and their undersides are the upper sides greyed
+  (a crow's underwing is as dark, only flatter), not another drawing.
+- **Fringes**: the keying left the cut edges' half-clear feathers purple
+  (pink on a black bird); `export.py` draws those the feathers' dark.
+- **Footprints measured** (page px, `down` below the anchor): stand 40x27.5;
+  walk 42x27.5; peck 46.5x25; alert 38x32.5; skim 43x27.5; flap 43x43
+  with 6 below (49 tall in all, inside the 46x58 flight target); take-off
+  51.5x51.5 with 11 below; flare 45.5x50 with 3.5 below; settle 47.5x48.5
+  with 3 below. The stand needs 27.5 clear, not 27: the turned head's box
+  corner (`WALKER.clear` follows when the layer is built).
+
 ### Accent
 
 Blackberry `#c39be0`, for the hedgerows in September: distinct from the
@@ -581,7 +623,8 @@ file, printing the placements and sizes below.
 | --- | --- | --- | --- |
 | `scarecrow-parts.png` | the scarecrow's four parts, an edit of `scarecrow.png` | the hat alone above; the left sleeve, the body (head completed under the hat, shoulders closed) and the right sleeve, each sleeve's inner end rounded and run on 40px to tuck under the jacket | `scarecrow-{hat,left-arm,body,right-arm}.webp`, laid out 66.8x64 |
 | `crow-parts.png` | the crow's body, head, tail and folded wing, an edit of the reference | a 2x2 sheet; the body closed where the legs, wing and tail were, keeping the feathered trousers; the head's and tail's cut edges soft | `crow-{body,head,tail,wing-folded}.webp` |
-| `crow-wing.png` | the spread wing, seen flat from above | the arm wing (shoulder to wrist, secondaries) and the hand wing (wrist to the fingered primaries), drawn 150px apart | `crow-wing-{arm,hand}.webp` |
+| `crow-wing.png` | the spread wing, seen flat from above | the arm wing (shoulder to wrist, secondaries) and the hand wing (wrist to the fingered primaries), drawn 150px apart | `crow-wing-{arm,hand}` and their `-under` sides |
+| `crow-drumstick.png` | the feathered drumstick, from the reference's legs | one capsule: shaggy trousers from the knee, the bare scaled leg at the intertarsal joint | `crow-drumstick` (with `-fur`) |
 | `crow-limbs.png` | the leg pieces, from the reference's legs | a bare scaled tarsus, the foot from the side (three toes forward, hallux back), the foot curled | `crow-tarsus`, `crow-foot`, `crow-foot-curled` (each with `-fur`) |
 
 How they were placed and sized:
@@ -603,6 +646,8 @@ How they were placed and sized:
 - **The spread wing** is sized to 0.95 of the bird's length from the arm's
   root to the hand's tip (a carrion crow's span is about 2.1 lengths, less
   the body between the shoulders): the arm piece 16.3 units, the hand 20.7.
+- **The drumstick** is as thick as the trousers where they leave the belly,
+  1.6 units.
 - **The legs** are sized to the reference's: the tarsus 0.85 units thick,
   the foot 5.6 units long with claws (the reference's foot is 6.7; kept
   smaller, as the brief asks of feet), the tarsus coming down on it at
