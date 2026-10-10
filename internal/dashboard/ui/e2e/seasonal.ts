@@ -1,5 +1,5 @@
 import { expect, type Locator, type Page } from '@playwright/test';
-import { coveredContent } from './content';
+import { coveredContent, type Drawn } from './content';
 
 // The contract every seasonal set with animals keeps, whatever it draws:
 // its palette, an overlay nobody can click or hear, enough animals for the
@@ -84,7 +84,7 @@ export const ROUTES = ['/', '/history', '/metrics', '/leaderboard', '/config', '
 // Where a set is known to cover content today, by its animals or by its
 // other parts. Each is a bug to fix: its check runs as an expected failure,
 // so it says when the bug is gone, and the contract holds everywhere else.
-export type Known = { theme: string; width: Width; route: string; what: 'animals' | 'parts'; bug: string };
+export type Known = { theme: string; width: Width; route: string; what: Covers; bug: string };
 export const KNOWN: readonly Known[] = [
   {
     theme: 'bonfire', width: 390, route: '/config', what: 'animals',
@@ -121,13 +121,16 @@ export async function settled(page: Page, set: SeasonalSet) {
 // that is not covering it.
 const SLACK = 1;
 
-// What the set's animals cover right now.
-export const coveredByAnimals = (page: Page, set: SeasonalSet) => coveredContent(animals(page, set), set.drawn, SLACK);
-
-// What its other parts (plants, petals, eggs, arrows) cover right now.
-export async function coveredByParts(page: Page, set: SeasonalSet) {
-  const parts = await Promise.all(set.parts.map(([els, of]) => coveredContent(page.locator(`${set.overlay} ${els}`), of, SLACK)));
-  return parts.flat();
+// What the set's animals, or its other parts (plants, petals, eggs,
+// arrows), cover right now; both at once in one look at the page.
+export type Covers = 'animals' | 'parts';
+export const coversOf = (set: SeasonalSet): Covers[] => (set.parts.length ? ['animals', 'parts'] : ['animals']);
+export function coveredBy(page: Page, set: SeasonalSet, what: readonly Covers[]) {
+  const drawn: Record<Covers, readonly Drawn[]> = {
+    animals: [[`${set.overlay} [data-${set.animal}]`, set.drawn]],
+    parts: set.parts.map(([els, of]) => [`${set.overlay} ${els}`, of] as const),
+  };
+  return coveredContent(page, what.flatMap((w) => drawn[w]), SLACK);
 }
 
 // How long the ledges take to catch up with the page once it has settled:

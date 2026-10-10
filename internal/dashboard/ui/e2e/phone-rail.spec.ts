@@ -25,7 +25,7 @@ for (const route of ['/metrics', '/history']) {
     await page.goto(`${route}?theme=hares`);
     await expect(page.locator(plants).first()).toBeAttached();
     await page.waitForTimeout(2500);
-    expect(await coveredContent(page.locator(plants), 'path')).toEqual([]);
+    expect(await coveredContent(page, [[plants, 'path']])).toEqual([]);
     // Only the ledges in main's flow, which on a phone starts below the rail.
     const rail = (await page.locator('.rail').boundingBox())!;
     const inFlow = (all: number[]) => all.filter((y) => y > rail.y + rail.height);
@@ -34,6 +34,6 @@ for (const route of ['/metrics', '/history']) {
     await page.locator('.rail').evaluate((el) => { el.style.paddingTop = '74px'; });
     await frames(page, 3);
     expect(inFlow(ys(await ledges(page)))).toEqual(before.map((y) => y + 60));
-    expect(await coveredContent(page.locator(plants), 'path')).toEqual([]);
+    expect(await coveredContent(page, [[plants, 'path']])).toEqual([]);
   });
 }

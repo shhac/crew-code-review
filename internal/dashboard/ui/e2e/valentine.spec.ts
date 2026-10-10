@@ -39,7 +39,7 @@ async function watchShot(page: Page) {
     const hearts = page.locator('[data-valentine] [data-heart]');
     if (await arrows.count()) seen.arrow = true;
     if (await hearts.count()) seen.hearts = true;
-    seen.covered.push(...await coveredContent(arrows, 'path'), ...await coveredContent(hearts, 'path'));
+    seen.covered.push(...await coveredContent(page, [['[data-valentine] [data-arrow] path', 'path'], ['[data-valentine] [data-heart]', 'path']]));
   }
   return seen;
 }

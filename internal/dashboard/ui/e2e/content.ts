@@ -1,13 +1,17 @@
-import type { Locator } from '@playwright/test';
+import type { Page } from '@playwright/test';
 
-// Where an animal's drawing (the union of its pictures) overlaps the page's
-// content: rendered text, controls, charts. Cards' own boxes are not content;
-// an animal may stand into their empty edges. `parts` picks what in each
-// element is drawn (its pictures, by default; a bow's strokes too, say); an
-// element that is itself one of them (an arrow, a heart) counts whole.
-// slack is how far a drawing may reach into content and still not count.
-export function coveredContent(animals: Locator, parts = 'image', slack = 0): Promise<string[]> {
-  return animals.evaluateAll((els, [parts, slack]) => {
+// What to check: the elements (a selector), and what in each is drawn (its
+// pictures, say, or a bow's strokes too); an element that is itself one of
+// them (an arrow, a heart) counts whole.
+export type Drawn = readonly [elements: string, parts: string];
+
+// Where the drawings overlap the page's content: rendered text, controls,
+// charts. Cards' own boxes are not content; an animal may stand into their
+// empty edges. slack is how far a drawing may reach into content and still
+// not count. The content is measured once for every group, since walking
+// every text range on the page is most of the cost.
+export function coveredContent(page: Page, groups: readonly Drawn[], slack = 0): Promise<string[]> {
+  return page.evaluate(([groups, slack]) => {
     const main = document.querySelector('main');
     if (!main) return [];
     const content: { name: string; r: DOMRect }[] = [];
@@ -43,10 +47,10 @@ export function coveredContent(animals: Locator, parts = 'image', slack = 0): Pr
       }), { left: box.left, right: box.right, top: box.top, bottom: box.bottom });
       return { ...cut, width: Math.max(0, cut.right - cut.left), height: Math.max(0, cut.bottom - cut.top) };
     };
-    return els.flatMap((el) => {
+    return groups.flatMap(([elements, parts]) => Array.from(document.querySelectorAll(elements)).flatMap((el) => {
       const drawn = el.matches(parts) ? [el] : Array.from(el.querySelectorAll(parts));
       const pictures = drawn.map(shown).filter((p) => p.width > 0 && p.height > 0);
       return content.filter((c) => pictures.some((p) => overlap(p, c.r))).map((c) => `${el.getAttribute('data-id') ?? el.tagName.toLowerCase()} over ${c.name}`);
-    });
-  }, [parts, slack] as const);
+    }));
+  }, [groups, slack] as const);
 }

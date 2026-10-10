@@ -1,14 +1,11 @@
 import { expect, test } from '@playwright/test';
 import {
-  CATCH_UP, ROOMY, ROUTES, SETS, WIDTHS, accentOf, animals, catching, coveredByAnimals, coveredByParts, knownAt, landsOnDecoration, modesOf,
-  sceneOf, seedRandom, serveTheme, settled, watchCovered, type Known, type SeasonalSet, type Width,
+  CATCH_UP, ROOMY, ROUTES, SETS, WIDTHS, accentOf, animals, catching, coveredBy, coversOf, knownAt, landsOnDecoration, modesOf,
+  sceneOf, seedRandom, serveTheme, settled, watchCovered, type Width,
 } from './seasonal';
 
 // The overlay contract, run for every seasonal set with animals (see
 // seasonal.ts). Each set's own spec covers only its own behaviour.
-
-const LOOK = { animals: coveredByAnimals, parts: coveredByParts } satisfies Record<Known['what'], unknown>;
-const covers = (set: SeasonalSet): Known['what'][] => (set.parts.length ? ['animals', 'parts'] : ['animals']);
 
 for (const set of SETS) {
   test.describe(set.theme, () => {
@@ -38,33 +35,31 @@ for (const set of SETS) {
     });
 
     for (const width of WIDTHS) {
-      test(`at ${width}px the roomy pages get at least ${set.min[width]} animals, and the shelf shows only beside a rail`, async ({ page }) => {
-        test.setTimeout(90_000);
+      // One load of each page checks everything the contract asks of it at
+      // this width: a page load and its settling are most of the time.
+      test(`at ${width}px nothing it draws covers text, controls or charts on any page, the roomy pages get at least ${set.min[width]} animals, and the shelf shows only beside a rail`, async ({ page }) => {
+        // Each route is looked at several times; measuring every text range
+        // is slow.
+        test.setTimeout(300_000);
+        await seedRandom(page);
         await page.setViewportSize({ width, height: 900 });
-        for (const route of ROOMY) {
+        for (const route of ROUTES) {
           await page.goto(`${route}?theme=${set.theme}`);
           await expect(page.locator(set.overlay)).toBeAttached();
-          await expect(page.locator(set.shelf)).toBeVisible({ visible: width !== 390 });
-          await expect.poll(() => animals(page, set).count(), { message: route, timeout: 20_000 }).toBeGreaterThanOrEqual(set.min[width]);
+          if (ROOMY.includes(route)) {
+            await expect(page.locator(set.shelf)).toBeVisible({ visible: width !== 390 });
+            await expect.poll(() => animals(page, set).count(), { message: route, timeout: 20_000 }).toBeGreaterThanOrEqual(set.min[width]);
+          }
+          const looks = coversOf(set).filter((what) => !knownAt(set.theme, width, what).some((k) => k.route === route));
+          if (!looks.length) continue;
+          await settled(page, set);
+          await page.waitForTimeout(CATCH_UP);
+          expect(await watchCovered(page, () => coveredBy(page, set, looks)), route).toEqual([]);
         }
       });
 
-      for (const what of covers(set)) {
-        const known = knownAt(set.theme, width, what);
-        test(`at ${width}px its ${what} cover no text, controls or charts on any page`, async ({ page }) => {
-          // Each route is looked at several times; measuring every text
-          // range is slow.
-          test.setTimeout(240_000);
-          await seedRandom(page);
-          await page.setViewportSize({ width, height: 900 });
-          for (const route of ROUTES.filter((r) => !known.some((k) => k.route === r))) {
-            await page.goto(`${route}?theme=${set.theme}`);
-            await settled(page, set);
-            await page.waitForTimeout(CATCH_UP);
-            expect(await watchCovered(page, () => LOOK[what](page, set)), route).toEqual([]);
-          }
-        });
-        for (const k of known) {
+      for (const what of coversOf(set)) {
+        for (const k of knownAt(set.theme, width, what)) {
           test(`at ${width}px on ${k.route} its ${what} cover content (known bug: ${k.bug})`, async ({ page }) => {
             test.fail();
             test.setTimeout(60_000);
@@ -75,7 +70,7 @@ for (const set of SETS) {
             await page.waitForTimeout(CATCH_UP);
             // Watched for longer, so a bug that shows only in some moments
             // (a sniff) is seen every run.
-            expect(await watchCovered(page, () => LOOK[what](page, set), 12)).toEqual([]);
+            expect(await watchCovered(page, () => coveredBy(page, set, [what]), 12)).toEqual([]);
           });
         }
       }
@@ -127,8 +122,8 @@ for (const set of SETS) {
       for (const step of steps) {
         await step.go();
         await page.waitForTimeout(Math.max(set.settle, CATCH_UP));
-        const looks = covers(set).filter((what) => !knownAt(set.theme, step.width, what).some((k) => k.route === step.route));
-        const look = async () => (await Promise.all(looks.map((what) => LOOK[what](page, set)))).flat();
+        const looks = coversOf(set).filter((what) => !knownAt(set.theme, step.width, what).some((k) => k.route === step.route));
+        const look = () => coveredBy(page, set, looks);
         expect(await watchCovered(page, look), step.name).toEqual([]);
       }
     });
