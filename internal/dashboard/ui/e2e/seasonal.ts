@@ -85,7 +85,7 @@ export const ROUTES = ['/', '/history', '/metrics', '/leaderboard', '/config', '
 // other parts. Each is a bug to fix: its check runs as an expected failure,
 // so it says when the bug is gone, and the contract holds everywhere else.
 export type Known = { theme: string; width: Width; route: string; what: Covers; bug: string };
-export const KNOWN: readonly Known[] = [
+const KNOWN: readonly Known[] = [
   {
     theme: 'bonfire', width: 390, route: '/config', what: 'animals',
     bug: "a sniffing hedgehog's lowered head reaches 4px below its ledge, into the config tabs under it",
