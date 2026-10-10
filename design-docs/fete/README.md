@@ -1,7 +1,7 @@
 # Village fête (2026-10-10)
 
 **Status**: being built. Done: the shelf, the wasp's parts and their
-export, the bunting's pure model. Waiting
+export, the bunting's pure model, the wasps' pure behaviour model. Waiting
 on the phase C kits: the shared gaps and rail air (c-surfaces) for the
 bunting's layer and the wasps' air, and the insect rig (c-insects) for the
 wasp's wings, legs and antennae. Not switched on yet.
@@ -346,6 +346,49 @@ whole world is the rail, and this is their contract.
 - **Still pose (reduced motion).** Wasp 0 standing on the cake's top, wasp 1
   on the jar's lid, wings folded along their backs, never stepped, antennae
   still.
+
+### The wasps' air, as built
+
+The pure model is `fete/wasp.ts` (with `fete/air.ts` for the air in the
+stage's coordinates and the exit lane, and `fete/footprints.ts`); its tests
+run the pair for minutes of simulated time in a tall air and a 1024x768
+one with a cursor sweeping past, and check at every frame that the two
+boxes never meet and that each stays in the air or the lane. Changes from
+the plan above, each because building showed it:
+
+- **The upper orbit is higher.** With the plan's numbers (centre 38px above
+  the cake) the two bands' boxes overlapped by 10px, so "a footprint plus
+  6px apart" did not hold. Its height is now worked out from the low band's
+  top (`orbitOf`): 52px above the cake's top, so it needs 70px of air above
+  the cake rather than 60, and the low one 28. A 1024x768 window (54px)
+  gets the low orbit only, with wasp 1 resting on its jar.
+- **Footprints are anchored at the thorax**, the same point flying or
+  standing; standing, it is 5px above what it stands on (`STAND`). The
+  sizes are the targets above; the rig's tests will hold its drawing to
+  them once the insect kit lands.
+- **Routes are lines with rounded corners**, not single cubics: a single
+  curve cannot go across under the high band and then up the air's left
+  edge without cutting the corner into it, which is the only way out for
+  wasp 0 when wasp 1 is circling above. Each route (onto an orbit, down to
+  a spot, out along the lane, back in) is planned from a few candidates and
+  taken only if the footprint swept along it stays in the air (or the lane)
+  and 2px clear of everything the other wasp has claimed: the rest of its
+  own flight and the band or the spot it keeps to. That is what keeps the
+  two apart, rather than holding still: wasp 1 still holds where it is for
+  a frame if it would come within 2px of wasp 0, but by construction it
+  never needs to, and wasp 0 has right of way.
+- **The backing-away arcs** start just above the spot (where taking off
+  ends) and widen to 20px round the cake and 18px round the jar, so
+  everything wasp 1 does at its jar keeps clear of wasp 0's band.
+- **Coming back** is to the leftmost point of its orbit, or, if its orbit
+  has no room, to just above its spot and down to land.
+- **Resting** shows the feeding pose with its slow shuffles; reduced
+  motion shows the standing one.
+- **Wasp 1 "1 to 3s behind"** is read as its first inspection coming 1 to
+  3s after wasp 0's would, so the two do not act in step; both are circling
+  from the first frame.
+- **Chased while feeding**, it flees straight from its spot: the first leg
+  of the flee is its take-off.
 
 ### Wasp behaviour
 
