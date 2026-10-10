@@ -1,6 +1,7 @@
 # Seaside (2026-10-10)
 
-**Status**: pre-production draft (decisions settled, not built).
+**Status**: in build. The shelf and the sand drifts are built (see "As built");
+the gulls are being built on the bird kit.
 
 **Pins**: written against `ea7e9d5`. Code-internal.
 
@@ -15,7 +16,9 @@ decisions, research and art rather than from the calendar's three lines.
 - **Rail shelf** (`SeasideShelf.svelte`): chips in a cone of white chip paper
   with a wooden chip fork, a red bucket with a yellow spade, and a 99 ice
   cream stood in a small heap of sand. One picture (`seaside-kit-2.png`), on
-  a low sand drift drawn in code like the aurora's snow drift. Hidden on
+  a low sand drift drawn in code like the aurora's snow drift, with a cockle
+  washed up beside it. (The picture has no chip fork after all: the edit that
+  fixed the chips and the cone lost it, and the chips read without it.) Hidden on
   cramped rails like the other shelves. No sky effect: the rail sky stays
   empty this month (see "No rail sky").
 - **Sand drifts** (`drifts.ts`): low drifts of sand along the ledges, each a
@@ -206,6 +209,13 @@ own box.
   curve plus the swept boxes of its subdivided hulls.
 - If February's cupids land an air surface first, use theirs, provided it
   excludes the rail.
+- **As built**: they did. `air.ts`'s `airOf` (built for the cupids) is
+  `main`'s box inset 6px (not 4px), with `room` for everything of `main` and
+  `view` for its part in the window, minus every obstacle widened by its
+  `GAP` (4px); `fits` and `sweeps` test a box or a swept chain of boxes
+  against it. That is this contract, a little more careful, so the gull
+  uses it and no new measurement is needed. The route's swept envelope (a
+  pose box per curve) comes from the bird kit's check in `air.ts`.
 
 ### Gull behaviour
 
@@ -307,6 +317,38 @@ Christmas's parchment, the info blue and the status red (`#d95f52`, which is
 darker and redder). Only the accent tokens move. A proposal: easy to change
 in `styles/themes.css`. (The art keeps clear of pink and magenta for keying;
 the accent is CSS and does not touch it.)
+
+## As built
+
+### The shelf
+
+`SeasideShelf.svelte`: the kit (`seaside-kit.webp`, 114x64) stood on one long
+low drift (168x9, its crest under the bucket), drawn by the same `driftPath`
+as the ledges' drifts with the same three sands, a few grains and a 7px
+cockle from `shellPaths` at its right-hand foot. Nothing moves, so reduced
+motion changes nothing. The art is exported by its own step,
+`design-docs/seaside/export_shelf.py`, while the gull's `export.py` is the
+bird kit's; it joins `export.py` when those files are handed over.
+
+### The sand drifts
+
+`drifts.ts` and `SeasideLayer.svelte`, as decided above, with these settled
+while building:
+
+- A slot is 56px of a clear run; a drift sits anywhere in it with 7px kept
+  free at the lee end, which is where its shell goes, so drifts and shells
+  never touch each other or leave their run.
+- The slopes are cubic curves: the windward one leaves the ledge flat and
+  steepens toward the crest, the lee falls steeply. The crest's lighter line
+  runs over the top half of the windward slope (drifts under 2px get none).
+  Grains are set inside the straight-sloped triangle under the curve, so
+  they always sit in sand; drifts under 2.5px get none.
+- A shell is 4 to 5px across: a cockle stood on its hinge, a ribbed fan with
+  three ribs; or a winkle on its side, a dark cone with a pale spiral. It
+  faces either way.
+- The overlay draws per ledge one sand path, one crest path and one grains
+  path, and a `<g data-shell>` per shell (two paths), so the e2e content
+  check can look at each shell on its own.
 
 ## Research: the herring gull
 
@@ -467,7 +509,7 @@ as style references. Every pose is an edit of `gull-standing.png`.
 
 | Source | Prompt, in short | Shipped as | Display size |
 | --- | --- | --- | --- |
-| `seaside-kit-2.png` | chips in plain chip paper with a wooden fork, a red bucket with a yellow spade, a 99 with a flake stood in a sand heap; an edit of a first generation whose chips came out as cubes and whose cone balanced on its point | `seaside-kit.webp` (not yet) | about 124x56 on the shelf |
+| `seaside-kit-2.png` | chips in plain chip paper with a wooden fork, a red bucket with a yellow spade, a 99 with a flake stood in a sand heap; an edit of a first generation whose chips came out as cubes and whose cone balanced on its point | `seaside-kit.webp` (`export_shelf.py`, at twice its display size) | 114x64 on the shelf |
 | `gull-standing.png` | an adult herring gull standing square, side on, facing right: plumage, bill and gonys spot, pale eye with orange ring, pink legs with the intertarsal joint showing, webbed feet with a raised hallux | the lab's reference (not yet) | 36.5x25.5 page px |
 | `gull-pose-walk-contact.png` | the strut as the near foot lands, the far heel lifting | the lab's overlay (not yet) | same eye scale |
 | `gull-pose-walk-pass.png` | mid-stride, the swinging foot folded, toes down | the lab's overlay | |
