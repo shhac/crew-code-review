@@ -169,7 +169,11 @@ standing on a ledge, and bunting hangs below one.
   only where `gapRuns(g, obstacles, 16)` covers its whole stretch (its deepest
   point: 1 + 4 sag + 1.5 sway + 7 pennant + 2 spare); the swags either side
   of a blocked stretch stay. Swags are numbered from the gap's left end, so a
-  blocked one never renumbers the rest.
+  blocked one never renumbers the rest. *As built*: a length cannot always
+  be divided evenly into swags of 56 to 80px (100px cannot), so the swags
+  are the inner length divided by the nearest whole number of 64px swags,
+  which keeps them 48 to 96px wide and about 64; a band shorter than 40px
+  inside its ends gets none.
 - **Across a side gap: one swag.** Tied at the two ends, sagging a quarter of
   its span (3.5px across a 14px gutter, 5.5px across 22px), with
   `floor((span - 3) / 6)` pennants spaced evenly between 2px margins: one in
@@ -199,7 +203,22 @@ standing on a ledge, and bunting hangs below one.
 - **The breeze.** While motion is allowed, every pennant flutters about 3
   degrees on its own seeded phase, under a slow gust that rises and falls
   over 8 to 14 seconds, so the bunting never looks pinned flat or ticks in
-  step.
+  step. *As built*: the 3 degrees are its swing in the page's plane; its
+  flutter toward and away from the viewer (which only shortens it, by the
+  cosine) goes up to 30 degrees at a gust's height, since 3 degrees of that
+  would shorten a 7px pennant by a hundredth of a pixel. The gust is one
+  sine whose pace wanders (`gust` in `bunting.ts`), so its rises come 9 to 13
+  seconds apart and never repeat in step; each pennant flutters at its own
+  seeded 1.3 to 2Hz, about its natural 1.6Hz.
+- **Swinging, as built.** Each mode is a damped spring worked out in closed
+  form from its state at its last kick (offset, speed, time), so a swag's
+  shape is a pure function of the time and its last kick, frame rate or
+  not. A kick is capped where it lands: the two tape modes' envelopes
+  together never pass the tape's cap, and a pennant's swing never passes
+  its cap less the breeze's 3 degrees, so no later moment can reach past
+  the footprint a string was hung by. A kick swings the pennants within
+  24px of the crossing, the nearest most; a festoon's swags either side
+  share 40% of it as an even push.
 - **The cursor brushing it.** A moving mouse or pen segment (from
   `ledgeScene`'s `stroke`) passing within 3px of a tape, or through a
   pennant, kicks that swag: its vertical speed into the sag mode, its
