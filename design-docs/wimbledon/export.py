@@ -15,8 +15,8 @@ placed where they sat in it; its leg and neck pieces, cut from its own legs
 and neck, are in pigeon-limbs.png; its flight wings and fanned tail in
 pigeon-wings.png. The hawk only flies, so its parts are cut from its glide,
 hawk-pose-glide-2.png, into hawk-parts.png and placed on the glide; its
-wings are in hawk-wings.png. Each wing piece is also written a shade darker,
-for the far wing. The sizes printed are what the rigs lay out.
+wings are in hawk-wings.png, each wing piece stood span up as the bird kit
+draws one. The sizes printed are what the rigs lay out.
 """
 from pathlib import Path
 import sys
@@ -65,23 +65,22 @@ WINGS = ['arm', 'hand', 'arm-under', 'hand-under']
 # primaries are about half of it. The arm is drawn on the same scale.
 PIGEON_HAND = 10.0
 HAWK_HAND = 15.3
-FAR = 0.78
 
 
-def darker(rgba: np.ndarray, k: float) -> np.ndarray:
-    out = rgba.copy()
-    out[..., :3] = (rgba[..., :3].astype(np.float32) * k).astype(np.uint8)
-    return out
+def spanUp(piece: np.ndarray) -> np.ndarray:
+    """A wing piece drawn lying down, root left and leading edge on top,
+    stood up as the bird kit draws one: span up the picture, root at the
+    bottom, leading edge on the right."""
+    return np.ascontiguousarray(np.rot90(piece, 1)[:, ::-1])
 
 
 def wings(sheet: str, prefix: str, hand: float, names: list[str]) -> dict[str, np.ndarray]:
-    """The wing pieces of sheet, each written as drawn and a shade darker for
-    the far wing, all on the scale that makes the hand hand units long."""
+    """The wing pieces of sheet, stood span up, all on the scale that makes
+    the hand hand units long. The rig shades the far wing itself."""
     pieces = cut(keyed(HERE / sheet), names)
     scale = hand * RES / pieces['hand'].shape[1]
     for name in WINGS:
-        w, h = export(pieces[name], OUT, f'{prefix}-{name}', scale)
-        export(darker(pieces[name], FAR), OUT, f'{prefix}-far-{name}', scale)
+        w, h = export(spanUp(pieces[name]), OUT, f'{prefix}-{name}', scale)
         print(f'{prefix}-{name}: {w / RES:.2f}x{h / RES:.2f}')
     return pieces
 
