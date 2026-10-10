@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { firstShut, imagesOf, lidsOf, rigBounds } from '../rig/test-rig';
 import { BEATS, poseFootprint } from './cupid';
-import { cupidRig, wingStroke, type CupidPose, type RigCupid } from './cupid-rig';
+import { cupidRig, type CupidPose, type RigCupid } from './cupid-rig';
 import { FOOTPRINTS } from './footprints';
 
 const cupid = (pose: CupidPose, over: Partial<RigCupid> = {}): RigCupid => ({ pose, seed: 1, beat: 0, progress: 0, aim: 0, speed: 0, accel: 0, gaze: 0, ...over });
@@ -62,18 +62,6 @@ describe('cupid rig', () => {
       // machine.
     }, 30_000);
   }
-
-  it('beats its wings: down broad, up turned edge-on, the tip riding a figure-eight', () => {
-    const down = wingStroke(0.25, 12, 75), up = wingStroke(0.75, 12, 75);
-    expect(down.squash).toBe(1);
-    expect(up.squash).toBeLessThan(0.6);
-    expect(wingStroke(0, 12, 75).angle).toBeCloseTo(12);
-    expect(wingStroke(0.5, 12, 75).angle).toBeCloseTo(12 - 75);
-    // The root rises and falls twice a beat, so the tip's path crosses
-    // itself.
-    expect(wingStroke(0.125, 12, 75).lift).toBeGreaterThan(0);
-    expect(wingStroke(0.375, 12, 75).lift).toBeLessThan(0);
-  });
 
   it('draws its wings, body and head as pictures, and its bow in code', () => {
     const pose = cupidRig(cupid('aim', { aim: 10, progress: 1 }), { now: 0, still: false });

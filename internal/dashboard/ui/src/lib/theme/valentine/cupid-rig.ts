@@ -1,6 +1,7 @@
 import type { Point } from '../pointer';
 import { blinking } from '../rig/life';
 import { lidLayers, limbLayers, turnAbout, turned, type DrawnLeg, type Fur, type Layer, type LimbArt, type RigPose, type Turn } from '../rig/rig';
+import { wingLayer, wingStroke, type Stroke } from '../rig/wings';
 import armFurArt from './cupid-arm-fur.webp';
 import armArt from './cupid-arm.webp';
 import bodyArt from './cupid-body.webp';
@@ -125,27 +126,10 @@ function limb(root: Point, end: Point, first: number, second: number, side: 1 | 
 const arm = (l: DrawnLeg['limb']): DrawnLeg => ({ limb: l, art: ARM_ART, width: ARM.width, haunch: ARM.width, fore: true, taper: false });
 const leg = (l: DrawnLeg['limb']): DrawnLeg => ({ limb: l, art: LEG_ART, width: LEG.width, haunch: LEG.haunch, fore: true, taper: false });
 
-// The wings' stroke at this point of the beat: the angle the wing is turned
-// from as drawn (negative sweeps it down and back), how far it is squashed
-// across its length (turned edge-on on the upstroke), and the root's small
-// rise and fall, which makes the tip trace a flattened figure-eight.
-type Stroke = { angle: number; squash: number; lift: number };
-export function wingStroke(beat: number, top: number, arc: number): Stroke {
-  const phase = ((beat % 1) + 1) % 1;
-  const down = (1 - Math.cos(2 * Math.PI * phase)) / 2;
-  const up = phase >= 0.5 ? Math.sin(2 * Math.PI * (phase - 0.5)) : 0;
-  return { angle: top - arc * down, squash: 1 - 0.45 * up, lift: 0.3 * Math.sin(4 * Math.PI * phase) };
-}
-
 function wing(stroke: Stroke, far: boolean): Layer {
   const root = far ? { x: WING_ROOT.x + FAR_WING.x, y: WING_ROOT.y + FAR_WING.y } : WING_ROOT;
   const at = far ? { ...WING, x: WING.x + FAR_WING.x, y: WING.y + FAR_WING.y } : WING;
-  const image: Layer = { kind: 'image', name: far ? 'far wing' : 'near wing', src: wingArt, ...at, far };
-  // Squashed across its length: turned so its length lies level, squashed,
-  // and turned back.
-  const edgeOn: Layer = { kind: 'group', turn: turnAbout(-WING_AXIS - 180, root), layers: [image] };
-  const squashed: Layer = { kind: 'group', turn: turnAbout(WING_AXIS + 180, root), scaleY: stroke.squash, layers: [edgeOn] };
-  return { kind: 'group', turn: turnAbout(stroke.angle, root, 0, stroke.lift), layers: [squashed] };
+  return wingLayer({ kind: 'image', name: far ? 'far wing' : 'near wing', src: wingArt, ...at, far }, root, WING_AXIS, stroke);
 }
 
 // The bow in the far fist at `grip`, pointing `aim` degrees: its stave
