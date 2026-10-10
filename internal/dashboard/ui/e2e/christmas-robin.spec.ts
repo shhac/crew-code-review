@@ -4,7 +4,11 @@ for (const width of [1440, 390]) {
   test(`shipped Christmas robin stays registered and click-through at ${width}px`, async ({ page }, info) => {
     await page.setViewportSize({ width, height: 900 });
     await page.emulateMedia({ reducedMotion: 'reduce' });
-    await page.goto('/logs?theme=christmas&theme-debug=1');
+    // Config, not Logs: on a phone Logs has one ledge, under a subtitle
+    // counting the daemon's log lines, and whether a second robin fits
+    // beside it depends on how wide the font sets that count (it does not
+    // with Linux's DejaVu Sans). Config's phone layout has ledges to spare.
+    await page.goto('/config?theme=christmas&theme-debug=1');
     await expect(page.locator('.robin')).toHaveCount(2);
     const bird = page.locator('[data-robin="0"]');
     await expect(bird).toBeVisible();
