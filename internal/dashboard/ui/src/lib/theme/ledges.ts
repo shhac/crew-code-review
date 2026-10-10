@@ -1,6 +1,6 @@
 import { clearance, clearRuns, inView, type Ledge, type PageMap, type Run } from './floors';
-import { apart } from './math';
-import type { Point } from './pointer';
+import { apart, sign } from './math';
+import type { Cursor, Point } from './pointer';
 import { maxBy } from './seed';
 
 // What every animal that walks the ledges (the fox, the rabbit, the hares)
@@ -84,6 +84,23 @@ export function staysPut(at: { floor: number; x: number }, scene: PageMap, w: Wa
   const f = scene.floors.get(at.floor);
   const run = f && runAt(f, scene, w, at.x);
   return !!run && within(bodyOf(run, w.half), at.x, slack) && clearOf(taken, at.floor, at.x, at.x, w.spacing);
+}
+
+// A step of up to `step` px toward its target, landing exactly on it: how
+// far it went is added to walked, and it faces the way it went.
+export function towardTarget<T extends { x: number; target: number; walked: number; dir: 1 | -1 }>(w: T, step: number): T {
+  const gap = w.target - w.x;
+  const moved = Math.min(step, Math.abs(gap));
+  return { ...w, x: Math.abs(gap) > step ? w.x + Math.sign(gap) * step : w.target, walked: w.walked + moved, dir: gap === 0 ? w.dir : sign(gap) };
+}
+
+// What a walker hears of the cursor: since when it has been within `near`
+// of its middle (null once it is not), and whether it is passing, having
+// moved in the last `moving` ms within `reach`.
+export type Senses = { near: number; reach: number; moving: number };
+export function noticing(cursor: Cursor | null, middle: Point, now: number, since: number | null, senses: Senses): { near: number | null; passing: boolean } {
+  const away = cursor ? apart(cursor, middle) : Infinity;
+  return { near: away < senses.near ? since ?? now : null, passing: !!cursor && now - cursor.at < senses.moving && away < senses.reach };
 }
 
 // Where a walker changing ledge is going: the end of the ledge it comes in

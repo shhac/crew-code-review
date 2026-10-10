@@ -1,5 +1,5 @@
 import type { Ledge, PageMap, Run } from '../floors';
-import { bodyOf, clampTo, roomiest, roomOver, runAt, staysPut, type Claim, type Walker } from '../ledges';
+import { bodyOf, clampTo, roomiest, roomOver, runAt, staysPut, towardTarget, type Claim, type Walker } from '../ledges';
 import { sign } from '../math';
 import { between, pick, type Rand } from '../seed';
 import type { HarePose } from './hare-rig';
@@ -134,13 +134,8 @@ function lane(hare: Hare, f: Ledge, scene: PageMap, others: readonly Hare[], tra
 
 const graze = (hare: Hare, now: number, rand: Rand): Hare => ({ ...hare, mode: 'graze', until: now + between(rand, 2000, 6000), target: hare.x });
 
-// Moving toward its target at speed; how far it got.
-function toward(hare: Hare, speed: number, dt: number): Hare {
-  const step = (speed * dt) / 1000;
-  const gap = hare.target - hare.x;
-  const moved = Math.min(step, Math.abs(gap));
-  return { ...hare, x: hare.x + Math.sign(gap) * moved, walked: hare.walked + moved, dir: gap === 0 ? hare.dir : sign(gap) };
-}
+// Moving toward its target at speed.
+const toward = (hare: Hare, speed: number, dt: number): Hare => towardTarget(hare, (speed * dt) / 1000);
 
 // After grazing a while: sit up, lope a little way clear of the others, or
 // graze on.

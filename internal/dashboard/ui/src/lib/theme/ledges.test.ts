@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Ledge } from './floors';
-import { arriving, clearOf, entries, exitEnd, freeOf, ledgeEnds, pointClaim, roomiest, runUnder, spare, staysPut, stillOpen, type Walker } from './ledges';
+import { arriving, clearOf, entries, exitEnd, freeOf, ledgeEnds, pointClaim, roomiest, noticing, runUnder, spare, staysPut, stillOpen, towardTarget, type Walker } from './ledges';
 import { scene } from './test-scene';
 
 const ledge = (left: number, right: number, y: number): Ledge => ({ left, right, y, base: y + 100, room: Infinity, headroom: Infinity });
@@ -27,6 +27,24 @@ describe('the ledges a walker uses', () => {
     expect(spare(f, page, WALKER, { width: 30, height: 15 }, 200)).toBe(20 - 15);
     expect(spare(f, page, WALKER, { width: 30, height: 25 }, 200)).toBe(-5);
     expect(spare(f, page, WALKER, { width: 30, height: 25 }, 0, 50)).toBeGreaterThan(0);
+  });
+});
+
+describe('a walker moving and listening', () => {
+  it('steps toward its target and lands exactly on it, facing the way it went', () => {
+    const w = { x: 0.1, target: 0.3, walked: 5, dir: -1 as const };
+    expect(towardTarget(w, 1)).toEqual({ x: 0.3, target: 0.3, walked: 5 + (0.3 - 0.1), dir: 1 });
+    expect(towardTarget({ ...w, target: -10 }, 4)).toEqual({ x: 0.1 - 4, target: -10, walked: 9, dir: -1 });
+    expect(towardTarget({ ...w, target: 0.1 }, 4).dir).toBe(-1);
+  });
+
+  it('hears a cursor close, and one passing within reach', () => {
+    const senses = { near: 50, reach: 100, moving: 120 };
+    const middle = { x: 0, y: 0 };
+    expect(noticing({ x: 30, y: 0, at: 990 }, middle, 1000, null, senses)).toEqual({ near: 1000, passing: true });
+    expect(noticing({ x: 30, y: 0, at: 500 }, middle, 1000, 800, senses)).toEqual({ near: 800, passing: false });
+    expect(noticing({ x: 80, y: 0, at: 990 }, middle, 1000, 800, senses)).toEqual({ near: null, passing: true });
+    expect(noticing(null, middle, 1000, 800, senses)).toEqual({ near: null, passing: false });
   });
 });
 

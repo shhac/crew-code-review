@@ -1,5 +1,6 @@
 import { clearance, inView, type Ledge, type PageMap } from '../floors';
 import { inTurn, placeInTurn } from '../group';
+import { towardTarget } from '../ledges';
 import type { Cursor, Point } from '../pointer';
 import { between, maxBy, type Rand } from '../seed';
 
@@ -188,7 +189,7 @@ function travel(hog: Hog, home: Home, others: readonly Hog[], now: number, dt: n
     return { ...hog, x: hog.target, walked: hog.walked + moved, mode: 'sniff', until: now + between(rand, 1500, 4000) };
   }
   if (moved === 0 && hog.mode === 'walk') return { ...hog, mode: 'sniff', until: now + between(rand, 1500, 4000) };
-  return { ...hog, x: hog.x + dir * moved, walked: hog.walked + moved, dir };
+  return towardTarget(hog, moved);
 }
 
 // One step of a hedgehog's day, given where the others are. dt is in ms.

@@ -1,6 +1,6 @@
 import type { Ledge, PageMap, Run } from '../floors';
 import {
-  arriving, bodyOf, clearOf, entries, exitEnd, ledgeEnds, lengthOf, pageAt, pointClaim, roomiest, RUNS, runAt, runUnder, spare, staysPut, widthOf, within,
+  arriving, bodyOf, clearOf, entries, exitEnd, ledgeEnds, lengthOf, noticing, pageAt, pointClaim, roomiest, RUNS, runAt, runUnder, spare, staysPut, widthOf, within,
   type Claim, type Entry, type Trip, type Walker,
 } from '../ledges';
 import { apart, clamp01, sign } from '../math';
@@ -326,9 +326,7 @@ function leave(r: Rabbit, mode: 'exit' | 'bolt', now: number, out: Way): Rabbit 
 // How long a cursor has been close, and whether it is passing near enough
 // to make it sit up, or has lingered long enough to make it thump.
 function notice(r: Rabbit, f: Ledge, now: number, cursor: Cursor | null): { r: Rabbit; passing: boolean; lingered: boolean } {
-  const away = cursor ? apart(cursor, centre(r, f)) : Infinity;
-  const near = away < NEAR ? r.near ?? now : null;
-  const passing = !!cursor && now - cursor.at < MOVING && away < PASSING;
+  const { near, passing } = noticing(cursor, centre(r, f), now, r.near, { near: NEAR, reach: PASSING, moving: MOVING });
   return { r: { ...r, near }, passing, lingered: near !== null && now - near >= LINGER };
 }
 

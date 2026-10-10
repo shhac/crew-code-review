@@ -1,6 +1,7 @@
 import type { Ledge, PageMap, Run } from '../floors';
 import {
-  arriving, bodyOf, clampTo, clearOf, entries, exitEnd, ledgeEnds, lengthOf, pageAt, pointClaim, roomiest, runAt, runUnder, spare, staysPut, within,
+  arriving, bodyOf, clampTo, clearOf, entries, exitEnd, ledgeEnds, lengthOf, noticing, pageAt, pointClaim, roomiest, runAt, runUnder, spare, staysPut,
+  towardTarget, within,
   type Claim, type Entry, type Trip, type Walker,
 } from '../ledges';
 import { apart, clamp01, sign } from '../math';
@@ -254,20 +255,14 @@ function wake(fox: Fox, now: number, startled: boolean): Fox {
   return { ...fox, mode: 'waking', until: now + WAKE, startled, near: null, ear: 0 };
 }
 
-function walk(fox: Fox, dt: number): Fox {
-  const step = SPEED * dt / 1000;
-  const gap = fox.target - fox.x;
-  const moved = Math.min(step, Math.abs(gap));
-  return { ...fox, x: Math.abs(gap) > step ? fox.x + Math.sign(gap) * step : fox.target, walked: fox.walked + moved, dir: gap === 0 ? fox.dir : sign(gap) };
-}
+const walk = (fox: Fox, dt: number): Fox => towardTarget(fox, SPEED * dt / 1000);
 
 // Asleep, it still hears the cursor: how long it has been close, and whether
 // it is passing near enough to twitch an ear.
 function notice(fox: Fox, f: Ledge, now: number, cursor: Cursor | null): Fox {
-  const away = cursor ? apart(cursor, centre(fox, f)) : Infinity;
-  const near = away < NEAR ? fox.near ?? now : null;
-  const passing = !!cursor && now - cursor.at < MOVING && away < EAR_REACH && now >= fox.earRest;
-  return passing ? { ...fox, near, ear: now + EAR, earRest: now + EAR + EAR_REST } : { ...fox, near };
+  const heard = noticing(cursor, centre(fox, f), now, fox.near, { near: NEAR, reach: EAR_REACH, moving: MOVING });
+  const near = heard.near;
+  return heard.passing && now >= fox.earRest ? { ...fox, near, ear: now + EAR, earRest: now + EAR + EAR_REST } : { ...fox, near };
 }
 
 // Up from waking: woken by the cursor, a stretch if there is room to bow;
