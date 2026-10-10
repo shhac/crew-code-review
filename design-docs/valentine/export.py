@@ -19,7 +19,7 @@ import numpy as np
 from PIL import Image
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from art import MARGIN as ART_MARGIN, crop, export, export_with_fur, feature, opaque, pale, place, poses, rescaled  # noqa: E402
+from art import MARGIN as ART_MARGIN, EyeScale, crop, cut, export, export_with_fur, feature, opaque, pale  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
 OUT = HERE.parents[1] / 'internal/dashboard/ui/src/lib/theme/valentine'
@@ -29,19 +29,14 @@ GREEN, BLUE = 1, 2
 KIT_HEIGHT = 70
 # The cupid's pictures are all on one scale, the eye's: EYE drawing units
 # across, written at RES file pixels per unit; cupid-rig.ts sets how big a
-# unit is on the page. Drawing units are the reference's, moved by MARGIN.
+# unit is on the page.
 EYE = 1.6
 RES = 12
-MARGIN = 1
 # Where each sheet's eye is (source pixels), measured by eye.
-EYES = {
-    'cupid-reference': (925, 290), 'cupid-parts': (915, 535),
-    'cupid-pose-flit': (1080, 380), 'cupid-pose-aim': (894, 280),
-    'cupid-pose-release': (890, 296), 'cupid-pose-dodge': (794, 286),
-}
+EYES = {'cupid-reference.png': (925, 290), 'cupid-parts.png': (915, 535)}
 # Key poses of the same cupid, edits of the reference, for the lab to lay
-# over each mode.
-KEY_POSES = ['cupid-pose-flit', 'cupid-pose-aim', 'cupid-pose-release', 'cupid-pose-dodge']
+# over each mode, and where each one's eye is.
+KEY_POSES = {'flit': (1080, 380), 'aim': (894, 280), 'release': (890, 296), 'dodge': (794, 286)}
 # The parts sheet, left to right, cut from the reference: the body with
 # its arms, legs, head and wings taken off; the head, its neck edge soft;
 # the near wing.
@@ -56,8 +51,9 @@ def tunic(rgba: np.ndarray) -> np.ndarray:
 
 
 # The head is matched by its pale skin and curls, since its outline alone
-# would fit in many places; the body by its tunic.
-MASKS = {'cupid-head': pale, 'cupid-body': tunic}
+# would fit in many places; the body by its tunic. The wing is placed by
+# hand: the near wing in the reference is partly behind the far one.
+MASKS = {'cupid-head': pale, 'cupid-body': tunic, 'cupid-wing': None}
 # The limb pieces, left to right, cut from the reference's own limbs, and
 # each one's size in drawing units: a capsule's thickness (its height), the
 # hand's height and the foot's length, measured off the reference.
@@ -81,30 +77,26 @@ def keyed_on(path: Path, channel: int) -> np.ndarray:
     return np.clip(np.dstack([out, alpha * 255]), 0, 255).astype(np.uint8)
 
 
-def eye_px(sheet: str) -> float:
-    return feature(HERE / f'{sheet}.png', EYES[sheet])
-
-
-def on_eye(sheet: str) -> float:
-    return EYE / eye_px(sheet) * RES
+def on_green(path: Path) -> np.ndarray:
+    return keyed_on(path, GREEN)
 
 
 def cupid(name: str) -> np.ndarray:
-    return keyed_on(HERE / f'{name}.png', GREEN)
+    return on_green(HERE / f'{name}.png')
 
 
-def eye_in(name: str) -> tuple[float, float]:
+def eye_in(name: str, seed: tuple[int, int]) -> tuple[float, float]:
     """The middle of the eye in a cropped, exported picture, in drawing
     units: where the lab lines a key pose up with the rig's eye."""
     rgb = np.asarray(Image.open(HERE / f'{name}.png').convert('RGB')).astype(int)
     dark = rgb.sum(axis=-1) < 200
-    sx, sy = EYES[name]
+    sx, sy = seed
     ys, xs = np.nonzero(dark[sy - 60:sy + 60, sx - 60:sx + 60])
     near = (ys - 60) ** 2 + (xs - 60) ** 2 < 40 ** 2
     cy, cx = ys[near].mean() + sy - 60, xs[near].mean() + sx - 60
     alpha = cupid(name)[..., 3] > 8
     top, left = np.nonzero(alpha.any(axis=1))[0].min() - ART_MARGIN, np.nonzero(alpha.any(axis=0))[0].min() - ART_MARGIN
-    per_unit = eye_px(name) / EYE
+    per_unit = feature(HERE / f'{name}.png', seed) / EYE
     return (cx - max(0, left)) / per_unit, (cy - max(0, top)) / per_unit
 
 
@@ -112,28 +104,18 @@ def main() -> None:
     kit = crop(keyed_on(HERE / 'valentine-kit.png', BLUE))
     size = export(kit, OUT, 'valentine-kit', 2 * KIT_HEIGHT / kit.shape[0])
     print(f'valentine-kit: display {size[0] / 2:g}x{size[1] / 2:g}')
-    # The reference, for the lab to lay over the rig, and where each part
-    # sat in it: their places in the rig, in drawing units with a MARGIN.
-    reference = crop(cupid('cupid-reference'))
-    per_unit = eye_px('cupid-reference') / EYE
-    w, h = export(reference, LAB, 'cupid-reference', on_eye('cupid-reference'))
-    ex, ey = eye_in('cupid-reference')
-    print(f'cupid-reference: {w / RES:.2f}x{h / RES:.2f} units at {MARGIN}, {MARGIN}, eye at {ex + MARGIN:.2f}, {ey + MARGIN:.2f}')
-    for name in KEY_POSES:
-        art = crop(cupid(name))
-        w, h = export(art, LAB, name, on_eye(name))
-        ex, ey = eye_in(name)
-        print(f'{name}: {w / RES:.2f}x{h / RES:.2f} units, eye at {ex:.2f}, {ey:.2f}')
-    k = eye_px('cupid-reference') / eye_px('cupid-parts')
-    for name, art in zip(PARTS, (crop(p) for p in poses(cupid('cupid-parts'), len(PARTS)))):
-        w, h = export(art, OUT, name, on_eye('cupid-parts'))
-        # The wing is placed by hand (the near wing in the reference is
-        # partly behind the far one), the rest where they match best.
-        at = '' if name == 'cupid-wing' else ' at {1:.2f}, {0:.2f}'.format(*(v / per_unit + MARGIN for v in place(rescaled(art, k), reference, mask=MASKS.get(name, opaque))))
-        print(f'{name}: {w / RES:.2f}x{h / RES:.2f} units{at}')
+    scale = EyeScale(HERE, EYES, EYE, RES)
+    scale.reference('cupid-reference.png', LAB, 'cupid-reference', key=on_green)
+    ex, ey = eye_in('cupid-reference', EYES['cupid-reference.png'])
+    print(f'cupid-reference: eye at {ex + scale.margin:.2f}, {ey + scale.margin:.2f}')
+    scale.key_poses('cupid-pose-', KEY_POSES, LAB, key=on_green)
+    for pose, seed in KEY_POSES.items():
+        ex, ey = eye_in(f'cupid-pose-{pose}', seed)
+        print(f'cupid-pose-{pose}: eye at {ex:.2f}, {ey:.2f}')
+    scale.parts(cut(cupid('cupid-parts'), PARTS), 'cupid-parts.png', OUT, masks=MASKS)
     # The limb pieces, each sized to the reference's limbs: across, in
     # drawing units, outline included.
-    for name, art in zip(LIMBS, (crop(p) for p in poses(cupid('cupid-limbs'), len(LIMBS)))):
+    for name, art in cut(cupid('cupid-limbs'), LIMBS).items():
         thick, by = LIMB_SIZE[name]
         scale = thick * RES / (art.shape[0] if by == 'height' else art.shape[1])
         w, h = export_with_fur(art, OUT, name, scale)
