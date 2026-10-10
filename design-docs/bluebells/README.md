@@ -578,6 +578,57 @@ its perch is the middle of its top edge, as fractions of its picture's box.
   bell by bell as on a ledge clump, rather than crawling across from one stem
   to another, which bees do not do.
 
+### The bees' model, as built
+
+The pure model is `beeair.ts` (the air), `route.ts` (the grid, A* and the
+curves), `flowers.ts` (flowers, perches, approach spots, what is
+visitable), `footprints.ts`, `bee.ts` (one bee's state table) and `bees.ts`
+(the group). Where building showed a decision above was wrong, it changed:
+
+- **Air is kept in all of main, chosen in view.** The contract above made
+  air main's visible box. That would have moved a perched bee whose card
+  scrolled out of view onto another flower at once, a jump on every scroll.
+  As the cupids' air does, a bee already somewhere must stay inside main's
+  whole box (and the rail's air), so a scroll carries it out of view and
+  back with its card; new spots, flowers and the ends of routes are chosen
+  in view (70px under the window's top, 30 above its bottom). A bee left
+  out of view flies back in when it next chooses a flower, or leaves and
+  comes back.
+- **Footprints face a way.** A bee's box is longer behind its thorax
+  (abdomen, wing blur) than ahead (head, antennae), so each footprint is
+  ahead, behind, up and down, mirrored with its facing, rather than a half
+  width either way: a bonk's box reaches 1px past the wall only because its
+  front is the head's. The routing grid, which cannot know which way a bee
+  will face, uses the longer side both ways.
+- **A route needs a 39px corridor.** The flying footprint (24x18) grown by
+  the bumbling's bound (3.5) and a 2px margin is 39px wide, so the 54px
+  margins at 1440 are flown, but the 41px margins at 1024 are not: there
+  the bees keep to the band above the first row of cards (48px to the
+  heading's text) and the open stretches of the heading. Gutters stay
+  closed, as planned.
+- **Routes through tight places round each cell's corner.** Smoothing
+  through every third cell and then every second is tried first; where both
+  clip something, the route goes through every cell, each corner rounded
+  inside its cell (a curve from the middle of the step in to the middle of
+  the step out, pulled toward the cell's centre), which the open cells
+  hold by construction.
+- **The grid is drawn obstacle by obstacle.** Testing every cell against
+  the obstacles cost 25 to 35ms a measurement; closing the cells each
+  obstacle reaches costs 1 to 8, and a route a few ms more.
+- **The bonk's last stretch is 12 to 30px.** Flying 30px level at a wall
+  needs the flying footprint 30 + 7 (the head) + 19.5 (its grown half) =
+  56.5px clear of the wall, more than the 54px margin at 1440. The bee
+  takes the longest of 30, 24, 18 and 12px that is open.
+- **Leaving with no way out fades.** "Stops being drawn at its next
+  landing" needed a bee to keep flying with nowhere to fly; instead it
+  fades out where it hovers (0.3s) and is away. Coming back with no way in
+  from beyond the window's top or bottom (the page scrolled to its top),
+  it fades in beside its flower.
+- **Held bees.** A bee whose next step would bring it within 8px of another
+  (and closer than it was) holds that frame: a timed move waits, a flight
+  neither flies on nor bumbles. Held half a second on a flight, the later in
+  the group's order stops and hovers where it is, to choose again.
+
 ## Verification (for the owner)
 
 - Unit tests for the pure models: the walls and their runs (see the
