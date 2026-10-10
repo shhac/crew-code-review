@@ -12,7 +12,8 @@ const load = async () => {
 it('has a scene for every theme name and nothing else', async () => {
   const { THEMES, scenes } = await load();
   expect(Object.keys(scenes).sort()).toEqual([...THEMES].sort());
-});
+  // The first import compiles every set's components: slow on a busy machine.
+}, 20_000);
 
 it('draws nothing for none and keeps the finished sets whole', async () => {
   const { sceneOf } = await load();
