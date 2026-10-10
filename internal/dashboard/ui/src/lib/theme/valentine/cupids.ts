@@ -1,7 +1,8 @@
-import { around, distance, inAir, sweeps, type Air } from '../air';
+import { around, inAir, sweeps, type Air } from '../air';
 import { heading, lengthOf, quadratic, samples, type Arc } from '../curves';
 import { inView, type Box, type Ledge, type Obstacle, type PageMap } from '../floors';
 import { inTurn, placeIds, regroup, troupeSize } from '../group';
+import { apart } from '../math';
 import type { Cursor, Point } from '../pointer';
 import type { Rand } from '../seed';
 import { land, landable, prune, reconcileStuck, slantOf, burstsLeft, type Burst, type Stuck } from './arrows';
@@ -139,7 +140,7 @@ function shotTo(air: Air, at: Point, f: Ledge, x: number, shield: readonly Box[]
   const to = { x: f.left + x, y: f.y };
   const dir: 1 | -1 = to.x >= at.x ? 1 : -1;
   const from = launchOf(at, dir);
-  if (distance(from, to) > RANGE) return null;
+  if (apart(from, to) > RANGE) return null;
   const mid = { x: (from.x + to.x) / 2, y: (from.y + to.y) / 2 };
   const span = Math.abs(to.x - from.x);
   for (const k of RISES) {
@@ -159,7 +160,7 @@ function landings(air: Air, cursor: Point): { floor: number; f: Ledge; x: number
     if (!inView(f, air.page)) return [];
     const xs = Array.from({ length: Math.max(0, Math.floor((f.right - f.left - 32) / 8) + 1) }, (_, i) => 16 + i * 8);
     return xs.filter((x) => landable(f, air.page.obstacles, x)).map((x) => ({ floor, f, x }));
-  }).sort((a, b) => distance({ x: a.f.left + a.x, y: a.f.y }, cursor) - distance({ x: b.f.left + b.x, y: b.f.y }, cursor)).slice(0, NEAREST);
+  }).sort((a, b) => apart({ x: a.f.left + a.x, y: a.f.y }, cursor) - apart({ x: b.f.left + b.x, y: b.f.y }, cursor)).slice(0, NEAREST);
 }
 
 // A cursor still for a second, not yet shot at: the hovering cupid with a
@@ -173,7 +174,7 @@ function startShot(group: Cupids, air: Air, now: number, cursor: Cursor): Cupids
       if (!at || !inAir(air.view, at)) return [];
       const shot = shotTo(air, at, landing.f, landing.x, shieldOf(air, group.cupids.filter((o) => o.id !== c.id), now));
       return shot ? [{ c, at, shot }] : [];
-    }).sort((a, b) => distance(a.at, cursor) - distance(b.at, cursor));
+    }).sort((a, b) => apart(a.at, cursor) - apart(b.at, cursor));
     const best = shots[0];
     if (!best) continue;
     const target = { floor: landing.floor, x: landing.x, aim: best.shot.aim };
@@ -220,7 +221,7 @@ function loose(group: Cupids, air: Air, c: Cupid, now: number, rand: Rand): Cupi
 export function stepCupids(group: Cupids, air: Air, now: number, dt: number, rand: Rand, cursor: Cursor | null): Cupids {
   const point = cursor && { x: cursor.x, y: cursor.y };
   const stepped = { ...group, cupids: inTurn(group.cupids, (c, others) => stepCupid(c, air, now, dt, rand, point, others)) };
-  const moved = !cursor || (group.stillAt !== null && distance(group.stillAt, cursor) >= MOVED);
+  const moved = !cursor || (group.stillAt !== null && apart(group.stillAt, cursor) >= MOVED);
   const lowered = moved
     ? { ...stepped, cupids: stepped.cupids.map((c) => (c.mode === 'turn' || c.mode === 'draw' || c.mode === 'aim' ? { ...c, mode: 'hover' as const, target: null } : c)) }
     : stepped;

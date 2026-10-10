@@ -93,5 +93,3 @@ export function placed(page: PageMap, a: Anchored): Point | null {
   const f = page.floors.get(a.floor);
   return f ? { x: f.left + a.dx, y: f.y + a.dy } : null;
 }
-
-export const distance = (a: Point, b: Point) => Math.hypot(a.x - b.x, a.y - b.y);

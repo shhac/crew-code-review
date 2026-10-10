@@ -1,7 +1,8 @@
-import { anchor, around, distance, fits, inAir, linesOf, placed, sweeps, type Air, type Anchored } from '../air';
+import { anchor, around, fits, inAir, linesOf, placed, sweeps, type Air, type Anchored } from '../air';
 import { cubic, lengthOf, samples, type Curve } from '../curves';
 import type { PageMap } from '../floors';
 import type { Point } from '../pointer';
+import { apart, smooth } from '../math';
 import { easeTo } from '../rig/life';
 import { between, type Rand } from '../seed';
 import type { CupidPose } from './cupid-rig';
@@ -72,10 +73,6 @@ const CALM = 1200;
 const GAZE_REACH = 160;
 const GAZE_EASE = 220;
 
-const smooth = (t: number) => {
-  const c = Math.max(0, Math.min(1, t));
-  return c * c * (3 - 2 * c);
-};
 const shift = (p: Point, by: Point): Point => ({ x: p.x + by.x, y: p.y + by.y });
 const shiftCurve = (c: Curve, by: Point): Curve => ({ from: shift(c.from, by), c1: shift(c.c1, by), c2: shift(c.c2, by), to: shift(c.to, by) });
 const origin = (page: PageMap, floor: number): Point | null => {
@@ -149,11 +146,11 @@ export function claims(others: readonly Cupid[], page: PageMap, now: number): Po
     return [...(here ? [here] : []), ...(spot ? [spot] : []), ...ahead(o)];
   });
 }
-const apart = (p: Point, taken: readonly Point[], by = SPACING) => taken.every((q) => distance(p, q) >= by);
+const spaced = (p: Point, taken: readonly Point[], by = SPACING) => taken.every((q) => apart(p, q) >= by);
 
 // Whether a cupid can hover at p: its whole footprint, whatever it does
 // there, in the air, and no other cupid too close.
-export const canHover = (air: Pick<Air, 'page' | 'room'>, p: Point, taken: readonly Point[]) => fits(air, around(p, SPOT), linesOf(air.page)) && apart(p, taken);
+export const canHover = (air: Pick<Air, 'page' | 'room'>, p: Point, taken: readonly Point[]) => fits(air, around(p, SPOT), linesOf(air.page)) && spaced(p, taken);
 
 // The curves tried for a flight from a to b: arched over, dipped under,
 // straight, and arched higher; each leaves and arrives along its bow.
@@ -172,7 +169,7 @@ export function routes(a: Point, b: Point): Curve[] {
 // stays in air, and it keeps SPACING from every claim.
 export function clearRoute(air: Pick<Air, 'page' | 'room'>, curve: Curve, taken: readonly Point[], reach = FOOTPRINTS.flight): boolean {
   const points = samples((t) => cubic(curve, t)).map((s) => s.p);
-  return points.every((p) => apart(p, taken)) && sweeps(air, points.map((p) => around(p, reach)));
+  return points.every((p) => spaced(p, taken)) && sweeps(air, points.map((p) => around(p, reach)));
 }
 
 // A flight from where it is to a spot, held relative to the spot's ledge.
@@ -200,7 +197,7 @@ export function flyTo(air: Air, from: Point, spots: readonly Point[], taken: rea
 // tried in a random order, a dozen at most.
 function flit(c: Cupid, air: Air, here: Point, now: number, rand: Rand, taken: readonly Point[]): Cupid {
   const near = air.spots.filter((p) => {
-    const d = distance(p, here);
+    const d = apart(p, here);
     return d >= FLIT_NEAR && d <= FLIT_FAR;
   });
   const order = near.map((p) => ({ p, k: rand() })).sort((a, b) => a.k - b.k).slice(0, 12).map((x) => x.p);
@@ -221,7 +218,7 @@ export function stepCupid(c: Cupid, air: Air, now: number, dt: number, rand: Ran
   const view = cupidView(c, air.page, now);
   const rate = now < c.flutter ? FLUTTER : view ? BEATS[view.pose] : BEATS.hover;
   const here = view && { x: view.x, y: view.y };
-  const toward = here && cursor && distance(here, cursor) < GAZE_REACH && (cursor.x - here.x) * c.dir > 0
+  const toward = here && cursor && apart(here, cursor) < GAZE_REACH && (cursor.x - here.x) * c.dir > 0
     ? Math.max(-12, Math.min(12, (Math.atan2(cursor.y - here.y, Math.abs(cursor.x - here.x)) * 180) / Math.PI * 0.5)) : 0;
   const lived = { ...c, beat: c.beat + (rate * dt) / 1000, gaze: easeTo(c.gaze, toward, dt, GAZE_EASE) };
   if (c.flight) {
@@ -263,7 +260,7 @@ export function dodge(c: Cupid, air: Air, now: number, from: Point, to: Point, o
   };
   if (line(here) > DASH_REACH) return c;
   const calmed = { ...c, calm: now + CALM, target: null, mode: c.flight ? c.mode : 'hover' as const };
-  const away = air.spots.filter((p) => line(p) >= line(here) + 60 && distance(p, here) <= FLIT_FAR).sort((a, b) => distance(a, here) - distance(b, here)).slice(0, 24);
+  const away = air.spots.filter((p) => line(p) >= line(here) + 60 && apart(p, here) <= FLIT_FAR).sort((a, b) => apart(a, here) - apart(b, here)).slice(0, 24);
   const way = flyTo(air, here, away, claims(others, air.page, now), now, DODGE_SPEED);
   if (!way) return { ...calmed, flutter: now + 400 };
   return { ...calmed, ...way, mode: 'dodge', dir: way.flight.curve.to.x >= way.flight.curve.from.x ? 1 : -1 };
@@ -274,8 +271,8 @@ export function dodge(c: Cupid, air: Air, now: number, from: Point, to: Point, o
 // and near a ledge below, where its arrows can land.
 export function bestSpot(air: Air, taken: readonly Point[], rand: Rand, spacing = SPACING): Point | null {
   const ledgeGap = (p: Point) => Math.min(400, ...[...air.page.floors.values()].filter((f) => f.left <= p.x && p.x <= f.right && f.y > p.y).map((f) => f.y - p.y));
-  const score = (p: Point) => Math.min(300, ...taken.map((q) => distance(p, q))) - 0.5 * Math.abs(ledgeGap(p) - 50) + 20 * rand();
-  return air.spots.filter((p) => apart(p, taken, spacing) && canHover(air, p, taken)).reduce<Point | null>((best, p) => (best && score(best) >= score(p) ? best : p), null);
+  const score = (p: Point) => Math.min(300, ...taken.map((q) => apart(p, q))) - 0.5 * Math.abs(ledgeGap(p) - 50) + 20 * rand();
+  return air.spots.filter((p) => spaced(p, taken, spacing) && canHover(air, p, taken)).reduce<Point | null>((best, p) => (best && score(best) >= score(p) ? best : p), null);
 }
 
 export function createCupid(air: Air, now: number, rand: Rand, others: readonly Cupid[], self: Self, spacing = SPACING, mode: 'hover' | 'enter' = 'hover'): Cupid | null {
@@ -301,7 +298,7 @@ export function reconcileCupid(c: Cupid, air: Air, now: number, rand: Rand, othe
   } else if (canHover(air, spot, taken)) {
     return c;
   }
-  const nearest = [...air.spots].sort((a, b) => distance(a, here) - distance(b, here)).slice(0, 8);
+  const nearest = [...air.spots].sort((a, b) => apart(a, here) - apart(b, here)).slice(0, 8);
   const way = fits(air, around(here, FOOTPRINTS.flight)) ? flyTo(air, here, nearest, taken, now, FLIT_SPEED) : null;
   if (way) return { ...c, ...way, mode: 'flit', target: null };
   const stay = canHover(air, here, taken) && anchor(air.page, here);
