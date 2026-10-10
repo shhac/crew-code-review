@@ -7,7 +7,7 @@
   import Geometry from '../Geometry.svelte';
   import { ledgeScene, placeTroupe } from '../layout';
   import type { Cursor } from '../pointer';
-  import { easeTo } from '../rig/life';
+  import { easeGazes } from '../rig/gaze';
   import Rig from '../rig/Rig.svelte';
   import { emberColour, fanEmbers, heat, reconcileEmbers, type Ember } from './embers';
   import { createHogs, hogPoint, PILE, reconcileHogs, restingHogs, stepHogs, type Hog, type Hogs } from './hedgehog';
@@ -24,7 +24,6 @@
   // turns smoothly rather than snapping.
   let gazes: ReadonlyMap<number, number> = new Map();
   const STILL_HEAT = 0.55;
-  const GAZE_EASE = 220;
 
   const at = (hog: Hog) => (hog.mode === 'hidden' ? null : hogPoint(hog, group?.home ?? null, scene));
   $: pile = group?.home ? floors.get(group.home.floor) : undefined;
@@ -34,10 +33,10 @@
   });
 
   function gazing(hogs: readonly Hog[], cursor: Cursor | null, dt: number): ReadonlyMap<number, number> {
-    return new Map(hogs.map((hog) => {
+    return easeGazes(hogs, (hog) => hog.id, (hog) => {
       const point = at(hog);
-      return [hog.id, easeTo(gazes.get(hog.id) ?? 0, point ? gazeAt(hog, point, cursor) : 0, dt, GAZE_EASE)];
-    }));
+      return point ? gazeAt(hog, point, cursor) : 0;
+    }, gazes, dt);
   }
 
   // Either way reduced motion switches, the hedgehogs start afresh; reduced

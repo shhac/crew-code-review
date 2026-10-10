@@ -7,7 +7,7 @@
   import Geometry from '../Geometry.svelte';
   import { ledgeScene, placeTroupe } from '../layout';
   import type { Cursor } from '../pointer';
-  import { easeTo } from '../rig/life';
+  import { easeGazes } from '../rig/gaze';
   import Rig from '../rig/Rig.svelte';
   import { bladePath, brush, leanOf, reconcileMeadows, BUD_TOP, type Meadow } from './grass';
   import { gazeAt, hareRig } from './hare-rig';
@@ -22,7 +22,6 @@
   // How far each hare's head is turned toward the cursor, eased so it turns
   // smoothly rather than snapping.
   let gazes: ReadonlyMap<number, number> = new Map();
-  const GAZE_EASE = 220;
   // Poses that look about; the others keep their heads to what they do.
   const LOOKING = new Set(['sit', 'alert']);
 
@@ -30,10 +29,7 @@
   $: shown = views.map((view) => ({ view, pose: hareRig({ pose: view.pose, walked: view.hare.walked, seed: view.hare.seed, leapt: view.leapt }, { now, gaze: gazes.get(view.hare.id) ?? 0, still: reduced }) }));
 
   function gazing(list: readonly HareView[], cursor: Cursor | null, dt: number): ReadonlyMap<number, number> {
-    return new Map(list.map((v) => {
-      const to = LOOKING.has(v.pose) ? gazeAt(v.dir, v, cursor) : 0;
-      return [v.hare.id, easeTo(gazes.get(v.hare.id) ?? 0, to, dt, GAZE_EASE)];
-    }));
+    return easeGazes(list, (v) => v.hare.id, (v) => (LOOKING.has(v.pose) ? gazeAt(v.dir, v, cursor) : 0), gazes, dt);
   }
 
   // Leaving reduced motion brings fresh hares; entering it sits these ones

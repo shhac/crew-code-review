@@ -8,7 +8,7 @@
   import Geometry from '../Geometry.svelte';
   import { ledgeScene, placeTroupe } from '../layout';
   import type { Cursor, Point } from '../pointer';
-  import { easeTo } from '../rig/life';
+  import { easeGazes } from '../rig/gaze';
   import Rig from '../rig/Rig.svelte';
   import { rabbitView, poseOf, type Rabbit } from './rabbit';
   import { gazeAt, rabbitRig } from './rabbit-rig';
@@ -23,7 +23,6 @@
   import { canLeave, EGG, findEggs, hideEggs, leaveEgg, NO_HUNT, tally, tallySpot, TALLY, type Hunt } from './hunt';
 
   const DESIGNS = [egg0, egg1, egg2, egg3, egg4, egg5];
-  const GAZE_EASE = 220;
 
   let floors: ReadonlyMap<number, Ledge> = new Map();
   let scene: PageMap = { floors, obstacles: [], width: 0, height: 0 };
@@ -52,11 +51,10 @@
 
   // Each head turns toward a cursor close by, eased so it never snaps.
   function look(rabbits: readonly Rabbit[], cursor: Cursor | null, dt: number): ReadonlyMap<number, number> {
-    return new Map(rabbits.map((r) => {
+    return easeGazes(rabbits, (r) => r.id, (r) => {
       const view = rabbitView(r, scene);
-      const target = view && view.pose === 'sit' ? gazeAt(r.dir, view, cursor) : 0;
-      return [r.id, easeTo(gazes.get(r.id) ?? 0, target, dt, GAZE_EASE)];
-    }));
+      return view && view.pose === 'sit' ? gazeAt(r.dir, view, cursor) : 0;
+    }, gazes, dt);
   }
 
   function step(time: number, dt: number, cursor: Cursor | null) {
