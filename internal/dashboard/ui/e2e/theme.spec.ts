@@ -162,6 +162,23 @@ async function geometryErrors(page: Page) {
   });
 }
 
+// The KPI grid's top ledge, read in one go with the grid it belongs to. On a
+// phone the rail stacks above main, and a rail that changes height (the feed
+// or the viewer arriving) moves the grid with no mutation in main, so only the
+// once-a-second remeasure catches it. The card check above allows 8px and can
+// pass on those floors; polling waits for a floor exactly on the grid's top
+// before judging whether it runs the grid's width (one column) or not (three).
+function kpiLedge(page: Page) {
+  return page.evaluate(() => {
+    const grid = document.querySelector('.metric-kpis')?.getBoundingClientRect();
+    if (!grid) return null;
+    const atTop = [...document.querySelectorAll<SVGLineElement>('.geometry .floor')]
+      .map((el) => ({ left: Number(el.getAttribute('x1')), right: Number(el.getAttribute('x2')), y: Number(el.getAttribute('y1')) }))
+      .filter((f) => Math.abs(f.y - grid.top) < 1);
+    return { atGridTop: atTop.length > 0, spansGrid: atTop.some((f) => f.right - f.left > grid.width - 1) };
+  });
+}
+
 for (const width of [1440, 390]) {
   test(`Halloween geometry follows all dashboard pages at ${width}px`, async ({ page }, testInfo) => {
     await page.setViewportSize({ width, height: 900 });
@@ -173,12 +190,7 @@ for (const width of [1440, 390]) {
       if (path === '/config' || path === '/prompt') await expect(page.locator('main .surface').first()).toBeVisible();
       await expect.poll(() => geometryErrors(page), { message: path }).toEqual([]);
       if (path === '/metrics') {
-        const grid = await page.locator('.metric-kpis').boundingBox();
-        expect(grid).not.toBeNull();
-        const floors = await page.locator('.geometry .floor').evaluateAll((els) => els.map((el) => ({
-          left: Number(el.getAttribute('x1')), right: Number(el.getAttribute('x2')), y: Number(el.getAttribute('y1')),
-        })));
-        expect(floors.some((f) => Math.abs(f.y - grid!.y) < 1 && f.right - f.left > grid!.width - 1)).toBe(width === 390);
+        await expect.poll(() => kpiLedge(page), { message: 'KPI ledge' }).toEqual({ atGridTop: true, spansGrid: width === 390 });
         await page.screenshot({ path: testInfo.outputPath(`metrics-geometry-${width}.png`), fullPage: true });
         await page.locator('main').evaluate(() => window.scrollTo(0, 300));
         await expect.poll(() => geometryErrors(page)).toEqual([]);
