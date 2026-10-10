@@ -8,6 +8,8 @@
 // on the floor, however fast or slow the spider is going, and a spider that
 // stops stops mid-step instead of treading air.
 
+import { clamp } from './math';
+
 export type Point = { x: number; y: number };
 export type LegSpec = {
   hip: Point;
@@ -28,7 +30,8 @@ const STANCE = 0.65;
 export const cycleLength = (stride: number, stance = STANCE) => stride / stance;
 
 const fract = (n: number) => n - Math.floor(n);
-export const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
+// Kept here too: the spider files have always taken clamp from this module.
+export { clamp };
 
 // `p` turned `angle` degrees about `pivot` (clockwise on the page, y down).
 export function rotate(p: Point, pivot: Point, angle: number): Point {
