@@ -25,7 +25,7 @@
   {:else if layer.kind === 'stroke'}
     <path data-stroke={layer.name} d="M{layer.points.map((p) => `${p.x} ${p.y}`).join('L')}{layer.fill ? 'Z' : ''}" style:fill={layer.fill ?? 'none'} stroke={layer.colour} stroke-width={layer.width} stroke-linejoin="round" />
   {:else}
-    <g transform={transformOf(layer.turn, layer.scaleY)}><Layers layers={layer.layers} /></g>
+    <g transform={transformOf(layer.turn, layer.scaleY)} opacity={layer.opacity}><Layers layers={layer.layers} /></g>
   {/if}
 {/each}
 

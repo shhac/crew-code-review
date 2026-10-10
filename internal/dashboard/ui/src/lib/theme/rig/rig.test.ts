@@ -1,4 +1,6 @@
+import { render } from 'svelte/server';
 import { describe, expect, it } from 'vitest';
+import Rig from './Rig.svelte';
 import { legImages, transformOf, turnAbout, turned, type DrawnLeg, type LimbArt, type RigPose } from './rig';
 import { rigBounds } from './test-rig';
 
@@ -46,5 +48,18 @@ describe('legImages', () => {
     expect([bone.stretch, drawnFoot.stretch]).toEqual([true, false]);
     expect(bone.x).toBe(-1);
     expect(legImages(leg, true)[0].x).toBeCloseTo(0);
+  });
+});
+
+describe('a group drawn see-through', () => {
+  const pose = (opacity?: number): RigPose => ({
+    width: 4, height: 4, anchor: { x: 2, y: 4 }, scale: 1,
+    layers: [{ kind: 'group', turn: turnAbout(0, { x: 0, y: 0 }), opacity, layers: [{ kind: 'image', name: 'wing', src: 'wing.webp', x: 0, y: 0, width: 4, height: 2 }] }],
+  });
+  const drawn = (p: RigPose) => render(Rig, { props: { pose: p, x: 0, y: 0 } }).body;
+
+  it('carries its opacity, and a group without one draws as it always has', () => {
+    expect(drawn(pose(0.3))).toMatch(/<g transform="[^"]*" opacity="0.3">/);
+    expect(drawn(pose())).not.toContain('opacity="');
   });
 });

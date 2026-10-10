@@ -53,7 +53,8 @@ export type Layer =
   // A line drawn in code through points (a bow's stave, its string), or
   // with `fill` a closed shape (an arrow's heart).
   | { kind: 'stroke'; name: string; points: readonly Point[]; width: number; colour: string; fill?: string }
-  | { kind: 'group'; turn: Turn; scaleY?: number; layers: readonly Layer[] };
+  // `opacity`: drawn see-through as one, as a wing's blur is.
+  | { kind: 'group'; turn: Turn; scaleY?: number; opacity?: number; layers: readonly Layer[] };
 
 // Guides: where its joints are, for the lab and the debug overlay to mark.
 export type Guide = { name: string; at: Point };
