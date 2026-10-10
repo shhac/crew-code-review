@@ -1,3 +1,4 @@
+import { around } from '../air';
 import { inView, reachOf, type PageMap } from '../floors';
 import { inTurn, placeInTurn } from '../group';
 import { bodyOf, clampTo, pageAt, roomOver, runAt, runsOf } from '../ledges';
@@ -73,8 +74,7 @@ function claimsBut(group: Hares, scene: PageMap, but: readonly number[], runs: r
   const others = group.hares.filter((h) => !but.includes(h.id) && !runOf(group, h.id));
   const boxed = claimsOfHares(others).map((c, i) => {
     const at = pagePoint(placeOf(group, others[i]), scene);
-    const box = POSES.sit;
-    return at ? { ...c, box: { left: at.x - box.width / 2, right: at.x + box.width / 2, top: at.y - box.height, bottom: at.y } } : c;
+    return at ? { ...c, box: around(at, SIT) } : c;
   });
   return [...boxed, ...runs.filter((r) => !r.members.some((m) => but.includes(m.id))).flatMap((r) => claimsOf(r.trail))];
 }
@@ -83,6 +83,8 @@ function claimsBut(group: Hares, scene: PageMap, but: readonly number[], runs: r
 // the air.
 const BOUND = reachOf(POSES.bound);
 const LEAP = reachOf(POSES.leap);
+// Where it stands, another hare is kept as clear of as one sitting up.
+const SIT = reachOf(POSES.sit);
 const planning = (claims: Claim[], extra: { budget: number; ledges: number; from?: Point | null; toward?: number }, rand: Rand) =>
   ({ clear: HARE.clear, body: BOUND, air: LEAP, claims, spacing: SPACING, rand, ...extra });
 

@@ -1,3 +1,5 @@
+import { around, meets } from '../air';
+import { parabola } from '../curves';
 import { inView, type Box, type Ledge, type PageMap, type Reach, type Run } from '../floors';
 import { bodyOf, clearOf, entries, ledgeEnds, pageAt, runAt, runsOf, type Claim as Stretch, type Walker } from '../ledges';
 import { apart, clamp, sign } from '../math';
@@ -108,12 +110,7 @@ export function arcPoint(seg: Extract<Segment, { kind: 'leap' }>, scene: PageMap
 }
 
 // A parabola from p to q rising hop above the higher of the two.
-function arc(p: Point, q: Point, hop: number, t: number): Point {
-  const lift = hop + Math.abs(q.y - p.y) / 2;
-  return { x: p.x + (q.x - p.x) * t, y: p.y + (q.y - p.y) * t - 4 * lift * t * (1 - t) };
-}
-
-const overlaps = (a: Box, b: Box) => a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
+const arc = (p: Point, q: Point, hop: number, t: number): Point => parabola(p, q, hop + Math.abs(q.y - p.y) / 2, t);
 
 // Whether a footprint standing on p is clear in the air:
 // inside the window; off every piece of content; off every card's box but
@@ -121,12 +118,12 @@ const overlaps = (a: Box, b: Box) => a.left < b.right && b.left < a.right && a.t
 // standing on it or reaching REACH up past it from below; and off every
 // other hare.
 export function clearAt(p: Point, reach: Reach, scene: PageMap, avoid: readonly Box[] = []): boolean {
-  const r = { left: p.x - reach.half, right: p.x + reach.half, top: p.y - reach.up, bottom: p.y + reach.down };
+  const r = around(p, reach);
   if (r.left < 0 || r.right > scene.width || r.top < 0 || r.bottom > scene.height) return false;
-  const hit = scene.obstacles.some((o) => overlaps(r, o.block ? { ...o, top: o.top + 1, bottom: o.bottom - REACH } : o));
+  const hit = scene.obstacles.some((o) => meets(r, o.block ? { ...o, top: o.top + 1, bottom: o.bottom - REACH } : o));
   if (hit) return false;
   const crossed = [...scene.floors.values()].some((f) => f.left < r.right && r.left < f.right && r.bottom > f.y + 1 && r.top < f.y - REACH);
-  return !crossed && !avoid.some((a) => overlaps(r, a));
+  return !crossed && !avoid.some((a) => meets(r, a));
 }
 
 // Whether a whole arc is clear, sampled every SAMPLE px along it.
