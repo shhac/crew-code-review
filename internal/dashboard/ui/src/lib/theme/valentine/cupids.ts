@@ -1,7 +1,7 @@
 import { around, distance, inAir, sweeps, type Air } from '../air';
 import { heading, lengthOf, quadratic, samples, type Arc } from '../curves';
 import { inView, type Box, type Ledge, type Obstacle, type PageMap } from '../floors';
-import { inTurn, placeInTurn } from '../group';
+import { inTurn, placeIds, regroup, troupeSize } from '../group';
 import type { Cursor, Point } from '../pointer';
 import type { Rand } from '../seed';
 import { land, landable, prune, reconcileStuck, slantOf, burstsLeft, type Burst, type Stuck } from './arrows';
@@ -53,40 +53,30 @@ const RISES = [0.25, 0.4, 0.12, 0.6];
 const empty = (target: number, cupids: Cupid[]): Cupids => ({ target, cupids, flying: null, stuck: [], bursts: [], lastShot: -Infinity, shotAt: -Infinity, stillAt: null, count: 0 });
 
 // Placed one after another, each away from those before it.
-const placeAll = (ids: readonly number[], place: (others: Cupid[], id: number) => Cupid | null) => placeInTurn<number, Cupid>(ids, (id, placed) => place(placed, id));
-
 export function createCupids(air: Air, now: number, rand: Rand): Cupids {
-  const three = placeAll([0, 1, 2], (others, id) => createCupid(air, now, rand, others, fresh(id), ROOMY));
-  const target = three.length === 3 ? 3 : 2;
-  const cupids = target === 3 ? three : placeAll([0, 1], (others, id) => createCupid(air, now, rand, others, fresh(id)));
+  const three = placeIds<Cupid>([0, 1, 2], (others, id) => createCupid(air, now, rand, others, fresh(id), ROOMY));
+  const target = troupeSize(three);
+  const cupids = target === 3 ? three : placeIds<Cupid>([0, 1], (others, id) => createCupid(air, now, rand, others, fresh(id)));
   return empty(target, cupids);
 }
 
-// Each kept where it can be, in id order, so the same cupid keeps a crowded
-// spot; any missing placed afresh, up to the target and never beyond it.
-function regroup(group: Cupids, keep: (c: Cupid, settled: Cupid[]) => Cupid | null, place: (others: Cupid[], id: number) => Cupid | null): Cupids {
-  const kept = placeInTurn<Cupid, Cupid>(group.cupids, (c, settled) => keep(c, settled));
-  const missing = Array.from({ length: group.target }, (_, id) => id).filter((id) => !kept.some((c) => c.id === id));
-  const added = placeAll(missing, (others, id) => place([...kept, ...others], id));
-  return { ...group, cupids: [...kept, ...added].sort((a, b) => a.id - b.id) };
-}
-
-// After a layout change: each cupid re-checked (cupid.ts), an arrow in the
-// air dropped if its way or its landing no longer holds, spent arrows kept
-// while their ledge and its clear stretch are there.
+// After a layout change: each cupid re-checked (cupid.ts) in id order, so
+// the same one keeps a crowded spot, seeing only those settled before it;
+// an arrow in the air dropped if its way or its landing no longer holds,
+// spent arrows kept while their ledge and its clear stretch are there.
 export function reconcileCupids(group: Cupids, air: Air, now: number, rand: Rand): Cupids {
-  const regrouped = regroup(group, (c, settled) => reconcileCupid(c, air, now, rand, settled), (others, id) => createCupid(air, now, rand, others, fresh(id), undefined, 'enter'));
+  const cupids = regroup(group.cupids, group.target, (c, settled) => reconcileCupid(c, air, now, rand, settled), (others, id) => createCupid(air, now, rand, others, fresh(id), undefined, 'enter'));
   const f = group.flying;
-  const flying = f && arrowStillClear(f, air, regrouped.cupids, now) ? f : null;
-  return { ...regrouped, flying, stuck: reconcileStuck(group.stuck, air.page.floors, air.page.obstacles) };
+  const flying = f && arrowStillClear(f, air, cupids, now) ? f : null;
+  return { ...group, cupids, flying, stuck: reconcileStuck(group.stuck, air.page.floors, air.page.obstacles) };
 }
 
 // Reduced motion: each hovering still, kept where it was where it can be.
 // Nothing shoots.
 export function restingCupids(air: Air, previous: Cupids | null): Cupids {
   const group = previous ?? empty(createCupids(air, 0, () => 0.5).target, []);
-  const settled = regroup(group, (c, others) => restingCupid(air, c, others, c), (others, id) => restingCupid(air, null, others, fresh(id)));
-  return { ...settled, flying: null, stuck: [], bursts: [] };
+  const cupids = regroup(group.cupids, group.target, (c, others) => restingCupid(air, c, others, c), (others, id) => restingCupid(air, null, others, fresh(id)));
+  return { ...group, cupids, flying: null, stuck: [], bursts: [] };
 }
 
 const origin = (page: PageMap, floor: number): Point | null => {
@@ -229,7 +219,7 @@ function loose(group: Cupids, air: Air, c: Cupid, now: number, rand: Rand): Cupi
 // the cursor is still.
 export function stepCupids(group: Cupids, air: Air, now: number, dt: number, rand: Rand, cursor: Cursor | null): Cupids {
   const point = cursor && { x: cursor.x, y: cursor.y };
-  const stepped = { ...group, cupids: inTurn(group.cupids, (c, others) => stepCupid(c, air, now, dt, rand, point, others), (_, __, other) => other) };
+  const stepped = { ...group, cupids: inTurn(group.cupids, (c, others) => stepCupid(c, air, now, dt, rand, point, others)) };
   const moved = !cursor || (group.stillAt !== null && distance(group.stillAt, cursor) >= MOVED);
   const lowered = moved
     ? { ...stepped, cupids: stepped.cupids.map((c) => (c.mode === 'turn' || c.mode === 'draw' || c.mode === 'aim' ? { ...c, mode: 'hover' as const, target: null } : c)) }
@@ -259,7 +249,7 @@ function flyOn(group: Cupids, air: Air, now: number): Cupids {
 // A cursor stroke: moving fast enough, any cupid it passes close to dodges.
 export function dash(group: Cupids, air: Air, now: number, from: Point, to: Point, speed: number): Cupids {
   if (speed < DASH) return group;
-  return { ...group, cupids: inTurn(group.cupids, (c, others) => dodge(c, air, now, from, to, others), (_, __, other) => other) };
+  return { ...group, cupids: inTurn(group.cupids, (c, others) => dodge(c, air, now, from, to, others)) };
 }
 
 // What is drawn for each cupid, in id order.
