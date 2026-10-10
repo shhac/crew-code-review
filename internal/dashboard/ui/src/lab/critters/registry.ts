@@ -4,11 +4,12 @@
 import type { Critter } from './critter';
 import { cupid } from './cupid';
 import { fox } from './fox';
+import { hare } from './hare';
 import { hedgehog } from './hedgehog';
 import { rabbit } from './rabbit';
 import { robin } from './robin';
 import { spider } from './spider';
 
-export const CRITTERS: readonly Critter[] = [hedgehog, fox, spider, robin, rabbit, cupid];
+export const CRITTERS: readonly Critter[] = [hedgehog, fox, spider, robin, rabbit, cupid, hare];
 
 export const critterNamed = (name: string | null): Critter | undefined => CRITTERS.find((c) => c.name === name);

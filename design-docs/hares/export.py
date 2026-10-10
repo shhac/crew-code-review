@@ -17,7 +17,7 @@ from pathlib import Path
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from art import crop, export, export_with_fur, feature, ground, keyed, place, poses, rescaled  # noqa: E402
+from art import crop, export, export_with_fur, feature, ground, keyed, opaque, place, poses, rescaled  # noqa: E402
 import numpy as np  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
@@ -49,8 +49,9 @@ LIMBS = ['hare-thigh', 'hare-leg', None, 'hare-hind-toes', 'hare-fore-toes']
 THIGH = 2.4
 LEG = 1.15
 # Toes: length in drawing units, and where on them (as fractions of their
-# box) the leg comes down.
-TOES = {'hare-hind-toes': (2.6, (0.16, 0.5)), 'hare-fore-toes': (1.7, (0.2, 0.5))}
+# box) the leg comes down: high enough on them that a long foot laid flat,
+# as thick as the leg, rests on the ledge level with their soles.
+TOES = {'hare-hind-toes': (2.6, (0.16, 0.375)), 'hare-fore-toes': (1.7, (0.2, 0.25))}
 
 
 def eye_px(sheet: str) -> float:
@@ -67,6 +68,24 @@ def symmetric(piece: np.ndarray) -> np.ndarray:
     half = piece.shape[1] // 2
     right = piece[:, half:]
     return np.concatenate([right[:, ::-1][:, :piece.shape[1] - right.shape[1]], right], axis=1)
+
+
+def fitted(part: np.ndarray, like: np.ndarray) -> float:
+    """The scale at which part's shape best overlaps like's (by the share of
+    their opaque pixels they have in common, part placed where it fits
+    best), tried in steps of 1%."""
+    def overlap(k: float) -> float:
+        a = rescaled(part, k)
+        if a.shape[0] > like.shape[0] + 40 or a.shape[1] > like.shape[1] + 40:
+            return 0.0
+        pad = np.zeros((like.shape[0] + 80, like.shape[1] + 80, 4), dtype=like.dtype)
+        pad[40:40 + like.shape[0], 40:40 + like.shape[1]] = like
+        y, x = place(a, pad)
+        mine = np.zeros(pad.shape[:2], bool)
+        mine[y:y + a.shape[0], x:x + a.shape[1]] = opaque(a)
+        theirs = opaque(pad)
+        return (mine & theirs).sum() / (mine | theirs).sum()
+    return max((k / 100 for k in range(70, 111)), key=overlap)
 
 
 def main() -> None:
@@ -89,16 +108,21 @@ def main() -> None:
         eye = feature(path, seed)
         w, h = export(crop(keyed(path)), LAB, f'hare-pose-{name}', EYE / eye * RES)
         print(f'hare-pose-{name}: eye {eye:.1f}px; drawing units {w / RES:.2f}x{h / RES:.2f}')
-    # The head and ears from the parts sheet; the body from hare-torso.png,
-    # which keeps the chest and neck the sheet's body left off. The torso has
-    # no eye to measure, and was edited at the reference's own size.
+    # The head and ears from the parts sheet; the body from hare-torso-2.png
+    # (see the note's Art section). The torso has no eye to measure: it is
+    # put on the reference's scale by fitting it to hare-torso.png, an edit
+    # that kept the reference's own size and differs only in its haunch.
     parts = dict(zip(PARTS, (crop(p) for p in poses(keyed(HERE / 'hare-parts.png'), len(PARTS)))))
-    parts['hare-body'] = crop(keyed(HERE / 'hare-torso.png'))
+    first = crop(keyed(HERE / 'hare-torso.png'))
+    torso = crop(keyed(HERE / 'hare-torso-2.png'))
+    t = fitted(torso, first)
+    print(f'hare-torso-2: {t:.3f} of the reference scale')
+    parts['hare-body'] = torso
     k = eye_px('hare-standing.png') / eye_px('hare-parts.png')
     for name, art in parts.items():
-        sheet = 'hare-standing.png' if name == 'hare-body' else 'hare-parts.png'
-        w, h = export(art, OUT, name, on_eye(sheet))
-        y, x = place(art if name == 'hare-body' else rescaled(art, k), reference)
+        scale = t * on_eye('hare-standing.png') if name == 'hare-body' else on_eye('hare-parts.png')
+        w, h = export(art, OUT, name, scale)
+        y, x = place(rescaled(art, t if name == 'hare-body' else k), reference)
         print(f'{name}: {w / RES:.2f}x{h / RES:.2f} at {x / per_unit + MARGIN:.2f}, {y / per_unit + MARGIN:.2f}')
     # Each limb piece as drawn and as fur alone, its outline taken out.
     pieces = dict(zip(LIMBS, (crop(p) for p in poses(keyed(HERE / 'hare-limbs.png'), len(LIMBS)))))
