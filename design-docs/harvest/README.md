@@ -1,8 +1,8 @@
 # Harvest (2026-10-10)
 
 **Status**: in production. Built so far: the parts and their export, the
-shelf with its flapping scarecrow and its alarm, and the straw and grain.
-The crows wait on the bird kit (legs, gait, flight poses, envelope check)
+shelf with its flapping scarecrow and its alarm, the straw and grain, and
+the crows' behaviour model (pure, tested, not yet drawn). The rest of the crows wait on the bird kit (legs, gait, flight poses, envelope check)
 and the surfaces kit (off-page exits, the `?theme-cue=` cue).
 
 **Pins**: written against `ea7e9d5` (the hedgehog rebuild and its test
@@ -316,6 +316,51 @@ every theme.
   clear, else it stands in the middle of the best clear run with an escape
   route. The scarecrow rests with its arms straight out.
 
+### The behaviour model as built (before the kits)
+
+`crow.ts` (one crow), `crows.ts` (the family) and `flight.ts` (routes) are
+pure and tested against a synthetic page; nothing draws them yet. The air
+is a seam: a `Field` carries `clear(route, leg)`, whether a route's whole
+swept envelope stays in air, and `envelope(point)`, a flying crow's box,
+both to come from the kits (the surfaces kit's air with its top and right
+exits, the bird kit's swept-envelope check and the rig's measured flight
+envelope). The tests use open air, closed air and stand-ins. Decided while
+building, each within the rules above:
+
+- **Routes** are shaped here, in the note's order (a climb off the top; a
+  skim 14px above the ledge to the right edge; a skim breaking into a climb
+  every 40px along the band), ending 64px past the edge so the envelope is
+  off the page; an arrival is a departure from the spot flown backwards. A
+  leaving flight eases in (a quarter cosine) and an arriving one out, at a
+  speed drawn per flight from 180 to 240px/s, pitching with the slope to 20
+  degrees at most. A crow already in the air turning back climbs or flies
+  level off to the right.
+- **Coming at it** (for the sidle) is the cursor's distance shrinking from
+  one frame to the next while it moves. A cursor that keeps coming sends it
+  on again after each 30px sidle.
+- **Walking with no grain within 60px** wanders 20 to 60px either way along
+  its run, then looks about; a bout of pecks whose grain runs out pecks on
+  at nothing to its end (as a bird pecking at crumbs does).
+- **The scatter** gives every crow on the ledge, settling ones included, its
+  take-off time in order of distance from the scarecrow, 0.2 to 0.35s apart.
+  A crow whose way out is not yet clear of the others (8px, in time) waits
+  0.2s and tries again, so the order is the intent and the separation wins
+  when they disagree; after 2s it walks 20px along its run first.
+- **Waits** are drawn per crow at the scatter; a later `until` from the same
+  flapping pushes each out, a new alarm draws them again. A restless crow's
+  absence is not a scare (its wait is 0), so the scarecrow's later `until`s
+  leave it alone unless a new alarm comes.
+- **An arriving crow after a layout change** keeps its route while the rest
+  of it is clear and its run still stands; else it plans a way down from
+  where it is to the same spot; else it turns back. It does not look for
+  another spot mid-air (simpler, and the turn-back is always safe): it
+  comes back later like any other.
+- **Reduced motion** stands every crow in mode `scan` with no end, never
+  stepped; the view keeps the head level.
+- **Still to come with the kits**: the rig and its footprints, the view
+  (gaze within 160px), the layer through `placeTroupe`, the debug overlay,
+  the `?theme-cue=scatter` cue for e2e, and the SETS row.
+
 ### Accent
 
 Blackberry `#c39be0`, for the hedgerows in September: distinct from the
@@ -542,9 +587,9 @@ file, printing the placements and sizes below.
 How they were placed and sized:
 
 - **The eye scale.** A black crow's eye is not the dark blob `art.py`'s
-  `feature` measures (the whole bird is dark), so `EyeScale` now takes a
-  `measure` (an additive change to `art.py`) and the crow's is its brown
-  iris's widest extent. That puts the eye at 40px in the reference; at
+  `feature` measures (the whole bird is dark), so the crow's `EyeScale` is
+  given its own `measure` (the option the insect kit added for the bee):
+  its brown iris's widest extent. That puts the eye at 40px in the reference; at
   `EYE = 1.24` units the reference is 39x27 units with its margins, so the
   rig's scale is about a page pixel to a unit. The flight redraws measure
   31 to 33px against the reference's 40, which is the "body a little
