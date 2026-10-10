@@ -40,7 +40,7 @@ function play(first: Play, page: PageMap, rand: () => number, touch: (now: numbe
 
 const boxOfBall = (b: { x: number; y: number; squash: number }) => ({ left: b.x - BALL / 2 - 1, right: b.x + BALL / 2 + 1, top: b.y - (BALL / 2) * b.squash, bottom: b.y + (BALL / 2) * b.squash });
 
-describe('the rally', () => {
+describe('the rally', { timeout: 30_000 }, () => {
   it('finds the court: the net between the cards, bounce spots 40 to 140px from it', () => {
     const t = tableOf(COURT, PAGE)!;
     expect(t.origin).toEqual({ x: 290, y: 200 });

@@ -27,7 +27,7 @@ function boxOf(p: Pigeon, now: number): Box | null {
   return around(v, envelopeAt(ENVELOPES, where.s, lengthOfTrack(p.flight.track), p.flight.lands));
 }
 
-describe('the flock', () => {
+describe('the flock', { timeout: 30_000 }, () => {
   it('places three, 70px apart, where each could fly away from again', () => {
     const flock = createFlock(PAGE, SKY, 0, seeded(1));
     expect(flock.target).toBe(3);

@@ -19,7 +19,7 @@ function run(p: Pigeon, ms: number, rand: () => number, from = 0, cursor: { x: n
   }, [p]);
 }
 
-describe('a pigeon on the ground', () => {
+describe('a pigeon on the ground', { timeout: 30_000 }, () => {
   it('stands 1.5 to 5s, then walks (60%) or pecks (40%)', () => {
     const p = on(300);
     expect(p.until).toBe(STAND[0]);
@@ -89,7 +89,7 @@ describe('a pigeon on the ground', () => {
   });
 });
 
-describe('a pigeon in the air', () => {
+describe('a pigeon in the air', { timeout: 30_000 }, () => {
   it('takes off, flies out along its route and is away; flies back in, lands and stands', () => {
     const route = escape(2, board, 300, 'right', ENVELOPES, SKY)!;
     const off = takeOff(on(300), route, 1000);

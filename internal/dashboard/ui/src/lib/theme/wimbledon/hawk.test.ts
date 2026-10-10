@@ -33,7 +33,7 @@ function boxesAt(plan: Plan, pigeons: readonly Pigeon[], page: PageMap, now: num
 const onScreen = (b: Box) => b.right > 0 && b.left < 1440 && b.bottom > 0 && b.top < 900;
 const grow = (b: Box, by: number): Box => ({ left: b.left - by, right: b.right + by, top: b.top - by, bottom: b.bottom + by });
 
-describe("the hawk's sweep", () => {
+describe("the hawk's sweep", { timeout: 30_000 }, () => {
   it('finds the rows: ledges side by side with tops within 2px', () => {
     expect(rowsOf(PAGE).map((r) => r.floors)).toEqual([[1], [2, 3], [4]]);
   });

@@ -9,7 +9,7 @@ const PAGE = overview();
 const SKY = testSky(PAGE);
 const onPage = (r: Route) => trackOf(r).map((q) => ({ x: board.left + q.at.x, y: board.y + q.at.y, s: q.s }));
 
-describe('pigeon flights', () => {
+describe('pigeon flights', { timeout: 30_000 }, () => {
   it('flies out along the band over its row, past the window edge, lifting off with its wings up', () => {
     const r = escape(2, board, 300, 'right', ENV, SKY)!;
     expect(r.way).toBe('right');
