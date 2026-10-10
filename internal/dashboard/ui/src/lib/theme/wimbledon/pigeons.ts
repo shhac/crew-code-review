@@ -40,31 +40,37 @@ const pageOf = (scene: PageMap, floor: number, x: number): Point | null => {
   return f ? { x: f.left + x, y: f.y } : null;
 };
 
-// Where a bird could stand: on a ledge in view, its walking body on a clear
-// run, APART from the others and where they are heading (and any stretch
-// the rally takes), and with a way out from there. Placed afresh, ledges
+// Where a bird could stand: on a card's top in view, its walking body on a
+// clear run, APART from the others and where they are heading (and any
+// stretch the rally takes), and with a way out from there. Not on a
+// heading's rule: it runs through the band of air the others fly out
+// along, so a bird standing there would be in their way. Placed afresh, ledges
 // with no bird come first, in no order; coming back, nearest `near` first,
 // on any ledge.
 export function standingSpots(scene: PageMap, sky: Sky, taken: readonly Claim[], near: Point | null, rand: Rand, keep: (c: { floor: number; x: number }) => boolean = () => true): { floor: number; x: number }[] {
-  const rooms = near ? spots(scene, [], PLACED, 2 * PLACED.half) : spots(scene, taken, PLACED, 2 * PLACED.half);
-  const all = rooms.flatMap((s) => {
+  const all = spots(scene, [], PLACED, 2 * PLACED.half).flatMap((s) => {
     const count = Math.max(1, Math.floor((s.room.hi - s.room.lo) / SAMPLE) + 1);
     return Array.from({ length: count }, (_, i) => ({ floor: s.floor, x: count === 1 ? (s.room.lo + s.room.hi) / 2 : s.room.lo + ((s.room.hi - s.room.lo) * i) / (count - 1) }));
-  }).filter((c) => clearOf(taken, c.floor, c.x, c.x, APART));
-  const order = near ? nearest(all.filter(keep), scene, near) : all.filter(keep).map((c) => ({ c, k: rand() })).sort((a, b) => a.k - b.k).map((a) => a.c);
+  }).filter((c) => scene.floors.get(c.floor)?.kind !== 'heading' && clearOf(taken, c.floor, c.x, c.x, APART));
+  // Placed afresh, ledges with no bird on them first, so they spread out.
+  const crowded = (c: { floor: number }) => (taken.some((t) => t.floor === c.floor) ? 1 : 0);
+  const order = near
+    ? nearest(all.filter(keep), scene, near)
+    : fewPerLedge(all.filter(keep).map((c) => ({ c, k: crowded(c) + rand() })).sort((a, b) => a.k - b.k).map((a) => a.c));
   return order.slice(0, TRIES * 2).filter((c) => {
     const f = scene.floors.get(c.floor);
     return !!f && escapeFrom(c.floor, f, c.x, null, ENVELOPES, sky) !== null;
   }).slice(0, TRIES);
 }
 // The few nearest spots on each ledge, nearest first: so one ledge's many
-// spots near `near` that no route reaches cannot crowd out the others.
+// spots that no route reaches cannot crowd out the others.
 const PER_LEDGE = 3;
 function nearest(all: readonly { floor: number; x: number }[], scene: PageMap, near: Point): { floor: number; x: number }[] {
-  const byDistance = all.map((c) => ({ c, d: distanceTo(scene, c, near) })).sort((a, b) => a.d - b.d);
-  const firsts = byDistance.filter((a, i) => byDistance.slice(0, i).filter((b) => b.c.floor === a.c.floor).length < PER_LEDGE);
-  return firsts.map((a) => a.c);
+  return fewPerLedge(all.map((c) => ({ c, d: distanceTo(scene, c, near) })).sort((a, b) => a.d - b.d).map((a) => a.c));
 }
+// The first few of each ledge's spots, in the order given.
+const fewPerLedge = <T extends { floor: number }>(order: readonly T[]): T[] =>
+  order.filter((c, i) => order.slice(0, i).filter((b) => b.floor === c.floor).length < PER_LEDGE);
 const distanceTo = (scene: PageMap, c: { floor: number; x: number }, p: Point) => {
   const at = pageOf(scene, c.floor, c.x);
   return at ? Math.hypot(at.x - p.x, at.y - p.y) : Infinity;

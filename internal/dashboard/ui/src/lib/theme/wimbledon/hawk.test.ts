@@ -2,9 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { around, meets } from '../air';
 import type { Box, Obstacle, PageMap } from '../floors';
 import { seeded } from '../test-scene';
-import { envelopeAt, flying, lengthOfTrack } from './flight';
+import { flying, lengthOfTrack, reachAt } from './flight';
 import {
-  AGAIN, createHawk, FIRST, GAP, GLIDE, hawkAt, hawkRemeasured, hawkView, laneClear, OFF_APART, planSweep, RETRY, RETURN, RETURN_APART, rowsOf, simulate, stepHawk, type Plan,
+  AGAIN, createHawk, FIRST, GAP, GLIDE, SIGHTED, SPEED, hawkAt, hawkRemeasured, hawkView, laneClear, OFF_APART, planSweep, RETRY, RETURN, RETURN_APART, rowsOf, simulate, stepHawk, type Plan,
 } from './hawk';
 import { board, EXITS, overview, side, testSky } from './fixtures';
 import { ENVELOPES, fresh, POSES, standing, type Pigeon } from './pigeon';
@@ -26,7 +26,7 @@ function boxesAt(plan: Plan, pigeons: readonly Pigeon[], page: PageMap, now: num
     const where = flying(off.track, now - off.at, false);
     if (where.done) return [];
     const g = page.floors.get(off.route.floor)!;
-    return [{ id: p.id, box: around({ x: g.left + where.at.x, y: g.y + where.at.y }, envelopeAt(ENVELOPES, where.s, lengthOfTrack(off.track), false)) }];
+    return [{ id: p.id, box: around({ x: g.left + where.at.x, y: g.y + where.at.y }, reachAt(ENVELOPES, where.at, where.s, lengthOfTrack(off.track), false)) }];
   });
   return hawk ? [{ id: -1, box: around({ x: row.left + hawk.x, y: row.y + hawk.y }, GLIDE) }, ...birds] : birds;
 }
@@ -125,7 +125,10 @@ describe("the hawk's sweep", { timeout: 30_000 }, () => {
   it('crosses from exit to exit, gliding a pixel up and down, its belly 4px over the row', () => {
     const plan = planSweep(FLOCK, PAGE, SKY, 0, seeded(7))!;
     const first = hawkAt(plan, plan.start)!;
-    expect(board.left + first.x + (plan.dir > 0 ? GLIDE.half : -GLIDE.half)).toBeCloseTo(plan.dir > 0 ? EXITS.left! - 1 : EXITS.right + 1);
+    // It starts out of sight, half a second before it comes in past the
+    // exit, while the pigeons already see it coming.
+    const lead = (SPEED * SIGHTED) / 1000;
+    expect(board.left + first.x + (plan.dir > 0 ? GLIDE.half : -GLIDE.half)).toBeCloseTo(plan.dir > 0 ? EXITS.left! - 1 - lead : EXITS.right + 1 + lead);
     const ys = Array.from({ length: 50 }, (_, i) => hawkAt(plan, plan.start + i * 40)!.y);
     expect(Math.max(...ys)).toBeLessThanOrEqual(-3);
     expect(Math.min(...ys)).toBeGreaterThanOrEqual(-5);

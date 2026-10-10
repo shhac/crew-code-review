@@ -109,13 +109,12 @@ take-off drawing is 30x32, the flight poses 33x22 (down) and 32x17 (up), the
 landing 33.5x39.5. With the 44px take-off and flight boxes of the budget a
 pigeon could not leave the overview at all (the band over the first row is
 48px, less 4px kept from the heading's text, and the take-off climbs), so
-the models use envelopes from the key poses, anchored at the feet:
-take-off 32 wide, 34 up, nothing below the feet (wings clapped overhead);
-flight 34 wide, 24 up, 8 below (the downstroke's tips); landing 34 wide, 40
-up, nothing below. They are in `pigeon.ts` (`ENVELOPES`) and will be
-replaced by what the rig's footprint test measures. The grounded poses keep
-the budget above (`POSES`), a little over the drawings. The hawk's glide
-keeps its 46x14 budget (`hawk.ts`'s `GLIDE`).
+the models first used envelopes from the key poses; since the rigs were
+built on the bird kit, every box comes from the rigs' measured footprints
+(`pigeon-rig.ts`'s and `hawk-rig.ts`'s `FOOTPRINTS`, checked over every
+moment of each motion by their tests), and `pigeon.ts`'s `POSES` and
+`ENVELOPES` and `hawk.ts`'s `GLIDE` are read from them. See "Rigs, as
+built" for the numbers.
 
 ### The page's room, measured
 
@@ -360,17 +359,37 @@ reduced-motion change, as for every theme.
 
 **As built** (`pigeon.ts`, one bird; `pigeons.ts`, the flock; `flight.ts`,
 the routes): a pigeon needs 27px clear where it stands (its alert pose)
-and walks with its 36px walking body on the run, stopping 6px short of
-another's (42px centre to centre); they are placed and land 70px apart. A
-spot to stand on must have a way out (the escape) and is chosen among the
-ledges in view, so the heading's rule counts where nothing is written over
-it. The band route climbs to its height over 28px and flies level; the
-heights tried run from 10 to 32px over the ledge, lowest first. Placing
-afresh prefers ledges with no pigeon (as every ledge walker does); coming
-back, the three nearest spots on each ledge are tried, nearest first, so a
-ledge whose near spots no route reaches cannot crowd out the rest. Cursor
-speed comes from its strokes; a flush needs the cursor within 40px of the
-bird's middle, 12px over its feet.
+and keeps its whole body on the run in its widest grounded pose (the peck,
+reaching 21px ahead), stopping 6px short of another's; they are placed and
+land 70px apart. A spot to stand on must have a way out (the escape) and
+is on a card's top in view: not on a heading's rule, which runs through the
+band of air the others fly out along, so a bird standing there was in
+every flight's way (the first build allowed it, and no sweep could be
+planned past it). The band route climbs to its height over 36px, easing up
+so the clap's tall envelope stays under the heading's text, and flies
+level; the heights tried run from 10 to 32px, lowest first. Placing afresh
+tries a few spots on each ledge, ledges with no pigeon first; coming back,
+the three nearest spots on each ledge, nearest first, so a ledge whose
+spots no route reaches cannot crowd out the rest. Cursor speed comes from
+its strokes; a flush needs the cursor within 40px of the bird's middle,
+12px over its feet.
+
+The take-off begins with the feet still down for 110ms while the wings
+open to the clap (half a wingbeat and a little more at 7 a second), and
+only then does the bird leave the ledge, speeding up to 480px/s; the
+landing's envelope grows into the braking pose sooner than its distance
+does (as the 2.5th power of the distance left), because the rig's wings
+swing up early in the flare. What reaches below the feet (the downstroke's
+tips) counts only once the bird is that high above its ledge, which the
+rig's tests check at every moment of a real take-off and landing.
+
+**The hawk is seen coming** (a change): it starts half a second out of
+sight, and the pigeons' take-offs count from then rather than from its
+coming into the window. Counted from its appearance, a pigeon within about
+250px of the edge it came in by could never get away in time, so with
+pigeons near both ends of a row no sweep could ever be planned. If the
+farthest-first order still leaves one too late, the nearest-first order is
+tried before giving up.
 
 ### The rally
 
@@ -718,11 +737,66 @@ tibiotarsus 1.7, tarsometatarsus 0.45) with their fur alone beside them
 (`-fur`), the flat foot 4.7 units long and the curled one 2.8. The wings are
 placed by hand in the rig, so they are scaled by length: the hand-wing is
 half the bird's length (10 units on the pigeon, 15.3 on the hawk), the arm
-on the same scale, and every wing piece is also written 22% darker for the
-far wing (`-far-`). The fanned tail is as long as the closed one. The lab
+on the same scale, each stood span up as the bird kit draws a wing piece
+(the first export also wrote each 22% darker for the far wing; the kit
+shades the far wing itself, so those are gone). The fanned tail is as long
+as the closed one. The lab
 gets `pigeon-reference.webp`, the eight pigeon key poses, and the hawk's
 glide (`hawk-pose-glide.webp`, the frame its parts are placed on) and two
 flap poses.
+
+### Rigs, as built
+
+On the bird kit (`rig/bird.ts`, `rig/wings.ts`), as the test gull is.
+
+**Pigeon** (`pigeon-rig.ts`), 1.4px a drawing unit. The legs are measured
+on the reference's near leg (53 source pixels a unit): the bare coral
+tarsus 1.25 units, leaning its foot end 6 degrees forward, the feathered
+drumstick 1, the femur 2 (hidden in the body, as long as the legs need to
+reach through a stride), the toes pressing the ledge 3.1 ahead of the
+metatarsophalangeal joint. The walk is the kit's two-beat bird walk
+(stride 3 units, stance 0.6) with its head bob, the thrust 0.45 of a step,
+the head held still over the ground through the rest (the test checks it
+never slides back). The head rides on a neck piece laid from the base of
+the neck to where the head sits, so a thrust or a peck never parts them.
+A peck tips the body 25 degrees and swings the head and neck down 45 from
+the base of the neck, the neck stretching, the bill to the ledge. The
+alert stands 4 degrees up with the neck stretched 1.5 units.
+
+In the air: the stroke is 40 degrees above level to 40 below, not the 65 to
+50 first tried, which made the flight box 40px tall against the band's 44
+and did not match the flight key poses, whose wings are drawn shallower.
+Taking off, the wings clap at 90 degrees over the back and ease into the
+flap over 1.6 beats, the first strokes kept above the ledge (bottoming at
+10 degrees above level and deepening as it climbs), so the wings never dip
+into the card it leaves. Landing, the body swings up 25 degrees (not 40:
+any more and the tail went through the ledge at touchdown); the tail is
+turned back against the pitch (1.3 times it) and pressed only 2 degrees,
+for the same reason; the feet reach nearly flat. Settling, the wings are
+held up only 26 degrees before folding, so it fits the 27px of a ledge.
+Tucked, the legs are drawn up into the belly feathers. The blink is the
+nictitating membrane, drawn as a pale lid.
+
+| Pose | Footprint (w x h, below) |
+| --- | --- |
+| stand, walk | 30 x 24 |
+| peck | 42.5 x 24 |
+| alert | 30.5 x 27 |
+| take-off | 34 x 39.5, 1 below |
+| fly | 31 x 30.5, 1 below |
+| land | 45.5 x 36.5, 1.2 below |
+| settle | 31 x 27 |
+
+**Hawk** (`hawk-rig.ts`), on the same scale: the gliding body (feet
+painted on), the head (turning a few degrees), the tail and the two wings;
+no legs. Gliding, its wings are held 14 degrees above level, swept back 25
+and folded 20, rocking a degree, which shows them over its back as the
+glide drawing does (held level, a wing seen side on is a line). It flaps
+45 above level to 40 below at 4.5 beats a second. Footprints: glide 46 x
+16.5 (0.5 below), flap 46 x 33.5 (16 below).
+
+The critters lab has both (`lab/critters/pigeon.ts`, `hawk.ts`), with the
+key poses laid over their modes eye to eye.
 
 ## Verification (for the owner)
 

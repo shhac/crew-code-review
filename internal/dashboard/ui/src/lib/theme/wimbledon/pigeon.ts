@@ -1,9 +1,10 @@
-import type { Ledge, PageMap, Run } from '../floors';
+import type { Ledge, PageMap, Reach, Run } from '../floors';
+import { BEATS, FOOTPRINTS, type Footprint, type RigPigeon } from './pigeon-rig';
 import { bodyOf, clampTo, clearOf, runAt, towardTarget, type Claim, type Walker } from '../ledges';
-import { sign } from '../math';
+import { clamp01, sign } from '../math';
 import type { Point } from '../pointer';
 import { between, type Rand } from '../seed';
-import { durationOf, flying, trackOf, type Envelopes, type Phase, type Route, type Stretch, type Track, type Way } from './flight';
+import { durationOf, flying, FOLD, LAND, trackOf, type Envelopes, type Phase, type Route, type Stretch, type Track, type Way } from './flight';
 
 // One feral pigeon: on the ground a ledge walker, as the fox and the hare
 // are, in ledge-local x so it rides with its card; in the air a flier on a
@@ -13,31 +14,22 @@ import { durationOf, flying, trackOf, type Envelopes, type Phase, type Route, ty
 // mode table.
 
 export type Mode = 'stand' | 'walk' | 'peck' | 'shy' | 'alert' | 'takeoff' | 'fly' | 'away' | 'land';
-export type Pose = 'stand' | 'walk' | 'peck' | 'alert' | Phase;
+export type Pose = 'stand' | 'walk' | 'peck' | 'alert' | 'settle' | Phase;
 
-// The space each grounded pose takes, anchored at its feet on the ledge: the
-// note's budget, a little over what the key poses measure at 1.4px a
-// drawing unit, until the rig's tests measure the drawing itself.
-export const POSES: Record<'stand' | 'walk' | 'peck' | 'alert', { width: number; height: number }> = {
-  stand: { width: 30, height: 24 },
-  walk: { width: 36, height: 24 },
-  peck: { width: 32, height: 22 },
-  alert: { width: 28, height: 27 },
-};
-// In the air, each envelope anchored at its feet under its hip (see
-// flight.ts): from the key poses at 1.4px a unit.
-export const ENVELOPES: Envelopes = {
-  takeoff: { half: 16, up: 34, down: 0 },
-  fly: { half: 17, up: 24, down: 8 },
-  land: { half: 17, up: 40, down: 0 },
-};
+// The space each grounded pose takes, anchored at its feet on the ledge,
+// and each envelope in the air, anchored at its feet under its hip: the
+// boxes the rig's drawing stays inside through each whole motion
+// (pigeon-rig.ts's FOOTPRINTS, which its tests measure).
+export const POSES = { stand: FOOTPRINTS.stand, walk: FOOTPRINTS.walk, peck: FOOTPRINTS.peck, alert: FOOTPRINTS.alert };
+const reachOf = (f: Footprint): Reach => ({ half: f.width / 2, up: f.height, down: f.down ?? 0 });
+export const ENVELOPES: Envelopes = { takeoff: reachOf(FOOTPRINTS.takeoff), fly: reachOf(FOOTPRINTS.fly), land: reachOf(FOOTPRINTS.land) };
 
 // A ledge must have room for the tallest grounded pose (the alert, neck up)
 // anywhere a pigeon stands, counting the 6px reach into the empty bottom
 // edge of a card or rule above; its whole walking body keeps on the run,
 // 6px clear of another's.
 export const REACH = 6;
-export const HALF = POSES.walk.width / 2;
+export const HALF = Math.max(...Object.values(POSES).map((p) => p.width)) / 2;
 export const PIGEON: Walker = { clear: POSES.alert.height, reach: REACH, half: HALF, spacing: 2 * HALF + 6 };
 
 // The state table's timings (ms) and speeds (px/s).
@@ -209,8 +201,35 @@ export function viewOf(p: Pigeon, scene: PageMap, now: number): View | null {
     const where = flying(p.flight.track, now - p.flight.start, p.flight.lands);
     return { pigeon: p, x: f.left + where.at.x, y: f.y + where.at.y, dir: p.dir, pose: where.pose };
   }
-  const pose: Pose = p.mode === 'shy' ? 'walk' : p.mode === 'walk' || p.mode === 'peck' || p.mode === 'alert' ? p.mode : 'stand';
+  const ground: Pose = p.mode === 'shy' ? 'walk' : p.mode === 'walk' || p.mode === 'peck' || p.mode === 'alert' ? p.mode : 'stand';
+  // Just down, it folds its wings away before it does anything else.
+  const pose: Pose = now - p.landed < FOLD ? 'settle' : ground;
   return { pigeon: p, x: f.left + p.x, y: f.y, dir: p.dir, pose };
+}
+
+// Wingbeats `ms` into a flight: out, opening to the clap half a beat before
+// the first stroke, then the quick strokes of a take-off; in, at cruise until
+// it brakes with the quick strokes of a landing.
+function beatsOut(ms: number): number {
+  const quick = BEATS.quick * (ms / 1000) - 0.5;
+  const settled = (1000 * 3.5) / BEATS.quick;
+  return ms < settled ? quick : 3 + (BEATS.cruise * (ms - settled)) / 1000;
+}
+const beatsIn = (ms: number, landing: number) =>
+  (BEATS.cruise * Math.min(ms, landing)) / 1000 + (BEATS.quick * Math.max(0, ms - landing)) / 1000;
+
+// What the rig draws of a pigeon at now: its pose and how far through it.
+export function rigPigeon(view: View, now: number): RigPigeon {
+  const p = view.pigeon;
+  const base = { pose: view.pose, walked: p.walked, seed: p.seed, beat: 0, t: 0 };
+  if (p.flight) {
+    const where = flying(p.flight.track, now - p.flight.start, p.flight.lands);
+    const landing = flightEnds(p.flight) - p.flight.start - LAND;
+    return { ...base, beat: p.flight.lands ? beatsIn(where.ms, landing) : beatsOut(where.ms), t: where.t };
+  }
+  if (view.pose === 'settle') return { ...base, t: clamp01((now - p.landed) / FOLD) };
+  if (view.pose === 'peck') return { ...base, t: (((now - (p.until - p.pecks * PECK)) % PECK) + PECK) % PECK / PECK };
+  return base;
 }
 
 // Whether a pigeon on the ground can stay where it is: its body on a clear

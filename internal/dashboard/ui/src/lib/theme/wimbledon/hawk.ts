@@ -2,7 +2,8 @@ import { around, meets } from '../air';
 import type { Box, Ledge, PageMap, Reach } from '../floors';
 import { inView } from '../floors';
 import { between, type Rand } from '../seed';
-import { durationOf, envelopeAt, escape, flying, lengthOfTrack, trackOf, type Route, type Sky, type Track } from './flight';
+import { durationOf, escape, flying, lengthOfTrack, reachAt, trackOf, type Route, type Sky, type Track } from './flight';
+import { FOOTPRINTS as HAWK_FOOTPRINTS } from './hawk-rig';
 import { ENVELOPES, grounded, POSES, type Pigeon } from './pigeon';
 
 // Every minute or two a single Harris's hawk sweeps low along the row of
@@ -13,10 +14,10 @@ import { ENVELOPES, grounded, POSES, type Pigeon } from './pigeon';
 // frame, every envelope in air and apart from every other, or no sweep.
 // design-docs/wimbledon/README.md ("The hawk's sweep").
 
-// Its glide's envelope over the whole glide (wings level, a 1px rise and
-// fall, the tail), anchored at its belly line; the note's budget until the
-// rig measures it.
-export const GLIDE: Reach = { half: 23, up: 14, down: 0 };
+// Its glide's envelope over the whole glide (wings held out, the tail),
+// anchored at its belly line: the box hawk-rig.ts's drawing stays inside,
+// which its tests measure. The 1px rise and fall is added to it here.
+export const GLIDE: Reach = { half: HAWK_FOOTPRINTS.glide.width / 2, up: HAWK_FOOTPRINTS.glide.height, down: HAWK_FOOTPRINTS.glide.down ?? 0 };
 // It glides this far above the row's ledges, at SPEED px/s, rising and
 // falling BOB px over each BOB_MS.
 export const ABOVE = 4;
@@ -28,7 +29,7 @@ export const BOB_MS = 800;
 export const FIRST = [30000, 60000] as const;
 export const AGAIN = [70000, 140000] as const;
 export const RETRY = 10000;
-// The pigeons on its row go 0.15s after it appears, 0.1s apart, the one
+// The pigeons on its row go 0.15s after they see it, 0.1s apart, the one
 // farthest from it first; those on other rows that can keep clear of it
 // follow 0.3 to 0.6s later.
 export const FIRST_OFF = 150;
@@ -75,6 +76,11 @@ function span(row: Ledge, sky: Sky): { from: number; to: number } {
   return { from: left - GLIDE.half - 1 - row.left, to: sky.exits.right + GLIDE.half + 1 - row.left };
 }
 
+// The pigeons see it coming before it is in the window: it starts this
+// long out of sight, and their take-offs count from when they see it.
+export const SIGHTED = 500;
+const LEAD = (SPEED * SIGHTED) / 1000;
+
 // Whether the glide's envelope swept along the lane at ABOVE over the row
 // stays in air from one exit to the other.
 export function laneClear(row: Ledge, sky: Sky): boolean {
@@ -85,7 +91,7 @@ export function laneClear(row: Ledge, sky: Sky): boolean {
 }
 // The glide's box with its belly line `y` above the row's ledge and its
 // middle at x (row-local), its rise and fall included.
-const glideBox = (row: Ledge, y: number, x: number): Box => ({ left: row.left + x - GLIDE.half, right: row.left + x + GLIDE.half, top: row.y + y - GLIDE.up - BOB, bottom: row.y + y + BOB });
+const glideBox = (row: Ledge, y: number, x: number): Box => ({ left: row.left + x - GLIDE.half, right: row.left + x + GLIDE.half, top: row.y + y - GLIDE.up - BOB, bottom: row.y + y + GLIDE.down + BOB });
 const join = (a: Box, b: Box): Box => ({ left: Math.min(a.left, b.left), right: Math.max(a.right, b.right), top: Math.min(a.top, b.top), bottom: Math.max(a.bottom, b.bottom) });
 
 // The hawk's belly point at now (row-local), or null outside its sweep.
@@ -119,7 +125,7 @@ function drawnAt(plan: Plan, pigeons: readonly Pigeon[], page: PageMap, now: num
     const f = page.floors.get(off.route.floor);
     const where = flying(off.track, now - off.at, false);
     if (!f || where.done) return [];
-    const env = envelopeAt(ENVELOPES, where.s, lengthOfTrack(off.track), false);
+    const env = reachAt(ENVELOPES, where.at, where.s, lengthOfTrack(off.track), false);
     return [{ id: p.id, box: around({ x: f.left + where.at.x, y: f.y + where.at.y }, env) }];
   });
   return hawkBox ? [{ id: -1, box: hawkBox }, ...birds] : birds;
@@ -156,34 +162,37 @@ export function planOn(row: Row, dir: 1 | -1, pigeons: readonly Pigeon[], page: 
   const first = page.floors.get(row.id);
   if (!first || !laneClear(first, sky)) return null;
   const { from: lo, to: hi } = span(first, sky);
-  const [from, to] = dir > 0 ? [lo, hi] : [hi, lo];
-  const appears = start + (1000 * (2 * GLIDE.half + 1)) / SPEED;
+  const [from, to] = dir > 0 ? [lo - LEAD, hi] : [hi + LEAD, lo];
   const way = dir > 0 ? 'right' : 'left';
   const onRow = pigeons.filter((p) => row.floors.includes(p.floor));
-  // Farthest from where it comes in first: the one with the clearest way out.
-  const entry = first.left + from;
-  const order = [...onRow].sort((a, b) => Math.abs(pageX(b, page) - entry) - Math.abs(pageX(a, page) - entry));
-  const routes = order.map((p) => ({ p, route: escapeOf(p, page, way, sky) }));
+  const routes = onRow.map((p) => ({ p, route: escapeOf(p, page, way, sky) }));
   if (routes.some((r) => !r.route)) return null;
-  const ahead = routes.map(({ p, route }, k): Takeoff => ({ id: p.id, at: appears + FIRST_OFF + OFF_APART * k, route: route!, track: trackOf(route!) }));
-  const follow = appears + FIRST_OFF + OFF_APART * ahead.length + between(rand, FOLLOW[0], FOLLOW[1]);
   const others = pigeons.filter((p) => !row.floors.includes(p.floor));
+  const end = endOf(from, to, start);
   const plan = (takeoffs: Takeoff[], alerts: number[]): Plan => {
-    const end = endOf(from, to, start);
-    const outOrder = takeoffs.map((t) => t.id);
-    const returns = outOrder.reduce<{ id: number; at: number }[]>((acc, id) => [...acc, { id, at: acc.length ? acc[acc.length - 1].at + between(rand, RETURN_APART[0], RETURN_APART[1]) : end + between(rand, RETURN[0], RETURN[1]) }], []);
+    const returns = takeoffs.reduce<{ id: number; at: number }[]>((acc, t) => [...acc, { id: t.id, at: acc.length ? acc[acc.length - 1].at + between(rand, RETURN_APART[0], RETURN_APART[1]) : end + between(rand, RETURN[0], RETURN[1]) }], []);
     return { row: row.id, y: -ABOVE, dir, start, from, to, end, takeoffs, alerts, returns };
   };
-  // Those on other rows follow where their way out keeps clear of the
-  // sweep; the rest look up until it has passed.
-  const chosen = others.reduce<{ takeoffs: Takeoff[]; alerts: number[] }>((acc, p) => {
-    const route = escapeOf(p, page, way, sky);
-    const tried = route && { id: p.id, at: follow, route, track: trackOf(route) };
-    if (tried && simulate(plan([...ahead, ...acc.takeoffs, tried], acc.alerts), pigeons, page, sky)) return { ...acc, takeoffs: [...acc.takeoffs, tried] };
-    return { ...acc, alerts: [...acc.alerts, p.id] };
-  }, { takeoffs: [], alerts: [] });
-  const whole = plan([...ahead, ...chosen.takeoffs], chosen.alerts);
-  return simulate(whole, pigeons, page, sky) ? whole : null;
+  // Those on its row go in turn, the one farthest from where it comes in
+  // first (the one with the clearest way out); where that leaves one near
+  // its way in too late, the nearest first instead.
+  const entry = first.left + from;
+  const farFirst = [...routes].sort((a, b) => Math.abs(pageX(b.p, page) - entry) - Math.abs(pageX(a.p, page) - entry));
+  return [farFirst, [...farFirst].reverse()].reduce<Plan | null>((found, order) => {
+    if (found) return found;
+    const ahead = order.map(({ p, route }, k): Takeoff => ({ id: p.id, at: start + FIRST_OFF + OFF_APART * k, route: route!, track: trackOf(route!) }));
+    const follow = start + FIRST_OFF + OFF_APART * ahead.length + between(rand, FOLLOW[0], FOLLOW[1]);
+    // Those on other rows follow where their way out keeps clear of the
+    // sweep; the rest look up until it has passed.
+    const chosen = others.reduce<{ takeoffs: Takeoff[]; alerts: number[] }>((acc, p) => {
+      const route = escapeOf(p, page, way, sky);
+      const tried = route && { id: p.id, at: follow, route, track: trackOf(route) };
+      if (tried && simulate(plan([...ahead, ...acc.takeoffs, tried], acc.alerts), pigeons, page, sky)) return { ...acc, takeoffs: [...acc.takeoffs, tried] };
+      return { ...acc, alerts: [...acc.alerts, p.id] };
+    }, { takeoffs: [], alerts: [] });
+    const whole = plan([...ahead, ...chosen.takeoffs], chosen.alerts);
+    return simulate(whole, pigeons, page, sky) ? whole : null;
+  }, null);
 }
 
 const pageX = (p: Pigeon, page: PageMap) => (page.floors.get(p.floor)?.left ?? 0) + p.x;

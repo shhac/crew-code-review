@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { around, meets } from '../air';
 import type { Box } from '../floors';
 import { fixed, seeded } from '../test-scene';
-import { envelopeAt, escape, flying, lengthOfTrack, routeClear } from './flight';
+import { escape, flying, lengthOfTrack, reachAt, routeClear } from './flight';
 import { board, overview, side, testSky } from './fixtures';
 import { GAP, hawkView } from './hawk';
 import { ENVELOPES, fresh, grounded, POSES, standing, takeOff, viewOf, type Pigeon } from './pigeon';
@@ -24,7 +24,7 @@ function boxOf(p: Pigeon, now: number): Box | null {
     return around(v, { half: size.width / 2, up: size.height, down: 0 });
   }
   const where = flying(p.flight.track, now - p.flight.start, p.flight.lands);
-  return around(v, envelopeAt(ENVELOPES, where.s, lengthOfTrack(p.flight.track), p.flight.lands));
+  return around(v, reachAt(ENVELOPES, where.at, where.s, lengthOfTrack(p.flight.track), p.flight.lands));
 }
 
 describe('the flock', { timeout: 30_000 }, () => {
@@ -33,9 +33,8 @@ describe('the flock', { timeout: 30_000 }, () => {
     expect(flock.target).toBe(3);
     expect(flock.pigeons).toHaveLength(3);
     for (const p of flock.pigeons) {
-      // The first row of cards, or the heading's rule where nothing is
-      // written over it.
-      expect([1, 2, 3]).toContain(p.floor);
+      // The first row of cards, never the heading's rule in the band.
+      expect([2, 3]).toContain(p.floor);
       expect(escape(p.floor, PAGE.floors.get(p.floor)!, p.x, 'right', ENVELOPES, SKY) ?? escape(p.floor, PAGE.floors.get(p.floor)!, p.x, 'left', ENVELOPES, SKY)).not.toBeNull();
     }
     flock.pigeons.forEach((a, i) => flock.pigeons.slice(i + 1).forEach((b) => {
@@ -44,9 +43,8 @@ describe('the flock', { timeout: 30_000 }, () => {
   });
 
   it('places two where only two spots have a way out, and none where nothing does', () => {
-    // Only the right card, 160px of it, under the band.
-    const short = { ...side, right: side.left + 190 };
-    const page = overview([], [[3, short]]);
+    // Two short cards under the band, each with room for one.
+    const page = overview([], [[2, { ...board, right: board.left + 100 }], [3, { ...side, right: side.left + 100 }]]);
     const two = createFlock(page, testSky(page), 0, seeded(2));
     expect(two.target).toBe(2);
     expect(two.pigeons).toHaveLength(2);

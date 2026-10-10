@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { around } from '../air';
 import {
-  along, durationOf, envelopeAt, escape, escapeFrom, flying, LAND, LAND_RUN, LIFT_RUN, lengthOfTrack, routeClear, routeIn, SPEED, TAKEOFF, trackOf, type Route,
+  along, durationOf, escape, reachAt, escapeFrom, flying, LAND, LAND_RUN, LIFT_RUN, lengthOfTrack, routeClear, routeIn, SPEED, TAKEOFF, trackOf, type Route,
 } from './flight';
 import { board, EXITS, overview, PIGEON_ENVELOPES as ENV, lower, side, testSky } from './fixtures';
 
@@ -20,7 +20,7 @@ describe('pigeon flights', { timeout: 30_000 }, () => {
     // Never above the band, never into a card.
     const total = lengthOfTrack(trackOf(r));
     for (const p of pts) {
-      const box = around(p, envelopeAt(ENV, p.s, total, false));
+      const box = around(p, reachAt(ENV, { x: 0, y: p.y - 182 }, p.s, total, false));
       expect(box.bottom).toBeLessThanOrEqual(182);
       expect(SKY.clear(box)).toBe(true);
     }

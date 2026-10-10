@@ -32,20 +32,25 @@ export type Route = { floor: number; curves: readonly Curve[]; way: Way };
 export type Envelopes = { takeoff: Reach; fly: Reach; land: Reach };
 
 // Flying at SPEED px/s after a TAKEOFF ms climb from the ledge, rising
-// CLIMB px; landing over the last LAND ms, slowing evenly to a stop.
+// CLIMB px; landing over the last LAND ms, slowing evenly to a stop. The
+// take-off begins with the wings opening to the clap, the feet still down
+// for PREP ms, until halfway through the first downstroke (half a beat and
+// a little more, at 7 beats a second); then the bird leaves the ledge,
+// speeding up evenly to SPEED.
 export const SPEED = 480;
 export const TAKEOFF = 300;
+export const PREP = 110;
 export const CLIMB = 8;
 export const LAND = 350;
 // Slowing evenly from SPEED to nothing over LAND covers this far, and
-// speeding up evenly over TAKEOFF as far.
+// speeding up evenly from the feet leaving as far.
 export const LAND_RUN = (SPEED * LAND) / 2000;
-export const LIFT_RUN = (SPEED * TAKEOFF) / 2000;
+export const LIFT_RUN = (SPEED * (TAKEOFF - PREP)) / 2000;
 // The heights (above the ledge) a band route is tried at, lowest first.
 const BANDS = [10, 12, 14, 16, 18, 20, 24, 28, 32];
 // The climb reaches its height this far ahead of where it lifted off; a
 // landing comes down over the whole of its slowing.
-const RISE_RUN = 28;
+const RISE_RUN = 36;
 // Out of the top: this far ahead by the time it is above the window.
 const TOP_RUN = 160;
 // Routes are checked at boxes this far apart.
@@ -66,7 +71,7 @@ export function bandRoute(floor: number, f: Ledge, x: number, way: 'left' | 'rig
   if (end === null) return null;
   const dir = way === 'right' ? 1 : -1;
   const top = { x: x + dir * run, y: -h };
-  const climb: Curve = { from: { x, y: 0 }, c1: { x: x + dir * run * 0.15, y: -h * 0.7 }, c2: { x: x + dir * run * 0.5, y: -h }, to: top };
+  const climb: Curve = { from: { x, y: 0 }, c1: { x: x + dir * run * 0.3, y: -h * 0.25 }, c2: { x: x + dir * run * 0.6, y: -h }, to: top };
   return { floor, way, curves: [climb, line(top, { x: end, y: -h })] };
 }
 
@@ -107,7 +112,7 @@ const onPage = (f: Ledge, p: Point): Point => ({ x: f.left + p.x, y: f.y + p.y }
 // braking pose over its landing, as the wings swing.
 export function envelopeAt(env: Envelopes, s: number, total: number, lands: boolean): Reach {
   if (!lands && s < LIFT_RUN) return blend(env.takeoff, env.fly, s / LIFT_RUN);
-  return lands && total - s < LAND_RUN ? blend(env.land, env.fly, (total - s) / LAND_RUN) : env.fly;
+  return lands && total - s < LAND_RUN ? blend(env.land, env.fly, ((total - s) / LAND_RUN) ** 2.5) : env.fly;
 }
 const blend = (a: Reach, b: Reach, k: number): Reach => ({ half: mix(a.half, b.half, k), up: mix(a.up, b.up, k), down: mix(a.down, b.down, k) });
 
@@ -122,7 +127,17 @@ export function routeClear(route: Route, f: Ledge, env: Envelopes, clear: Clear,
 export function routeBoxes(route: Route, f: Ledge, env: Envelopes, lands: boolean): Box[] {
   const track = trackOf(route);
   const total = lengthOfTrack(track);
-  return track.map((q) => around(onPage(f, q.at), envelopeAt(env, q.s, total, lands)));
+  return track.map((q) => around(onPage(f, q.at), reachAt(env, q.at, q.s, total, lands)));
+}
+
+// The envelope at a point of a route (`at`, ledge-local, its y the feet's
+// height over the route's ledge, negative): what reaches below the feet
+// (a downstroke's tips, the legs reaching) is drawn only once the bird is
+// that high, so near the ledge it reaches no lower than the ledge, as the
+// rig's tests check.
+export function reachAt(env: Envelopes, at: Point, s: number, total: number, lands: boolean): Reach {
+  const r = envelopeAt(env, s, total, lands);
+  return { ...r, down: Math.min(r.down, Math.max(0, -at.y)) };
 }
 
 // The stretches of each ledge a route passes low over: where its envelope
@@ -175,25 +190,27 @@ export const reversed = (r: Route): Route => ({ ...r, curves: [...r.curves].reve
 // climb speeding up to SPEED, then on at SPEED. In: at SPEED until the last
 // LAND_RUN, slowing evenly to touch down.
 export type Phase = 'takeoff' | 'fly' | 'land';
-export type InFlight = { at: Point; pose: Phase; s: number; done: boolean };
+// `t` is how far through its take-off or landing it is (0 to 1), and `ms`
+// how long it has been flying.
+export type InFlight = { at: Point; pose: Phase; s: number; done: boolean; t: number; ms: number };
 export function flying(track: Track, ms: number, lands: boolean): InFlight {
   const total = lengthOfTrack(track);
   if (!lands) {
-    const s = ms < TAKEOFF ? LIFT_RUN * (ms / TAKEOFF) ** 2 : LIFT_RUN + (SPEED * (ms - TAKEOFF)) / 1000;
-    return { at: along(track, Math.min(s, total)), pose: ms < TAKEOFF ? 'takeoff' : 'fly', s, done: s >= total };
+    const s = ms < TAKEOFF ? LIFT_RUN * (Math.max(0, ms - PREP) / (TAKEOFF - PREP)) ** 2 : LIFT_RUN + (SPEED * (ms - TAKEOFF)) / 1000;
+    return { at: along(track, Math.min(s, total)), pose: ms < TAKEOFF ? 'takeoff' : 'fly', s, done: s >= total, t: clamp01(ms / TAKEOFF), ms };
   }
   const cruise = Math.max(0, total - LAND_RUN);
   const reach = (1000 * cruise) / SPEED;
-  if (ms < reach) return { at: along(track, (SPEED * ms) / 1000), pose: 'fly', s: (SPEED * ms) / 1000, done: false };
+  if (ms < reach) return { at: along(track, (SPEED * ms) / 1000), pose: 'fly', s: (SPEED * ms) / 1000, done: false, t: 0, ms };
   const k = clamp01((ms - reach) / LAND);
   const s = cruise + (total - cruise) * (1 - (1 - k) ** 2);
-  return { at: along(track, s), pose: 'land', s, done: k >= 1 };
+  return { at: along(track, s), pose: 'land', s, done: k >= 1 - 1e-9, t: k, ms };
 }
 // How long a flight takes, to its exit or its touchdown.
 export function durationOf(track: Track, lands: boolean): number {
   const total = lengthOfTrack(track);
   if (lands) return (1000 * Math.max(0, total - LAND_RUN)) / SPEED + LAND;
-  return total <= LIFT_RUN ? TAKEOFF * Math.sqrt(total / LIFT_RUN) : TAKEOFF + (1000 * (total - LIFT_RUN)) / SPEED;
+  return total <= LIFT_RUN ? PREP + (TAKEOFF - PREP) * Math.sqrt(total / LIFT_RUN) : TAKEOFF + (1000 * (total - LIFT_RUN)) / SPEED;
 }
 // The wings fold over this long once it has landed.
 export const FOLD = 300;
