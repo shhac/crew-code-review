@@ -22,7 +22,7 @@ from pathlib import Path
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from art import EyeScale, by_colour, crop, cut, export, export_with_fur, keyed  # noqa: E402
+from art import EyeScale, by_colour, crop, cut, export, export_with_fur, feature, keyed  # noqa: E402
 import numpy as np  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
@@ -112,7 +112,7 @@ def main() -> None:
     w, h = export(flight['tail-fan'], OUT, 'pigeon-tail-fan', length / flight['tail-fan'].shape[1])
     print(f'pigeon-tail-fan: {w / RES:.2f}x{h / RES:.2f}')
 
-    hawk = EyeScale(HERE, HAWK_EYES, HAWK_EYE, RES, dark_below=HAWK_DARK)
+    hawk = EyeScale(HERE, HAWK_EYES, HAWK_EYE, RES, measure=lambda path, seed: feature(path, seed, HAWK_DARK))
     for sheet in HAWK_EYES:
         print(f'{sheet}: eye {hawk.px(sheet):.1f}px')
     hawk.reference('hawk-pose-glide-2.png', LAB, 'hawk-pose-glide')

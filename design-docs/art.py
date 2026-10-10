@@ -199,12 +199,12 @@ class EyeScale:
     reference's, moved by margin so a frame round it has a margin. measure
     says how big the feature is in a sheet, given where it is: feature (a
     dark blob) by default, or another where an eye cannot be told from the
-    fur round it (a bumblebee's, in its black head)."""
+    fur round it (a bumblebee's, in its black head) or than which only a
+    darker blob counts (a brown hawk's: feature with a lower dark_below)."""
 
     def __init__(self, here: Path, eyes: dict[str, tuple[int, int]], eye: float, res: int, margin: int = 1,
-                 measure: Callable[[Path, tuple[int, int]], float] | None = None, dark_below: int = 200):
-        self.here, self.eyes, self.eye, self.res, self.margin = here, eyes, eye, res, margin
-        self.measure = measure or (lambda path, seed: feature(path, seed, dark_below))
+                 measure: Callable[[Path, tuple[int, int]], float] = feature):
+        self.here, self.eyes, self.eye, self.res, self.margin, self.measure = here, eyes, eye, res, margin, measure
         self.standing = np.zeros((0, 0, 4), np.uint8)
         self.standing_sheet = ''
 
