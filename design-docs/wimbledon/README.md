@@ -1,10 +1,10 @@
 # Summer tennis (2026-10-10)
 
-**Status**: being built. Done: the birds' parts cut and exported, the
-shelf, the court lines (see "As built" under each). Waiting on the bird kit
-(legs, gait with head bob, flight poses, the envelope check) and the
-surfaces kit (courts, exits, the `?theme-cue=` cue) for the rigs, the
-flights and the rally.
+**Status**: being built, on the bird and surfaces kits. Done: the birds'
+parts, the shelf, the court lines, the pure models, the pigeon's and the
+hawk's rigs in the critters lab, and the layer drawing it all (see "As
+built" under each). Still to do: the overlay contract's row, the Linux-font
+check and switching the month on.
 
 **Pins**: written against `ea7e9d5` (the hedgehog rebuilt from one drawing and
 the robin kept mounted). Code-internal, except the research sources below.
@@ -204,11 +204,21 @@ August's gull, September's crows and February's cupids can use it.
 - **Reduced motion**: no flight at all. The pigeons stand still on their
   spots; there is no hawk and no ball.
 
-**As built**: until the surfaces and bird kits land, the models take the
-air check as a function (`flight.ts`'s `Sky`: `clear(box)`, true for a box
-in air or wholly past an exit, and the exits' x), so the kits' check plugs
-in unchanged; the tests use a stand-in with these rules (`fixtures.ts`'s
-`testSky`). Three things the building showed:
+**As built**: the models take the air as `flight.ts`'s `Sky` (`clear(box)`,
+true for a box in air or wholly past an exit, and the exits' x), built by
+`airspace.ts`'s `skyOf` on the surfaces kit: `air.ts`'s `boundsOf` with all
+three exits and its `fits`, which counts only the part of a box still in
+sight. The kit keeps a flier 4px from everything, cards too; this contract
+lets a bird touch the top of the card it stands on, leaves or lands on, and
+reach 6px into the empty bottom edge of a card above, so `skyOf` hands the
+kit the cards trimmed by those amounts (`julyObstacles`). The tests use the
+same air on their fixture pages. Rows and the hawk's lane are the kit's
+(`rowsOf`, `laneOf`), as are the rally's courts (`gaps.ts`'s `courts`).
+The kit's `sweptPath` checks a route curve by curve with one envelope for
+each; a pigeon's envelope changes along its route (below), and held at
+each curve's largest, no pigeon could leave the overview, so July keeps its
+own sampled check (`routeClear`, a box every 4px, each pair joined) on the
+kit's `fits`. Three things the building showed:
 
 - **The envelope changes through take-off and landing.** A bird lifting off
   with its wings clapped overhead is taller than one flapping, and one
@@ -283,11 +293,13 @@ leaves already gliding, its flapping done out of sight), at 4.5 beats a
 second, two or three beats at a time. Its eye blinks with the nictitating
 membrane (below). It never lands.
 
-**As built** (`hawk.ts`): rows are found by the month itself (`rowsOf`),
-and the lane is checked with the glide's box swept 4px over the row's
-first ledge from the rail's edge to past the window's right edge; with no
-rail column (a phone) the hawk comes in from the window's left edge, which
-only it may use (pigeons have no exit there). The simulation runs every
+**As built** (`hawk.ts`): rows and the lane are the surfaces kit's
+(`rowsOf`, and `laneOf` with the glide's box, its 1px rise and fall
+included, 4px over the row, from behind the rail to past the window's right
+edge). A sweep needs both ends to be exits, so on a phone, where the rail is
+stacked above main and is no exit, there is no sweep: the hawk would have
+had to appear in view at main's left edge (a change from the first plan,
+which let it in from the window's left edge). The simulation runs every
 frame (60 a second) from the hawk's start until the last pigeon is out,
 each bird's box joined to its last frame's so nothing between frames is
 missed, every box in air or past an exit, and no two visible birds within
@@ -445,6 +457,12 @@ bounce turns its head to it. No sweep is planned during a rally, and no
 rally starts while a bird is flying or away.
 
 **Reduced motion**: no ball.
+
+**As built**, the court's air: a rally takes each card's top from the net
+out past its farthest bounce spot by the room an out ball's bounces and
+roll need (38px), not the whole card, or with pigeons on the first row a
+rally could never start; an out ball lands deep within the bounce spots
+and bounces and rolls on outward from there.
 
 **As built** (`rally.ts`): everything is in court-local coordinates from
 the left card's top left, so the ball rides with the cards. The court's two
@@ -618,6 +636,22 @@ rule for birds rather than this species, it says so.
   a singles court 8.23m, so each tramline is 1.37m in; the baseline carries a
   centre mark 10cm long, drawn inside the court; a ball is 6.54 to 6.86cm
   across.
+
+### The layer, as built
+
+`summer.ts` steps everything together each frame: the flock and its hawk
+first (kept off the court while a ball is in play), then the rally (served
+only on a court with no pigeon in its air, no bird in the air and no sweep
+under way), then the chalk a bounce kicks up within 3px of a mark.
+`WimbledonLayer.svelte` measures the page into `summerOf` (its air on the
+kits and its courts), places everything through `placeTroupe`, and draws
+the lines, the chalk specks, the ball (an optic-yellow disc 6px across, its
+white seam turning with its spin, squashed as it bounces), the pigeons
+(`data-pigeon`, their mode) and the hawk (`data-hawk`) on their rigs. The
+test-only cue starts things at once: `?theme-cue=sweep` brings the hawk
+0.3s after the pigeons are placed, `?theme-cue=rally` the first serve.
+`e2e/wimbledon.spec.ts` uses them to watch a sweep and a rally frame by
+frame for anything drawn over content.
 
 ## Art plan
 
