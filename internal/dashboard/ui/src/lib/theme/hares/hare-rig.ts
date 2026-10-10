@@ -1,7 +1,7 @@
 import type { Point } from '../pointer';
-import { beatsFor, flightAt, flightLift, gaitPhase, legsTo, onSoles, restingFeet, stepping, type Gait, type Landings, type QuadLeg, type Step } from '../rig/gait';
+import { beatsFor, flightAt, flightLift, gaitPhase, legsTo, onSoles, restingFeet, stepping, type Gait, type Landings, type Step } from '../rig/gait';
 import { blinking, breath } from '../rig/life';
-import { legsAround, lidLayers, turnAbout, turned, type Foot, type Frame, type Fur, type Layer, type LegArt, type RigPose, type Turn } from '../rig/rig';
+import { legsAround, lidLayers, turnAbout, turned, type ArtLeg, type Foot, type Frame, type Fur, type Layer, type LimbArt, type RigPose, type Turn } from '../rig/rig';
 import { hash } from '../seed';
 import { clamp } from '../spidergait';
 import bodyArt from './hare-body.webp';
@@ -54,11 +54,7 @@ export const REFERENCE = { x: 1, y: 1, width: 22.5, height: 22.42 };
 const FACE: Fur = { fill: '#d39552', outline: '#0b0503' };
 const HIND_TOES: Foot = { src: hindToesArt, fur: hindToesFurArt, width: 2.58, height: 1, heel: { x: 0.41, y: 0.38 } };
 const FORE_TOES: Foot = { src: foreToesArt, fur: foreToesFurArt, width: 1.67, height: 0.83, heel: { x: 0.33, y: 0.21 } };
-const LEG_ART: LegArt = {
-  bone: legArt, boneFur: legFurArt, knee: true,
-  thigh: { src: thighArt, fur: thighFurArt },
-  feet: { fore: FORE_TOES, hind: HIND_TOES },
-};
+const legArtOn = (foot: Foot): LimbArt => ({ bone: legArt, boneFur: legFurArt, knee: true, thigh: { src: thighArt, fur: thighFurArt }, foot });
 const LEG_WIDTH = 1.25;
 // A long foot laid flat rests its bone on the ledge, as thick as the leg,
 // a pixel above its edge, on the rule's line: a row of tabs can start a
@@ -72,9 +68,9 @@ const FEET = GROUND - LEG_WIDTH / 2 - 0.7;
 // near foreleg near upright from the shoulder, the elbow behind the chest,
 // the wrist just off the ground. The far pair a little apart from the near,
 // as they would be seen.
-const HIND_LEG = { thigh: 3.1, shin: 4.8, bend: 1, fore: false, haunch: 3.8, taper: true, reach: 0.5, walksOn: { kind: 'toes', length: 4.6, lean: 35, fold: 40 } } as const;
-const FORE_LEG = { thigh: 2.9, shin: 5, bend: -1, fore: true, haunch: 1.6, reach: -0.2, walksOn: { kind: 'toes', length: 1, lean: 30, fold: 45 } } as const;
-const LEGS: QuadLeg[] = [
+const HIND_LEG = { art: legArtOn(HIND_TOES), width: LEG_WIDTH, thigh: 3.1, shin: 4.8, bend: 1, fore: false, haunch: 3.8, taper: true, reach: 0.5, walksOn: { kind: 'toes', length: 4.6, lean: 35, fold: 40 } } as const;
+const FORE_LEG = { art: legArtOn(FORE_TOES), width: LEG_WIDTH, thigh: 2.9, shin: 5, bend: -1, fore: true, haunch: 1.6, reach: -0.2, walksOn: { kind: 'toes', length: 1, lean: 30, fold: 45 } } as const;
+const LEGS: ArtLeg[] = [
   { ...HIND_LEG, hip: { x: 5.8, y: 13.1 }, far: true },
   { ...FORE_LEG, hip: { x: 18.2, y: 13.9 }, far: true },
   { ...HIND_LEG, hip: { x: 7.4, y: 13.6 }, far: false },
@@ -124,11 +120,11 @@ export function gazeAt(dir: 1 | -1, at: Point, cursor: Point | null): number {
 // How the hare stands: its body's turn, its head's (positive turns the nose
 // down), its ears' (negative lays them back), which legs (on their soles or
 // toes), where its feet go, and where each is in its step.
-type Stance = { body: Turn; head: number; ears: number; legs: readonly QuadLeg[]; feet: (hips: readonly Point[]) => Point[]; steps: Step[] };
+type Stance = { body: Turn; head: number; ears: number; legs: readonly ArtLeg[]; feet: (hips: readonly Point[]) => Point[]; steps: Step[] };
 
 // Feet planted on the ledge, fore and hind each set this far from its hip.
 const planted = (foreBy: number, hindBy: number) => (hips: readonly Point[]) => hips.map((h, i) => ({ x: h.x + (LEGS[i].fore ? foreBy : hindBy), y: FEET }));
-const still = (body: Turn, head: number, ears: number, legs: readonly QuadLeg[] = LEGS, feet = (hips: readonly Point[]) => restingFeet(LEGS, hips, FEET)): Stance =>
+const still = (body: Turn, head: number, ears: number, legs: readonly ArtLeg[] = LEGS, feet = (hips: readonly Point[]) => restingFeet(LEGS, hips, FEET)): Stance =>
   ({ body, head, ears, legs, feet, steps: [] });
 
 // An ear flick now and then, grazing: a quick twitch at a seeded moment in
@@ -157,7 +153,7 @@ function stretched(feet: readonly Point[], hips: readonly Point[], phase: number
 
 // Flying between ledges, the hind legs stream out behind, the long foot in
 // line with the shank rather than standing up from the toes.
-const TRAILING: QuadLeg[] = LEGS.map((s) => (s.fore || s.walksOn?.kind !== 'toes' ? s : { ...s, walksOn: { ...s.walksOn, lean: -70 } }));
+const TRAILING: ArtLeg[] = LEGS.map((s) => (s.fore || s.walksOn?.kind !== 'toes' ? s : { ...s, walksOn: { ...s.walksOn, lean: -70 } }));
 
 // Each tuned against its key pose (design-docs/hares/hare-pose-*.png, laid
 // over the rig in the critters lab).
@@ -231,7 +227,7 @@ export function hareRig(hare: RigHare, look: HareLook): RigPose {
   };
   return {
     ...FRAME,
-    layers: legsAround(specs, legs, LEG_ART, LEG_WIDTH, { kind: 'group', turn: body, scaleY: breathing, layers: [{ kind: 'image', name: 'body', src: bodyArt, ...BODY }, headLayer] }),
+    layers: legsAround(specs, legs, { kind: 'group', turn: body, scaleY: breathing, layers: [{ kind: 'image', name: 'body', src: bodyArt, ...BODY }, headLayer] }),
     guides: [
       { name: 'stands here', at: ANCHOR }, { name: 'neck', at: turned(body, NECK) }, { name: 'ear base', at: turned(body, turned(nod, EAR_BASE)) },
       { name: 'eye', at: turned(body, turned(nod, EYE)) }, { name: 'nose', at: turned(body, turned(nod, NOSE)) },

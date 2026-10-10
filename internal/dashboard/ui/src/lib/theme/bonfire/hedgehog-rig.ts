@@ -1,7 +1,7 @@
 import type { Point } from '../pointer';
-import { gaitPhase, legsTo, restingFeet, stepping, type Gait, type QuadLeg, type Step } from '../rig/gait';
+import { gaitPhase, legsTo, restingFeet, stepping, type Gait, type Step } from '../rig/gait';
 import { blinking, breath, snuffle } from '../rig/life';
-import { legsAround, lidLayers, stillPicture, turnAbout, turned, type Foot, type Frame, type Fur, type LegArt, type Layer, type RigPose, type Turn } from '../rig/rig';
+import { legsAround, lidLayers, stillPicture, turnAbout, turned, type ArtLeg, type Foot, type Frame, type Fur, type Layer, type LimbArt, type RigPose, type Turn } from '../rig/rig';
 import { clamp } from '../spidergait';
 import { moving, type Hog } from './hedgehog';
 import ballArt from './hedgehog-ball.webp';
@@ -38,25 +38,21 @@ export const REFERENCE = { x: 1, y: 1, width: 24.42, height: 16.58 };
 const BALL = { name: 'ball', src: ballArt, width: 17, height: 16.58 };
 // Too short to show a knee: one stubby piece, hip to heel, on its sole. The
 // front feet are short and broad like little hands, the hind ones longer.
-const LEG_ART: LegArt = {
-  bone: legArt, boneFur: legFurArt, knee: false, overFoot: true,
-  feet: {
-    fore: { src: handArt, fur: handFurArt, width: 3.42, height: 2, heel: { x: 1.16, y: 0.65 } },
-    hind: { src: hindArt, fur: hindFurArt, width: 4, height: 2, heel: { x: 1.16, y: 0.65 } },
-  },
-};
+const HAND: Foot = { src: handArt, fur: handFurArt, width: 3.42, height: 2, heel: { x: 1.16, y: 0.65 } };
+const HIND_FOOT: Foot = { src: hindArt, fur: hindFurArt, width: 4, height: 2, heel: { x: 1.16, y: 0.65 } };
+const legArtOn = (foot: Foot): LimbArt => ({ bone: legArt, boneFur: legFurArt, knee: false, overFoot: true, foot });
 const LEG_WIDTH = 2.6;
 // Where each leg ends: its heel, as high as the foot under it stands.
-const FEET = GROUND - (LEG_ART.feet.hind.height - LEG_ART.feet.hind.heel.y);
+const FEET = GROUND - (HIND_FOOT.height - HIND_FOOT.heel.y);
 const FACE: Fur = { fill: '#fdd79b', outline: '#140c05' };
 
 // Hips just inside the belly, over the feet as the drawing stands them; the
 // far pair a little apart from the near, as it would be seen. Each foot's
 // heel peels up over the tips of its toes as it pushes off.
 const soleOf = (foot: Foot) => ({ kind: 'sole', toes: { x: foot.width - foot.heel.x, y: foot.height - foot.heel.y }, peel: 30 }) as const;
-const HIND = { reach: 0, thigh: 1, shin: 1, bend: 1, fore: false, walksOn: soleOf(LEG_ART.feet.hind) } as const;
-const FORE = { reach: 0.2, thigh: 1, shin: 1, bend: -1, fore: true, walksOn: soleOf(LEG_ART.feet.fore) } as const;
-const LEGS: QuadLeg[] = [
+const HIND = { reach: 0, thigh: 1, shin: 1, bend: 1, fore: false, art: legArtOn(HIND_FOOT), width: LEG_WIDTH, walksOn: soleOf(HIND_FOOT) } as const;
+const FORE = { reach: 0.2, thigh: 1, shin: 1, bend: -1, fore: true, art: legArtOn(HAND), width: LEG_WIDTH, walksOn: soleOf(HAND) } as const;
+const LEGS: ArtLeg[] = [
   { ...HIND, hip: { x: 5.9, y: 14.6 }, far: false },
   { ...FORE, hip: { x: 15.5, y: 14.6 }, far: false },
   { ...HIND, hip: { x: 9.9, y: 14.8 }, far: true },
@@ -150,7 +146,7 @@ export function hogRig(hog: Hog, look: HogLook): RigPose {
   };
   return {
     ...FRAME,
-    layers: legsAround(LEGS, legs, LEG_ART, LEG_WIDTH, { kind: 'group', turn: body, layers: [{ kind: 'image', name: 'body', src: bodyArt, ...BODY }, head] }),
+    layers: legsAround(LEGS, legs, { kind: 'group', turn: body, layers: [{ kind: 'image', name: 'body', src: bodyArt, ...BODY }, head] }),
     guides: [
       { name: 'stands here', at: ANCHOR }, { name: 'neck', at: turned(body, NECK) }, { name: 'eye', at: turned(body, turned(nod, EYE)) },
       { name: 'nose', at: turned(body, turned(nod, NOSE)) },

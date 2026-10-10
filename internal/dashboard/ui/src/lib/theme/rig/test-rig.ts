@@ -1,6 +1,6 @@
 // Queries over a rig's drawing, shared by the animals' rig tests.
 import type { Point } from '../pointer';
-import { footBox, piecesOf, turnAbout, turned, type DrawnLeg, type Layer, type LegArt, type RigPose } from './rig';
+import { footBox, piecesOf, turnAbout, turned, type DrawnLeg, type Layer, type RigPose } from './rig';
 
 export const flatLayers = (layers: readonly Layer[]): Layer[] => layers.flatMap((l) => (l.kind === 'group' ? [l, ...flatLayers(l.layers)] : [l]));
 // Each leg once (from the outlined pass, not again from the fur over it),
@@ -15,14 +15,14 @@ export const firstShut = (poseAt: (now: number) => RigPose) => Array.from({ leng
 const corners = (x0: number, y0: number, x1: number, y1: number): Point[] => [{ x: x0, y: y0 }, { x: x1, y: y0 }, { x: x0, y: y1 }, { x: x1, y: y1 }];
 
 // A foot's box's corners, turned as its paw folds or its sole rolls.
-function footCorners(leg: DrawnLeg, art: LegArt): Point[] {
-  const b = footBox(leg, art);
+function footCorners(leg: DrawnLeg): Point[] {
+  const b = footBox(leg);
   const turn = turnAbout(leg.limb.paw, leg.limb.foot);
   return corners(b.x, b.y, b.x + b.width, b.y + b.height).map((p) => turned(turn, p));
 }
 
 // How low each foot reaches, in the order legsOf lists the legs.
-export const solesOf = (pose: RigPose) => flatLayers(pose.layers).flatMap((l) => (l.kind === 'legs' && !l.fur ? l.legs.map((leg) => Math.max(...footCorners(leg, l.art).map((c) => c.y))) : []));
+export const solesOf = (pose: RigPose) => flatLayers(pose.layers).flatMap((l) => (l.kind === 'legs' && !l.fur ? l.legs.map((leg) => Math.max(...footCorners(leg).map((c) => c.y))) : []));
 
 export const guideAt = (pose: RigPose, name: string) => pose.guides?.find((g) => g.name === name)?.at;
 
@@ -36,9 +36,9 @@ function reach(l: Exclude<Layer, { kind: 'group' }>): Point[] {
     case 'legs': {
       // Each piece runs half its thickness past its joints, every way; each
       // foot is its own box.
-      const pieces = l.legs.flatMap((leg) => piecesOf(leg, l.art, l.width));
+      const pieces = l.legs.flatMap(piecesOf);
       const joints = pieces.flatMap((p) => [p.from, p.to].flatMap((at) => corners(at.x - p.width / 2, at.y - p.width / 2, at.x + p.width / 2, at.y + p.width / 2)));
-      const feet = l.legs.flatMap((leg) => footCorners(leg, l.art));
+      const feet = l.legs.flatMap(footCorners);
       return [...joints, ...feet];
     }
   }

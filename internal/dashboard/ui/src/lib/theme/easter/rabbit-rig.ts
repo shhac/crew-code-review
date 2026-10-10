@@ -1,7 +1,7 @@
 import type { Point } from '../pointer';
-import { beatsFor, flightLift, gaitPhase, legsTo, stepping, type Gait, type QuadLeg, type Step } from '../rig/gait';
+import { beatsFor, flightLift, gaitPhase, legsTo, stepping, type Gait, type Step } from '../rig/gait';
 import { blinking, snuffle } from '../rig/life';
-import { lidLayers, turnAbout, turned, type DrawnLeg, type Foot, type Frame, type Fur, type Layer, type LegArt, type RigPose, type Turn } from '../rig/rig';
+import { legsAround, lidLayers, turnAbout, turned, type ArtLeg, type Foot, type Frame, type Fur, type Layer, type LimbArt, type RigPose, type Turn } from '../rig/rig';
 import { clamp } from '../spidergait';
 import bodyArt from './rabbit-body.webp';
 import earsArt from './rabbit-ears.webp';
@@ -52,14 +52,12 @@ const FACE: Fur = { fill: '#a89273', outline: '#120d09' };
 // forepaw; each with where its leg comes down onto it.
 const FOOT: Foot = { src: footArt, fur: footFurArt, width: 4.42, height: 2.17, heel: { x: 0.62, y: 0.69 } };
 const PAW: Foot = { src: pawArt, fur: pawFurArt, width: 1.92, height: 1.17, heel: { x: 0.46, y: 0.35 } };
-const HIND_ART: LegArt = {
+const HIND_ART: LimbArt = {
   bone: legArt, boneFur: legFurArt, knee: true, overFoot: true,
   thigh: { src: haunchArt, fur: haunchFurArt },
-  feet: { fore: FOOT, hind: FOOT },
+  foot: FOOT,
 };
-const FORE_ART: LegArt = { bone: forelegArt, boneFur: forelegFurArt, knee: true, feet: { fore: PAW, hind: PAW } };
-const HIND_WIDTH = 1.9;
-const FORE_WIDTH = 1.45;
+const FORE_ART: LimbArt = { bone: forelegArt, boneFur: forelegFurArt, knee: true, foot: PAW };
 // Where each leg ends: the hind leg on its heel, as high as the foot under it
 // stands; a foreleg's toes on the ledge.
 const HEEL = GROUND - (FOOT.height - FOOT.heel.y);
@@ -74,11 +72,11 @@ const TOES = GROUND - (PAW.height - PAW.heel.y);
 // elbow, the forearm down to the wrist (the carpus), and a short bone to the
 // forepaw, which folds back as it swings. The far pair a little apart.
 const HIND_LEG = {
-  thigh: 3.3, shin: 3.4, bend: 1, fore: false, haunch: 3.2, taper: true, reach: -0.6,
+  art: HIND_ART, width: 1.9, thigh: 3.3, shin: 3.4, bend: 1, fore: false, haunch: 3.2, taper: true, reach: -0.6,
   walksOn: { kind: 'sole', toes: { x: FOOT.width - FOOT.heel.x, y: FOOT.height - FOOT.heel.y }, peel: 62 },
 } as const;
-const FORE_LEG = { thigh: 2, shin: 2.4, bend: -1, fore: true, haunch: 1.7, reach: 0.3, walksOn: { kind: 'toes', length: 0.8, lean: 6, fold: 60 } } as const;
-const LEGS: QuadLeg[] = [
+const FORE_LEG = { art: FORE_ART, width: 1.45, thigh: 2, shin: 2.4, bend: -1, fore: true, haunch: 1.7, reach: 0.3, walksOn: { kind: 'toes', length: 0.8, lean: 6, fold: 60 } } as const;
+const LEGS: ArtLeg[] = [
   { ...HIND_LEG, hip: { x: 7.6, y: 11.4 }, far: true },
   { ...FORE_LEG, hip: { x: 15.5, y: 12.2 }, far: true },
   { ...HIND_LEG, hip: { x: 6.4, y: 11.6 }, far: false },
@@ -237,17 +235,6 @@ function stamping(rabbit: RigRabbit): Step[] {
   return LEGS.map((l) => (l.fore ? { down: true, t: 0 } : up));
 }
 
-// The legs of one side, outlined or as fur alone, hind and fore each with
-// their own art.
-function sideLegs(legs: readonly DrawnLeg[], far: boolean, fur: boolean): Layer[] {
-  const of = (isFore: boolean) => legs.filter((d, i) => LEGS[i].far === far && d.fore === isFore);
-  const name = far ? 'far legs' : 'near legs';
-  return [
-    { kind: 'legs', name: `${name}, hind`, legs: of(false), art: HIND_ART, width: HIND_WIDTH, far, fur },
-    { kind: 'legs', name: `${name}, fore`, legs: of(true), art: FORE_ART, width: FORE_WIDTH, far, fur },
-  ];
-}
-
 // From one pose into the next: the body, head, ears and tail turn, and the
 // feet move, smoothly over EASE ms, so nothing snaps. The feet every pose
 // plants are the same, so none slides.
@@ -284,7 +271,6 @@ export function rabbitRig(rabbit: RigRabbit, look: RabbitLook): RigPose {
   const hips = LEGS.map((s) => turned(body, s.hip));
   const stamp = look.still ? [] : stamping(rabbit);
   const limbs = legsTo(LEGS, hips, feet(hips), stamp.length ? stamp : steps);
-  const legs: DrawnLeg[] = limbs.map((limb, i) => ({ limb, haunch: LEGS[i].haunch ?? HIND_WIDTH, fore: LEGS[i].fore, taper: !!LEGS[i].taper }));
   const nod = turnAbout(angle, NECK);
   const shut = !look.still && blinking(rabbit.seed, look.now);
   const headLayers: Layer = {
@@ -305,10 +291,7 @@ export function rabbitRig(rabbit: RigRabbit, look: RabbitLook): RigPose {
   };
   return {
     ...FRAME,
-    // The far legs behind the body, outlined then as fur; the near legs
-    // outlined behind it too, their fur then over its edge, so they grow out
-    // of it with no line across.
-    layers: [...sideLegs(legs, true, false), ...sideLegs(legs, true, true), ...sideLegs(legs, false, false), torso, ...sideLegs(legs, false, true)],
+    layers: legsAround(LEGS, limbs, torso),
     guides: [
       { name: 'stands here', at: ANCHOR }, { name: 'tail root', at: turned(body, TAIL_ROOT) }, { name: 'neck', at: turned(body, NECK) },
       { name: 'ear base', at: turned(body, turned(nod, EAR_BASE)) },

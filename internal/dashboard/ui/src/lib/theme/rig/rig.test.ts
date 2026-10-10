@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { legImages, transformOf, turnAbout, turned, type DrawnLeg, type LegArt, type RigPose } from './rig';
+import { legImages, transformOf, turnAbout, turned, type DrawnLeg, type LimbArt, type RigPose } from './rig';
 import { rigBounds } from './test-rig';
 
 describe('turned', () => {
@@ -31,9 +31,9 @@ describe('rigBounds', () => {
 
 describe('legImages', () => {
   const foot = { src: 'foot.webp', fur: 'foot-fur.webp', width: 3, height: 2, heel: { x: 1, y: 0.5 } };
-  const art: LegArt = { bone: 'bone.webp', boneFur: 'bone-fur.webp', knee: false, feet: { fore: foot, hind: foot } };
-  const leg: DrawnLeg = { limb: { hip: { x: 0, y: 0 }, knee: { x: 0, y: 2 }, ankle: { x: 0, y: 4 }, foot: { x: 0, y: 4 }, paw: 0 }, haunch: 2, fore: true, taper: false };
-  const hrefs = (a: LegArt, fur: boolean) => legImages(leg, a, 2, fur).map((i) => i.href);
+  const art: LimbArt = { bone: 'bone.webp', boneFur: 'bone-fur.webp', knee: false, foot };
+  const leg: DrawnLeg = { limb: { hip: { x: 0, y: 0 }, knee: { x: 0, y: 2 }, ankle: { x: 0, y: 4 }, foot: { x: 0, y: 4 }, paw: 0 }, art, width: 2, haunch: 2, fore: true, taper: false };
+  const hrefs = (a: LimbArt, fur: boolean) => legImages({ ...leg, art: a }, fur).map((i) => i.href);
 
   it('draws the foot over the leg\'s end, or under it for a sole walker', () => {
     expect(hrefs(art, false)).toEqual(['bone.webp', 'foot.webp']);
@@ -42,9 +42,9 @@ describe('legImages', () => {
   });
 
   it('stretches the bones but not the foot, the fur pass running its first piece flush from the hip', () => {
-    const [bone, drawnFoot] = legImages(leg, art, 2, false);
+    const [bone, drawnFoot] = legImages(leg, false);
     expect([bone.stretch, drawnFoot.stretch]).toEqual([true, false]);
     expect(bone.x).toBe(-1);
-    expect(legImages(leg, art, 2, true)[0].x).toBeCloseTo(0);
+    expect(legImages(leg, true)[0].x).toBeCloseTo(0);
   });
 });

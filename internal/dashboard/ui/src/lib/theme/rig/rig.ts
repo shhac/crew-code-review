@@ -16,34 +16,38 @@ export type Fur = { fill: string; outline: string };
 // A foot (a paw, toes, a little hand), standing flat, toes forward; `heel`
 // is where the leg's end meets it, in its own box.
 export type Foot = { src: string; fur: string; width: number; height: number; heel: Point };
-// A leg's art: a bone piece (straight, lying along x, rounded at both ends)
-// laid along each bone, and a foot standing at the leg's end, the fore and
-// hind feet each their own. Each comes twice: as drawn, and as fur alone
-// with the outline taken out, which is drawn over the outlined pieces so
-// the outlines only show round the leg's silhouette, not where its pieces
-// meet. Legs too short to show a knee are one bone, hip to foot.
-export type LegArt = {
+// A limb's art: a bone piece (straight, lying along x, rounded at both
+// ends) laid along each bone, and the foot standing at its end. Each comes
+// twice: as drawn, and as fur alone with the outline taken out, which is
+// drawn over the outlined pieces so the outlines only show round the limb's
+// silhouette, not where its pieces meet. Limbs too short to show a knee are
+// one bone, hip to foot.
+export type LimbArt = {
   bone: string;
   boneFur: string;
   // The upper bone's own piece (thick at the hip, tapering to the knee), if
-  // the leg has one; drawn as thick as each leg's haunch.
+  // the limb has one; drawn as thick as each leg's haunch.
   thigh?: { src: string; fur: string };
-  feet: { fore: Foot; hind: Foot };
+  foot: Foot;
   knee: boolean;
   // A sole walker's leg is drawn over its foot, its rounded end the heel,
   // hiding the foot's back; otherwise the foot is drawn over the leg's end.
   overFoot?: boolean;
 };
-// One leg as drawn: its pose, how thick its upper piece is, which foot, and
-// whether its shank tapers to the hock (see QuadLeg).
-export type DrawnLeg = { limb: Limb; haunch: number; fore: boolean; taper: boolean };
+// A leg as an animal is put together: where it is and how it steps
+// (gait.ts), the art it is drawn with, and how thick its pieces are.
+export type ArtLeg = QuadLeg & { art: LimbArt; width: number };
+// One leg as drawn: its pose, its art and how thick its pieces are, how
+// thick its upper piece is, whether it is a foreleg (the lab names its foot
+// by it), and whether its shank tapers to the hock (see QuadLeg).
+export type DrawnLeg = { limb: Limb; art: LimbArt; width: number; haunch: number; fore: boolean; taper: boolean };
 
 export type Layer =
   // `far`: on the far side, seen past the body, a shade darker.
   | { kind: 'image'; name: string; src: string; x: number; y: number; width: number; height: number; far?: boolean }
-  // Each bone drawn with a piece of leg art `width` thick, then its foot;
-  // the far side shaded; `fur` for the pass of fur alone.
-  | { kind: 'legs'; name: string; legs: readonly DrawnLeg[]; art: LegArt; width: number; far: boolean; fur: boolean }
+  // Each bone drawn with a piece of its leg's art, then its foot; the far
+  // side shaded; `fur` for the pass of fur alone.
+  | { kind: 'legs'; name: string; legs: readonly DrawnLeg[]; far: boolean; fur: boolean }
   | { kind: 'lid'; at: Point; r: number; fur: Fur }
   // A line drawn in code through points (a bow's stave, its string), or
   // with `fill` a closed shape (an arrow's heart).
@@ -82,10 +86,13 @@ export function bone(from: Point, to: Point, thick: number, flush = false) {
   return { x: -start, y: -thick / 2, width: length + start + thick / 2, height: thick, transform: `translate(${from.x} ${from.y}) rotate(${angle})` };
 }
 
+const drawnLeg = (spec: ArtLeg, limb: Limb): DrawnLeg =>
+  ({ limb, art: spec.art, width: spec.width, haunch: spec.haunch ?? spec.width, fore: spec.fore, taper: !!spec.taper });
+
 // One side's legs, outlined or as fur alone.
-function legsLayer(specs: readonly QuadLeg[], limbs: readonly Limb[], art: LegArt, width: number, far: boolean, fur: boolean): Layer {
-  const legs = specs.flatMap((s, i) => (s.far === far ? [{ limb: limbs[i], haunch: s.haunch ?? width, fore: s.fore, taper: !!s.taper }] : []));
-  return { kind: 'legs', name: far ? 'far legs' : 'near legs', legs, art, width, far, fur };
+function legsLayer(specs: readonly ArtLeg[], limbs: readonly Limb[], far: boolean, fur: boolean): Layer {
+  const legs = specs.flatMap((s, i) => (s.far === far ? [drawnLeg(s, limbs[i])] : []));
+  return { kind: 'legs', name: far ? 'far legs' : 'near legs', legs, far, fur };
 }
 
 // The legs round the body, each where it belongs against it: they start
@@ -93,16 +100,21 @@ function legsLayer(specs: readonly QuadLeg[], limbs: readonly Limb[], art: LegAr
 // alone so no line crosses where their pieces meet; the near legs outlined
 // behind it too, their fur then over its edge, so they grow out of it with
 // no line across.
-export function legsAround(specs: readonly QuadLeg[], limbs: readonly Limb[], art: LegArt, width: number, body: Layer): Layer[] {
-  const side = (far: boolean, fur: boolean) => legsLayer(specs, limbs, art, width, far, fur);
+export function legsAround(specs: readonly ArtLeg[], limbs: readonly Limb[], body: Layer): Layer[] {
+  const side = (far: boolean, fur: boolean) => legsLayer(specs, limbs, far, fur);
   return [side(true, false), side(true, true), side(false, false), body, side(false, true)];
 }
+
+// One limb on its own, outlined then as fur alone, for an animal that sets
+// its limbs among its other parts itself.
+export const limbLayers = (name: string, leg: DrawnLeg, far: boolean): Layer[] =>
+  [false, true].map((fur) => ({ kind: 'legs', name, legs: [leg], far, fur }));
 
 // The pieces a leg is drawn with: a piece of art laid along each bone, as
 // thick as it is drawn, outlined and as fur alone.
 export type Piece = { from: Point; to: Point; width: number; src: string; fur: string };
-export function piecesOf(leg: DrawnLeg, art: LegArt, width: number): Piece[] {
-  const { hip, knee, ankle, foot } = leg.limb;
+export function piecesOf(leg: DrawnLeg): Piece[] {
+  const { limb: { hip, knee, ankle, foot }, art, width } = leg;
   const plain = { src: art.bone, fur: art.boneFur };
   if (!art.knee) return [{ from: hip, to: foot, width, ...plain }];
   const upper = { from: hip, to: knee, width: leg.haunch, ...(art.thigh ?? plain) };
@@ -112,10 +124,9 @@ export function piecesOf(leg: DrawnLeg, art: LegArt, width: number): Piece[] {
   return [upper, shank, ...toes];
 }
 
-export const footOf = (leg: DrawnLeg, art: LegArt) => (leg.fore ? art.feet.fore : art.feet.hind);
 // A foot's box, and its turn about the heel as the bone above it folds.
-export function footBox(leg: DrawnLeg, art: LegArt) {
-  const foot = footOf(leg, art);
+export function footBox(leg: DrawnLeg) {
+  const { foot } = leg.art;
   const { x, y } = leg.limb.foot;
   return { x: x - foot.heel.x, y: y - foot.heel.y, width: foot.width, height: foot.height, transform: `rotate(${leg.limb.paw} ${x} ${y})` };
 }
@@ -125,11 +136,11 @@ export function footBox(leg: DrawnLeg, art: LegArt) {
 // flush from the hip, see bone), then the foot over the leg's end; or, for
 // a sole walker, the foot first, under the leg's rounded end, its heel.
 export type LegImage = { href: string; stretch: boolean; x: number; y: number; width: number; height: number; transform: string };
-export function legImages(leg: DrawnLeg, art: LegArt, width: number, fur: boolean): LegImage[] {
-  const pieces = piecesOf(leg, art, width).map((p, i) => ({ href: fur ? p.fur : p.src, stretch: true, ...bone(p.from, p.to, p.width, fur && i === 0) }));
-  const drawn = footOf(leg, art);
-  const foot = { href: fur ? drawn.fur : drawn.src, stretch: false, ...footBox(leg, art) };
-  return art.overFoot ? [foot, ...pieces] : [...pieces, foot];
+export function legImages(leg: DrawnLeg, fur: boolean): LegImage[] {
+  const pieces = piecesOf(leg).map((p, i) => ({ href: fur ? p.fur : p.src, stretch: true, ...bone(p.from, p.to, p.width, fur && i === 0) }));
+  const drawn = leg.art.foot;
+  const foot = { href: fur ? drawn.fur : drawn.src, stretch: false, ...footBox(leg) };
+  return leg.art.overFoot ? [foot, ...pieces] : [...pieces, foot];
 }
 
 // An eyelid over the eye at `at`, while the eye is shut.

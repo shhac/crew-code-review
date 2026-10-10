@@ -14,7 +14,7 @@
   {:else if layer.kind === 'legs'}
     <g data-legs={layer.fur ? 'fur' : 'outlined'} class:far={layer.far}>
       {#each layer.legs as leg}
-        {#each legImages(leg, layer.art, layer.width, layer.fur) as { href, stretch, ...box }}
+        {#each legImages(leg, layer.fur) as { href, stretch, ...box }}
           <image {href} preserveAspectRatio={stretch ? 'none' : undefined} {...box} />
         {/each}
       {/each}

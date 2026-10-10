@@ -197,7 +197,7 @@ export function flightLift(phase: number, gait: Gait, height: number): number {
 // as specified, 1 flat, the bone up from the toes laid along the ground
 // behind them from the hock to the toes. A hare or rabbit sits so, on its
 // long hind feet, and runs on its toes. By default the hind legs only.
-export const onSoles = (specs: readonly QuadLeg[], amount: number, which: (s: QuadLeg) => boolean = (s) => !s.fore): QuadLeg[] =>
+export const onSoles = <L extends QuadLeg>(specs: readonly L[], amount: number, which: (s: L) => boolean = (s) => !s.fore): L[] =>
   specs.map((s) => {
     const on = s.walksOn;
     if (on?.kind !== 'toes' || !which(s)) return s;

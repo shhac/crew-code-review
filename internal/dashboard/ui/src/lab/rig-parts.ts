@@ -22,12 +22,12 @@ export const allPartNames = (poses: readonly RigPose[]): string[] => poses.map(p
 export const partArt = (pose: RigPose): { name: string; src: string }[] => [...new Map(artOf(pose).map((a) => [a.name, a])).values()];
 const artOf = (pose: RigPose): { name: string; src: string }[] => leaves(pose.layers).flatMap((l) => {
   if (l.kind === 'image') return [{ name: l.name, src: l.src }];
-  if (l.kind === 'legs' && !l.far && !l.fur) {
-    const thigh = l.art.thigh ? [{ name: 'upper leg', src: l.art.thigh.src }, { name: 'upper leg, fur', src: l.art.thigh.fur }] : [];
-    const { fore, hind } = l.art.feet;
-    return [...thigh, { name: 'leg bone', src: l.art.bone }, { name: 'leg bone, fur', src: l.art.boneFur }, { name: 'front foot', src: fore.src }, { name: 'front foot, fur', src: fore.fur }, { name: 'hind foot', src: hind.src }, { name: 'hind foot, fur', src: hind.fur }];
-  }
-  return [];
+  if (l.kind !== 'legs' || l.far || l.fur) return [];
+  return l.legs.flatMap(({ art, fore }) => {
+    const thigh = art.thigh ? [{ name: 'upper leg', src: art.thigh.src }, { name: 'upper leg, fur', src: art.thigh.fur }] : [];
+    const foot = fore ? 'front foot' : 'hind foot';
+    return [...thigh, { name: 'leg bone', src: art.bone }, { name: 'leg bone, fur', src: art.boneFur }, { name: foot, src: art.foot.src }, { name: `${foot}, fur`, src: art.foot.fur }];
+  });
 });
 
 // The pose with only the parts `keep` allows, each still where it is.

@@ -1,7 +1,7 @@
 import type { Point } from '../pointer';
-import { gaitPhase, legsTo, restingFeet, stepping, type Gait, type Step, type QuadLeg } from '../rig/gait';
+import { gaitPhase, legsTo, restingFeet, stepping, type Gait, type Step } from '../rig/gait';
 import { blinking, breath } from '../rig/life';
-import { legsAround, lidLayers, stillPicture, turnAbout, turned, type Frame, type Fur, type LegArt, type RigPose, type Turn } from '../rig/rig';
+import { legsAround, lidLayers, stillPicture, turnAbout, turned, type ArtLeg, type Frame, type Fur, type LimbArt, type RigPose, type Turn } from '../rig/rig';
 import { leapt, poseOf, type Fox } from './fox';
 import alertArt from './fox-alert.webp';
 import curledArt from './fox-curled.webp';
@@ -50,10 +50,10 @@ const FACE: Fur = { fill: '#fbfcfc', outline: '#0a0809' };
 // to elbow), thick where it meets the body; the leg on down to the hock (or
 // wrist); a bone from there to the toes, which stand on the ledge.
 const TOES = { src: toesArt, fur: toesFurArt, width: 3.33, height: 1.42, heel: { x: 1, y: 0.42 } };
-const LEG_ART: LegArt = {
+const LEG_ART: LimbArt = {
   bone: legArt, boneFur: legFurArt, knee: true,
   thigh: { src: haunchArt, fur: haunchFurArt },
-  feet: { fore: TOES, hind: TOES },
+  foot: TOES,
 };
 const LEG_WIDTH = 2.1;
 
@@ -72,9 +72,9 @@ const LEG_WIDTH = 2.1;
 // pair lands this much of a stride before its fore foot, as a trotter's
 // tends to.
 const HIND_FIRST = 0.06;
-const HIND_LEG = { thigh: 2.3, shin: 2.1, bend: 1, fore: false, haunch: 2.6, taper: true, reach: -1, walksOn: { kind: 'toes', length: 1.5, lean: 10, fold: 70 } } as const;
-const FORE_LEG = { thigh: 2.3, shin: 3.6, bend: -1, fore: true, haunch: 2.4, reach: 0.3, walksOn: { kind: 'toes', length: 0.7, lean: 8, fold: 100 } } as const;
-const LEGS: QuadLeg[] = [
+const HIND_LEG = { art: LEG_ART, width: LEG_WIDTH, thigh: 2.3, shin: 2.1, bend: 1, fore: false, haunch: 2.6, taper: true, reach: -1, walksOn: { kind: 'toes', length: 1.5, lean: 10, fold: 70 } } as const;
+const FORE_LEG = { art: LEG_ART, width: LEG_WIDTH, thigh: 2.3, shin: 3.6, bend: -1, fore: true, haunch: 2.4, reach: 0.3, walksOn: { kind: 'toes', length: 0.7, lean: 8, fold: 100 } } as const;
+const LEGS: ArtLeg[] = [
   { ...HIND_LEG, hip: { x: 12.2, y: 11 }, far: true },
   { ...FORE_LEG, hip: { x: 21.9, y: 10.2 }, far: true },
   { ...HIND_LEG, hip: { x: 11.2, y: 11.2 }, far: false },
@@ -152,7 +152,7 @@ export function foxRig(fox: RigFox, look: FoxLook): RigPose {
     ...FRAME,
     // The legs start inside the body, its hips high in the rump and its
     // shoulders in the chest.
-    layers: legsAround(LEGS, legs, LEG_ART, LEG_WIDTH, {
+    layers: legsAround(LEGS, legs, {
       kind: 'group', turn: body,
       layers: [
         { kind: 'group', turn: turnAbout(tail, TAIL_ROOT), layers: [{ kind: 'image', name: 'tail', src: tailArt, ...TAIL }] },

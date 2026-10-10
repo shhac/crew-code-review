@@ -1,6 +1,6 @@
 import type { Point } from '../pointer';
 import { blinking } from '../rig/life';
-import { lidLayers, turnAbout, turned, type DrawnLeg, type Fur, type Layer, type LegArt, type RigPose, type Turn } from '../rig/rig';
+import { lidLayers, limbLayers, turnAbout, turned, type DrawnLeg, type Fur, type Layer, type LimbArt, type RigPose, type Turn } from '../rig/rig';
 import armFurArt from './cupid-arm-fur.webp';
 import armArt from './cupid-arm.webp';
 import bodyArt from './cupid-body.webp';
@@ -54,8 +54,8 @@ const ROSE = '#e8436b';
 // the end, each piece outlined and then as fur alone.
 const HAND = { src: handArt, fur: handFurArt, width: 2.42, height: 2.08, heel: { x: 0.35, y: 1.04 } };
 const FOOT = { src: footArt, fur: footFurArt, width: 3.17, height: 2.5, heel: { x: 1.2, y: 0.55 } };
-const ARM_ART: LegArt = { bone: armArt, boneFur: armFurArt, thigh: { src: armArt, fur: armFurArt }, knee: true, feet: { fore: HAND, hind: HAND } };
-const LEG_ART: LegArt = { bone: shinArt, boneFur: shinFurArt, thigh: { src: thighArt, fur: thighFurArt }, knee: true, feet: { fore: FOOT, hind: FOOT } };
+const ARM_ART: LimbArt = { bone: armArt, boneFur: armFurArt, thigh: { src: armArt, fur: armFurArt }, knee: true, foot: HAND };
+const LEG_ART: LimbArt = { bone: shinArt, boneFur: shinFurArt, thigh: { src: thighArt, fur: thighFurArt }, knee: true, foot: FOOT };
 const ARM = { upper: 2.5, fore: 2.4, width: 1.9 };
 const LEG = { thigh: 2.6, shin: 2.6, haunch: 2.7, width: 2.15 };
 // Shoulders and hips, in the body's own frame: the near arm hangs at the
@@ -122,7 +122,8 @@ function limb(root: Point, end: Point, first: number, second: number, side: 1 | 
   const knee = joint(root, end, first, second, side);
   return { hip: root, knee, ankle: end, foot: end, paw };
 }
-const drawn = (l: DrawnLeg['limb'], haunch: number): DrawnLeg => ({ limb: l, haunch, fore: true, taper: false });
+const arm = (l: DrawnLeg['limb']): DrawnLeg => ({ limb: l, art: ARM_ART, width: ARM.width, haunch: ARM.width, fore: true, taper: false });
+const leg = (l: DrawnLeg['limb']): DrawnLeg => ({ limb: l, art: LEG_ART, width: LEG.width, haunch: LEG.haunch, fore: true, taper: false });
 
 // The wings' stroke at this point of the beat: the angle the wing is turned
 // from as drawn (negative sweeps it down and back), how far it is squashed
@@ -307,8 +308,6 @@ export function cupidRig(cupid: RigCupid, look: CupidLook): RigPose {
     return { hip, knee, ankle: foot, foot, paw: 60 - shin };
   };
   const nearLeg = legOf(nearHip, 0), farLeg = legOf(farHip, -16);
-  const legs = (l: DrawnLeg['limb'], name: string, far: boolean, fur: boolean): Layer => ({ kind: 'legs', name, legs: [drawn(l, LEG.haunch)], art: LEG_ART, width: LEG.width, far, fur });
-  const arms = (l: DrawnLeg['limb'], name: string, far: boolean, fur: boolean): Layer => ({ kind: 'legs', name, legs: [drawn(l, ARM.width)], art: ARM_ART, width: ARM.width, far, fur });
   const nod = turnAbout(h.head, NECK);
   const drawnBow = bow(grip, h.aim, h.bend, nock);
   return {
@@ -316,9 +315,9 @@ export function cupidRig(cupid: RigCupid, look: CupidLook): RigPose {
     layers: [
       { kind: 'group', turn: body, layers: [wing(h.stroke, true), wing(h.stroke, false)] },
       ...drawnBow.stave,
-      arms(far, 'far arm', true, false), arms(far, 'far arm', true, true),
-      legs(farLeg, 'far leg', true, false), legs(farLeg, 'far leg', true, true),
-      legs(nearLeg, 'near leg', false, false), legs(nearLeg, 'near leg', false, true),
+      ...limbLayers('far arm', arm(far), true),
+      ...limbLayers('far leg', leg(farLeg), true),
+      ...limbLayers('near leg', leg(nearLeg), false),
       {
         kind: 'group', turn: body, layers: [
           { kind: 'image', name: 'body', src: bodyArt, ...BODY },
@@ -327,7 +326,7 @@ export function cupidRig(cupid: RigCupid, look: CupidLook): RigPose {
       },
       drawnBow.string,
       ...(h.arrow ? drawnBow.arrow : []),
-      arms(near, 'near arm', false, false), arms(near, 'near arm', false, true),
+      ...limbLayers('near arm', arm(near), false),
     ],
     guides: [
       { name: 'hovers here', at: ANCHOR }, { name: 'neck', at: at(NECK) }, { name: 'eye', at: at(turned(nod, EYE)) },
