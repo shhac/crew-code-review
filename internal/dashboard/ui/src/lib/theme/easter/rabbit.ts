@@ -157,6 +157,15 @@ const sitsStill = (r: Rabbit, scene: PageMap, others: readonly Rabbit[]) => r.mo
 
 const leaving = (r: Rabbit) => r.mode === 'exit' || (r.mode === 'bolt' && r.trip !== null);
 
+// Whether a rabbit can stay on the run under it through a layout change:
+// the run still wide enough for it, nobody too close to it or to where its
+// hops take it, and all of it on the run, unless it is coming or going at
+// its ledge's end.
+function canStay(r: Rabbit, run: Run, others: readonly Rabbit[]): boolean {
+  const coming = r.mode === 'enter' || leaving(r);
+  return lengthOf(run) >= 2 * HALF && clear(claims(others), r.floor, r.x, targetOf(r)) && (coming || within(body(run), r.x));
+}
+
 // After a layout change. One out of sight keeps its trip. Otherwise it stays
 // on its ledge, whatever it is doing, while the stretch under it is still
 // clear and nobody is too close, its hops cut short where the run shrank;
@@ -166,11 +175,9 @@ export function reconcileRabbit(r: Rabbit, scene: PageMap, now: number, rand: Ra
   if (r.mode === 'away') return r;
   const f = scene.floors.get(r.floor);
   const run = f && runUnder(f, scene, RABBIT, r.x);
-  const crowded = !clear(claims(others), r.floor, r.x, targetOf(r));
-  const coming = r.mode === 'enter' || leaving(r);
-  if (!f || !run || lengthOf(run) < 2 * HALF || crowded || (!coming && !within(body(run), r.x))) return createRabbit(scene, now, rand, avoid, r);
+  if (!f || !run || !canStay(r, run, others)) return createRabbit(scene, now, rand, avoid, r);
   if (leaving(r)) return ledgeEnds(f, run).some((e) => Math.abs(e - targetOf(r)) <= HOP_LENGTH) ? r : settle(r, now);
-  if (coming) return r;
+  if (r.mode === 'enter') return r;
   const room = body(run);
   const hops = Array.from({ length: r.hops + 1 }, (_, n) => r.hops - n).find((n) => within(room, targetOf({ ...r, hops: n }))) ?? 0;
   const egg = hops === r.hops ? r.egg : null;
@@ -276,7 +283,7 @@ function along(r: Rabbit, f: Ledge, run: Run, scene: PageMap, now: number, rand:
   const reach = (d: -1 | 1) => (d < 0 ? r.x - lane.lo : lane.hi - r.x);
   const sides = ([-1, 1] as const).filter((d) => reach(d) >= MIN_MOVE);
   const side = away ? maxBy(sides, (d) => Math.abs(f.left + r.x + d * MIN_MOVE - away.x)) : maxBy(sides, reach);
-  if (!side && bolt) return alertAt(settle(r, now), f, now, rand, spareFor(f, scene, 'alert', r.x) >= 0);
+  if (!side && bolt) return alertAt(settle(r, now), scene, now, rand);
   if (!side) return settle(r, now, between(rand, RESTLESS.lo, RESTLESS.hi));
   const far = bolt ? reach(side) : Math.min(reach(side), between(rand, MIN_MOVE, MAX_MOVE));
   return hopToward(r, bolt ? 'bolt' : 'hop', now, r.x + side * far);
@@ -335,15 +342,16 @@ export const busy = (r: Rabbit) => ['thump', 'bolt', 'nudge', 'exit', 'away', 'e
 
 // Sat up on alert (tall where there is room), until a while after the
 // cursor has gone.
-function alertAt(r: Rabbit, f: Ledge, now: number, rand: Rand, roomy: boolean): Rabbit {
+function alertAt(r: Rabbit, scene: PageMap, now: number, rand: Rand): Rabbit {
+  const f = scene.floors.get(r.floor);
+  const roomy = !!f && spareFor(f, scene, 'alert', r.x) >= 0;
   const until = now + between(rand, ALERT.lo, ALERT.hi);
   if (r.mode === 'alert') return { ...r, until };
   return become(r, 'alert', now, { until, tall: roomy });
 }
 export const rouse = (r: Rabbit, scene: PageMap, now: number, rand: Rand): Rabbit => {
-  const f = scene.floors.get(r.floor);
-  if (!f || (r.mode !== 'sit' && r.mode !== 'groom' && r.mode !== 'alert')) return r;
-  return alertAt(r, f, now, rand, spareFor(f, scene, 'alert', r.x) >= 0);
+  if (!scene.floors.has(r.floor) || (r.mode !== 'sit' && r.mode !== 'groom' && r.mode !== 'alert')) return r;
+  return alertAt(r, scene, now, rand);
 };
 
 // One step of a rabbit, given the others. dt is in milliseconds. canLay
@@ -361,7 +369,7 @@ export function stepRabbit(start: Rabbit, scene: PageMap, now: number, dt: numbe
     case 'groom': {
       const seen = notice(r, f, now, cursor);
       if (seen.lingered && !othersBusy) return become(seen.r, 'thump', now, { until: now + THUMP, near: null, scare: cursor && { x: cursor.x, y: cursor.y } });
-      if (seen.passing || seen.lingered) return alertAt(seen.r, f, now, rand, spareFor(f, scene, 'alert', r.x) >= 0);
+      if (seen.passing || seen.lingered) return alertAt(seen.r, scene, now, rand);
       if (now < r.until) return seen.r;
       if (r.mode !== 'sit') return settle(seen.r, now, between(rand, RESTLESS.lo, RESTLESS.hi));
       if (rand() < 0.25 && spareFor(f, scene, 'groom', r.x) >= 0) return become(seen.r, 'groom', now, { until: now + GROOM });
@@ -386,7 +394,7 @@ export function stepRabbit(start: Rabbit, scene: PageMap, now: number, dt: numbe
       if (!done) return moved;
       if (leaving(moved)) return become(moved, 'away', now, { until: now + between(rand, AWAY.lo, AWAY.hi) });
       if (moved.egg) return become(moved, 'nudge', now, { until: now + NUDGE, dir: moved.egg === 'left' ? -1 : 1 });
-      if (moved.mode === 'bolt') return alertAt(settle(moved, now), f, now, rand, spareFor(f, scene, 'alert', moved.x) >= 0);
+      if (moved.mode === 'bolt') return alertAt(settle(moved, now), scene, now, rand);
       return settle(moved, now, between(rand, RESTLESS.lo, RESTLESS.hi));
     }
   }
