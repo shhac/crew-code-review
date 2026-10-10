@@ -85,6 +85,19 @@ test('a cupid shoots at a still cursor, into a ledge, and neither arrow nor hear
   await expect(page.locator('[data-valentine] [data-arrow="stuck"]')).toHaveCount(1);
 });
 
+test('a cursor whipping past a cupid makes it dodge', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/?theme=valentine');
+  const cupid = page.locator('[data-cupid][data-id="0"]');
+  await expect(cupid).toBeVisible();
+  await page.waitForTimeout(400);
+  const box = (await cupid.boundingBox())!;
+  const x = box.x + box.width / 2, y = box.y + box.height / 2;
+  await page.mouse.move(x - 150, y + 4);
+  await page.mouse.move(x + 150, y - 4, { steps: 6 });
+  await expect(cupid).toHaveAttribute('data-cupid', 'dodge', { timeout: 1000 });
+});
+
 test('the cupids never cover text, controls, charts or cards', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   const seen: number[] = [];

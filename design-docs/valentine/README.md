@@ -172,10 +172,13 @@ the time, a random source and the cursor.
   where it was still, the cupid lowers its bow and hovers. A fast move is a
   dodge as well.
 - **A fast cursor**: one moving at 900px/s or more, passing within 70px of a
-  cupid's middle, makes it dodge: it flits to the clear spot, reachable by a
-  clear route, that is farthest from the cursor's line among those at least
-  60px farther from it than it is now. None reachable, it flutters in place
-  (a faster wingbeat for 0.4s). Then it cannot dodge again for 1.2s.
+  cupid's middle, makes it dodge: a quick dart to the nearest clear spot,
+  reachable by a clear route, at least 60px farther from the cursor's path
+  than it is now (within 360px; the 24 nearest are tried). None reachable,
+  it flutters in place (a faster wingbeat for 0.4s). Then it cannot dodge
+  again for 1.2s. (It first darted to the farthest such spot; in the
+  heading band those were nearly always out of reach, so on the real page
+  it only ever fluttered.)
 - **The arrow** flies at 420px/s (at least 0.3s), turned along its arc. On
   landing it becomes a spent arrow stuck in the ledge (below) and pops four
   hearts.

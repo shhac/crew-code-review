@@ -248,10 +248,10 @@ export function stepCupid(c: Cupid, air: Air, now: number, dt: number, rand: Ran
   }
 }
 
-// A cursor moving fast and passing close makes it dodge: away to the clear
-// spot farthest from the cursor's line among those 60px or more farther
-// from it than it is now, reachable without passing another cupid; with
-// none, it flutters in place. A drawn bow is lowered either way.
+// A cursor moving fast and passing close makes it dodge: a quick dart to the
+// nearest clear spot 60px or more farther from the cursor's path than it is
+// now, reachable without passing another cupid; with none, it flutters in
+// place. A drawn bow is lowered either way.
 export const DASH = 900;
 export const DASH_REACH = 70;
 export function dodge(c: Cupid, air: Air, now: number, from: Point, to: Point, others: readonly Cupid[]): Cupid {
@@ -264,7 +264,7 @@ export function dodge(c: Cupid, air: Air, now: number, from: Point, to: Point, o
   };
   if (line(here) > DASH_REACH) return c;
   const calmed = { ...c, calm: now + CALM, target: null, mode: c.flight ? c.mode : 'hover' as const };
-  const away = air.spots.filter((p) => line(p) >= line(here) + 60 && distance(p, here) <= FLIT_FAR).sort((a, b) => line(b) - line(a)).slice(0, 12);
+  const away = air.spots.filter((p) => line(p) >= line(here) + 60 && distance(p, here) <= FLIT_FAR).sort((a, b) => distance(a, here) - distance(b, here)).slice(0, 24);
   const way = flyTo(air, here, away, claims(others, air.page, now), now, DODGE_SPEED);
   if (!way) return { ...calmed, flutter: now + 400 };
   return { ...calmed, ...way, mode: 'dodge', dir: way.flight.curve.to.x >= way.flight.curve.from.x ? 1 : -1 };
