@@ -10,7 +10,9 @@ import type { Drawing } from '../drawings';
 // One frame of it: what it is doing, the time, and how far it has walked.
 export type Moment = { mode: string; now: number; walked: number };
 export type Look = { gaze: number; still: boolean };
-export type Size = { width: number; height: number };
+// A footprint's box, standing on its anchor; a flier's also reaches `down`
+// below it.
+export type Size = { width: number; height: number; down?: number };
 export type Art = { name: string; src: string };
 
 type Shown = {
@@ -31,6 +33,9 @@ export type RigCritter = Shown & {
   pose: (at: Moment, look: Look) => RigPose;
   // The box placement allows it on the page, which may change as it moves.
   box: (at: Moment) => Size;
+  // A flier hovers this far (page px) above the stage's floor, its anchor
+  // in the air rather than on the ledge.
+  lift?: number;
   // How far its head would turn toward the cursor, standing at the stage's
   // anchor; one without it does not look.
   gaze?: (dir: 1 | -1, cursor: Point | null) => number;

@@ -73,7 +73,7 @@ describe('hearts', () => {
   });
 
   it('stay inside the landing clearance', () => {
-    for (let t = 0; t < BURST; t += 10) {
+    for (const t of Array.from({ length: BURST / 10 }, (_, i) => i * 10)) {
       for (const h of hearts(burst, 1000 + t)) {
         // A heart is 6px across at full size.
         expect(Math.abs(h.dx) + 3 * h.scale).toBeLessThanOrEqual(HEART_SPREAD);

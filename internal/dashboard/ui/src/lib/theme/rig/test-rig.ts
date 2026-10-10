@@ -31,6 +31,8 @@ function reach(l: Exclude<Layer, { kind: 'group' }>): Point[] {
   switch (l.kind) {
     case 'image': return corners(l.x, l.y, l.x + l.width, l.y + l.height);
     case 'lid': return corners(l.at.x - l.r, l.at.y - l.r, l.at.x + l.r, l.at.y + l.r);
+    // Round joins and ends reach half the width past each point.
+    case 'stroke': return l.points.flatMap((p) => corners(p.x - l.width / 2, p.y - l.width / 2, p.x + l.width / 2, p.y + l.width / 2));
     case 'legs': {
       // Each piece runs half its thickness past its joints, every way; each
       // foot is its own box.

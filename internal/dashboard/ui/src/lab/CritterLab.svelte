@@ -64,6 +64,8 @@
   $: art = view ? view.art : [...new Map(everyPose.flatMap(partArt).map((a) => [a.name, a])).values()];
   // The box placement allows this pose on the page.
   $: box = rig && rig.box(moment);
+  // A flier hovers above the floor; a walker stands on it.
+  $: lift = rig?.lift ?? 0;
   $: apart = view ? view.apart(mode) : 'pieces';
 
   function choose(c: Critter) {
@@ -190,12 +192,12 @@
     <div class="floor"></div>
     <div class="big" style="scale: {zoom}">
       {#if box && footprint && pose}
-        <span class="footprint" style="left: {-box.width / 2}px; top: {-box.height}px; width: {box.width}px; height: {box.height}px"></span>
+        <span class="footprint" style="left: {-box.width / 2}px; top: {-lift - box.height}px; width: {box.width}px; height: {box.height + (box.down ?? 0)}px"></span>
       {/if}
       {#if shown}
-        <Rig pose={shown} x={0} y={0} {dir} {guides} data-critter={mode} />
+        <Rig pose={shown} x={0} y={-lift} {dir} {guides} data-critter={mode} />
         {#if drawings[reference]}
-          <Rig pose={overlay(shown, drawings[reference])} x={0} y={0} {dir} opacity={0.45} />
+          <Rig pose={overlay(shown, drawings[reference])} x={0} y={-lift} {dir} opacity={0.45} />
         {/if}
       {:else if view}
         <svelte:component this={view.View} {mode} {now} {walked} {dir} {playing} {still} {guides} {separate} {hidden} marked />
@@ -214,7 +216,7 @@
       <div class="row pieces">
         {#each parts as name}
           <figure>
-            <div class="spot" style="scale: {Math.max(2, zoom / 2)}"><Rig pose={keepParts(pose, (n) => n === name)} x={0} y={0} {dir} /></div>
+            <div class="spot" style="scale: {Math.max(2, zoom / 2)}"><Rig pose={keepParts(pose, (n) => n === name)} x={0} y={-lift} {dir} /></div>
             <figcaption>{name}</figcaption>
           </figure>
         {/each}
@@ -242,7 +244,7 @@
       <p>Every pose at the same scale, three times page size, so the animal stays the same size whatever it does:</p>
       <div class="row lineup">
         {#each rig.modes as m}
-          <figure><div class="spot" style="scale: 3"><Rig pose={rig.pose({ mode: m, now: 1300, walked: 1.3 }, { gaze: 0, still })} x={0} y={0} /></div><figcaption>{m}</figcaption></figure>
+          <figure><div class="spot" style="scale: 3"><Rig pose={rig.pose({ mode: m, now: 1300, walked: 1.3 }, { gaze: 0, still })} x={0} y={-lift} /></div><figcaption>{m}</figcaption></figure>
         {/each}
       </div>
     {/if}
@@ -253,7 +255,7 @@
     {#each [1, -1] as const as d}
       <div class="spot">
         {#if rig && pose}
-          <Rig pose={rig.pose(moment, { gaze: 0, still })} x={0} y={0} dir={d} />
+          <Rig pose={rig.pose(moment, { gaze: 0, still })} x={0} y={-lift} dir={d} />
         {:else if view}
           <svelte:component this={view.View} {mode} {now} {walked} dir={d} {playing} {still} guides={false} separate={false} hidden={[]} />
         {/if}

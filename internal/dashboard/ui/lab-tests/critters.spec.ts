@@ -142,3 +142,30 @@ test('the hedgehog has its drawings to lay over it, each mode its own', async ({
   await page.getByRole('button', { name: 'fox', exact: true }).click();
   await expect(drawing).toHaveCount(0);
 });
+
+test('the cupid hovers above the floor, beating its wings, every part decoded', async ({ page }) => {
+  await page.goto('/lab/critters.html#animal=cupid&mode=hover');
+  await expect(big(page)).toBeVisible();
+  const sizes = await decoded(page);
+  expect(sizes.length).toBeGreaterThanOrEqual(8);
+  expect(sizes.every((n) => n > 0)).toBe(true);
+  // Airborne: its feet clear the stage's floor.
+  const feet = await big(page).evaluate((el) => el.getBoundingClientRect().bottom);
+  const floor = await page.locator('[data-stage] .floor').evaluate((el) => el.getBoundingClientRect().top);
+  expect(feet).toBeLessThan(floor);
+  const wings = () => big(page).locator('g[transform]').evaluateAll((els) => els.map((el) => el.getAttribute('transform')));
+  const first = await wings();
+  await expect.poll(wings).not.toEqual(first);
+});
+
+test('the cupid draws its bow in code, the arrow nocked only while it draws', async ({ page }) => {
+  await page.goto('/lab/critters.html#animal=cupid&mode=aim&frame=0');
+  await expect(big(page).locator('[data-stroke="string"]')).toHaveCount(1);
+  await expect(big(page).locator('[data-stroke="arrow head"]')).toHaveCount(1);
+  await page.getByRole('button', { name: 'hover', exact: true }).click();
+  await expect(big(page).locator('[data-stroke="arrow head"]')).toHaveCount(0);
+  await page.getByLabel('reduced motion').check();
+  const still = await big(page).innerHTML();
+  await page.waitForTimeout(300);
+  expect(await big(page).innerHTML()).toBe(still);
+});

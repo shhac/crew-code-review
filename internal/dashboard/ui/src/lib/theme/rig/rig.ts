@@ -39,11 +39,15 @@ export type LegArt = {
 export type DrawnLeg = { limb: Limb; haunch: number; fore: boolean; taper: boolean };
 
 export type Layer =
-  | { kind: 'image'; name: string; src: string; x: number; y: number; width: number; height: number }
+  // `far`: on the far side, seen past the body, a shade darker.
+  | { kind: 'image'; name: string; src: string; x: number; y: number; width: number; height: number; far?: boolean }
   // Each bone drawn with a piece of leg art `width` thick, then its foot;
   // the far side shaded; `fur` for the pass of fur alone.
   | { kind: 'legs'; name: string; legs: readonly DrawnLeg[]; art: LegArt; width: number; far: boolean; fur: boolean }
   | { kind: 'lid'; at: Point; r: number; fur: Fur }
+  // A line drawn in code through points (a bow's stave, its string), or
+  // with `fill` a closed shape (an arrow's heart).
+  | { kind: 'stroke'; name: string; points: readonly Point[]; width: number; colour: string; fill?: string }
   | { kind: 'group'; turn: Turn; scaleY?: number; layers: readonly Layer[] };
 
 // Guides: where its joints are, for the lab and the debug overlay to mark.
@@ -137,12 +141,13 @@ export function stillPicture(frame: Frame, art: { name: string; src: string; wid
   return { ...frame, layers: [{ kind: 'group', turn: turnAbout(0, frame.anchor), scaleY: squash, layers: [image] }], guides: [{ name: 'stands here', at: frame.anchor }] };
 }
 
-// What a layer is called in the lab: an image by its part, the rest by what
-// they draw.
+// What a layer is called in the lab: an image or a stroke by its part, the
+// rest by what they draw.
 export function layerName(layer: Exclude<Layer, { kind: 'group' }>): string {
   switch (layer.kind) {
     case 'image': return layer.name;
     case 'legs': return `${layer.name}${layer.fur ? ', fur' : ''}`;
     case 'lid': return 'eyelid';
+    case 'stroke': return layer.name;
   }
 }
