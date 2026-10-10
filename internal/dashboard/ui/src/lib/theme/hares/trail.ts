@@ -138,7 +138,7 @@ const claimed = (claims: readonly Claim[], floor: number, lo: number, hi: number
 // How far along its run a hare going dir from x can go: to the run's end,
 // its whole body on it, or spacing short of another hare's claim; and
 // whether that is the run's own end.
-function laneEnd(f: Ledge, r: Run, floor: number, x: number, dir: 1 | -1, opts: PlanOptions): { end: number; open: boolean } {
+function laneEnd(r: Run, floor: number, x: number, dir: 1 | -1, opts: PlanOptions): { end: number; open: boolean } {
   const room = bodyOf(r, opts.body.half);
   const runEnd = dir > 0 ? room.hi : room.lo;
   const ahead = opts.claims.filter((c) => c.floor === floor && (dir > 0 ? c.hi > x : c.lo < x)).map((c) => (dir > 0 ? c.lo - opts.spacing : c.hi + opts.spacing));
@@ -202,7 +202,7 @@ export function plan(start: Spot, dir: 1 | -1, scene: PageMap, opts: PlanOptions
     const r = f && runAt(f, scene, walkerOf(opts), at.x);
     if (!f || !r) return segments;
     const used = segments.reduce((sum, s) => sum + segLength(s), 0);
-    const lane = laneEnd(f, r, at.floor, at.x, d, opts);
+    const lane = laneEnd(r, at.floor, at.x, d, opts);
     const end = at.x + d * Math.min(Math.abs(lane.end - at.x), Math.max(0, opts.budget - used));
     const run: Segment[] = Math.abs(end - at.x) > 0 ? [{ kind: 'run', floor: at.floor, from: at.x, to: end }] : [];
     const so = [...segments, ...run];
