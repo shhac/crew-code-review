@@ -49,6 +49,10 @@ for (const set of SETS) {
           if (ROOMY.includes(route)) {
             await expect(page.locator(set.shelf)).toBeVisible({ visible: width !== 390 });
             await expect.poll(() => animals(page, set).count(), { message: route, timeout: 20_000 }).toBeGreaterThanOrEqual(set.min[width]);
+            if (set.none?.includes(width)) {
+              await settled(page, set);
+              expect(await animals(page, set).count(), `${route}: none at ${width}px`).toBe(0);
+            }
           }
           const looks = coversOf(set).filter((what) => !knownAt(set.theme, width, what).some((k) => k.route === route));
           if (!looks.length) continue;

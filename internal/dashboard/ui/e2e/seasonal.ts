@@ -39,6 +39,13 @@ export type SeasonalSet = {
   parts: readonly (readonly [string, string])[];
   // The fewest animals the overview, history and metrics pages get.
   min: Record<Width, number>;
+  // Widths at which the set rightly shows no animals at all (June's wasps
+  // live in the rail's air, so none on a phone, where the shelf is hidden);
+  // the contract asserts there are none.
+  none?: readonly Width[];
+  // Where its animals are drawn, when not on the overlay (June's, in the
+  // shelf).
+  home?: string;
   // The mode every animal shows under reduced motion.
   still: string;
   // How long the page must stay still before its animals are all out.
@@ -77,6 +84,14 @@ export const SETS: readonly SeasonalSet[] = [
     animal: 'rabbit', drawn: 'image', decoration: 'g[data-egg]', parts: [['g[data-egg]', 'image']],
     min: { 1440: 2, 1024: 2, 390: 2 }, still: 'sit', settle: 400,
   },
+  {
+    // The wasps circle the cake in the rail's air, so they are the shelf's,
+    // and there are none on a phone, where the shelf is hidden. The bunting
+    // is the overlay's, hung in the gaps between ledges.
+    theme: 'fete', overlay: '[data-fete]', shelf: '.fete-shelf', home: '.fete-shelf', accent: 'rgb(232, 112, 159)',
+    animal: 'wasp', drawn: 'image, [data-stroke]', decoration: '[data-bunting]', parts: [['[data-bunting] path', 'path']],
+    min: { 1440: 2, 1024: 2, 390: 0 }, none: [390], still: 'rest', settle: 400,
+  },
 ];
 
 export const ROUTES = ['/', '/history', '/metrics', '/leaderboard', '/config', '/prompt', '/logs'];
@@ -107,7 +122,7 @@ export async function seedRandom(page: Page) {
 // The pages every width keeps room on for the set's fewest animals.
 export const ROOMY = ['/', '/history', '/metrics'];
 
-export const animals = (page: Page, set: SeasonalSet) => page.locator(`${set.overlay} [data-${set.animal}]`);
+export const animals = (page: Page, set: SeasonalSet) => page.locator(`${set.home ?? set.overlay} [data-${set.animal}]`);
 
 // Waits for the page's nav to finish arriving (the config adds a link, which
 // moves the rail and so the ledges), then for the animals to be placed.
@@ -127,7 +142,7 @@ export type Covers = 'animals' | 'parts';
 export const coversOf = (set: SeasonalSet): Covers[] => (set.parts.length ? ['animals', 'parts'] : ['animals']);
 export function coveredBy(page: Page, set: SeasonalSet, what: readonly Covers[]) {
   const drawn: Record<Covers, readonly Drawn[]> = {
-    animals: [[`${set.overlay} [data-${set.animal}]`, set.drawn]],
+    animals: [[`${set.home ?? set.overlay} [data-${set.animal}]`, set.drawn]],
     parts: set.parts.map(([els, of]) => [`${set.overlay} ${els}`, of] as const),
   };
   return coveredContent(page, what.flatMap((w) => drawn[w]), SLACK);
