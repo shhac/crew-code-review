@@ -6,7 +6,7 @@ import type { Cursor, Point } from '../pointer';
 import { between, type Rand } from '../seed';
 import { alarm, bolt } from './alarm';
 import { advanceBout, boxRoom, COURTING, endChase, startBout, type Bout } from './bout';
-import { CHASE_GAP, fresh, HALF, HARE, holds, placeHare, sittingAt, sitUp, stepHare, TALL, type Hare, type Mode } from './hare';
+import { CHASE_GAP, fresh, HALF, HARE, holds, placeHare, sittingAt, sitUp, stepHare, TALL, tallHere, type Hare, type Mode } from './hare';
 import type { HarePose } from './hare-rig';
 import { advanceRuns, memberOf, pagePoint, placeOf, runOf, sAt, trailHolds, update, type Run } from './runs';
 import { claimsOf, placeOn } from './trail';
@@ -121,12 +121,13 @@ function putDown(h: Hare, dropped: readonly Run[]): Hare[] {
 // A hare kept where it can be, seeing those settled before it: on with a
 // trail that holds; else put down on the first spot that still holds it,
 // pulled inside the run there, sitting up if its trail was dropped; else
-// null, to be placed afresh.
+// null, to be placed afresh. The room over it may have changed, so whether
+// it can sit up tall there is measured again.
 function reseat(h: Hare, settled: Hare[], group: Hares, runs: Split, scene: PageMap, now: number, rand: Rand): Hare | null {
   if (onRun(runs.holding, h)) return h;
   const fits = putDown(h, runs.dropped).map((c) => clamped(c, scene)).find((c) => c && holds(c, scene, settled, partnerOf(group, h)));
   if (!fits) return null;
-  return onRun(runs.dropped, h) ? sitUp(fits, scene, now, rand) : fits;
+  return onRun(runs.dropped, h) ? sitUp(fits, scene, now, rand) : { ...fits, tall: tallHere(fits, scene) };
 }
 
 // A box with no tall room left (or only one hare of it left) is a

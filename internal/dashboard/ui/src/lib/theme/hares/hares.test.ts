@@ -266,7 +266,7 @@ describe('a layout change mid-run', () => {
   // Bug: reconcileHares keeps each hare's `tall` from before the change, so
   // the pair, now a stand-off, still sits up 38px tall under a chart 32px
   // above the ledge.
-  it.fails('turns a box that lost its tall room into a stand-off, the bout over, clear of the chart', () => {
+  it('turns a box that lost its tall room into a stand-off, the bout over, clear of the chart', () => {
     const { g, now } = first((x) => x.hares.filter((h) => h.mode === 'box').length === 2);
     const [a, b] = g.hares.filter((h) => h.mode === 'box');
     const f = page().floors.get(a.floor)!;
