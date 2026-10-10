@@ -62,9 +62,6 @@ export const RESTLESS = { lo: 3000, hi: 8000 };
 export const FADE = 14;
 
 export type Mode = 'sit' | 'alert' | 'groom' | 'hop' | 'nudge' | 'thump' | 'bolt' | 'exit' | 'away' | 'enter';
-// Where a rabbit changing ledge is going: the end it hops in at, and where
-// it will sit.
-export type { Trip };
 export type Rabbit = {
   id: number;
   seed: number;
@@ -89,6 +86,8 @@ export type Rabbit = {
   from: number;
   // The ledge end it is leaving an egg at, while it goes there and nudges.
   egg: End | null;
+  // Where it is going when changing ledge: the end it hops in at, and where
+  // it will sit.
   trip: Trip | null;
   // Since when a cursor has been close, or null.
   near: number | null;
