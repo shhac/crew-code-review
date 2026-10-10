@@ -2,7 +2,8 @@ import { inView, type Ledge, type Obstacle, type PageMap } from '../floors';
 import { inTurn, placeInTurn } from '../group';
 import type { Cursor, Point } from '../pointer';
 import type { Rand } from '../seed';
-import { arcAt, arcHeading, around, distance, lengthOf, samples, sweeps, type Air, type Arc, type Box } from './air';
+import { heading, lengthOf, quadratic, samples, type Arc } from '../curves';
+import { around, distance, sweeps, type Air, type Box } from './air';
 import { land, landable, prune, reconcileStuck, slantOf, burstsLeft, type Burst, type Stuck } from './arrows';
 import { createCupid, cupidView, dodge, DASH, fresh, LOOSE, reconcileCupid, restingCupid, shooting, stepCupid, TURN, where, type Cupid } from './cupid';
 import { FOOTPRINTS } from './footprints';
@@ -105,8 +106,8 @@ export function arrowAt(page: PageMap, f: Flying, now: number): (Point & { angle
   const arc = arrowArc(page, f);
   if (!arc) return null;
   const t = Math.max(0, Math.min(1, (now - f.start) / f.duration));
-  const h = arcHeading(arc, t);
-  return { ...arcAt(arc, t), angle: (Math.atan2(h.y, h.x) * 180) / Math.PI };
+  const h = heading(arc, t);
+  return { ...quadratic(arc, t), angle: (Math.atan2(h.y, h.x) * 180) / Math.PI };
 }
 
 // The box an arrow takes with its tip at p, pointing along h: the shaft
@@ -122,13 +123,13 @@ function arrowBox(p: Point, h: Point): Box {
 // it comes down to the ledge from above. The card whose top is the ledge is
 // the one obstacle it may touch, and only with its tip.
 function clearArc(air: Pick<Air, 'page' | 'room'>, arc: Arc, f: Ledge, cupids: readonly Box[]): boolean {
-  const points = samples((t) => arcAt(arc, t));
+  const points = samples((t) => quadratic(arc, t));
   const own = (o: Obstacle) => !!o.block && Math.abs(o.top - f.y) <= 1 && o.left <= arc.to.x && arc.to.x <= o.right;
   const across = points.filter(({ p }) => p.x >= f.left && p.x <= f.right);
   if (across.some(({ p }) => p.y > f.y + 0.5)) return false;
   // The tip ends on the ledge line, so its last stretch meets the ledge's
   // own card, which is left out.
-  return sweeps(air, points.map(({ t, p }) => arrowBox(p, arcHeading(arc, t))), cupids, own);
+  return sweeps(air, points.map(({ t, p }) => arrowBox(p, heading(arc, t))), cupids, own);
 }
 
 // The other cupids, kept 20px clear of by an arrow.
@@ -153,7 +154,7 @@ function shotTo(air: Air, at: Point, f: Ledge, x: number, shield: readonly Box[]
   const span = Math.abs(to.x - from.x);
   for (const k of RISES) {
     const arc = { from, via: { x: mid.x, y: Math.min(from.y, to.y) - k * span - 6 }, to };
-    const h = arcHeading(arc, 0);
+    const h = heading(arc, 0);
     const aim = (Math.atan2(h.y, h.x * dir) * 180) / Math.PI;
     if (aim < AIMS.lo || aim > AIMS.hi) continue;
     if (clearArc(air, arc, f, shield)) return { arc, aim, dir };
@@ -204,7 +205,7 @@ function arrowStillClear(f: Flying, air: Air, cupids: readonly Cupid[], now: num
   // point at t, its control a t of the way from the old one to the end.
   const t = Math.max(0, Math.min(1, (now - f.start) / f.duration));
   const via = { x: arc.via.x + (arc.to.x - arc.via.x) * t, y: arc.via.y + (arc.to.y - arc.via.y) * t };
-  return clearArc(air, { from: arcAt(arc, t), via, to: arc.to }, g, shieldOf(air, cupids.filter((c) => c.id !== f.by), now));
+  return clearArc(air, { from: quadratic(arc, t), via, to: arc.to }, g, shieldOf(air, cupids.filter((c) => c.id !== f.by), now));
 }
 
 // The shooter's bow at the end of its aim: loosed along its arc if that is
@@ -218,7 +219,7 @@ function loose(group: Cupids, air: Air, c: Cupid, now: number, rand: Rand): Cupi
   if (!target || !at || !g || !o) return lowered;
   const shot = shotTo(air, at, g, target.x, shieldOf(air, group.cupids.filter((x) => x.id !== c.id), now));
   if (!shot || shot.dir !== c.dir) return lowered;
-  const length = lengthOf((t) => arcAt(shot.arc, t));
+  const length = lengthOf((t) => quadratic(shot.arc, t));
   const flying: Flying = { key: `${c.id}:${group.count}`, by: c.id, floor: target.floor, arc: shiftArc(shot.arc, { x: -o.x, y: -o.y }), start: now, duration: Math.max(MIN_ARROW, (length / ARROW_SPEED) * 1000), seed: Math.floor(rand() * 1000) };
   const cupids = group.cupids.map((x) => (x.id === c.id ? { ...x, mode: 'loose' as const, until: now + LOOSE, target: { ...target, aim: shot.aim } } : x));
   return { ...group, cupids, flying, lastShot: now, count: group.count + 1 };
@@ -251,7 +252,7 @@ function flyOn(group: Cupids, air: Air, now: number): Cupids {
   const arc = arrowArc(air.page, f);
   const g = air.page.floors.get(f.floor);
   if (!arc || !g) return { ...tidy, flying: null };
-  const h = arcHeading(arc, 1);
+  const h = heading(arc, 1);
   const x = arc.to.x - g.left;
   const stuck = land(tidy.stuck, { key: f.key, floor: f.floor, x, slant: slantOf(h.x, h.y), at: now, fading: Infinity }, now);
   return { ...tidy, flying: null, stuck, bursts: [...tidy.bursts, { key: f.key, floor: f.floor, x, at: now, seed: f.seed }] };

@@ -2,7 +2,8 @@ import type { PageMap } from '../floors';
 import type { Point } from '../pointer';
 import { easeTo } from '../rig/life';
 import { between, type Rand } from '../seed';
-import { anchor, around, curveAt, distance, fits, lengthOf, linesOf, placed, samples, sweeps, type Air, type Anchored, type Curve } from './air';
+import { cubic, lengthOf, samples, type Curve } from '../curves';
+import { anchor, around, distance, fits, linesOf, placed, sweeps, type Air, type Anchored } from './air';
 import type { CupidPose } from './cupid-rig';
 import { FOOTPRINTS, SPOT, type Footprint } from './footprints';
 
@@ -93,7 +94,7 @@ const flown = (f: Flight, now: number) => Math.max(0, Math.min(1, (now - f.start
 export function where(c: Pick<Cupid, 'spot' | 'flight'>, page: PageMap, now: number): Point | null {
   if (!c.flight) return placed(page, c.spot);
   const curve = flightCurve(page, c.flight);
-  return curve && curveAt(curve, smooth(flown(c.flight, now)));
+  return curve && cubic(curve, smooth(flown(c.flight, now)));
 }
 
 // What the drawing needs: its pose, how far through a draw or a loose,
@@ -107,7 +108,7 @@ export function cupidView(c: Cupid, page: PageMap, now: number): CupidView | nul
   const base = { ...at, dir: c.dir, progress: 0, speed: 0, accel: 0, opacity };
   if (c.flight) {
     const curve = flightCurve(page, c.flight);
-    const t = flown(c.flight, now), length = curve ? lengthOf((u) => curveAt(curve, u)) : 0;
+    const t = flown(c.flight, now), length = curve ? lengthOf((u) => cubic(curve, u)) : 0;
     const seconds = c.flight.duration / 1000;
     const speed = (length * 6 * t * (1 - t)) / seconds, accel = (length * 6 * (1 - 2 * t)) / (seconds * seconds);
     return { ...base, pose: c.mode === 'dodge' && t < 0.35 ? 'dodge' : 'flight', speed, accel };
@@ -140,7 +141,7 @@ export function claims(others: readonly Cupid[], page: PageMap, now: number): Po
     const curve = f && flightCurve(page, f);
     if (!f || !curve) return [];
     const done = flown(f, now);
-    return samples((u) => curveAt(curve, smooth(done + u * (1 - done))), 8).map((s) => s.p);
+    return samples((u) => cubic(curve, smooth(done + u * (1 - done))), 8).map((s) => s.p);
   };
   return others.flatMap((o) => {
     const here = where(o, page, now);
@@ -170,7 +171,7 @@ export function routes(a: Point, b: Point): Curve[] {
 // Whether a flight along this curve is clear: its footprint swept along it
 // stays in air, and it keeps SPACING from every claim.
 export function clearRoute(air: Pick<Air, 'page' | 'room'>, curve: Curve, taken: readonly Point[], reach = FOOTPRINTS.flight): boolean {
-  const points = samples((t) => curveAt(curve, t)).map((s) => s.p);
+  const points = samples((t) => cubic(curve, t)).map((s) => s.p);
   return points.every((p) => apart(p, taken)) && sweeps(air, points.map((p) => around(p, reach)));
 }
 
@@ -179,7 +180,7 @@ function flightTo(page: PageMap, from: Point, to: Point, curve: Curve, now: numb
   const spot = anchor(page, to);
   const o = spot && origin(page, spot.floor);
   if (!spot || !o) return null;
-  const length = lengthOf((t) => curveAt(curve, t));
+  const length = lengthOf((t) => cubic(curve, t));
   const back = { x: -o.x, y: -o.y };
   return { spot, flight: { floor: spot.floor, curve: shiftCurve(curve, back), start: now, duration: Math.max(MIN_FLIGHT, (length / speed) * 1000) } };
 }
@@ -228,7 +229,7 @@ export function stepCupid(c: Cupid, air: Air, now: number, dt: number, rand: Ran
   if (c.flight) {
     if (now < c.flight.start + c.flight.duration) {
       const curve = flightCurve(air.page, c.flight);
-      const ahead = curve && curveAt(curve, Math.min(1, smooth(flown(c.flight, now)) + 0.02));
+      const ahead = curve && cubic(curve, Math.min(1, smooth(flown(c.flight, now)) + 0.02));
       const dir = ahead && here && Math.abs(ahead.x - here.x) > 0.3 ? (ahead.x > here.x ? 1 : -1) : c.dir;
       return { ...lived, dir };
     }
@@ -297,7 +298,7 @@ export function reconcileCupid(c: Cupid, air: Air, now: number, rand: Rand, othe
   if (!here || !spot) return createCupid(air, now, rand, others, c, SPACING, 'enter');
   if (c.flight) {
     const curve = flightCurve(air.page, c.flight);
-    const left = curve && { from: here, c1: curveAt(curve, 0.5 + flown(c.flight, now) / 2), c2: curveAt(curve, 0.75 + flown(c.flight, now) / 4), to: curve.to };
+    const left = curve && { from: here, c1: cubic(curve, 0.5 + flown(c.flight, now) / 2), c2: cubic(curve, 0.75 + flown(c.flight, now) / 4), to: curve.to };
     if (left && clearRoute(air, left, taken) && canHover(air, spot, taken)) return c;
   } else if (canHover(air, spot, taken)) {
     return c;
