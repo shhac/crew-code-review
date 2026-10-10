@@ -21,8 +21,6 @@ import { claimsOf, placeOn } from './trail';
 // grazing, by a lag at least as long on a trail, and by BOX_GAP only face to
 // face boxing.
 
-export type { Bout } from './bout';
-export type { Member, Run } from './runs';
 export type Hares = { target: number; hares: Hare[]; runs: Run[]; bout: Bout | null; nextBout: number };
 
 const calm = (h: Hare) => h.mode === 'graze' || h.mode === 'sit' || h.mode === 'lope';
