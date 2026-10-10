@@ -175,11 +175,22 @@ export function flightsOf(gait: Gait): Flight[] {
   });
 }
 
+// A gait's flights, worked out once: they never change, and an animal asks
+// for them every frame.
+const known = new WeakMap<Gait, readonly Flight[]>();
+function flightsFor(gait: Gait): readonly Flight[] {
+  const had = known.get(gait);
+  if (had) return had;
+  const flights = flightsOf(gait);
+  known.set(gait, flights);
+  return flights;
+}
+
 // Where in a flight the animal is at this phase of its cycle (0 leaving the
 // ground to 1 landing), and that flight's length; null while a foot is down.
 export function flightAt(phase: number, gait: Gait): { t: number; length: number } | null {
   const p = fract(phase);
-  const flight = flightsOf(gait).find((f) => fract(p - f.from) < f.length);
+  const flight = flightsFor(gait).find((f) => fract(p - f.from) < f.length);
   return flight ? { t: fract(p - flight.from) / flight.length, length: flight.length } : null;
 }
 
@@ -189,7 +200,7 @@ export function flightAt(phase: number, gait: Gait): { t: number; length: number
 export function flightLift(phase: number, gait: Gait, height: number): number {
   const at = flightAt(phase, gait);
   if (!at) return 0;
-  const longest = Math.max(...flightsOf(gait).map((f) => f.length));
+  const longest = Math.max(...flightsFor(gait).map((f) => f.length));
   return height * (at.length / longest) * 4 * at.t * (1 - at.t);
 }
 
