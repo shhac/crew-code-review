@@ -391,9 +391,59 @@ March's entry.
 
 ## Art
 
-To be recorded as it is generated: tool, model, date, prompts, each source
-under `design-docs/hares/` and what it ships as, with `export.py`
-reproducing every shipped file.
+Every source was generated on 2026-10-10 by the Codex CLI (`gpt-5.6-terra`)
+through its built-in `$imagegen` path, each on a flat magenta `#FF00FF`
+background. The pot and the reference were generated with
+`design-docs/halloween/pumpkins.png`, `design-docs/bonfire/toffee-apples.png`
+and `design-docs/aurora/winter-kit.png` (the pot), and
+`design-docs/aurora/fox-standing.png` and
+`design-docs/bonfire/hedgehog-standing.png` (the hare), as style references
+only. Every other hare picture is an edit of `hare-standing.png`: the hare
+seen exactly side on, facing right, standing on all four feet with every
+limb separate, long black-tipped ears up, the hind legs showing the haunch,
+stifle, hock and long foot.
+
+- `hare-parts.png`: the hare cut into body, head (a soft, unoutlined back
+  edge) and ears (a pair, a soft base). Its body left the chest and neck
+  off, so the shipped body comes from `hare-torso.png` instead, a second
+  edit asked for the torso with its chest and the whole neck, the neck's top
+  a soft unoutlined tuft under the head.
+- `hare-limbs.png`: five pieces from its own legs, in a row: a thigh piece
+  thick at the hip, a leg bone, a hind foot with its heel turned up (not
+  used: it reads as a foot and an ankle, the long foot is a leg bone
+  instead), the hind toes and the fore toes. The leg bone's left end came
+  out as a ragged cut, so `export.py` mirrors its rounded right half onto
+  its left.
+- Key poses (`hare-pose-*.png`), each asked for as this exact hare in a new
+  pose: sit (on its haunches, hind feet flat, forelegs straight), graze
+  (low, nose to the ground), lope (forefeet planted, hind pair swinging
+  forward), bound reach (airborne, stretched out), bound gather (forefeet
+  down, back arched, hind feet swinging past), box (reared on the long hind
+  feet, forepaws striking), freeze (crouched, ears straight up) and bolt
+  (the push off, hind legs straight behind).
+
+| Source | Shipped as | Display size |
+| --- | --- | --- |
+| `daffodils.png` | `ui/src/lib/theme/hares/daffodils.webp` | 57x88 |
+| `hare-standing.png` | `ui/src/lab/hare-reference.webp` (the lab's overlay) | 22.5x22.42 units |
+| `hare-torso.png` | `hare-body.webp` | 20.42x10.42 units at (1, 7.21) |
+| `hare-parts.png` | `hare-head.webp`, `hare-ears.webp` | 6.83x6.58 at (16.6, 5.99); 5.83x7.42 at (14.44, 1.14) |
+| `hare-limbs.png` | `hare-thigh`, `hare-leg`, `hare-hind-toes`, `hare-fore-toes` (`.webp`, each with `-fur`) | thigh 2.4 units thick at the hip, leg 1.15 thick, toes 2.6 and 1.7 long |
+| `hare-pose-*.png` | `ui/src/lab/hare-pose-*.webp` (the lab's overlays) | on the same eye scale |
+
+The hare's pictures are in drawing units, all on one scale: each sheet's eye
+(its dark outline and pupil, the blob `art.py`'s `feature` finds from a seed
+point set in `export.py`) is measured and every picture exported so its eye
+is 1.4 units, at 12 file pixels per unit; the torso, which has no eye, was
+edited at the reference's own size and is exported on the reference's
+scale. Each part is placed where it sat in the reference by matching
+(`art.py`'s `place`, printed by `export.py`, checked by laying the parts
+over the reference). The fur versions of the limb pieces have their outline
+taken out (`fill_only`). Where the head, ears and body turn, the eye, the
+hips and shoulders and the bones' lengths are set in `hare-rig.ts`, measured
+against these exports (the lab's joints view shows them); regenerated parts
+mean measuring again. `export.py` reproduces every shipped file (`uv run
+design-docs/hares/export.py`).
 
 ## Verification
 
