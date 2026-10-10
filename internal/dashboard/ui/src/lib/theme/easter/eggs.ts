@@ -33,7 +33,7 @@ const pop = (t: number) => {
 
 const HIDDEN = (1 - PEEP) * EGG.height;
 
-function wobble(egg: Egg, seed: number, now: number): number {
+function wobble(seed: number, now: number): number {
   const span = WOBBLE_EVERY.lo + hash(seed) * (WOBBLE_EVERY.hi - WOBBLE_EVERY.lo);
   const n = Math.floor(now / span);
   const t = (now - n * span - hash(seed * 7 + n) * (span - WOBBLE)) / WOBBLE;
@@ -51,5 +51,5 @@ export function eggView(egg: Egg, f: Ledge, now: number, still: boolean): EggVie
   }
   if (still) return { ...at, sunk: HIDDEN, tilt: 0, glint: 0 };
   const rising = smooth((now - egg.hidden) / LEFT);
-  return { ...at, sunk: EGG.height - (EGG.height - HIDDEN) * rising, tilt: rising < 1 ? 0 : wobble(egg, seed, now), glint: 0 };
+  return { ...at, sunk: EGG.height - (EGG.height - HIDDEN) * rising, tilt: rising < 1 ? 0 : wobble(seed, now), glint: 0 };
 }
