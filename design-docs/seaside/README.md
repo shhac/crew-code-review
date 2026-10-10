@@ -420,8 +420,10 @@ The rig follows the fox's and the hedgehog's: parts on the shared rig
   taken off and the back closed, for flight; the near wing in two pieces, the
   inner arm (shoulder to wrist, with the secondaries) and the hand (wrist to
   tip, with the primaries), each as an upper surface and as an underside,
-  because a side view sees the top of a raised wing and the underside of a
-  lowered one. The far wing reuses them a shade darker. The flap rotates the
+  because a side view sees one side of a raised wing and the other of a
+  lowered one (raised, the near wing's upper side turns up and in, so a
+  side-on eye sees its underside; lowered, its upper side; the far wing
+  the other way about: `rig/wings.ts`'s `wingFace`). The far wing reuses them a shade darker. The flap rotates the
   arm about the shoulder (about 50 degrees up to 35 down from level at
   cruise), folds the hand about the wrist on the upstroke, foreshortens both
   as they pass level, and swaps upper for underside there.
@@ -430,11 +432,11 @@ The rig follows the fox's and the hedgehog's: parts on the shared rig
   and two feet seen from the side, spread flat and folded (toes together,
   for the swing and for flight, where the legs are tucked into the belly
   feathers and not drawn). Each piece outlined and as fill alone
-  (`fill_only`), so outlines run only round the silhouette. The rig's
-  `QuadLeg` already covers a bird's leg: two legs, hind-type, `bend: 1` (the
-  knee forward, hidden in the body), `walksOn: Toes` with the
-  tarsometatarsus as the bone up from the toes and the intertarsal joint as
-  its "ankle", stepping on a two-beat gait (beats 0 and 0.5, stance 0.6).
+  (`fill_only`), so outlines run only round the silhouette. The bird kit's
+  `BirdLeg` (`rig/bird.ts`) covers a bird's leg: the femur hidden in the
+  body, the knee kept forward, `walksOn: Toes` with the tarsometatarsus as
+  the bone up from the toes and the intertarsal joint as its "ankle",
+  stepping on `birdWalk`'s two-beat gait (beats 0 and 0.5, stance 0.6).
   The lab's joints view names hip, knee, intertarsal joint (ankle) and
   metatarsophalangeal joint.
 - **Life**: the eye blinks on a seeded schedule (`rig/life.ts`), the lid a
@@ -448,7 +450,10 @@ The rig follows the fox's and the hedgehog's: parts on the shared rig
   descriptor extension adds (no floor anchor): flight modes shown hanging in
   the frame, with the flap cycle on the numbered frames.
 
-The parts are not cut yet: the owner cuts them once the rig is decided.
+The parts were cut by the bird kit (phase C's `c-birds`), which built the
+gull as its test bird (`seaside/gull-rig.ts`, in the critters lab) for the
+owner to take over; see "Art" for the sheets and "The test gull's rig" for
+what it does and does not yet do.
 
 ## Art
 
@@ -474,12 +479,32 @@ as style references. Every pose is an edit of `gull-standing.png`.
 | `gull-pose-swoop.png` | a shallow dive, wings half folded and swept back | the lab's overlay | |
 | `gull-pose-flare-2.png` | the flare, pitched up, wings raised, tail fanned, feet reaching forward, true side view; the first try was a three-quarter front view | the lab's overlay | |
 
+| `gull-parts.png` | the reference taken apart: the body with its folded wing, legs off and belly closed, head off with a soft edge; the head and neck with a soft unoutlined back edge | `gull-body.webp`, `gull-head.webp` | placed where they sat |
+| `gull-flight-body.png` | an edit of `gull-parts.png`'s body, in place: folded wing, wingtips and tail taken off, the back closed as a grey mantle | `gull-flight-body.webp` | |
+| `gull-flight-parts.png` | the tail closed and fanned, soft at the root (its first piece, an egg-shaped body, is not used) | `gull-tail.webp`, `gull-tail-fanned.webp` | laid at the rump by hand |
+| `gull-wings.png` | the spread wing flat, seen from above and from below, each cut at the wrist: arm and hand, span up the picture, leading edge right | `gull-arm.webp`, `gull-hand.webp`, `-under` of each | arm 10.5, hand 11.5 drawing units long |
+| `gull-limbs-3.png` | the leg's pieces: the drumstick (feathered at the knee end), the tarsus, the webbed foot flat and with its toes drawn together; the first try (not kept) was refused by the image tool and the second drew hands | `gull-drumstick`, `gull-tarsus`, `gull-toes`, `gull-toes-curled` (`.webp` and `-fur.webp`) | bars by the reference leg's thickness, feet by its foot's length |
+
 Each prompt followed the seasonal brief's template (header, image spec,
-footer); the table gives each request in short. The
-eye scale and the export (`design-docs/seaside/export.py` on
-`design-docs/art.py`) are the owner's, once parts exist: measure the pupil in
-each picture (`art.feature`) and export every one so its eye matches the
-reference's.
+footer); the table gives each request in short. `export.py` (on
+`design-docs/art.py`) puts every picture on the eye's scale (the pupil
+0.3 drawing units, 12 file pixels to a unit, so the reference is 17.3
+units tall and `gull-rig.ts`'s 1.5px a unit draws it 26px tall) and
+prints where each part sat in the reference.
+
+### The test gull's rig
+
+`seaside/gull-rig.ts` is the bird kit's test bird, built from these parts
+on `rig/bird.ts` (legs and walk) and `rig/wings.ts` (wings and flight
+poses), with footprints its rig test measures over every motion. It does
+stand, strut (no head bob, the body rising once a step), forage (the
+occasional bob), take-off, flap (2.8 a second), glide, stoop, flare and
+settle; it does not yet do the eye or call poses, the opening bill, or the
+mirror turn, and its model and behaviour are the owner's. Known
+shortcuts for the owner to refine: the flight body's grey mantle reads a
+little like a folded wing; the wings are drawn about 0.9 of the bird's
+length, longer than the key poses but shorter than life; landing and
+taking off hold the anchor on the floor (a route lifts it).
 
 ## Verification (for the build)
 
