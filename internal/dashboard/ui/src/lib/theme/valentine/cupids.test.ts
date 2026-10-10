@@ -149,4 +149,27 @@ describe('the cupids', () => {
     expect(restingCupids(air, g).cupids.map((c) => c.spot)).toEqual(g.cupids.map((c) => c.spot));
     expect(g.cupids.every((c) => c.mode === 'hover' && c.flight === null)).toBe(true);
   });
+
+  it('all hover still at once when reduced motion comes on mid-flight, those hovering where they were', () => {
+    const air = airFor();
+    const rand = seeded(5);
+    const { seen } = run(createCupids(air, 0, rand), 40000, still(620, 230, 0), 0, air, rand);
+    const moments = seen.filter((s, i) => i % 50 === 0 || (s.g.cupids.some((c) => c.flight) && i % 5 === 0));
+    expect(moments.some((s) => s.g.cupids.some((c) => c.flight))).toBe(true);
+    for (const { t, g: moving } of moments) {
+      const resting = restingCupids(air, moving);
+      expect(resting.cupids.every((c) => c.mode === 'hover' && c.flight === null), `${t}`).toBe(true);
+      expect(resting.flying).toBeNull();
+      expect(resting.cupids.map((c) => c.id)).toEqual(moving.cupids.map((c) => c.id));
+      const ps = resting.cupids.map((c) => where(c, air.page, t)!);
+      ps.forEach((a, i) => ps.slice(i + 1).forEach((b) => expect(Math.hypot(a.x - b.x, a.y - b.y)).toBeGreaterThanOrEqual(63.9)));
+      const boxes = ps.map((p) => around(p, FOOTPRINTS.hover));
+      expect(clearOfContent(boxes, air.page)).toBe(true);
+      expect(boxes.some((b) => air.page.obstacles.some((o) => o.block && meets(b, o)))).toBe(false);
+      for (const c of moving.cupids.filter((c) => c.mode === 'hover' && !c.flight)) {
+        expect(resting.cupids.find((r) => r.id === c.id)!.spot).toEqual(c.spot);
+      }
+      expect(restingCupids(air, resting).cupids.map((c) => c.spot)).toEqual(resting.cupids.map((c) => c.spot));
+    }
+  });
 });

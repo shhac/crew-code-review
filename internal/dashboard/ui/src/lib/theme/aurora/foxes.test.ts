@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import type { PageMap } from '../floors';
 import type { Cursor } from '../pointer';
-import { fixed, scene, seeded, steps } from '../test-scene';
-import { foxView, type Fox } from './fox';
+import { clearOfContent, dashboardPage, fixed, scene, seeded, steps } from '../test-scene';
+import { foxView, POSES, type Fox } from './fox';
 import { asleep, card, rule, still } from './fox-fixtures';
 import { createFoxes, reconcileFoxes, restingFoxes, stepFoxes, type Foxes } from './foxes';
 
@@ -156,6 +156,30 @@ describe('foxes together', () => {
           if (a.floor === b.floor) expect(Math.abs(a.x - b.x)).toBeGreaterThanOrEqual(SPACING - 1e-6);
         }));
       }
+    }
+  });
+  it('sleeps them all at once when reduced motion comes on mid-run, those asleep where they lay', () => {
+    const page = dashboardPage([{ left: 900, right: 1000, top: 135, bottom: 158 }]);
+    const rand = seeded(6);
+    const states = groupTrace(createFoxes(page, 0, rand), page, 0, 90000, (t) => still(320 + 480 * (1 + Math.sin(t / 4000)), 170 + 12 * Math.sin(t / 900), t), rand);
+    expect(states.some((x) => x.foxes.some((f) => f.mode !== 'asleep'))).toBe(true);
+    for (const moving of states.filter((_, i) => i % 40 === 0)) {
+      const resting = restingFoxes(page, moving);
+      expect(resting.foxes.every((f) => f.mode === 'asleep' && f.until === Infinity)).toBe(true);
+      expect(resting.foxes.length).toBeLessThanOrEqual(moving.target);
+      expect(new Set(resting.foxes.map((f) => f.id)).size).toBe(resting.foxes.length);
+      resting.foxes.forEach((a, i) => resting.foxes.slice(i + 1).forEach((b) => {
+        if (a.floor === b.floor) expect(Math.abs(a.x - b.x)).toBeGreaterThanOrEqual(SPACING - 1e-6);
+      }));
+      const boxes = resting.foxes.flatMap((f) => {
+        const v = foxView(f, page, 0);
+        return v ? [{ left: v.x - POSES[v.pose].width / 2, right: v.x + POSES[v.pose].width / 2, top: v.y - POSES[v.pose].height, bottom: v.y }] : [];
+      });
+      expect(clearOfContent(boxes, page)).toBe(true);
+      for (const f of moving.foxes.filter((f) => f.mode === 'asleep')) {
+        expect(resting.foxes.find((r) => r.id === f.id)).toMatchObject({ floor: f.floor, x: f.x });
+      }
+      expect(restingFoxes(page, resting)).toEqual(resting);
     }
   });
 });

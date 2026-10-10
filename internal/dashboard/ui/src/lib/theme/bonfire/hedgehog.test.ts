@@ -267,4 +267,19 @@ describe('reduced motion', () => {
     const scrolled = scene([[1, { ...card, y: 250 }]]);
     expect(restingHogs(scrolled, g)).toEqual(g);
   });
+
+  it('sits them all still at once when it comes on mid-run, out and about or not', () => {
+    const rand = seeded(3);
+    const states = steps(createHogs(s, 0, rand), 0, 90000, (g, t) => stepHogs(g, s, t, 50, rand, Math.floor(t / 9000) % 3 === 2 ? { x: 450, y: 290, at: t } : null));
+    expect(states.some((g) => out(g).length > 0)).toBe(true);
+    for (const moving of states.filter((_, i) => i % 40 === 0)) {
+      const still = restingHogs(s, moving);
+      expect(still.home).toEqual(moving.home);
+      expect(still.hogs.map((h) => h.id)).toEqual(moving.hogs.map((h) => h.id));
+      expect(still.hogs.every((h) => (h.mode === 'sniff' || h.mode === 'hidden') && h.until === Infinity)).toBe(true);
+      const xs = out(still).map((h) => h.x);
+      xs.slice(1).forEach((x, i) => expect(xs[i] - x).toBeGreaterThanOrEqual(SPACING));
+      expect(restingHogs(s, still)).toEqual(still);
+    }
+  });
 });

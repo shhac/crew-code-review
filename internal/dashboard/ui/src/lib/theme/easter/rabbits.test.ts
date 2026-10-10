@@ -106,4 +106,21 @@ describe('the rabbits', () => {
     expect(still.rabbits.every((r) => r.mode === 'sit' && r.until === Infinity)).toBe(true);
     expect(restingRabbits(roomy, still)).toEqual(still);
   });
+
+  it('all sit still at once when reduced motion comes on mid-run, those sitting where they sat', () => {
+    const rand = seeded(4);
+    const states = live(createRabbits(dashboard, 0, rand), 0, 60000, rand, visits, () => true, dashboard);
+    for (const moving of states.filter((_, i) => i % 40 === 0)) {
+      const still = restingRabbits(dashboard, moving);
+      expect(still.rabbits.every((r) => r.mode === 'sit' && r.until === Infinity)).toBe(true);
+      expect(still.rabbits.length).toBeLessThanOrEqual(moving.target);
+      expect(new Set(still.rabbits.map((r) => r.id)).size).toBe(still.rabbits.length);
+      expect(still.rabbits.every((a, i) => still.rabbits.slice(i + 1).every((b) => a.floor !== b.floor || Math.abs(a.x - b.x) >= SPACING))).toBe(true);
+      expect(clearOfContent(boxesOf(still), dashboard)).toBe(true);
+      for (const r of moving.rabbits.filter((r) => r.mode === 'sit')) {
+        expect(still.rabbits.find((s) => s.id === r.id)).toMatchObject({ floor: r.floor, x: r.x });
+      }
+      expect(restingRabbits(dashboard, still)).toEqual(still);
+    }
+  });
 });
