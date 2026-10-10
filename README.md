@@ -510,8 +510,8 @@ deliberately.
 - **Logs**: a live tail of the daemon's own log.
 
 **Seasonal themes.** `dashboard.theme` adds decorations to the dashboard: `auto` (the
-default) switches a set on in its season: the northern lights in January, Valentine's in February, Mad March hares in March, an Easter egg hunt in April, Halloween in October, Bonfire Night in November and Christmas throughout December. `none` turns
-decorations off, and naming a set (`aurora`, `valentine`, `hares`, `easter`, `halloween`, `bonfire` or `christmas`) forces it on. They are purely cosmetic and
+default) switches a set on in its season: the northern lights in January, Valentine's in February, Mad March hares in March, an Easter egg hunt in April, a village fete in June, Halloween in October, Bonfire Night in November and Christmas throughout December. `none` turns
+decorations off, and naming a set (`aurora`, `valentine`, `hares`, `easter`, `fete`, `halloween`, `bonfire` or `christmas`) forces it on. They are purely cosmetic and
 never block a click. Reduced-motion users get the decorations without the
 animation. To preview a set whatever the date, add `?theme=halloween` to the
 URL.
@@ -582,6 +582,19 @@ passing makes one sit up, one that lingers makes it thump and bolt for cover,
 and now and then one nudges a new egg into a ledge end. Reduced motion shows
 the rabbits sitting still and the hunt as it stands. Preview with
 `?theme=easter`; design notes: [Easter egg hunt](design-docs/easter/README.md).
+
+June is a village fete: a cake stall on the rail (a coconut shy, a prize
+Victoria sandwich with its rosette, three jars of jam on a tablecloth), and
+bunting strung in the gaps between the page's ledges, festooned under page
+headings and across the gutters between cards, fluttering in a breeze and
+swinging when the cursor brushes it. Two common wasps circle the cake in the
+rail's air above it, never over the page, the nav or the identity chip; now
+and then one zigzags in, lands on the sponge and feeds. A cursor darting at
+one chases it off past the window's edge, and it comes back a little later.
+On a phone, where the rail has no shelf, there are no wasps. Reduced motion
+shows the wasps standing on the cake and a jar and the bunting at rest.
+Preview with `?theme=fete`; design notes:
+[Village fete](design-docs/fete/README.md).
 
 
 Queue add/reorder/promote are also available as JSON endpoints

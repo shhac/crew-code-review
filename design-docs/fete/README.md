@@ -3,7 +3,7 @@
 **Status**: built and shown under `?theme=fete`: the shelf, the bunting
 on the shared gaps (`FeteLayer.svelte`), the two wasps in the rail's air
 (`FeteShelf.svelte`) on the insect rig, the seasonal contract's row and
-`e2e/fete.spec.ts`. Not switched on yet.
+`e2e/fete.spec.ts`. Switched on: `auto` shows it from 1 to 30 June.
 
 **Pins**: written against `b45e997`. Code-internal.
 

@@ -92,6 +92,16 @@ three rabbits sit, groom and hop on stepping legs, sit up at a passing
 cursor, thump and bolt when it lingers, and now and then leave a new egg.
 Reduced motion keeps a still scene.
 
+June now has a village fete (`dashboard.theme` `fete`, on by default under
+`auto` from 1 to 30 June). The rail shows a cake stall: a coconut shy, a
+prize Victoria sandwich and three jars of jam. Bunting hangs in the gaps
+between the page's ledges, under page headings and across the gutters
+between cards, only where nothing is in the way; it flutters in a breeze and
+swings when the cursor brushes it. Two wasps circle the cake in the rail's
+air, inspect it and land to feed, and are chased off past the window's edge
+by a cursor darting at them, coming back a little later; there are none on a
+phone. Reduced motion keeps a still scene.
+
 Seasonal scenes now measure the page through one shared snapshot, and each
 creature decides how much headroom it needs instead of inheriting the
 spider's. Halloween and Christmas render exactly as before. The

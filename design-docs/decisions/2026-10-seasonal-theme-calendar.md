@@ -9,7 +9,7 @@ consolidation were not started. Revised the same day after a read-only
 review by Codex (`gpt-5.6-terra`), which corrected two claims about the code
 and tightened the refactor's contract. Since built: February (Valentine's,
 2026-10-10), March (Mad March hares, 2026-10-10), April (Easter egg hunt,
-2026-10-10).
+2026-10-10), June (Village fête, 2026-10-10).
 
 ## The problem
 
@@ -85,7 +85,7 @@ all twelve. Easter can fall in late March; an April-long egg hunt still works.
 - **Animal**: a bumblebee bumbles from flower to flower, dodges the cursor, and
   now and then bonks into a card wall and bounces off.
 
-### June: Village fête
+### June: Village fête (built)
 
 - **Shelf**: a Victoria sponge with a rosette, a coconut shy, jam jars.
 - **Ledges**: bunting strung across the gaps between ledges, swaying when the
