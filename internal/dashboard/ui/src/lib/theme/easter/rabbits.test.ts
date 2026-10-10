@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Ledge } from '../floors';
-import { fixed, scene, seeded, steps } from '../test-scene';
-import { busy, POSES, type Rabbit } from './rabbit';
+import { clearOfContent, dashboardPage, fixed, scene, seeded, steps } from '../test-scene';
+import { busy, POSES, rabbitView, SPACING, type Rabbit } from './rabbit';
 import { createRabbits, reconcileRabbits, restingRabbits, stepRabbits, takeEggs, type Rabbits } from './rabbits';
 
 const ledge = (y: number, left = 100, right = 700): Ledge => ({ left, right, y, base: y + 200, room: 40, headroom: Infinity, kind: 'card' });
@@ -15,8 +15,19 @@ function apart(g: Rabbits): boolean {
   return seen.every((a, i) => seen.slice(i + 1).every((b) => a.floor !== b.floor || Math.abs(a.x - b.x) >= POSES.nudge.width));
 }
 
-const live = (g: Rabbits, from: number, to: number, rand: () => number, cursor: (t: number) => { x: number; y: number } | null = () => null, canLay = () => true) =>
-  steps(g, from, to, (s, t) => takeEggs(stepRabbits(s, roomy, t, 50, rand, cursor(t) && { ...cursor(t)!, at: t }, canLay)).group);
+const live = (g: Rabbits, from: number, to: number, rand: () => number, cursor: (t: number) => { x: number; y: number } | null = () => null, canLay = () => true, page = roomy) =>
+  steps(g, from, to, (s, t) => takeEggs(stepRabbits(s, page, t, 50, rand, cursor(t) && { ...cursor(t)!, at: t }, canLay)).group);
+
+// The dashboard page with a control standing on the heading rule, and the
+// box each rabbit drawn on it takes up.
+const dashboard = dashboardPage([{ left: 900, right: 1000, top: 135, bottom: 158 }]);
+const boxesOf = (g: Rabbits, page = dashboard) => g.rabbits.flatMap((r) => {
+  const v = rabbitView(r, page);
+  const { width, height } = POSES[v?.pose ?? 'sit'];
+  return v ? [{ left: v.x - width / 2, right: v.x + width / 2, top: v.y - height, bottom: v.y }] : [];
+});
+// A cursor that comes and lingers by each ledge in turn, then leaves.
+const visits = (t: number) => (Math.floor(t / 6000) % 2 === 1 ? { x: 320 + ((t / 8) % 960), y: [160, 182][Math.floor(t / 12000) % 2] - 12 } : null);
 
 describe('the rabbits', () => {
   it('are three where the page has room, else two', () => {
@@ -43,6 +54,16 @@ describe('the rabbits', () => {
       // They do get about: hops, trips and eggs.
       expect(states.some((g) => g.rabbits.some((r) => r.mode === 'away'))).toBe(true);
       expect(states.some((g) => g.rabbits.some((r) => r.mode === 'hop'))).toBe(true);
+    }
+  });
+
+  it('never cover the content of a dashboard page, over long random runs', () => {
+    for (const seed of [1, 2, 3]) {
+      const rand = seeded(seed);
+      const states = live(createRabbits(dashboard, 0, rand), 0, 90000, rand, visits, () => true, dashboard);
+      expect(states.some((g) => g.rabbits.some((r) => r.mode === 'hop'))).toBe(true);
+      const covering = states.flatMap((g, i) => (clearOfContent(boxesOf(g), dashboard) ? [] : [`${i * 50}: ${g.rabbits.map((r) => `${r.id} ${r.mode} ${r.floor}:${r.x.toFixed(1)}`).join(', ')}`]));
+      expect(covering.slice(0, 3), `seed ${seed}`).toEqual([]);
     }
   });
 
