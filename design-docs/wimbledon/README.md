@@ -102,6 +102,21 @@ All the grounded pigeon poses fit the 22px of a first-row card top plus its
 6px; the flight poses do not fit there, which is what the airspace contract
 below is about.
 
+**As built** (the pure models, before the rigs): the page scale is 1.4px a
+drawing unit, which makes the alert key pose 26.4px tall, inside its 27. On
+that scale the key poses are smaller than the budget above for flight: the
+take-off drawing is 30x32, the flight poses 33x22 (down) and 32x17 (up), the
+landing 33.5x39.5. With the 44px take-off and flight boxes of the budget a
+pigeon could not leave the overview at all (the band over the first row is
+48px, less 4px kept from the heading's text, and the take-off climbs), so
+the models use envelopes from the key poses, anchored at the feet:
+take-off 32 wide, 34 up, nothing below the feet (wings clapped overhead);
+flight 34 wide, 24 up, 8 below (the downstroke's tips); landing 34 wide, 40
+up, nothing below. They are in `pigeon.ts` (`ENVELOPES`) and will be
+replaced by what the rig's footprint test measures. The grounded poses keep
+the budget above (`POSES`), a little over the drawings. The hawk's glide
+keeps its 46x14 budget (`hawk.ts`'s `GLIDE`).
+
 ### The page's room, measured
 
 A survey of the running preview (every route, at 1440x900, 1280x800 and
@@ -190,6 +205,33 @@ August's gull, September's crows and February's cupids can use it.
 - **Reduced motion**: no flight at all. The pigeons stand still on their
   spots; there is no hawk and no ball.
 
+**As built**: until the surfaces and bird kits land, the models take the
+air check as a function (`flight.ts`'s `Sky`: `clear(box)`, true for a box
+in air or wholly past an exit, and the exits' x), so the kits' check plugs
+in unchanged; the tests use a stand-in with these rules (`fixtures.ts`'s
+`testSky`). Three things the building showed:
+
+- **The envelope changes through take-off and landing.** A bird lifting off
+  with its wings clapped overhead is taller than one flapping, and one
+  braking to land taller still; held at the take-off or landing box the
+  whole way, a pigeon over the first row would hit the heading's text. So
+  the envelope blends from the take-off box into the flight box over the
+  take-off's distance, and from the flight box into the landing box over
+  the landing's, as the wings swing (`envelopeAt`).
+- **The landing is the last 84px, not 40.** Slowing evenly from 480px/s to
+  a stop over the landing's 0.35s covers 84px, and a slower final approach
+  would be a step in speed; the landing box is checked over all of it.
+- **No flight passes low over a pigeon on the ground.** Flying out along
+  the band, a pigeon would pass through the others standing on its row.
+  Each route's corridor (the stretches of ledge its envelope comes within
+  27px and 6px more of) is worked out when it is planned: a flushed pigeon
+  takes the way out away from the cursor, else the other way, and with
+  neither clear of every bird on the ground it shies instead; a pigeon
+  coming back lands only where its way in misses them; and while a bird is
+  in the air the others keep out of its corridor as they would keep out of
+  another's stretch. Only one bird flies at a time outside a sweep: a flush
+  waits for the air to be empty, and a bird due back waits a moment.
+
 ### A new shared surface: lanes, courts and exits
 
 The calendar's table asks the first month that needs a surface to define it.
@@ -241,6 +283,21 @@ envelope fits around its line (rare on these pages: usually it arrives and
 leaves already gliding, its flapping done out of sight), at 4.5 beats a
 second, two or three beats at a time. Its eye blinks with the nictitating
 membrane (below). It never lands.
+
+**As built** (`hawk.ts`): rows are found by the month itself (`rowsOf`),
+and the lane is checked with the glide's box swept 4px over the row's
+first ledge from the rail's edge to past the window's right edge; with no
+rail column (a phone) the hawk comes in from the window's left edge, which
+only it may use (pigeons have no exit there). The simulation runs every
+frame (60 a second) from the hawk's start until the last pigeon is out,
+each bird's box joined to its last frame's so nothing between frames is
+missed, every box in air or past an exit, and no two visible birds within
+6px; a pigeon not yet off counts as standing in its alert pose. Pigeons on
+other rows are tried one at a time: each one's way out added only if the
+whole sweep still simulates clear, else it looks up until the hawk has
+gone. When each pigeon comes back is fixed when the sweep is planned, in
+the order they left. A page change mid-sweep simulates the rest again and,
+if it is no longer clear, the hawk is gone at once.
 
 ### Pigeons
 
@@ -300,6 +357,20 @@ reduced-motion change, as for every theme.
   the contract says.
 - **Reduced motion**: standing still on its spot, head level, no blink,
   never stepped; the spot is kept across scrolls while it stays clear.
+
+**As built** (`pigeon.ts`, one bird; `pigeons.ts`, the flock; `flight.ts`,
+the routes): a pigeon needs 27px clear where it stands (its alert pose)
+and walks with its 36px walking body on the run, stopping 6px short of
+another's (42px centre to centre); they are placed and land 70px apart. A
+spot to stand on must have a way out (the escape) and is chosen among the
+ledges in view, so the heading's rule counts where nothing is written over
+it. The band route climbs to its height over 28px and flies level; the
+heights tried run from 10 to 32px over the ledge, lowest first. Placing
+afresh prefers ledges with no pigeon (as every ledge walker does); coming
+back, the three nearest spots on each ledge are tried, nearest first, so a
+ledge whose near spots no route reaches cannot crowd out the rest. Cursor
+speed comes from its strokes; a flush needs the cursor within 40px of the
+bird's middle, 12px over its feet.
 
 ### The rally
 
