@@ -112,6 +112,30 @@ describe('steps', () => {
   });
 });
 
+describe('a limb-relative toe hinge', () => {
+  const spec: QuadLeg = { ...hind, hip: { x: 0, y: 0 }, thigh: 4.2, shin: 4.7, bend: 1, bendFrame: 'limb', jointLimits: { min: 40, max: 175 }, walksOn: { kind: 'toes', length: 3.5, lean: 35, fold: 40 } };
+  const at = (foot: { x: number; y: number }) => legsTo([spec], [spec.hip], [foot])[0];
+
+  it('preserves each bone when the preferred ankle is too close or too far from the hip', () => {
+    for (const target of [{ x: 0, y: 2 }, { x: -8, y: 5 }, { x: 20, y: 20 }, { x: 0, y: 0 }]) {
+      const leg = at(target);
+      const length = (a: typeof target, b: typeof target) => Math.hypot(b.x - a.x, b.y - a.y);
+      expect(length(leg.hip, leg.knee)).toBeCloseTo(4.2, 6);
+      expect(length(leg.knee, leg.ankle)).toBeCloseTo(4.7, 6);
+      expect(length(leg.ankle, leg.foot)).toBeCloseTo(3.5, 6);
+    }
+    const reachable = { x: -8, y: 5 };
+    expect(at(reachable).foot.x).toBeCloseTo(reachable.x, 6);
+    expect(at(reachable).foot.y).toBeCloseTo(reachable.y, 6);
+    expect(Math.hypot(at({ x: 20, y: 20 }).foot.x, at({ x: 20, y: 20 }).foot.y)).toBeLessThan(12.4);
+  });
+
+  it('keeps the knee on its branch when the leg crosses horizontal', () => {
+    const [before, after] = [at({ x: -6, y: -0.0001 }), at({ x: -6, y: 0.0001 })];
+    expect(Math.hypot(after.knee.x - before.knee.x, after.knee.y - before.knee.y)).toBeLessThan(0.001);
+  });
+});
+
 describe('a sole walker', () => {
   const sole: QuadLeg = { ...fore, walksOn: { kind: 'sole', toes: { x: 2, y: 1 }, peel: 30 } };
 

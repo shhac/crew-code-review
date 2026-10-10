@@ -1,6 +1,7 @@
 import { clamp, rad, smooth } from '../math';
 import type { Point } from '../pointer';
 import { cycleLength, footOf, kneeToward, rotate, stepAt, type Leg, type LegSpec, type Step } from '../spidergait';
+import { jointBeside } from './limb';
 
 export type { Step };
 
@@ -35,6 +36,12 @@ export type QuadLeg = Omit<LegSpec, 'beat'> & {
   // Which way the middle joint points: a hind knee forward (1), a fore elbow
   // back (-1).
   bend: 1 | -1;
+  // A limb-relative hinge keeps the same side of the root-to-end line as
+  // the leg swings past horizontal. Older rigs choose by page x instead.
+  bendFrame?: 'limb';
+  // Interior knee/elbow angles, in degrees; 180 is straight. These are a
+  // pose policy for a limb-relative hinge, not measured biological limits.
+  jointLimits?: { min: number; max: number };
   // The far side, drawn behind and a shade darker.
   far: boolean;
   // How thick its upper piece is drawn, where that differs from the rest of
@@ -107,11 +114,38 @@ function ankleOf(toes: Toes, foot: Point, fold: number): Point {
   return { x: foot.x - toes.length * Math.sin(angle), y: foot.y - toes.length * Math.cos(angle) };
 }
 
+// A three-bone hinge with a chosen toe target. Keep the foot planted when
+// it is reachable: change the hock/wrist angle instead of stretching the
+// shin. Only an impossible target moves, to the nearest reachable point.
+function hingedToes(spec: QuadLeg, hip: Point, target: Point, on: Toes, fold: number): Limb {
+  const spanAt = (angle: number) => Math.sqrt(spec.thigh ** 2 + spec.shin ** 2 - 2 * spec.thigh * spec.shin * Math.cos(rad(angle)));
+  const upperMin = spec.jointLimits ? spanAt(spec.jointLimits.min) : Math.abs(spec.thigh - spec.shin) + 1e-3;
+  const upperMax = spec.jointLimits ? spanAt(spec.jointLimits.max) : spec.thigh + spec.shin - 1e-6;
+  const minimum = Math.max(0, upperMin - on.length, on.length - upperMax) + 1e-4;
+  const maximum = upperMax + on.length - 1e-4;
+  const dx = target.x - hip.x, dy = target.y - hip.y;
+  const distance = Math.hypot(dx, dy);
+  const reach = clamp(distance, minimum, maximum);
+  const direction = Math.atan2(dx, dy);
+  const foot = { x: hip.x + reach * Math.sin(direction), y: hip.y + reach * Math.cos(direction) };
+  const desired = rad(on.lean - fold);
+  const opening = (length: number) => Math.acos(clamp((reach * reach + on.length * on.length - length * length) / (2 * reach * on.length), -1, 1));
+  const delta = Math.atan2(Math.sin(desired - direction), Math.cos(desired - direction));
+  // Stay in one continuous fold sector. Choosing whichever circle
+  // intersection is nearest independently each frame can flip the hock
+  // across the hip, even with a stable knee solution.
+  const angle = direction + spec.bend * clamp(spec.bend * delta, opening(upperMin), opening(upperMax));
+  const ankle = { x: foot.x - on.length * Math.sin(angle), y: foot.y - on.length * Math.cos(angle) };
+  return { hip, knee: jointBeside(hip, ankle, spec.thigh, spec.shin, spec.bend === 1 ? -1 : 1), ankle, foot, paw: fold };
+}
+
 // One leg posed from its hip to its foot. A sole walker's heel is turned up
 // about its toe tips, which stay planted, as the foot rolls; a toe walker's
 // bone up from the toes folds back as the paw swings.
 function limbOf(spec: QuadLeg, hip: Point, foot: Point, step?: Step): Limb {
-  const knee = (to: Point) => kneeToward(hip, to, spec.thigh, spec.shin, spec.bend);
+  const knee = (to: Point) => spec.bendFrame === 'limb'
+    ? jointBeside(hip, to, spec.thigh, spec.shin, spec.bend === 1 ? -1 : 1)
+    : kneeToward(hip, to, spec.thigh, spec.shin, spec.bend);
   const on = spec.walksOn;
   if (!on) return { hip, knee: knee(foot), ankle: foot, foot, paw: 0 };
   if (on.kind === 'sole') {
@@ -120,6 +154,7 @@ function limbOf(spec: QuadLeg, hip: Point, foot: Point, step?: Step): Limb {
     return { hip, knee: knee(heel), ankle: heel, foot: heel, paw };
   }
   const fold = on.fold * flexion(step);
+  if (spec.bendFrame === 'limb') return hingedToes(spec, hip, foot, on, fold);
   const ankle = ankleOf(on, foot, fold);
   return { hip, knee: knee(ankle), ankle, foot, paw: fold };
 }

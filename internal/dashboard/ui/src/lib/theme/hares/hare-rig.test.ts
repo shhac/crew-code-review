@@ -104,8 +104,44 @@ describe('hare rig', () => {
       expect(leg.ankle.y, pose).toBeCloseTo(leg.foot.y, 5);
       expect(leg.ankle.x, pose).toBeLessThan(leg.foot.x);
     }
-    const running = hock(hareRig(hare('bound', { walked: 2 }), look()), NEAR_HIND);
+    // Test a planted hind foot, not the gathered airborne tuck: the long
+    // foot need not stay upright throughout its entire swing.
+    const walked = 0.55 * cycleLength(BOUND.stride, BOUND.stance) * SCALE;
+    const running = hock(hareRig(hare('bound', { walked }), look()), NEAR_HIND);
     expect(running.ankle.y).toBeLessThan(running.foot.y - 2);
+  });
+
+  it('keeps all three bones the same length through every pose', () => {
+    for (const pose of POSE_NAMES) {
+      for (const rig of moments(pose)) {
+        for (const [i, limb] of legsOf(rig).entries()) {
+          const points = [limb.hip, limb.knee, limb.ankle, limb.foot];
+          const lengths = i % 2 ? [4.4, 4, 1] : [4.2, 4.7, 3.5];
+          lengths.forEach((length, bone) => expect(Math.hypot(points[bone + 1].x - points[bone].x, points[bone + 1].y - points[bone].y), `${pose}, leg ${i}, bone ${bone}`).toBeCloseTo(length, 6));
+        }
+      }
+    }
+  });
+
+  it('keeps knees and hocks continuous through the whole stride, including a tight tuck', () => {
+    for (const [pose, gait] of [['lope', LOPE], ['bound', BOUND]] as const) {
+      const cycle = cycleLength(gait.stride, gait.stance) * SCALE;
+      let previous = legsOf(hareRig(hare(pose), look()));
+      let biggest = 0;
+      for (let i = 1; i <= 6000; i++) {
+        const current = legsOf(hareRig(hare(pose, { walked: cycle * i / 6000 }), look()));
+        current.forEach((leg, k) => {
+          for (const joint of ['knee', 'ankle'] as const) biggest = Math.max(biggest, Math.hypot(leg[joint].x - previous[k][joint].x, leg[joint].y - previous[k][joint].y));
+        });
+        previous = current;
+      }
+      // Under 0.3 page px per sample. A branch flip remains several pixels
+      // even at this fine interval; the old foot-only check missed it.
+      expect(biggest, pose).toBeLessThan(0.2);
+    }
+    const at = (frame: number) => legsOf(hareRig(hare('bound', { walked: 85 * frame / 60 }), look({ now: frame * 1000 / 60 })));
+    const [before, after] = [at(148), at(149)];
+    expect(Math.hypot(after[NEAR_HIND].knee.x - before[NEAR_HIND].knee.x, after[NEAR_HIND].knee.y - before[NEAR_HIND].knee.y)).toBeLessThan(1.5);
   });
 
   it('lays its ears back running and holds them up sitting', () => {

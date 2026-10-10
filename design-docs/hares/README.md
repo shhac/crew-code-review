@@ -48,6 +48,38 @@ hock to the toes. A foreleg: the shoulder in the chest; the upper arm
 (humerus) back to the elbow; the long forearm down to the wrist (the
 carpus); the short forefoot (metacarpus and toes).
 
+**Skeleton proportions and the joint repair.** Extant European hares in
+Fostowicz-Frelik (2007), Table 3, have a mean femur of 132.4mm and tibia of
+148.2mm: tibia/femur about 1.12. Williams et al. (2007), thoracic-limb Table
+4, give mean humerus 113mm and radius 101.5mm: radius/humerus about 0.90.
+The rig now uses 4.2/4.7 drawing units for femur/tibia and 4.4/4 for
+humerus/radius, replacing 3.1/4.8 and 2.9/5. Those ratios guide the stylised
+side projection; the absolute drawing lengths and the 3.5-unit hock-to-toe
+chain are art tuning, not a claim to reproduce a specimen's whole skeleton.
+
+The old inverse-kinematics choice used the knee's screen x, switching
+solutions when the hip-to-hock line crossed horizontal. It also clamped the
+distance used to calculate a knee without moving an unreachable ankle,
+stretching the drawn shin (55% in the sitting far foreleg). The hare now
+opts into a limb-relative hinge and a continuous hock/wrist fold sector.
+The three bones keep their lengths: a reachable toe target stays planted,
+and the hock/wrist angle changes to connect it. An impossible toe target is
+projected to the chain's reach. Knee/elbow interior-angle bounds of
+40–175°/30–175° keep the solver away from collapsed folds; these are visual
+pose constraints, not physiological range-of-motion measurements. Sitting
+is lowered and retuned to keep the forefeet reachable and the drawing
+inside its existing footprint. Tests cover all three bone lengths and the
+knees/hocks throughout a whole stride, including the original frame flip.
+
+The thigh artwork has explicit joint anchors at 25% and 92% of its width:
+the hip inside the rounded haunch and the knee inside the narrow tip.
+Both outline and fur map those centres to the same bone endpoints. The old
+generic bar mapping extended the image half a haunch beyond the knee and
+rescaled/shifted its fur pass independently, leaving the visible thigh
+misplaced even after the skeleton was repaired. Registered artwork's full
+rectangle is included in footprint checks, and tests pin its anchor mapping
+and alignment between passes.
+
 **Two ways of standing on the hind feet.** Sitting, grazing or reared up to
 box, a hare rests on the whole long hind foot, sole down from the hock to the
 toes, its thigh folded tight against the body. Running, it is on its toes:
@@ -370,8 +402,9 @@ Hare-only tuning (strides, stances, timings, reaches) stays in
   wrist, toes, long and slim. The hind leg's long foot is the bone up from the
   toes, drawn with the leg piece, its toes the hind toes' piece, and let down
   flat sitting, grazing, crouched and boxing (`onSoles`); in a leap it
-  streams out behind in line with the shank. No shared rig change was
-  needed: a first plan for a separate long-foot piece was dropped when the
+  streams out behind in line with the shank. The hare opts into the shared
+  rig's limb-relative three-bone hinge; existing animals retain their
+  previous solver. A first plan for a separate long-foot piece was dropped when the
   generated one came out as a foot with an ankle. Every piece drawn
   outlined, then as fur alone, the near pair's fur over the body's edge.
 - **Gaits.** Grazing it lopes (the slow hop: forefeet then the hind pair, no
@@ -516,6 +549,21 @@ design-docs/hares/export.py`).
   at 1440 and 1024, another route and a phone.
 
 ## Sources
+
+- Fostowicz-Frelik, Ł. 2007, *The hind limb skeleton and cursorial
+  adaptations of the Plio-Pleistocene rabbit Hypolagus beremendensis*,
+  Acta Palaeontologica Polonica 52, 447–476. Table 3 includes extant
+  European hare measurements (n=10): https://www.app.pan.pl/archive/published/app52/app52-447.pdf
+- Williams et al. 2007, *Functional specialisation of the thoracic limb
+  of the hare*, Journal of Anatomy 210, 491–505, Table 4 (humerus/radius
+  lengths; the muscular attachment of the scapula):
+  https://onlinelibrary.wiley.com/doi/10.1111/j.1469-7580.2007.00703.x
+- Stott et al. 2026, *Mechanisms enabling cursorial hares to make abrupt
+  turns*, Mammalian Biology 106, 609–628 (half-bound gait, hindlimb thrust,
+  extended suspension, and variation from digitigrade to almost plantigrade
+  posture during turning): https://link.springer.com/article/10.1007/s42991-026-00566-7
+- Mounted European hare skeleton, prepared by Tierschaedel (joint placement,
+  not a measurement of dynamic joint limits): https://www.tierschaedel.de/p/feldhase-skelett
 
 - Animal Diversity Web, *Lepus europaeus* (ears long, black-tipped, grey-white
   inside; tail black above, white below; hind foot 142 to 161mm; crouching in

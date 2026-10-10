@@ -17,6 +17,9 @@ export type Fur = { fill: string; outline: string };
 // A foot (a paw, toes, a little hand), standing flat, toes forward; `heel`
 // is where the leg's end meets it, in its own box.
 export type Foot = { src: string; fur: string; width: number; height: number; heel: Point };
+// Joint centres within a horizontal limb picture, as fractions of its
+// width. Its rounded cap can surround the joint instead of starting at it.
+export type BoneAnchors = { start: number; end: number };
 // A limb's art: a bone piece (straight, lying along x, rounded at both
 // ends) laid along each bone, and the foot standing at its end. Each comes
 // twice: as drawn, and as fur alone with the outline taken out, which is
@@ -28,7 +31,7 @@ export type LimbArt = {
   boneFur: string;
   // The upper bone's own piece (thick at the hip, tapering to the knee), if
   // the limb has one; drawn as thick as each leg's haunch.
-  thigh?: { src: string; fur: string };
+  thigh?: { src: string; fur: string; anchors?: BoneAnchors };
   foot: Foot;
   knee: boolean;
   // A sole walker's leg is drawn over its foot, its rounded end the heel,
@@ -96,10 +99,16 @@ export const transformOf = (turn: Turn, scaleY = 1) => {
 // A piece of leg art laid along a bone: centred on it and running half its
 // thickness past each end, so the rounded ends overlap at the joints; or,
 // from the joint exactly (flush), as fur laid over a body's edge from a hip
-// just inside it, which must not spread up over the body.
-export function bone(from: Point, to: Point, thick: number, flush = false) {
+// just inside it, which must not spread up over the body. Registered art
+// instead puts its internal joint centres on the two ends of the bone;
+// outline and fur share the same rectangle, including the rounded cap.
+export function bone(from: Point, to: Point, thick: number, flush = false, anchors?: BoneAnchors) {
   const length = Math.hypot(to.x - from.x, to.y - from.y);
   const angle = degrees(Math.atan2(to.y - from.y, to.x - from.x));
+  if (anchors) {
+    const width = length / (anchors.end - anchors.start);
+    return { x: -anchors.start * width, y: -thick / 2, width, height: thick, transform: `translate(${from.x} ${from.y}) rotate(${angle})` };
+  }
   const start = flush ? 0 : thick / 2;
   return { x: -start, y: -thick / 2, width: length + start + thick / 2, height: thick, transform: `translate(${from.x} ${from.y}) rotate(${angle})` };
 }
@@ -130,7 +139,7 @@ export const limbLayers = (name: string, leg: DrawnLeg, far: boolean): Layer[] =
 
 // The pieces a leg is drawn with: a piece of art laid along each bone, as
 // thick as it is drawn, outlined and as fur alone.
-export type Piece = { from: Point; to: Point; width: number; src: string; fur: string };
+export type Piece = { from: Point; to: Point; width: number; src: string; fur: string; anchors?: BoneAnchors };
 export function piecesOf(leg: DrawnLeg): Piece[] {
   const { limb: { hip, knee, ankle, foot }, art, width } = leg;
   const plain = { src: art.bone, fur: art.boneFur };
@@ -156,7 +165,7 @@ export function footBox(leg: DrawnLeg, foot: Foot = leg.art.foot) {
 // a sole walker, the foot first, under the leg's rounded end, its heel.
 export type LegImage = { href: string; stretch: boolean; x: number; y: number; width: number; height: number; transform: string; opacity?: number };
 export function legImages(leg: DrawnLeg, fur: boolean): LegImage[] {
-  const pieces = piecesOf(leg).map((p, i) => ({ href: fur ? p.fur : p.src, stretch: true, ...bone(p.from, p.to, p.width, fur && i === 0) }));
+  const pieces = piecesOf(leg).map((p, i) => ({ href: fur ? p.fur : p.src, stretch: true, ...bone(p.from, p.to, p.width, fur && i === 0, p.anchors) }));
   const feet = footImages(leg, fur);
   return leg.art.overFoot ? [...feet, ...pieces] : [...pieces, ...feet];
 }

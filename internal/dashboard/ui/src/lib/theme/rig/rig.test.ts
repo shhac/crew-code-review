@@ -71,6 +71,29 @@ describe('legImages', () => {
     expect(bone.x).toBe(-1);
     expect(legImages(leg, true)[0].x).toBeCloseTo(0);
   });
+
+  it('places a registered thigh\'s rounded centre at the hip and its tip at the knee in both passes', () => {
+    const registered: LimbArt = { ...art, knee: true, thigh: { src: 'thigh.webp', fur: 'thigh-fur.webp', anchors: { start: 0.25, end: 0.92 } } };
+    const drawn: DrawnLeg = { ...leg, art: registered, haunch: 3.8, limb: { ...leg.limb, hip: { x: 7, y: 9 }, knee: { x: 7, y: 13.2 } } };
+    const [outline, fur] = [legImages(drawn, false)[0], legImages(drawn, true)[0]];
+    for (const image of [outline, fur]) {
+      expect(image.x + 0.25 * image.width).toBeCloseTo(0, 6);
+      expect(image.x + 0.92 * image.width).toBeCloseTo(4.2, 6);
+      expect(image.y + image.height / 2).toBe(0);
+      expect(image.transform).toBe('translate(7 9) rotate(90)');
+    }
+    expect({ ...fur, href: outline.href }).toEqual(outline);
+    // The narrow tip overlaps the knee only slightly, rather than extending
+    // another half-haunch (1.9 units) past it.
+    expect(outline.x + outline.width - 4.2).toBeLessThan(0.6);
+  });
+
+  it('counts a registered cap extending behind the hip in the footprint', () => {
+    const registered: LimbArt = { ...art, knee: true, thigh: { src: 'thigh.webp', fur: 'thigh-fur.webp', anchors: { start: 0.5, end: 1 } } };
+    const drawn: DrawnLeg = { ...leg, art: registered, limb: { ...leg.limb, hip: { x: 0, y: 0 }, knee: { x: 4, y: 0 }, ankle: { x: 6, y: 0 }, foot: { x: 8, y: 0 } } };
+    const pose: RigPose = { width: 20, height: 20, anchor: { x: 10, y: 20 }, scale: 1, layers: [{ kind: 'legs', name: 'legs', legs: [drawn], far: false, fur: false }] };
+    expect(rigBounds(pose).left).toBe(-4);
+  });
 });
 
 describe('a group drawn see-through', () => {

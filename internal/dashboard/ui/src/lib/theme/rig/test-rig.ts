@@ -1,6 +1,7 @@
 // Queries over a rig's drawing, shared by the animals' rig tests.
 import type { Point } from '../pointer';
-import { footBox, footInUse, piecesOf, turnAbout, turned, type DrawnLeg, type Layer, type RigPose } from './rig';
+import { degrees } from '../math';
+import { bone, footBox, footInUse, piecesOf, turnAbout, turned, type DrawnLeg, type Layer, type RigPose } from './rig';
 
 export const flatLayers = (layers: readonly Layer[]): Layer[] => layers.flatMap((l) => (l.kind === 'group' ? [l, ...flatLayers(l.layers)] : [l]));
 // Each leg once (from the outlined pass, not again from the fur over it),
@@ -38,7 +39,12 @@ function reach(l: Exclude<Layer, { kind: 'group' }>): Point[] {
       // Each piece runs half its thickness past its joints, every way; each
       // foot is its own box.
       const pieces = l.legs.flatMap(piecesOf);
-      const joints = pieces.flatMap((p) => [p.from, p.to].flatMap((at) => corners(at.x - p.width / 2, at.y - p.width / 2, at.x + p.width / 2, at.y + p.width / 2)));
+      const joints = pieces.flatMap((p) => {
+        if (!p.anchors) return [p.from, p.to].flatMap((at) => corners(at.x - p.width / 2, at.y - p.width / 2, at.x + p.width / 2, at.y + p.width / 2));
+        const box = bone(p.from, p.to, p.width, false, p.anchors);
+        const turn = turnAbout(degrees(Math.atan2(p.to.y - p.from.y, p.to.x - p.from.x)), { x: 0, y: 0 }, p.from.x, p.from.y);
+        return corners(box.x, box.y, box.x + box.width, box.y + box.height).map((at) => turned(turn, at));
+      });
       const feet = l.legs.flatMap(footCorners);
       return [...joints, ...feet];
     }

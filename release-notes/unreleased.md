@@ -76,6 +76,13 @@ where there is room to rear, then chase ledge to ledge in bounding leaps
 (never over text, controls or charts), and freeze with their ears up at a
 cursor coming near, then bolt. Reduced motion keeps a still scene.
 
+Hare knees and hocks now follow continuous folds through the bounding stride,
+with skeleton-based upper/lower limb proportions and fixed bone lengths.
+Sitting keeps the forefeet reachable without stretched shins, while the long
+hind feet remain flat at rest and rise onto the toes in running stance.
+Thigh artwork is anchored at the hip and knee, with matching placement for
+its outline and fur, so the haunch stays attached to the rump.
+
 April now has an Easter egg hunt (`dashboard.theme` `easter`, on by default
 under `auto` from 1 to 30 April). The rail shows a basket of painted eggs and
 chicks; painted eggs peep from the ends of the page's ledges and pop up when

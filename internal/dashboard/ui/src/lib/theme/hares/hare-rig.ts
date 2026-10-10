@@ -54,7 +54,9 @@ export const REFERENCE = { x: 1, y: 1, width: 22.5, height: 22.42 };
 const FACE: Fur = { fill: '#d39552', outline: '#0b0503' };
 const HIND_TOES: Foot = { src: hindToesArt, fur: hindToesFurArt, width: 2.58, height: 1, heel: { x: 0.41, y: 0.38 } };
 const FORE_TOES: Foot = { src: foreToesArt, fur: foreToesFurArt, width: 1.67, height: 0.83, heel: { x: 0.33, y: 0.21 } };
-const legArtOn = (foot: Foot): LimbArt => ({ bone: legArt, boneFur: legFurArt, knee: true, thigh: { src: thighArt, fur: thighFurArt }, foot });
+// In the thigh picture, the hip lies inside the rounded haunch, and the
+// knee inside its narrow tip. Both image passes use those same centres.
+const legArtOn = (foot: Foot): LimbArt => ({ bone: legArt, boneFur: legFurArt, knee: true, thigh: { src: thighArt, fur: thighFurArt, anchors: { start: 0.25, end: 0.92 } }, foot });
 const LEG_WIDTH = 1.25;
 // A long foot laid flat rests its bone on the ledge, as thick as the leg,
 // a pixel above its edge, on the rule's line: a row of tabs can start a
@@ -68,8 +70,12 @@ const FEET = GROUND - LEG_WIDTH / 2 - 0.7;
 // near foreleg near upright from the shoulder, the elbow behind the chest,
 // the wrist just off the ground. The far pair a little apart from the near,
 // as they would be seen.
-const HIND_LEG = { art: legArtOn(HIND_TOES), width: LEG_WIDTH, thigh: 3.1, shin: 4.8, bend: 1, fore: false, haunch: 3.8, taper: true, reach: 0.5, walksOn: { kind: 'toes', length: 4.6, lean: 35, fold: 40 } } as const;
-const FORE_LEG = { art: legArtOn(FORE_TOES), width: LEG_WIDTH, thigh: 2.9, shin: 5, bend: -1, fore: true, haunch: 1.6, reach: -0.2, walksOn: { kind: 'toes', length: 1, lean: 30, fold: 45 } } as const;
+// Skeletal baselines, rather than the visible fur's segment lengths:
+// tibia/femur 148.2/132.4 = 1.12 (Fostowicz-Frelik 2007, Table 3),
+// radius/humerus 102/113 = 0.90 (Williams et al. 2007, Table 4).
+// Sources and the projected pose tuning are in design-docs/hares/README.md.
+const HIND_LEG = { art: legArtOn(HIND_TOES), width: LEG_WIDTH, thigh: 4.2, shin: 4.7, bend: 1, bendFrame: 'limb', jointLimits: { min: 40, max: 175 }, fore: false, haunch: 3.8, taper: true, reach: 0.5, walksOn: { kind: 'toes', length: 3.5, lean: 35, fold: 40 } } as const;
+const FORE_LEG = { art: legArtOn(FORE_TOES), width: LEG_WIDTH, thigh: 4.4, shin: 4, bend: -1, bendFrame: 'limb', jointLimits: { min: 30, max: 175 }, fore: true, haunch: 1.6, reach: -0.2, walksOn: { kind: 'toes', length: 1, lean: 30, fold: 45 } } as const;
 const LEGS: ArtLeg[] = [
   { ...HIND_LEG, hip: { x: 5.8, y: 13.1 }, far: true },
   { ...FORE_LEG, hip: { x: 18.2, y: 13.9 }, far: true },
@@ -158,8 +164,9 @@ function stance(hare: RigHare, look: HareLook): Stance {
       return still(turnAbout(12, HIPS, 0, 2.2), 48 + chew, -26 + flick(hare.seed, look.now), onSoles(LEGS, 1), planted(1.2, 2.6));
     }
     case 'sit':
-      // Up on its haunches, the long hind feet flat, forelegs straight.
-      return still(turnAbout(-34, HIPS, 0, 2.6), 30 + look.gaze, -6 - look.gaze, onSoles(LEGS, 1), planted(0.3, 3.2));
+      // Up on its haunches, the long hind feet flat. Keep the shoulders
+      // low enough for the forelegs to reach without stretching a bone.
+      return still(turnAbout(-23, HIPS, -0.82, 3), 19 + look.gaze, -6 - look.gaze, onSoles(LEGS, 1), planted(0.3, 3.2));
     case 'alert':
       // Crouched low and still, ears up, head toward what it heard.
       return still(turnAbout(-4, HIPS, 0, 5), -4 + look.gaze, -22 - look.gaze, onSoles(LEGS, 1), planted(1.6, 2.4));
@@ -183,7 +190,7 @@ function stance(hare: RigHare, look: HareLook): Stance {
       const reach = (h: Point, i: number): Point => (LEGS[i].fore
         ? { x: h.x + 4.5 - 2 * t, y: h.y + 4.6 - 1.2 * t }
         : { x: h.x - 10 + 5 * t, y: h.y + 3.5 - t });
-      return { body: turnAbout(-8 + 16 * t, HIPS, 0, CROUCH), head: 6 - 10 * t, ears: -88, legs: TRAILING, feet: (hips) => hips.map(reach), steps: LEGS.map((s) => ({ down: !s.fore, t: s.fore ? 0.9 : 0 })) };
+      return { body: turnAbout(-8 + 16 * t, HIPS, 0, CROUCH - 0.1), head: 6 - 10 * t, ears: -88, legs: TRAILING, feet: (hips) => hips.map(reach), steps: LEGS.map((s) => ({ down: !s.fore, t: s.fore ? 0.9 : 0 })) };
     }
     case 'box': {
       // Reared up on the long hind feet, forepaws striking in turn.
