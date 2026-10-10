@@ -66,6 +66,17 @@ export function claimsBut(group: Troupe, scene: PageMap, but: readonly number[],
 export const planning = (claims: Claim[], extra: { budget: number; ledges: number; from?: Point | null; toward?: number }, rand: Rand): PlanOptions =>
   ({ clear: HARE.clear, body: BOUND, air: LEAP, claims, spacing: SPACING, rand, ...extra });
 
+// A run for a file of hares, its leader first: the trail planned on from
+// the rear one, each hare keeping at least gap behind the one ahead.
+export function fileRun(kind: Run['kind'], file: readonly Hare[], trail: Trail, speed: number, gap: number): Run {
+  const [leader, rear] = [file[0], file[file.length - 1]];
+  const members = file.reduce<Member[]>((all, h) => {
+    const ahead = all.at(-1);
+    return [...all, { id: h.id, lag: ahead ? Math.max(ahead.lag + gap, Math.abs(leader.x - h.x)) : 0, start: Math.abs(h.x - rear.x) }];
+  }, []);
+  return { kind, trail, at: Math.abs(leader.x - rear.x), speed, members };
+}
+
 // Every trail moves on; each hare on one is put where it now is on it, its
 // steps driven by how far it moved. The trails that reached their end are
 // handed back, finished, for their hares to stop.

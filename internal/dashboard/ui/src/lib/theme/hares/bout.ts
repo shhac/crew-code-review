@@ -4,7 +4,7 @@ import { sign } from '../math';
 import { between, type Rand } from '../seed';
 import { BOX_GAP, BOX_SPAN, CHASE_GAP, CHASE_SPEED, HALF, HARE, SPACING, TALL, type Hare, type Mode } from './hare';
 import type { Hares } from './hares';
-import { claimsBut, planning, update, type Member, type Run } from './runs';
+import { claimsBut, fileRun, planning, update } from './runs';
 import { plan } from './trail';
 
 // A courtship: a jack comes up to the jill, they box where there is room to
@@ -90,13 +90,8 @@ function startChase(group: Hares, scene: PageMap, now: number, rand: Rand, bout:
   const rear = followers[followers.length - 1];
   const ids = [jill.id, ...followers.map((h) => h.id)];
   const trail = plan({ floor: rear.floor, x: rear.x }, side, scene, planning(claimsBut(group, scene, ids), CHASE, rand));
-  const lead = Math.abs(jill.x - rear.x);
-  if (trail.length - lead < 20) return standoff(group, now, rand, jill, jack);
-  const lags = followers.reduce<Member[]>((all, h) => {
-    const behind = all.length ? all[all.length - 1].lag + CHASE_LAG : CHASE_LAG;
-    return [...all, { id: h.id, lag: Math.max(behind, Math.abs(jill.x - h.x)), start: Math.abs(h.x - rear.x) }];
-  }, []);
-  const run: Run = { kind: 'chase', trail, at: lead, speed: CHASE_SPEED, members: [{ id: jill.id, lag: 0, start: lead }, ...lags] };
+  const run = fileRun('chase', [jill, ...followers], trail, CHASE_SPEED, CHASE_LAG);
+  if (trail.length - run.at < 20) return standoff(group, now, rand, jill, jack);
   return { ...group, runs: [...group.runs, run], bout };
 }
 

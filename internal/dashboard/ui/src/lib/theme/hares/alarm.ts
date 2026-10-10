@@ -5,7 +5,7 @@ import { between, type Rand } from '../seed';
 import { BOLT_SPEED, sitUp, type Hare } from './hare';
 import { breakBout } from './bout';
 import type { Hares } from './hares';
-import { claimsBut, grounded, pagePoint, placeOf, planning, update, type Run } from './runs';
+import { claimsBut, fileRun, grounded, pagePoint, placeOf, planning, update, type Run } from './runs';
 import { plan } from './trail';
 
 // A moving cursor coming near freezes the hares, and once frozen, those it
@@ -49,6 +49,15 @@ export function alarm(group: Hares, scene: PageMap, now: number, rand: Rand, cur
   return { ...group, hares: boutBroken ? breakBout(hares, now) : hares, runs: group.runs.filter((r) => !stopped.includes(r)), bout: boutBroken ? null : bout };
 }
 
+// The hares in file: by ledge and the way each is going, each file in the
+// order its first hare comes.
+function filesOf(hares: readonly Hare[], way: (h: Hare) => 1 | -1): Hare[][] {
+  return hares.reduce<Hare[][]>((files, h) => {
+    const file = files.find((f) => f[0].floor === h.floor && way(f[0]) === way(h));
+    return file ? files.map((f) => (f === file ? [...f, h] : f)) : [...files, [h]];
+  }, []);
+}
+
 // A hare taken off its trail where it is on it.
 function settle(group: Hares, hare: Hare): Hare {
   const place = placeOf(group, hare);
@@ -64,17 +73,15 @@ export function bolt(group: Hares, scene: PageMap, now: number, rand: Rand, curs
   const scared = cursor ? done.filter((h) => near(middleOf(group, h, scene), cursor, BOLT_REACH)) : [];
   const relaxed = done.filter((h) => !scared.includes(h)).map((h) => sitUp(h, scene, now, rand));
   const way = (h: Hare) => (cursor ? sign((middleOf(group, h, scene)?.x ?? 0) - cursor.x) : h.dir);
-  const files = [...new Set(scared.map((h) => `${h.floor}:${way(h)}`))].map((key) => scared.filter((h) => `${h.floor}:${way(h)}` === key));
-  const runs = files.reduce<Run[]>((all, file) => {
+  const runs = filesOf(scared, way).reduce<Run[]>((all, file) => {
     const d = way(file[0]);
     const ordered = [...file].sort((a, b) => (b.x - a.x) * d);
-    const [leader, rear] = [ordered[0], ordered[ordered.length - 1]];
+    const rear = ordered[ordered.length - 1];
     const claims = claimsBut(group, scene, file.map((h) => h.id), [...group.runs, ...all]);
     const trail = plan({ floor: rear.floor, x: rear.x }, d, scene, planning(claims, { ...BOLT, from: cursor }, rand));
-    const lead = Math.abs(leader.x - rear.x);
-    if (trail.length - lead < 1) return all;
-    const members = ordered.map((h) => ({ id: h.id, lag: Math.abs(leader.x - h.x), start: Math.abs(h.x - rear.x) }));
-    return [...all, { kind: 'bolt', trail, at: lead, speed: BOLT_SPEED, members }];
+    // Bolting, each keeps the distance it already had behind the leader.
+    const run = fileRun('bolt', ordered, trail, BOLT_SPEED, 0);
+    return trail.length - run.at < 1 ? all : [...all, run];
   }, []);
   const fled = new Set(runs.flatMap((r) => r.members.map((m) => m.id)));
   const cornered = scared.filter((h) => !fled.has(h.id)).map((h) => sitUp(h, scene, now, rand));
