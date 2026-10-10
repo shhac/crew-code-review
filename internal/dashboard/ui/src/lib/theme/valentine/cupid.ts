@@ -2,8 +2,8 @@ import { around, fits, inAir, linesOf, sweeps, type Air } from '../air';
 import { anchor, fromLedge, placed, progress, toLedge, type Anchored } from '../anchored';
 import { cubic, lengthOf, samples, shift, type Curve } from '../curves';
 import type { PageMap } from '../floors';
-import type { Point } from '../pointer';
-import { apart, smooth } from '../math';
+import { distance, type Point } from '../pointer';
+import { apart, clamp, degrees, smooth } from '../math';
 import { easeTo } from '../rig/life';
 import { between, type Rand } from '../seed';
 import type { CupidPose } from './cupid-rig';
@@ -183,6 +183,25 @@ export function flyTo(air: Air, from: Point, spots: readonly Point[], taken: rea
   return null;
 }
 
+// Which way it faces setting off on a flight: toward where it is going.
+const facing = (curve: Curve): 1 | -1 => (curve.to.x >= curve.from.x ? 1 : -1);
+// Settling afresh: toward the middle of the view.
+const towardMiddle = (air: Air, p: Point): 1 | -1 => (p.x < (air.view.left + air.view.right) / 2 ? 1 : -1);
+// On a flight: the way it is heading just ahead, keeping the way it faced
+// while that is nearly straight up or down.
+function facingAlong(flight: Flight, page: PageMap, here: Point | null, now: number, dir: 1 | -1): 1 | -1 {
+  const curve = flightCurve(page, flight);
+  const ahead = curve && cubic(curve, Math.min(1, smooth(progress(flight, now)) + 0.02));
+  return ahead && here && Math.abs(ahead.x - here.x) > 0.3 ? (ahead.x > here.x ? 1 : -1) : dir;
+}
+
+// How far its head turns toward a cursor near and ahead of it: half the
+// angle up or down to it, at most 12 degrees either way.
+function gazeToward(here: Point | null, cursor: Point | null, dir: 1 | -1): number {
+  if (!here || !cursor || apart(here, cursor) >= GAZE_REACH || (cursor.x - here.x) * dir <= 0) return 0;
+  return clamp(degrees(Math.atan2(cursor.y - here.y, Math.abs(cursor.x - here.x))) * 0.5, -12, 12);
+}
+
 // Off for a flit of its own accord: to a spot in view 60 to 360px away,
 // tried in a random order, a dozen at most.
 function flit(c: Cupid, air: Air, here: Point, now: number, rand: Rand, taken: readonly Point[]): Cupid {
@@ -193,7 +212,7 @@ function flit(c: Cupid, air: Air, here: Point, now: number, rand: Rand, taken: r
   const order = near.map((p) => ({ p, k: rand() })).sort((a, b) => a.k - b.k).slice(0, 12).map((x) => x.p);
   const way = flyTo(air, here, order, taken, now, FLIT_SPEED);
   if (!way) return { ...c, restless: now + between(rand, 2000, 4000) };
-  return { ...c, ...way, mode: 'flit', dir: way.flight.curve.to.x >= way.flight.curve.from.x ? 1 : -1, target: null };
+  return { ...c, ...way, mode: 'flit', dir: facing(way.flight.curve), target: null };
 }
 
 // Whether it is busy with its bow.
@@ -208,16 +227,9 @@ export function stepCupid(c: Cupid, air: Air, now: number, dt: number, rand: Ran
   const view = cupidView(c, air.page, now);
   const rate = now < c.flutter ? FLUTTER : view ? BEATS[view.pose] : BEATS.hover;
   const here = view && { x: view.x, y: view.y };
-  const toward = here && cursor && apart(here, cursor) < GAZE_REACH && (cursor.x - here.x) * c.dir > 0
-    ? Math.max(-12, Math.min(12, (Math.atan2(cursor.y - here.y, Math.abs(cursor.x - here.x)) * 180) / Math.PI * 0.5)) : 0;
-  const lived = { ...c, beat: c.beat + (rate * dt) / 1000, gaze: easeTo(c.gaze, toward, dt, GAZE_EASE) };
+  const lived = { ...c, beat: c.beat + (rate * dt) / 1000, gaze: easeTo(c.gaze, gazeToward(here, cursor, c.dir), dt, GAZE_EASE) };
   if (c.flight) {
-    if (now < c.flight.start + c.flight.duration) {
-      const curve = flightCurve(air.page, c.flight);
-      const ahead = curve && cubic(curve, Math.min(1, smooth(progress(c.flight, now)) + 0.02));
-      const dir = ahead && here && Math.abs(ahead.x - here.x) > 0.3 ? (ahead.x > here.x ? 1 : -1) : c.dir;
-      return { ...lived, dir };
-    }
+    if (now < c.flight.start + c.flight.duration) return { ...lived, dir: facingAlong(c.flight, air.page, here, now, c.dir) };
     return { ...lived, flight: null, mode: 'hover', restless: now + between(rand, ...RESTLESS) };
   }
   switch (c.mode) {
@@ -243,17 +255,13 @@ export const DASH_REACH = 70;
 export function dodge(c: Cupid, air: Air, now: number, from: Point, to: Point, others: readonly Cupid[]): Cupid {
   const here = where(c, air.page, now);
   if (!here || now < c.calm) return c;
-  const line = (p: Point) => {
-    const dx = to.x - from.x, dy = to.y - from.y;
-    const t = Math.max(0, Math.min(1, ((p.x - from.x) * dx + (p.y - from.y) * dy) / (dx * dx + dy * dy || 1)));
-    return Math.hypot(p.x - from.x - t * dx, p.y - from.y - t * dy);
-  };
+  const line = (p: Point) => distance(p, from, to);
   if (line(here) > DASH_REACH) return c;
   const calmed = { ...c, calm: now + CALM, target: null, mode: c.flight ? c.mode : 'hover' as const };
   const away = air.spots.filter((p) => line(p) >= line(here) + 60 && apart(p, here) <= FLIT_FAR).sort((a, b) => apart(a, here) - apart(b, here)).slice(0, 24);
   const way = flyTo(air, here, away, claims(others, air.page, now), now, DODGE_SPEED);
   if (!way) return { ...calmed, flutter: now + 400 };
-  return { ...calmed, ...way, mode: 'dodge', dir: way.flight.curve.to.x >= way.flight.curve.from.x ? 1 : -1 };
+  return { ...calmed, ...way, mode: 'dodge', dir: facing(way.flight.curve) };
 }
 
 // Where cupids may first hover, or settle afresh: the best spot in view
@@ -268,7 +276,7 @@ export function bestSpot(air: Air, taken: readonly Point[], rand: Rand, spacing 
 export function createCupid(air: Air, now: number, rand: Rand, others: readonly Cupid[], self: Self, spacing = SPACING, mode: 'hover' | 'enter' = 'hover'): Cupid | null {
   const p = bestSpot(air, claims(others, air.page, now), rand, spacing);
   const spot = p && anchor(air.page, p);
-  return spot && hoverAt(self, spot, now, now + between(rand, ...FIRST), mode, p.x < (air.view.left + air.view.right) / 2 ? 1 : -1);
+  return spot && hoverAt(self, spot, now, now + between(rand, ...FIRST), mode, towardMiddle(air, p));
 }
 
 // After a layout change. Flying, it flies on while the way still to go is
@@ -304,5 +312,5 @@ export function restingCupid(air: Air, previous: Cupid | null, others: readonly 
   if (previous && kept && canHover(air, kept, taken)) return hoverAt(self, previous.spot, 0, Infinity, 'hover', previous.dir);
   const p = bestSpot(air, taken, () => 0.5, spacing);
   const spot = p && anchor(air.page, p);
-  return spot && hoverAt(self, spot, 0, Infinity, 'hover', p.x < (air.view.left + air.view.right) / 2 ? 1 : -1);
+  return spot && hoverAt(self, spot, 0, Infinity, 'hover', towardMiddle(air, p));
 }
