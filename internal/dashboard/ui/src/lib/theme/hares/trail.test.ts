@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { reachOf } from '../floors';
 import { CLEAR, POSES, SPACING } from './hare';
-import { CARDS, HEADING, page, seeded } from './fixtures';
+import { CARDS, dashboardPage as page, HEADING, seeded } from '../test-scene';
 import { arcPoint, AWAY, clearAt, FADE, placeOn, plan, REACH, sweptClear, trailOf, type Claim, type PlanOptions, type Segment } from './trail';
 
 const LEAP = reachOf(POSES.leap);

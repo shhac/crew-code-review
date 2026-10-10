@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Cursor } from '../pointer';
-import { CARDS, HEADING, page, seeded } from './fixtures';
+import { CARDS, dashboardPage as page, HEADING, seeded } from '../test-scene';
 import { BOX_GAP, CHASE_GAP, REACHES, SPACING, type Hare } from './hare';
 import { createHares, hareViews, reconcileHares, restingHares, stepHares, type HareView, type Hares } from './hares';
 
