@@ -164,7 +164,7 @@ export function clearRoute(air: Pick<Air, 'page' | 'room'>, curve: Curve, taken:
 }
 
 // A flight from where it is to a spot, held relative to the spot's ledge.
-function flightTo(page: PageMap, from: Point, to: Point, curve: Curve, now: number, speed: number): { spot: Anchored; flight: Flight } | null {
+function flightTo(page: PageMap, to: Point, curve: Curve, now: number, speed: number): { spot: Anchored; flight: Flight } | null {
   const spot = anchor(page, to);
   const held = spot && toLedge(page, spot.floor, curve);
   if (!spot || !held) return null;
@@ -177,7 +177,7 @@ export function flyTo(air: Air, from: Point, spots: readonly Point[], taken: rea
   for (const to of spots) {
     if (!canHover(air, to, taken)) continue;
     const curve = routes(from, to).find((r) => clearRoute(air, r, taken));
-    const flight = curve && flightTo(air.page, from, to, curve, now, speed);
+    const flight = curve && flightTo(air.page, to, curve, now, speed);
     if (flight) return flight;
   }
   return null;
