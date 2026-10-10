@@ -1,3 +1,4 @@
+import { keepByKey, shareOut } from '../decor';
 import { clearRuns, type Ledge, type Obstacle, type Run } from '../floors';
 import { distance, type Segment } from '../pointer';
 import { hash } from '../seed';
@@ -86,24 +87,10 @@ export function meadowOn(id: number, f: Ledge, obstacles: readonly Obstacle[]): 
   return [...tufts, ...shoots].sort((a, b) => a.x - b.x);
 }
 
-// One of each ledge's in turn, up to the cap, so a long page keeps some on
-// every ledge rather than all of them on the first few cards.
-function shareOut(all: readonly (readonly Plant[])[], cap: number): Set<Plant> {
-  const rounds = Math.max(0, ...all.map((p) => p.length));
-  return new Set(Array.from({ length: rounds }, (_, i) => all.flatMap((p) => p.slice(i, i + 1))).flat().slice(0, cap));
-}
-
 // The grass on every ledge, keeping when each surviving plant was last
 // brushed; capped at MAX_TUFTS tufts and MAX_SHOOTS shoots in all.
 export function reconcileMeadows(floors: ReadonlyMap<number, Ledge>, obstacles: readonly Obstacle[], old: ReadonlyMap<number, Meadow> = new Map()): Map<number, Meadow> {
-  const fresh = [...floors].map(([id, f]) => {
-    const held = new Map(old.get(id)?.map((p) => [p.key, p]));
-    const meadow = meadowOn(id, f, obstacles).map((p) => {
-      const before = held.get(p.key);
-      return before && before.x === p.x ? { ...p, at: before.at, away: before.away } : p;
-    });
-    return [id, meadow] as const;
-  });
+  const fresh = [...floors].map(([id, f]) => [id, keepByKey(old.get(id), meadowOn(id, f, obstacles), (before, p) => ({ ...p, at: before.at, away: before.away }))] as const);
   const kept = new Set([
     ...shareOut(fresh.map(([, m]) => m.filter((p) => p.kind === 'tuft')), MAX_TUFTS),
     ...shareOut(fresh.map(([, m]) => m.filter((p) => p.kind === 'shoot')), MAX_SHOOTS),

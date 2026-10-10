@@ -1,3 +1,4 @@
+import { shareOut } from '../decor';
 import { clearRuns, type Ledge, type Obstacle, type Run } from '../floors';
 import { hash } from '../seed';
 
@@ -44,9 +45,7 @@ function petalsOn(id: number, r: Run): Petal[] {
 // the first few cards.
 export function scatterPetals(floors: ReadonlyMap<number, Ledge>, obstacles: readonly Obstacle[]): Map<number, Petal[]> {
   const all = [...floors].map(([id, f]) => [id, clearRuns(f, obstacles, CLEAR, { inset: INSET }).flatMap((r) => petalsOn(id, r))] as const);
-  const rounds = Math.max(0, ...all.map(([, p]) => p.length));
-  const turns = Array.from({ length: rounds }, (_, i) => all.flatMap(([, p]) => p.slice(i, i + 1))).flat();
-  const kept = new Set(turns.slice(0, MAX_PETALS));
+  const kept = shareOut(all.map(([, p]) => p), MAX_PETALS);
   return new Map(all.map(([id, p]) => [id, p.filter((petal) => kept.has(petal))]));
 }
 

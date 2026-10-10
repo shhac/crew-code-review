@@ -1,3 +1,4 @@
+import { keepByKey, shareOut } from '../decor';
 import { clearRuns, type Ledge, type Obstacle, type Run } from '../floors';
 import { distance, type Segment } from '../pointer';
 import { hash } from '../seed';
@@ -76,19 +77,10 @@ function glintsOn(id: number, r: Run): Glint[] {
 // the light; capped at MAX_GLINTS glints in all.
 export function reconcileRime(floors: ReadonlyMap<number, Ledge>, obstacles: readonly Obstacle[], old: ReadonlyMap<number, Rime> = new Map()): Map<number, Rime> {
   const fresh = [...floors].map(([id, f]) => {
-    const held = new Map(old.get(id)?.glints.map((g) => [g.key, g]));
     const rime = rimeOn(id, f, obstacles);
-    const glints = rime.glints.map((g) => {
-      const before = held.get(g.key);
-      return before && before.x === g.x ? before : g;
-    });
-    return [id, { ...rime, glints }] as const;
+    return [id, { ...rime, glints: keepByKey(old.get(id)?.glints, rime.glints) }] as const;
   });
-  // A glint from each ledge in turn, so a long page keeps some on every
-  // ledge rather than all of them on the first few cards.
-  const rounds = Math.max(0, ...fresh.map(([, r]) => r.glints.length));
-  const turns = Array.from({ length: rounds }, (_, i) => fresh.flatMap(([, r]) => r.glints.slice(i, i + 1))).flat();
-  const kept = new Set(turns.slice(0, MAX_GLINTS));
+  const kept = shareOut(fresh.map(([, r]) => r.glints), MAX_GLINTS);
   return new Map(fresh.map(([id, r]) => [id, { ...r, glints: r.glints.filter((g) => kept.has(g)) }]));
 }
 

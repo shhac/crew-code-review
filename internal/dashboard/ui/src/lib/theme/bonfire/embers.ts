@@ -1,3 +1,4 @@
+import { keepByKey } from '../decor';
 import type { Ledge } from '../floors';
 import { distance, type Segment } from '../pointer';
 import { hash } from '../seed';
@@ -37,13 +38,7 @@ export function emberSpots(id: number, f: Ledge): Ember[] {
 }
 
 export function reconcileEmbers(floors: ReadonlyMap<number, Ledge>, old: ReadonlyMap<number, Ember[]> = new Map()): Map<number, Ember[]> {
-  return new Map([...floors].map(([id, f]) => {
-    const previous = new Map(old.get(id)?.map((e) => [e.key, e]));
-    return [id, emberSpots(id, f).map((e) => {
-      const held = previous.get(e.key);
-      return held && held.x === e.x ? held : e;
-    })];
-  }));
+  return new Map([...floors].map(([id, f]) => [id, keepByKey(old.get(id), emberSpots(id, f))]));
 }
 
 // What is left at now of the last fanning.
