@@ -568,6 +568,54 @@ generated poses are not all drawn at one size: the owner exports each on the
 eye scale (`art.py`'s `feature`, `rescaled`), and their boxes then give the
 real footprints in place of the budget above.
 
+### Parts, as built
+
+Cut on 2026-10-10 by the same tool and model, each an edit of the drawing it
+names, on flat magenta, the pieces in one row so `art.py`'s `cut` splits
+them at their empty columns. Each was looked at before use, and the parts
+were checked by laying them at their printed places over their drawing.
+
+| File | What | Edit of |
+| --- | --- | --- |
+| `pigeon-parts.png` | the body (legs, folded wing and tail off, belly and back closed, a soft unoutlined top where the head and neck go), the folded wing, the closed tail, the head with the green of the upper neck and a soft lower edge | `pigeon-standing-2.png` |
+| `pigeon-limbs.png` | the neck piece (green over violet), the feathered tibiotarsus piece, the bare coral tarsometatarsus, a foot flat (three toes forward, the hallux back) and a foot curled | `pigeon-standing-2.png` |
+| `pigeon-wings.png` | the near wing's arm and hand, each as upper side and underside, root at the left with a soft end; the fanned tail | `pigeon-standing-2.png`, with the flight and take-off poses as guides |
+| `hawk-parts.png` | the gliding body (wing, head and tail off, the feet tucked under the tail painted on), the head with a soft back edge, the closed tail | `hawk-pose-glide-2.png` |
+| `hawk-wings.png` | the near wing's arm and hand, upper side and underside | `hawk-pose-glide-2.png`, with the flap poses as guides |
+
+`export.py` puts both birds on one scale in drawing units, each bird's eye
+(its pupil) setting its own: the pigeon's pupil is 1 unit, which makes the
+standing reference 20.2x17.0 units; the hawk's is 1.8, which makes its glide
+drawing 32.3 units long, 1.6 times the pigeon, as the sizes above ask. So
+one page size for a unit serves both rigs. The hawk's plumage is itself dark
+brown, so `art.py`'s `feature` gained an optional darkness threshold (90
+for the hawk, 200 as before for everyone else). The parts' shapes alone fit
+anywhere inside their drawing (a tail, a head, the folded wing), so they are
+placed by colour: `art.py`'s new `by_colour` finds the offset where a part's
+own pixels differ least from the drawing's, by FFT; every placement checked
+by overlay. Where each part sat (units, the reference's top left at 1, 1):
+
+| Part | Size | At |
+| --- | --- | --- |
+| `pigeon-body` | 12.17x10.17 | 8.02, 4.36 |
+| `pigeon-wing` | 12.42x6.92 | 3.98, 5.75 |
+| `pigeon-tail` | 7.92x4.17 | 1.00, 10.04 |
+| `pigeon-head` | 7.67x6.67 | 13.45, 1.00 |
+| `hawk-body` | 18.25x7.17 | 9.15, 1.65 (on the glide) |
+| `hawk-head` | 8.67x6.42 | 24.62, 1.00 |
+| `hawk-tail` | 10.67x4.67 | 1.03, 3.11 |
+
+The limb pieces are exported at measured thicknesses (neck 3.6 units,
+tibiotarsus 1.7, tarsometatarsus 0.45) with their fur alone beside them
+(`-fur`), the flat foot 4.7 units long and the curled one 2.8. The wings are
+placed by hand in the rig, so they are scaled by length: the hand-wing is
+half the bird's length (10 units on the pigeon, 15.3 on the hawk), the arm
+on the same scale, and every wing piece is also written 22% darker for the
+far wing (`-far-`). The fanned tail is as long as the closed one. The lab
+gets `pigeon-reference.webp`, the eight pigeon key poses, and the hawk's
+glide (`hawk-pose-glide.webp`, the frame its parts are placed on) and two
+flap poses.
+
 ## Verification (for the owner)
 
 As for January and November, plus what flight adds:

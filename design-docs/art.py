@@ -19,6 +19,8 @@ from PIL import Image
 MARGIN = 6
 
 Mask = Callable[[np.ndarray], np.ndarray]
+# Finds where a part sits in a whole (its top left), as by_colour does.
+Placer = Callable[[np.ndarray, np.ndarray], tuple[int, int]]
 Size = tuple[int, int]
 
 
@@ -69,11 +71,13 @@ def rows(rgba: np.ndarray, count: int) -> list[np.ndarray]:
     return [p.transpose(1, 0, 2) for p in poses(rgba.transpose(1, 0, 2), count)]
 
 
-def feature(path: Path, seed: tuple[int, int]) -> float:
+def feature(path: Path, seed: tuple[int, int], dark_below: int = 200) -> float:
     """The size (mean of width and height) of the dark blob nearest seed in a
-    source image: an eye, the one feature every pose of an animal shares."""
+    source image: an eye, the one feature every pose of an animal shares. An
+    animal whose plumage is itself dark (a brown hawk) sets dark_below lower,
+    so only the pupil counts."""
     rgb = np.asarray(Image.open(path).convert('RGB')).astype(int)
-    dark = rgb.sum(axis=-1) < 200
+    dark = rgb.sum(axis=-1) < dark_below
     ys, xs = np.nonzero(dark)
     start = min(zip(ys, xs), key=lambda p: (p[0] - seed[1]) ** 2 + (p[1] - seed[0]) ** 2)
     seen, todo, blob = {start}, deque([start]), []
@@ -135,6 +139,33 @@ def place(part: np.ndarray, whole: np.ndarray, step: int = 4, mask=opaque) -> tu
     return best(a, b, ys, xs)
 
 
+def _correlate(a: np.ndarray, b: np.ndarray) -> np.ndarray:
+    """For every offset (y, x) with a wholly inside b, the sum of a times the
+    window of b there, by FFT."""
+    h, w = a.shape
+    shape = (b.shape[0] + h, b.shape[1] + w)
+    out = np.fft.irfft2(np.fft.rfft2(b, shape) * np.conj(np.fft.rfft2(a, shape)), shape)
+    return out[:b.shape[0] - h + 1, :b.shape[1] - w + 1]
+
+
+def by_colour(part: np.ndarray, whole: np.ndarray) -> tuple[int, int]:
+    """Where a part cut from a whole picture sits in it (its top left, in the
+    whole's pixels), by colour: the offset at which the part's own pixels
+    differ least from the whole's, so a part whose shape alone fits
+    anywhere inside the whole (a tail, a head, a folded wing) still finds
+    its place. Colours are weighed by opacity, so transparency counts too."""
+    def planes(rgba: np.ndarray) -> np.ndarray:
+        a = rgba[..., 3:4].astype(np.float32) / 255
+        return np.concatenate([rgba[..., :3].astype(np.float32) / 255 * a, a], axis=-1)
+    p, q = planes(part), planes(whole)
+    weight = (part[..., 3] > 128).astype(np.float32)
+    # The squared difference over the part's pixels, written out so each sum
+    # is one correlation: sum(w p^2) - 2 sum(w p q) + sum(w q^2).
+    cost = sum(float((weight * p[..., c] ** 2).sum()) - 2 * _correlate(weight * p[..., c], q[..., c]) + _correlate(weight, q[..., c] ** 2) for c in range(4))
+    y, x = np.unravel_index(int(np.argmin(cost)), cost.shape)
+    return int(y), int(x)
+
+
 def export(rgba: np.ndarray, out: Path, name: str, scale: float) -> tuple[int, int]:
     img = Image.fromarray(rgba, 'RGBA')
     size = (round(img.width * scale), round(img.height * scale))
@@ -171,8 +202,9 @@ class EyeScale:
     fur round it (a bumblebee's, in its black head)."""
 
     def __init__(self, here: Path, eyes: dict[str, tuple[int, int]], eye: float, res: int, margin: int = 1,
-                 measure: Callable[[Path, tuple[int, int]], float] = feature):
-        self.here, self.eyes, self.eye, self.res, self.margin, self.measure = here, eyes, eye, res, margin, measure
+                 measure: Callable[[Path, tuple[int, int]], float] | None = None, dark_below: int = 200):
+        self.here, self.eyes, self.eye, self.res, self.margin = here, eyes, eye, res, margin
+        self.measure = measure or (lambda path, seed: feature(path, seed, dark_below))
         self.standing = np.zeros((0, 0, 4), np.uint8)
         self.standing_sheet = ''
 
@@ -211,21 +243,22 @@ class EyeScale:
             size = export(crop(key(path)), out, name, self.eye / eye * self.res)
             print(f'{name}: eye {eye:.1f}px; drawing units {self.units(size)}')
 
-    def placed(self, name: str, art: np.ndarray, out: Path, scale: float, k: float, mask: Mask | None = opaque) -> Size:
+    def placed(self, name: str, art: np.ndarray, out: Path, scale: float, k: float, mask: Mask | Placer | None = opaque) -> Size:
         """Writes a part at scale and prints where it sat in the reference,
         its place in the rig, matched by what mask picks out with the part
-        grown k times onto the reference's pixels. A part with no mask is
-        placed by hand."""
+        grown k times onto the reference's pixels, or by its colours when
+        mask is by_colour. A part with no mask is placed by hand."""
         size = export(art, out, name, scale)
         if mask is None:
             print(f'{name}: {self.units(size)}')
             return size
         per_unit = self.per_unit()
-        y, x = place(rescaled(art, k), self.standing, mask=mask)
+        grown = rescaled(art, k)
+        y, x = by_colour(grown, self.standing) if mask is by_colour else place(grown, self.standing, mask=mask)
         print(f'{name}: {self.units(size)} at {x / per_unit + self.margin:.2f}, {y / per_unit + self.margin:.2f}')
         return size
 
-    def parts(self, arts: dict[str, np.ndarray], sheet: str, out: Path, mask: Mask = opaque, masks: dict[str, Mask | None] | None = None) -> dict[str, Size]:
+    def parts(self, arts: dict[str, np.ndarray], sheet: str, out: Path, mask: Mask | Placer = opaque, masks: dict[str, Mask | Placer | None] | None = None) -> dict[str, Size]:
         """The parts cut from the reference into sheet, each placed; masks
         sets a part's own mask in place of mask."""
         k = self.px(self.standing_sheet) / self.px(sheet)
