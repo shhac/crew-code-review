@@ -148,11 +148,14 @@ export async function watchCovered(page: Page, look: () => Promise<string[]>, ti
   return [...seen];
 }
 
-// Elements in the overlay or shelf that would catch a pointer.
+// Elements in the overlay or shelf that would catch a pointer. evaluateAll
+// finds the elements and then runs on them, so one drawn only for a moment
+// (a blink's lid) can be gone by then, and a removed element has no
+// computed style at all; it catches nothing.
 export function catching(page: Page, set: SeasonalSet) {
   const scope = `${set.overlay}, ${set.overlay} *, ${set.shelf}, ${set.shelf} *`;
   return page.locator(scope).evaluateAll((els) =>
-    els.filter((el) => getComputedStyle(el).pointerEvents !== 'none').map((el) => el.tagName + '.' + el.getAttribute('class')),
+    els.filter((el) => el.isConnected && getComputedStyle(el).pointerEvents !== 'none').map((el) => el.tagName + '.' + el.getAttribute('class')),
   );
 }
 
