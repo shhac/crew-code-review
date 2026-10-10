@@ -356,6 +356,26 @@ rally starts while a bird is flying or away.
 
 **Reduced motion**: no ball.
 
+**As built** (`rally.ts`): everything is in court-local coordinates from
+the left card's top left, so the ball rides with the cards. The court's two
+card ids come from the surfaces kit's courts; the rally works out the net
+and the bounce spots itself (40 to 140px from the net, never inside a
+card's 12px rounded corner). The shot's height is the ball's bottom over
+the ledges; a shot is a parabola solved so its top is the height chosen.
+The bounce's low hop goes on 10px the way the ball was going, to the
+height the next shot is struck from. Every piece of the ball's way (shot,
+squash, hop, fall, roll, drop into the net) is sampled every 2px and its
+box, each pair joined, kept 2px from text, controls and charts, off any
+card but its top (where it bounces) and its empty bottom 6px (where it may
+rise), and inside the window; the room over a shot comes from `clearance`
+on both cards with the 6px reach, less the ball and 2px. A volley is a fast
+flat shot (a 2px rise) back to the side the ball came from; it cannot be
+volleyed in turn, and the rally then goes on as before. The deep landing of
+an out leaves room for its two lower bounces and the roll (30px) before the
+card's end; a rally that cannot finish one way finishes the other, or
+simply ends. A page change that leaves the rest of the ball's way unclear
+ends the rally at once.
+
 ### Court lines
 
 Drawn only where `clearRuns(f, obstacles, 4)` says 4px is clear, on card
