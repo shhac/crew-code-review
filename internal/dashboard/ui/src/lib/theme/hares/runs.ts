@@ -4,7 +4,7 @@ import { pageAt, runAt } from '../ledges';
 import type { Point } from '../pointer';
 import type { Rand } from '../seed';
 import { claimsOfHares, HARE, POSES, SPACING, type Hare, type Mode } from './hare';
-import { arcPoint, claimsOf, placeOn, sweptClear, type Claim, type PlanOptions, type Place, type Trail } from './trail';
+import { arcPoint, claimsOf, placeOn, segmentsWithStart, sweptClear, type Claim, type PlanOptions, type Place, type Trail } from './trail';
 
 // The trails the hares are running: who is on each, how far along it each
 // is, and moving them along it. A run is one planned trail (trail.ts) that
@@ -90,7 +90,7 @@ export function advanceRuns<G extends Troupe>(group: G, dt: number): { group: G;
 // run still on a clear run, every leap still clear.
 export function trailHolds(run: Run, scene: PageMap): boolean {
   const from = Math.min(...run.members.map((m) => sAt(run, m)));
-  const ahead = run.trail.segments.filter((_, i) => run.trail.segments.slice(0, i + 1).reduce((sum, s) => sum + (s.kind === 'run' ? Math.abs(s.to - s.from) : s.length), 0) >= from);
+  const ahead = segmentsWithStart(run.trail).filter((g) => g.start + g.length >= from).map((g) => g.segment);
   return ahead.every((s) => {
     if (s.kind === 'away') return scene.floors.has(s.from.floor) && scene.floors.has(s.to.floor);
     if (s.kind === 'run') {

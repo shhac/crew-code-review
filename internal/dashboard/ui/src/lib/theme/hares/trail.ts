@@ -70,24 +70,25 @@ export type PlanOptions = {
 // on the page where it stands, for a leap to fly clear of.
 export type Claim = Stretch & { box?: Box };
 
-const segLength = (s: Segment) => (s.kind === 'run' ? Math.abs(s.to - s.from) : s.length);
+export const segLength = (s: Segment) => (s.kind === 'run' ? Math.abs(s.to - s.from) : s.length);
 // How a hare on a trail stands on the ledges.
 const walkerOf = (opts: PlanOptions): Walker => ({ clear: opts.clear, reach: REACH, half: opts.body.half, spacing: opts.spacing });
 
 export const trailOf = (segments: Segment[]): Trail => ({ segments, length: segments.reduce((sum, s) => sum + segLength(s), 0) });
 
+// Each segment with how far along the trail it starts, and its length.
+export const segmentsWithStart = (trail: Trail) => trail.segments.reduce<{ segment: Segment; start: number; length: number }[]>((all, segment) => {
+  const before = all.at(-1);
+  return [...all, { segment, start: before ? before.start + before.length : 0, length: segLength(segment) }];
+}, []);
+
 // Where a hare is, s along the trail (clamped to it).
 export function placeOn(trail: Trail, s: number): Place {
   const at = clamp(s, 0, trail.length);
-  const found = trail.segments.reduce<{ left: number; place: Place | null }>((acc, seg, i) => {
-    if (acc.place) return acc;
-    const length = segLength(seg);
-    const last = i === trail.segments.length - 1;
-    if (acc.left > length && !last) return { left: acc.left - length, place: null };
-    const into = Math.min(acc.left, length);
-    return { left: 0, place: placeIn(trail, i, into) };
-  }, { left: at, place: null });
-  return found.place ?? { kind: 'run', floor: 0, x: 0, dir: 1, fade: 0 };
+  const segments = segmentsWithStart(trail);
+  const i = segments.findIndex((g, k) => at - g.start <= g.length || k === segments.length - 1);
+  if (i < 0) return { kind: 'run', floor: 0, x: 0, dir: 1, fade: 0 };
+  return placeIn(trail, i, Math.min(at - segments[i].start, segments[i].length));
 }
 
 function placeIn(trail: Trail, i: number, into: number): Place {
@@ -220,9 +221,6 @@ export function plan(start: Spot, dir: 1 | -1, scene: PageMap, opts: PlanOptions
   return trailOf(step(start, dir, [], [start.floor]));
 }
 
-// The trail's end: where the leader stops.
-export const endOf = (trail: Trail): Place => placeOn(trail, trail.length);
-
 // The stretches a trail passes along on each ledge, for others to keep
 // clear of.
 export function claimsOf(trail: Trail): Claim[] {
@@ -231,6 +229,3 @@ export function claimsOf(trail: Trail): Claim[] {
     return [{ floor: s.to.floor, lo: s.to.x, hi: s.to.x }];
   });
 }
-
-// Whether every ledge a trail uses is still there, so it can go on.
-export const stillThere = (trail: Trail, scene: PageMap) => trail.segments.every((s) => (s.kind === 'run' ? scene.floors.has(s.floor) : scene.floors.has(s.from.floor) && scene.floors.has(s.to.floor)));
