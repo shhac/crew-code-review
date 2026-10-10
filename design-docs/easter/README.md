@@ -92,21 +92,27 @@ hindlimb spring and landing on one forefoot before the other, as in rabbits
 and hares). Foraging, a rabbit moves in single hops with pauses between
 them, stopping to look and sniff.
 
-One hop, as the rig draws it (`hop.ts`), from sitting to sitting:
+One hop, as the rig draws it (`rabbit-rig.ts`'s `HOP`), is one cycle of
+the shared gait (`rig/gait.ts`): its landings given to March's `beatsFor`
+(the hind pair together at the start of the cycle, the near forefoot at
+0.6, the far at 0.66), each foot down for 45% of the cycle, so:
 
-| Part of the hop | Feet | Body |
+| Part of the cycle | Feet | Body |
 | --- | --- | --- |
-| push (first 30%) | hind feet planted, heels peeling up onto the toes; forefeet lift and reach | rises and stretches, nose up |
-| flight (to 62%) | all off the ground, hind legs trailing, then swinging forward | arcs over, levels, nose down |
-| forefeet land (62%, the far one 6% later) | forefeet planted where they will stay | takes the weight on its chest |
-| gather (to the end) | hind feet swing forward under the arched back and land together beside the forefeet | rump comes down, settling |
+| 0 to 0.05 | all four down: where each hop starts and ends, and where it rests between hops | gathered, as it sits |
+| to 0.45, the push | the forefeet lift; the hind feet stay planted while the body passes over them, heels peeling up onto the toes | rises, nose up |
+| 0.45 to 0.6, the flight | all off the ground, the hind legs trailing out behind then folding forward | carried up by `flightLift`, levelling, ears back, scut up |
+| 0.6 to 1, landing and gathering | the near forefoot lands, then the far; the hind pair swing forward and land together beside them as the next cycle starts | nose down onto the forefeet, then the rump comes down |
 
-Every planted foot is held at its place on the ledge (worked out from where
-the hop began and where it ends), so nothing slides; the body's own travel
-within the hop is eased (quick in flight, slow while gathering), and the
-feet follow from it. It is rabbit-only motion, in this theme's own files;
-the shared `rig/gait.ts` is untouched (its lagomorph additions are the
-hare's agent's; see "Shared code" below).
+Stepping is driven by distance hopped, as every animal's is, so a planted
+foot never slides (a rig test holds each planted foot still on the ledge
+through a whole hop); the feet are set from where the hips stand at rest,
+not where the pitching body carries them, so the body can rock over planted
+feet. A rabbit moves a whole hop at a time and pauses between hops (0.1 to
+0.35s, none when bolting) at the start of the cycle, all four feet down, so
+it never stops in the air. The trailing hind legs, the body's pitch and the
+forefeet's extra lift are rabbit-only tuning in `easter/rabbit-rig.ts`; the
+shared gait is used as March's agent landed it.
 
 ### Behaviour
 
@@ -146,11 +152,12 @@ reduced motion). With no eggs on the page and none found it is not drawn.
 
 - **Tucked into a ledge end**: an egg stands centred 10px in from one end of
   a ledge, in the corner of its card or heading rule. Hidden, it is drawn
-  clipped at the ledge's line and sunk so only its top third (about 4px)
-  peeps over the edge, as if tucked behind the card's corner. Every 7 to 13
-  seconds (seeded) a hidden egg gives a small wobble, so a watchful eye can
-  spot one.
-- **Only where clear**: an egg needs 14px clear over the 12px around its
+  clipped at the ledge's line and sunk so only its top (42%, about 6px of
+  its 14) peeps over the edge, as if tucked behind the card's corner. Every
+  7 to 13 seconds (seeded) a hidden egg gives a small wobble, so a watchful
+  eye can spot one. (First drawn 12px tall peeping 4px, which read as a
+  speck of dust on the page.)
+- **Only where clear**: an egg needs 16px clear over the 12px around its
   spot (`clearance` with the animals' 6px reach), so a revealed egg never
   stands over text, controls or charts; heading rules qualify only where
   their own text leaves room.
@@ -161,7 +168,7 @@ reduced motion). With no eggs on the page and none found it is not drawn.
 - **Found by hover, never by a click**: the overlay never takes pointer
   events, so finding is by the passive cursor (the same mouse or pen hover
   every theme uses): a stroke passing within 26px of an egg's top reveals
-  it. It pops up over 0.4s with a small overshoot and stands on the ledge,
+  it. It pops up over 0.4s, quick then easing, and stands on the ledge,
   with a brief four-pointed glint, and stays found for the rest of the
   session on that ledge.
 - **Rabbits' eggs**: a rabbit leaving an egg first hops to near a free,
@@ -199,20 +206,25 @@ creature may reach into a card's or rule's empty edge; the gaps between
 deeper cards are less. So everything a rabbit does fits under 27px over its
 width, counting that reach, and its footprints (the box each pose stays
 inside at every moment, which the rig's tests check over whole cycles,
-along with no foot sinking below the ledge) are set from its drawing:
+along with no foot and no picture's box reaching below the ledge, and the
+eased change from every pose into every other staying inside the larger of
+the two) are set from its drawing, at one page scale (1.4 page pixels per
+drawing unit, the eye 2.1px):
 
-| Pose | Used for |
-| --- | --- |
-| sit | sitting, the nose twitch, looking about, settling, the still pose |
-| alert | sitting up on alert |
-| groom | washing its face |
-| hop | every hop: along a ledge, in, out, bolting |
-| nudge | leaving an egg |
-| thump | the stamp before it bolts |
+| Pose | Footprint | Used for |
+| --- | --- | --- |
+| sit | 31x26 | sitting, the nose twitch, looking about, the still pose |
+| alert | 31x28 | sitting up on alert, forepaws to its chest |
+| groom | 31x27 | washing its face, forepaws at its muzzle |
+| hop | 31x27 | every hop: along a ledge, in, out, bolting |
+| nudge | 40x19 | leaving an egg, head down to the ledge |
+| thump | 31x23 | the stamp before it bolts |
 
-(Sizes in "Footprints" below, once measured.) A pose that does not fit
-where the rabbit is, is skipped: no room to sit up means no alert pose (it
-crouches instead, the sit), no room to groom means it does not.
+Sitting up on alert is the one pose over 27px: where there is not that much
+room it stays in its sit, ears pricked, and nothing else changes. No room
+to groom means it does not. The sit's box is wide for its body because the
+scut sticks out behind; the boxes are symmetric about where it stands so
+they hold whichever way it faces.
 
 ### Behaviour, as a state table
 
@@ -289,7 +301,10 @@ a forepaw from its near legs, so their thickness is the drawing's.
   tapering to the hock's point), and the long hind foot from the hock,
   standing flat as a sole walker's foot (`walksOn: sole`), its heel peeling
   up over its toes as it pushes off.
-- **Foreleg**: shoulder to elbow to wrist, a slim bar, on a small forepaw.
+- **Foreleg**: shoulder to elbow to wrist, a slim bar, and a short bone on
+  to the small forepaw, which folds back as the paw lifts (`walksOn: toes`).
+  Sat up on alert the forepaws are held to the chest; grooming, they are at
+  the muzzle, stroking up over it as the head bobs down to them.
 - **Outlines only on the silhouette**: each piece drawn outlined and again as
   fur alone (`fill_only`), the near legs' fur over the body's edge; the far
   pair a shade darker.
@@ -302,17 +317,24 @@ a forepaw from its near legs, so their thickness is the drawing's.
   pose.
 - **Signs of life**: the eye blinks on a seeded schedule (`rig/life.ts`), the
   nose snuffles while sitting, the head turns a little toward a cursor within
-  160px (eased), an ear now and then turns back to listen. Reduced motion:
-  sitting, head level, no blink.
+  160px while it sits (eased), the ears drift slowly. Every change of pose
+  eases over 0.26s (body, head, ears, tail and lifted paws; a forepaw folds
+  as it rises off the ledge and unfolds before it lands), so nothing snaps.
+  Reduced motion: sitting, head level, no blink.
 
 ## Shared code
 
-Additive only. The hop is the rabbit's own (`easter/hop.ts`), on
-`rig/gait.ts`'s `legsTo` and sole walker as they stand; nothing in
-`rig/gait.ts` is changed, and the March agent's lagomorph additions there are
-used if they land and fit. `e2e/content.ts` already checks every `<image>`
+Nothing shared is changed. The hop is built on `rig/gait.ts` as it stands
+with March's lagomorph additions (`beatsFor`, `flightLift`), `stepping`,
+`legsTo` and the sole and toe walkers; rabbit-only tuning is in
+`easter/rabbit-rig.ts`. `e2e/content.ts` already checks every `<image>`
 inside a located element, which covers the eggs too (they are images, each in
-its own element with a `data-id`), so it needs no change.
+its own element with a `data-id`), so it needs no change. Two things a
+later structure pass could share: the rig's legs are drawn as four `legs`
+layers (hind and fore each with their own art and thickness), composed by
+hand because `legsAround` takes one art for all four legs; and the rabbit's
+group plumbing (`rabbits.ts`) repeats the foxes' `regroup` almost line for
+line.
 
 ## Accent
 
@@ -330,8 +352,35 @@ built-in `$imagegen` path, each on a flat magenta `#FF00FF` background, with
 `hedgehog-standing.png` as style references. Every prompt kept pink and
 purple out of the art so the magenta key cannot eat it (the rabbit's inner
 ears are a warm beige-tan). `export.py` reproduces every shipped file
-(`uv run design-docs/easter/export.py`). The table is filled in as the art
-is exported.
+(`uv run design-docs/easter/export.py`), which prints where each part sat in
+the reference and every size below.
+
+The rabbit started as one drawing of it standing on all four feet
+(`rabbit-standing.png`); every other rabbit image is an edit of it:
+`rabbit-parts.png` (tail, body, head without ears, ears), `rabbit-limbs.png`
+(haunch, hind leg bar, long hind foot, foreleg bar, forepaw, cut from its
+near legs) and the key poses. The first hop-gather and thump edits came back
+as near copies of the standing pose (legs straight, not gathered; feet
+flat, not stamping) and were regenerated with sharper prompts. The parts are
+placed by matching their thickened black outlines against the reference
+(`export.py`'s `inked`), since a small part's shape alone fits anywhere
+inside the whole rabbit, and checked by overlay.
+
+| Source | Shipped as | Display size |
+| --- | --- | --- |
+| `basket-chicks.png` | `basket.webp` | 141x64, at twice that |
+| `eggs.png` | `egg-0.webp` to `egg-5.webp` | 10.75x14, at four times that |
+| `rabbit-standing.png` | `ui/src/lab/rabbit-reference.webp` (the lab's overlay) | 20.5x17.2 units |
+| `rabbit-pose-*.png` (seven key poses) | `ui/src/lab/rabbit-pose-*.webp` (the lab's overlays) | on the same eye scale |
+| `rabbit-parts.png` | `rabbit-tail.webp`, `rabbit-body.webp`, `rabbit-head.webp`, `rabbit-ears.webp` | 3.5x4.6, 13.8x8.3, 7.7x6.3, 4.6x6.2 units, at (1, 7.84), (3.35, 6.81), (13.78, 4.27), (13.67, 1) |
+| `rabbit-limbs.png` | `rabbit-haunch`, `rabbit-leg`, `rabbit-foot`, `rabbit-foreleg`, `rabbit-paw`, each with a `-fur` version | haunch 3.2 thick, hind leg 1.9, foreleg 1.45; foot 4.4x2.2, paw 1.9x1.2 units |
+
+The shipped files are under `ui/src/lib/theme/easter/` unless named. Every
+rabbit picture is exported so its eye is 1.5 drawing units, at 12 file
+pixels per unit; `rabbit-rig.ts` draws 1.4 page pixels per unit. Where the
+parts sit, the pivots (neck, ear base, tail root, hips), the eye and the
+feet's heels are set in `rabbit-rig.ts`, measured against these exports;
+regenerated parts mean measuring again.
 
 ## Verification
 

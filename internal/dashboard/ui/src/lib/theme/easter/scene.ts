@@ -1,4 +1,5 @@
 import type { Scene } from '../scenes';
+import EasterLayer from './EasterLayer.svelte';
+import EasterShelf from './EasterShelf.svelte';
 
-// Not drawn yet: the set shows nothing until its parts are named here.
-export default {} satisfies Scene;
+export default { Shelf: EasterShelf, Layer: EasterLayer } satisfies Scene;
