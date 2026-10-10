@@ -22,7 +22,7 @@ from pathlib import Path
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from art import crop, export, export_with_fur, feature, ground, keyed, lum, opaque, place, poses, rescaled  # noqa: E402
+from art import EyeScale, crop, cut, export, export_with_fur, keyed, lum, opaque, poses  # noqa: E402
 import numpy as np  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
@@ -33,9 +33,6 @@ BASKET = (64, 2)
 EGG = (14, 4)
 EGGS = 6
 PARTS = ['rabbit-tail', 'rabbit-body', 'rabbit-head', 'rabbit-ears']
-# Drawing units are the reference's, moved by this, so a frame round it has
-# a margin.
-MARGIN = 1
 # The eye's size in drawing units, and file pixels per drawing unit.
 EYE = 1.5
 RES = 12
@@ -69,37 +66,18 @@ def inked(rgba: np.ndarray) -> np.ndarray:
     return thick
 
 
-def eye_px(sheet: str) -> float:
-    return feature(HERE / sheet, EYES[sheet])
-
-
-def on_eye(sheet: str) -> float:
-    return EYE / eye_px(sheet) * RES
-
-
 def rabbit() -> dict:
-    units = {}
-    reference = crop(keyed(HERE / 'rabbit-standing.png'))
-    per_unit = eye_px('rabbit-standing.png') / EYE
-    units['rabbit-reference'] = export(reference, LAB, 'rabbit-reference', on_eye('rabbit-standing.png'))
-    print(f'rabbit-reference: at {MARGIN}, {MARGIN}; ground {ground(reference) / per_unit + MARGIN:.2f}')
-    for name, seed in KEY_POSES.items():
-        path = HERE / f'rabbit-pose-{name}.png'
-        w, h = export(crop(keyed(path)), LAB, f'rabbit-pose-{name}', EYE / feature(path, seed) * RES)
-        print(f'rabbit-pose-{name}: drawing units {w / RES:.2f}x{h / RES:.2f}')
-    k = eye_px('rabbit-standing.png') / eye_px('rabbit-parts.png')
-    for name, art in zip(PARTS, (crop(p) for p in poses(keyed(HERE / 'rabbit-parts.png'), len(PARTS)))):
-        units[name] = export(art, OUT, name, on_eye('rabbit-parts.png'))
-        y, x = place(rescaled(art, k), reference, mask=inked)
-        print(f'{name}: at {x / per_unit + MARGIN:.2f}, {y / per_unit + MARGIN:.2f}')
+    scale = EyeScale(HERE, EYES, EYE, RES)
+    units = {'rabbit-reference': scale.reference('rabbit-standing.png', LAB, 'rabbit-reference')}
+    scale.key_poses('rabbit-pose-', KEY_POSES, LAB)
+    units.update(scale.parts(cut(keyed(HERE / 'rabbit-parts.png'), PARTS), 'rabbit-parts.png', OUT, mask=inked))
     # Each piece also as fur alone, its outline taken out.
     haunch, leg, foot, foreleg, paw = (crop(p) for p in poses(keyed(HERE / 'rabbit-limbs.png'), 5))
     units['rabbit-haunch'] = export_with_fur(haunch, OUT, 'rabbit-haunch', HAUNCH * RES / haunch.shape[0])
     units['rabbit-leg'] = export_with_fur(leg, OUT, 'rabbit-leg', HIND_LEG * RES / leg.shape[0])
     units['rabbit-foreleg'] = export_with_fur(foreleg, OUT, 'rabbit-foreleg', FORELEG * RES / foreleg.shape[0])
-    for (name, (length, (hx, hy))), art in zip(FEET.items(), (foot, paw)):
-        w, h = export_with_fur(art, OUT, name, length * RES / art.shape[1])
-        print(f'{name}: {w / RES:.2f}x{h / RES:.2f}, heel {w * hx / RES:.2f}, {h * hy / RES:.2f}')
+    for (name, (length, heel)), art in zip(FEET.items(), (foot, paw)):
+        scale.foot(name, art, OUT, length, heel)
     return units
 
 
