@@ -9,9 +9,11 @@ import { mkdirSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 
-export const DAEMON_PORT = 18940;
-export const PROXY_PORT = 18941;
-export const ROOT = join(tmpdir(), 'ccr-e2e');
+// E2E_PORT moves the daemon (and the proxy, on the next port) and the scratch
+// store with it, so suites in separate worktrees can run side by side.
+export const DAEMON_PORT = Number(process.env.E2E_PORT ?? 18940);
+export const PROXY_PORT = DAEMON_PORT + 1;
+export const ROOT = join(tmpdir(), process.env.E2E_PORT ? `ccr-e2e-${DAEMON_PORT}` : 'ccr-e2e');
 export const CONFIG_HOME = join(ROOT, 'cfg');
 export const DATA_HOME = join(ROOT, 'data');
 // Every XDG root, not just the two the store and config live in: the daemon
