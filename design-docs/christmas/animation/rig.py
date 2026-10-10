@@ -4,7 +4,6 @@ Outputs are a draft evidence unit, NOT pack.py acceptance records. Numerical
 checks and pending visual review are separate. No original reference is edited.
 """
 import argparse
-import hashlib
 import json
 import math
 import os
