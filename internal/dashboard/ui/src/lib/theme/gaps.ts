@@ -1,4 +1,4 @@
-import type { Ledge, Obstacle, PageMap, Run } from './floors';
+import { runsAlong, type Ledge, type Obstacle, type PageMap, type Run } from './floors';
 
 // The gaps between neighbouring ledges, where things may hang (June's
 // bunting) or play (July's courts): beside each other across a gutter, or in
@@ -107,12 +107,7 @@ export function gapDepth(g: Gap, obstacles: readonly Obstacle[], x0: number, x1:
 export function gapRuns(g: Gap, obstacles: readonly Obstacle[], depth: number, { inset = 4, step = 4 } = {}): Run[] {
   const width = g.to.x - g.from.x;
   if (g.kind === 'side') return gapDepth(g, obstacles, 0, width) >= depth ? [{ lo: 0, hi: width }] : [];
-  const count = Math.max(0, Math.floor((width - 2 * inset) / step) + 1);
-  const xs = Array.from({ length: count }, (_, i) => inset + i * step).filter((x) => gapDepth(g, obstacles, x - step / 2, x + step / 2) >= depth);
-  return xs.reduce<Run[]>((runs, x) => {
-    const last = runs.at(-1);
-    return last && last.hi === x - step ? [...runs.slice(0, -1), { lo: last.lo, hi: x }] : [...runs, { lo: x, hi: x }];
-  }, []);
+  return runsAlong(width, inset, step, (x) => gapDepth(g, obstacles, x - step / 2, x + step / 2) >= depth);
 }
 
 // One number for seed.ts's hash, from the gap's id (its two ledges and its

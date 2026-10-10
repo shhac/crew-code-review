@@ -147,10 +147,15 @@ export function clearRuns(f: Ledge, obstacles: readonly Obstacle[], height: numb
   if (f.headroom + reach < height) return [];
   // Only what overhangs low enough can block; the rest is skipped per sample.
   const low = obstacles.filter((o) => f.y - o.bottom < height);
-  const count = Math.max(0, Math.floor((f.right - f.left - 2 * inset) / step) + 1);
-  const xs = Array.from({ length: count }, (_, i) => inset + i * step);
+  return runsAlong(f.right - f.left, inset, step, (x) => clearance(f, low, x - step / 2, x + step / 2, reach) >= height);
+}
+
+// The stretches of a length where open says a sample is, sampled every step
+// px and kept inset px in from each end, merged into runs.
+export function runsAlong(length: number, inset: number, step: number, open: (at: number) => boolean): Run[] {
+  const count = Math.max(0, Math.floor((length - 2 * inset) / step) + 1);
+  const xs = Array.from({ length: count }, (_, i) => inset + i * step).filter(open);
   return xs.reduce<Run[]>((runs, x) => {
-    if (clearance(f, low, x - step / 2, x + step / 2, reach) < height) return runs;
     const last = runs.at(-1);
     return last && last.hi === x - step ? [...runs.slice(0, -1), { lo: last.lo, hi: x }] : [...runs, { lo: x, hi: x }];
   }, []);
@@ -237,10 +242,5 @@ export function wallRuns(w: Wall, page: PageMap, depth: number, { inset = 8, ste
     return holds(main, front) && holds(view, front) && !page.obstacles.some((o) => meets(front, o))
       && !content.some((o) => meets(besideWall(w, -SKIN, top, bottom), o));
   };
-  const count = Math.max(0, Math.floor((w.bottom - w.top - 2 * inset) / step) + 1);
-  const ds = Array.from({ length: count }, (_, i) => inset + i * step).filter(open);
-  return ds.reduce<Run[]>((runs, d) => {
-    const last = runs.at(-1);
-    return last && last.hi === d - step ? [...runs.slice(0, -1), { lo: last.lo, hi: d }] : [...runs, { lo: d, hi: d }];
-  }, []);
+  return runsAlong(w.bottom - w.top, inset, step, open);
 }
