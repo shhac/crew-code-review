@@ -90,19 +90,43 @@ test samples the whole cycle (`rig/test-rig.ts`'s `pageReach`), as for the
 fox and the hedgehog. Boxes are measured from the thorax's centre, the point
 the models move, and mirrored with the bee's facing:
 
-| Pose | Footprint (w x h) | Used for | Needs |
-| --- | --- | --- | --- |
-| perch | 20x13 | feeding on a bell, the warm-up shiver, reduced motion | the clump's box plus 6px above its top |
-| crawl | 20x13 | walking from one bell to the next | as perch |
-| land | 22x20 | the last 70ms before touching down | air |
-| hover | 22x21 | hovering at a flower, before a dart, after a bonk | air |
-| fly | 24x18 | flying between flowers, darting | air, swept along the route |
-| bonk | 26x22 | the knock and the bounce | the wall's air run (below) |
+| Pose | Footprint (w x h), as built | Planned | Used for | Needs |
+| --- | --- | --- | --- | --- |
+| perch | 22.5x14 | 20x13 | feeding on a bell, the warm-up shiver, reduced motion | the clump's box plus 6px above its top |
+| crawl | 22.5x14.5 | 20x13 | walking from one bell to the next | as perch |
+| land | 22.5x17.75 | 22x20 | the last 70ms before touching down | air |
+| hover | 20.5x25 | 22x21 | hovering at a flower, before a dart, after a bonk | air |
+| fly | 23.5x23.5 | 24x18 | flying between flowers, darting | air, swept along the route |
+| bonk | 24.5x19.5 | 26x22 | the knock and the bounce | the wall's air run (below) |
 
-These are targets for the rig, set against the room above: the hover box fits
-beside a clump on a heading rule (26px), and the bonk with its 8px bounce
-fits the 41px margin at 1024 with room to spare. If the rig comes out bigger,
-change these numbers here first, then the code.
+The planned boxes were targets for the rig. The rig the insect kit proved
+came out bigger (perch 22.5x16, hover 22.5x27.5, fly 24.5x26), from the
+reference's long legs and wing ghosts drawn at full length through a stroke
+that swept up over the bee's back. Settled by building, in this order:
+
+- **Shorter legs.** Drawn three quarters as long as the reference's, the
+  thorax stands 6px above the flower instead of 8. A bumblebee stands low,
+  its thorax about a quarter of its length above what it stands on; the
+  reference's legs were a cartoon's stilts. Perched it is now 14px tall.
+- **A flattened stroke.** A bumblebee's stroke plane is nearly level with
+  its body (see Research), so seen from the side the wings sweep along its
+  back, not up over it in a half circle. The blur (fan and ghosts) is drawn
+  squashed to 0.55 of its height about the wing hinge, a level circle seen
+  from a little above. Hovering it is now 25px tall, flying 23.5.
+- **The targets changed to what is left.** Hover and fly are still taller
+  than planned: the hover's nose-up pitch (38 degrees, the key pose's) drops
+  the tail as far as the head rises. They are checked against the page's
+  real room instead: over a clump on a first-row card the hover box's top
+  is 38 to 40px above the card (48px up to the heading's text), and an
+  approach spot beside it may sit 4px lower than the hover when the room
+  is short. A clump on a heading rule (26 to 30px up to its text) is too
+  low for a bee to perch on with room above it, so those clumps are not
+  visitable and only flowers elsewhere are; the moss and clumps there stay.
+
+The model takes its boxes from the rig's measured reach (`REACH` in
+`bee-rig.ts`, sampled over every cycle by its test). The flattened stroke
+is drawn with the rig's `foreshorten` (the bird kit's, for a part seen at a
+slant), which `rigBounds` counts, so the reach is measured as drawn.
 
 ### Walls as segments (a new shared surface)
 
@@ -600,12 +624,13 @@ visitable), `footprints.ts`, `bee.ts` (one bee's state table) and `bees.ts`
   width either way: a bonk's box reaches 1px past the wall only because its
   front is the head's. The routing grid, which cannot know which way a bee
   will face, uses the longer side both ways.
-- **A route needs a 39px corridor.** The flying footprint (24x18) grown by
-  the bumbling's bound (3.5) and a 2px margin is 39px wide, so the 54px
-  margins at 1440 are flown, but the 41px margins at 1024 are not: there
-  the bees keep to the band above the first row of cards (48px to the
-  heading's text) and the open stretches of the heading. Gutters stay
-  closed, as planned.
+- **A route needs a 35px corridor.** The flying footprint (23.5px either
+  side of the thorax at most, as the grid cannot know which way a bee will
+  face) grown by the bumbling's bound (3.5) and a 2px margin is 35px wide
+  and 34.5 tall, so the 54px margins at 1440 are flown, the 41px margins at
+  1024 only where a grid cell happens to fall in the 6px of room, and the
+  band over the first row of cards (48px up to the heading's text) always.
+  Gutters stay closed, as planned.
 - **Routes through tight places round each cell's corner.** Smoothing
   through every third cell and then every second is tried first; where both
   clip something, the route goes through every cell, each corner rounded
@@ -616,9 +641,22 @@ visitable), `footprints.ts`, `bee.ts` (one bee's state table) and `bees.ts`
   the obstacles cost 25 to 35ms a measurement; closing the cells each
   obstacle reaches costs 1 to 8, and a route a few ms more.
 - **The bonk's last stretch is 12 to 30px.** Flying 30px level at a wall
-  needs the flying footprint 30 + 7 (the head) + 19.5 (its grown half) =
-  56.5px clear of the wall, more than the 54px margin at 1440. The bee
-  takes the longest of 30, 24, 18 and 12px that is open.
+  needs the flying footprint clear for 30px plus the bee's own length in
+  front of the wall, more than the 54px margin at 1440 holds. The bee takes
+  the longest of 30, 24, 18 and 12px that is open.
+- **Contact is the antennae's.** The bonk pose (added to the rig: nose up
+  25 degrees, settling in a damped swing at 3Hz, legs splayed) reaches
+  12.25px ahead of the thorax with its antennae, further than the head. A
+  bonk ends with the antennae a pixel into the card's side, the head 4px
+  short of it: as the research says, a bumblebee often touches first with
+  its antennae.
+- **No banking.** Seen from the side, a bee rolling into a turn shows
+  nothing a page can draw; the turn shows in its facing and its pitch with
+  speed (the rig's), so the model gives no bank.
+- **A page still loading.** A bee the group could not place when it was
+  made (no flowers yet: the page's cards had not arrived) is put on a
+  flower at the first measurement that has one, rather than waiting out an
+  away of 3 to 8s.
 - **Leaving with no way out fades.** "Stops being drawn at its next
   landing" needed a bee to keep flying with nowhere to fly; instead it
   fades out where it hovers (0.3s) and is away. Coming back with no way in

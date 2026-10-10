@@ -7,7 +7,7 @@ import { beeView, boxOf, stepBee, where, type Bee, type WallSide } from './bee';
 import { boxesOf, createBees, reconcileBees, restingBees, SPACE, stepBees, type Bees, type Meadow } from './bees';
 import { cursorAt, dashboard, meadowOn } from './fixtures';
 import { SHELF_KEY } from './flowers';
-import { HEAD } from './footprints';
+import { CONTACT } from './footprints';
 
 const gap = (a: Box, b: Box) => Math.max(b.left - a.right, a.left - b.right, b.top - a.bottom, a.top - b.bottom);
 
@@ -110,12 +110,13 @@ describe('the bees', () => {
       modes.push(next.mode);
       const box = boxOf(next, page, t);
       if (box) {
-        expect(box.right).toBeLessThanOrEqual(card.left + 1 + 1e-9);
+        // On its way to the wall, and knocked back off it.
+        if (next.bonk || next.mode === 'bounce') expect(box.right, `${next.mode} at ${t}`).toBeLessThanOrEqual(card.left + 1 + 1e-9);
         expect(clear(m.air, box, { except: (o) => (o.block && o.left === card.left ? { ...o, left: o.left + 1 } : undefined) })).toBe(true);
       }
       if (next.mode === 'bounce' && b.mode === 'bonk') {
         const p = where(next, page, t)!;
-        expect(p.x + HEAD).toBeCloseTo(card.left, 0);
+        expect(p.x + CONTACT).toBeCloseTo(card.left, 0);
       }
       return next;
     }, first);
@@ -145,6 +146,16 @@ describe('the bees', () => {
       if (box) expect(clear(covered.air, box)).toBe(true);
     }
     expect(moved.bees[0].flower).not.toBe(g.bees[0].flower);
+  });
+
+  it('are put on flowers as soon as a page still loading has some', () => {
+    const empty = { ...meadowOn(), flowers: new Map() };
+    const g = createBees(empty, 0, seeded(14));
+    expect(g.bees.every((b) => b.mode === 'away')).toBe(true);
+    const loaded = reconcileBees(g, meadowOn(), 200, seeded(15));
+    expect(loaded.bees.length).toBe(g.bees.length);
+    expect(loaded.bees.every((b) => b.mode === 'perch')).toBe(true);
+    expect(new Set(loaded.bees.map((b) => b.flower)).size).toBe(loaded.bees.length);
   });
 
   it('perch still under reduced motion, keeping their flowers across a measurement', () => {

@@ -65,7 +65,7 @@ export function createBees(m: Meadow, now: number, rand: Rand): Bees {
   const bees = Array.from({ length: target }, (_, id) => {
     const f = flowers[id];
     const rest = FIRST + id * STAGGER + rand() * (STAGGER - 400);
-    return f ? placedBee(id, f, now, rest, facingMiddle(m, f)) : awayBee({ id, seed: id * 7 + 3 }, now, rand);
+    return f ? placedBee(id, f, now, rest, facingMiddle(m, f)) : { ...awayBee({ id, seed: id * 7 + 3 }, now, rand), unplaced: true };
   });
   return { target, bees, lastBonk: -Infinity, held: new Map() };
 }
@@ -155,7 +155,7 @@ export function reconcileBees(group: Bees, m: Meadow, now: number, rand: Rand): 
 }
 
 function keep(b: Bee, m: Meadow, now: number, rand: Rand, others: readonly Box[]): Bee | null {
-  if (b.mode === 'away') return b;
+  if (b.mode === 'away') return b.unplaced ? onNearest(b, m, now, rand, others) ?? b : b;
   const page = m.air.page;
   const box = boxOf(b, page, now);
   if (!box || !clear(m.air, box, { also: others })) return null;
@@ -185,7 +185,7 @@ function onNearest(b: Bee, m: Meadow, now: number, rand: Rand, others: readonly 
   const open = [...m.flowers.values()].filter((f) => visitable(m.air, f, others));
   const nearest = maxBy(open, (f) => -apart(hoverAt(m, f) ?? { x: Infinity, y: Infinity }, was ?? { x: 0, y: 0 }));
   if (!nearest) return null;
-  return perchOn({ ...b, flight: null, bonk: null, startled: null, fled: null, fade: null }, nearest, 0, now, 3000 + 5000 * rand(), b.dir);
+  return perchOn({ ...b, flight: null, bonk: null, startled: null, fled: null, fade: null, unplaced: false }, nearest, 0, now, 3000 + 5000 * rand(), b.dir);
 }
 
 // Reduced motion: each perched still on a flower, keeping its own while it

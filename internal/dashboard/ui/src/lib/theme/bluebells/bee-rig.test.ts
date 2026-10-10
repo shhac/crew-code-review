@@ -4,7 +4,7 @@ import type { Layer, RigPose } from '../rig/rig';
 import { flatLayers, lidsOf, rigBounds } from '../rig/test-rig';
 import { ANCHOR, beeRig, GROUND, REACH, SCALE, type BeePose, type RigBee } from './bee-rig';
 
-const POSES: BeePose[] = ['perch', 'crawl', 'scurry', 'hover', 'fly', 'land'];
+const POSES: BeePose[] = ['perch', 'crawl', 'scurry', 'hover', 'fly', 'land', 'bonk'];
 const grounded = (pose: BeePose) => pose === 'perch' || pose === 'crawl' || pose === 'scurry';
 const bee = (pose: BeePose, over: Partial<RigBee> = {}): RigBee => ({ pose, seed: 2, walked: 0, speed: 0, lean: 0, wings: grounded(pose) ? 0 : 1, ...over });
 const strokes = (pose: RigPose, name: string) => flatLayers(pose.layers).flatMap((l) => (l.kind === 'stroke' && l.name === name ? [l] : []));
@@ -33,7 +33,7 @@ describe('the bee', () => {
       const reach = REACH[pose];
       for (const speeds of pose === 'fly' ? [0, 30, 70, 140] : [0]) {
         for (const m of moments) {
-          const b = rigBounds(beeRig(bee(pose, { walked: m.walked, lean: m.lean, speed: speeds }), { now: m.now, still: false }));
+          const b = rigBounds(beeRig(bee(pose, { walked: m.walked, lean: m.lean, speed: speeds, knocked: m.now % 700 }), { now: m.now, still: false }));
           const at = `${pose} at ${m.now}ms, ${speeds}px/s`;
           expect((ANCHOR.x - b.left) * SCALE, at).toBeLessThanOrEqual(reach.behind);
           expect((b.right - ANCHOR.x) * SCALE, at).toBeLessThanOrEqual(reach.ahead);

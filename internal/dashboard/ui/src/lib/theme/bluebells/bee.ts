@@ -1,10 +1,10 @@
 import type { Box, PageMap, Run } from '../floors';
-import { apart, clamp, degrees, mixPoint, smooth } from '../math';
+import { apart, clamp, mixPoint, smooth } from '../math';
 import type { Cursor, Point } from '../pointer';
 import { between, type Rand } from '../seed';
 import { clear, type BeeAir } from './beeair';
 import { approaches, fitsAt, frameAt, hoverSpot, lastBell, onPage, perchSpot, spotIn, visitable, type Flower, type Spot } from './flowers';
-import { boxAt, FOOTPRINTS, HEAD, type Pose } from './footprints';
+import { boxAt, CONTACT, FOOTPRINTS, type Pose } from './footprints';
 import { along, flyReach, holdRoute, originOf, placeRoute, plan, routeOf, type Frame, type Route } from './route';
 
 // One bumblebee: perched on a bell, crawling up to the next, warming up,
@@ -65,6 +65,9 @@ export type Bee = {
   heading: Point | null;
   // Fading in or out (enter, a leave with no way out).
   fade: { from: number; to: number; at: number } | null;
+  // Never yet placed: the page had no flower for it when the group was
+  // made (still loading, say), so it is put on one as soon as there is.
+  unplaced?: boolean;
 };
 
 // Timings in ms, speeds in px/s, per the note's state table.
@@ -409,7 +412,7 @@ function bonkFrom(b: Bee, ctx: Context, here: Point, now: number): Bee | null {
       const lo = w.top + r.lo - 2 + fp.up, hi = w.top + r.hi + 2 - fp.down;
       if (hi < lo) return [];
       const y = clamp(here.y, lo, hi);
-      const contact = { x: w.x + w.side * HEAD, y };
+      const contact = { x: w.x + w.side * CONTACT, y };
       const lead = LEADS.map((d) => ({ x: contact.x + w.side * d, y })).find((p) => clear(ctx.air, flyReach(p), { view: true }));
       return lead ? [{ w, o, contact, lead, d: apart(lead, here) }] : [];
     });
@@ -527,25 +530,34 @@ export function opacityOf(b: Bee, now: number): number {
   return b.fade.from + (b.fade.to - b.fade.from) * t;
 }
 
-// What the drawing needs: where, which way, its pose, how fast it is going
-// and how far it banks into a turn, how visible it is, and the flower and
-// bell it is on (which dips under it).
-export type BeeView = Point & { dir: 1 | -1; pose: Pose; mode: Mode; speed: number; bank: number; opacity: number; on: { flower: string; bell: number } | null };
+// What the drawing needs: where, which way, its pose, how fast it is going,
+// how far it has crawled, how far its wings are going (0 folded to 1
+// beating), how long since a bonk knocked it back, how visible it is, and
+// the flower and bell it is on (which dips under it). Seen from the side, a
+// bee banking into a turn shows nothing a page can draw, so it does not.
+export type BeeView = Point & {
+  dir: 1 | -1; pose: Pose; mode: Mode; speed: number; walked: number; wings: number; knocked?: number; opacity: number;
+  on: { flower: string; bell: number } | null;
+};
+// Warming up, the body trembles this much (px) at this rate, the wings still.
+const TREMBLE = 0.2;
+const TREMBLE_HZ = 25;
+// Knocked off a wall, the blur dims to half for a moment.
+const DIM = 120;
+
 export function beeView(b: Bee, page: PageMap, now: number): BeeView | null {
   const p = where(b, page, now);
   if (!p) return null;
   const f = b.flight;
-  const speed = f && b.mode !== 'bonk' ? f.v : b.mode === 'bonk' ? CRUISE : 0;
-  const bank = f && b.mode !== 'bonk' ? bankOn(f) : 0;
+  const since = now - b.since;
+  const speed = f ? f.v : b.mode === 'bonk' ? CRUISE : 0;
   const on = (b.mode === 'perch' || b.mode === 'shiver' || b.mode === 'crawl') && b.flower ? { flower: b.flower, bell: b.bell } : null;
-  return { ...p, dir: b.dir, pose: poseOf(b, now, page), mode: b.mode, speed, bank, opacity: opacityOf(b, now), on };
-}
-
-// Banking into a turn: how fast the heading turns over the next few px,
-// at most 15 degrees.
-function bankOn(f: Flight): number {
-  const a = along(f.route, f.s), c = along(f.route, Math.min(f.route.length, f.s + 8));
-  const turn = Math.atan2(a.dx * c.dy - a.dy * c.dx, a.dx * c.dx + a.dy * c.dy);
-  return clamp(degrees(turn) * 1.5 * Math.min(1, f.v / CRUISE), -15, 15);
+  const wings = on ? 0 : b.mode === 'takeoff' ? clamp(since / TAKEOFF, 0, 1) : b.mode === 'bounce' && since < DIM ? 0.5 : 1;
+  const tremble = b.mode === 'shiver' ? TREMBLE * Math.sin((2 * Math.PI * TREMBLE_HZ * since) / 1000) : 0;
+  return {
+    x: p.x + tremble, y: p.y, dir: b.dir, pose: poseOf(b, now, page), mode: b.mode, speed,
+    walked: b.mode === 'crawl' ? (since / 1000) * CRAWL_SPEED : 0, wings,
+    ...(b.mode === 'bounce' ? { knocked: since } : {}), opacity: opacityOf(b, now), on,
+  };
 }
 

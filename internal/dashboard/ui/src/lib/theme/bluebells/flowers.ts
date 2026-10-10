@@ -21,6 +21,9 @@ export type Spot = { frame: Frame; x: number; y: number };
 // the hover a bee comes in from or leaves to.
 export const ABOVE = 8;
 const BESIDE = [22, 34] as const;
+// Level with that hover or a little lower, where the room above a card is
+// short.
+const LOWER = [0, 4] as const;
 export const SHELF_KEY = 'shelf';
 
 export function flowersOf(wood: ReadonlyMap<number, Moss>, shelf: Box | null): Flower[] {
@@ -55,16 +58,16 @@ export function fitsAt(air: BeeAir, s: Spot, pose: keyof typeof FOOTPRINTS, dir:
 }
 
 // The spots beside a flower a bee comes in from and leaves to, at its
-// hovering height either side, nearest first; each open to a flying bee
-// (its grown footprint in air, in view).
+// hovering height (or a little lower) either side, nearest first; each open
+// to a flying bee (its grown footprint in air, in view).
 export function approaches(air: BeeAir, f: Flower, i = 0, also: readonly Box[] = []): Spot[] {
   const above = hoverSpot(f, i);
   const p = onPage(air.page, above);
   if (!p) return [];
-  return BESIDE.flatMap((d) => [-1, 1].flatMap((side) => {
-    const q = { x: p.x + side * d, y: p.y };
-    return clear(air, flyReach(q), { view: true, also }) ? [{ frame: f.frame, x: above.x + side * d, y: above.y }] : [];
-  }));
+  return LOWER.flatMap((dy) => BESIDE.flatMap((d) => [-1, 1].flatMap((side) => {
+    const q = { x: p.x + side * d, y: p.y + dy };
+    return clear(air, flyReach(q), { view: true, also }) ? [{ frame: f.frame, x: above.x + side * d, y: above.y + dy }] : [];
+  })));
 }
 
 // Whether its frame is on the page and in view: a ledge's clump while the

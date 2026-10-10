@@ -20,8 +20,10 @@ import type { Moment, RigCritter } from './critter';
 const MODES: { label: string; pose: BeePose }[] = [
   { label: 'perch', pose: 'perch' }, { label: 'crawl', pose: 'crawl' }, { label: 'scurry', pose: 'scurry' },
   { label: 'hover', pose: 'hover' }, { label: 'fly', pose: 'fly' }, { label: 'dart', pose: 'fly' },
-  { label: 'lift off', pose: 'land' }, { label: 'land', pose: 'land' },
+  { label: 'lift off', pose: 'land' }, { label: 'land', pose: 'land' }, { label: 'bonk', pose: 'bonk' },
 ];
+// The bonk's knock back off the wall, again every 900ms.
+const KNOCK_EVERY = 900;
 
 // The dart: 14px ahead in 300ms, a hover, and back (bees fly backwards as
 // readily), round every 1.2s.
@@ -42,16 +44,15 @@ const beeAt = ({ mode, now, walked }: Moment, lean: number): RigBee => {
   // Flying, the dial's speed is her speed ahead.
   const speed = mode === 'dart' ? darting(now).speed : pick.pose === 'fly' ? walked / Math.max(0.001, now / 1000) : 0;
   const wings = pick.pose === 'perch' || pick.pose === 'crawl' || pick.pose === 'scurry' ? 0 : mode === 'lift off' ? smooth((now % 1500) / 250) : 1;
-  return { pose: pick.pose, seed: 1, walked, speed, lean, wings };
+  return { pose: pick.pose, seed: 1, walked, speed, lean, wings, ...(pick.pose === 'bonk' ? { knocked: now % KNOCK_EVERY } : {}) };
 };
 
 // Each key pose laid over the rig collar to collar (the export prints where
 // each one's collar is), the rig's own collar placed as the mode pitches it.
-// The bonk is the month's, not the rig's: its drawing is laid over the
-// hover, which it starts from, and named for no mode of its own.
-const byCollar = (src: string, width: number, height: number, collar: { x: number; y: number }, mode: string, own = true): Drawing => {
+// The bonk's drawing is laid over its own mode, the knock back off a wall.
+const byCollar = (src: string, width: number, height: number, collar: { x: number; y: number }, mode: string): Drawing => {
   const at = collarOf(beeAt({ mode, now: 0, walked: 0 }, 0));
-  return { src, width, height, at: { x: at.x - collar.x, y: at.y - collar.y }, ...(own ? { mode } : {}) };
+  return { src, width, height, at: { x: at.x - collar.x, y: at.y - collar.y }, mode };
 };
 const DRAWINGS: Record<string, Drawing> = {
   standing: { src: reference, ...REFERENCE, at: REFERENCE },
@@ -60,7 +61,7 @@ const DRAWINGS: Record<string, Drawing> = {
   hover: byCollar(hover, 20.58, 15.75, { x: 12.31, y: 4.5 }, 'hover'),
   fly: byCollar(fly, 22.42, 15.92, { x: 13.68, y: 6.84 }, 'fly'),
   land: byCollar(land, 21.67, 16.75, { x: 12.7, y: 7 }, 'land'),
-  bonk: byCollar(bonk, 21.67, 19.25, { x: 12.46, y: 7.12 }, 'hover', false),
+  bonk: byCollar(bonk, 21.67, 19.25, { x: 12.46, y: 7.12 }, 'bonk'),
 };
 
 const gaze = gazeFrom({ eye: EYE, anchor: ANCHOR, scale: SCALE, look: 15, reach: 120 });

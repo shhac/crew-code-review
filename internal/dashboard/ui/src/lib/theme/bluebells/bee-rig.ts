@@ -24,7 +24,7 @@ import wingsArt from './bee-wings.webp';
 export const SCALE = 1;
 
 export const ANCHOR = { x: 12.72, y: 6.19 };
-export const GROUND = 14.2;
+export const GROUND = 12.2;
 const FRAME = { width: 24, height: 16, anchor: ANCHOR, scale: SCALE };
 // The standing drawing, for the lab to lay over the rig: where it sits.
 export const REFERENCE = { x: 1, y: 1, width: 21.67, height: 13.67 };
@@ -53,14 +53,19 @@ const POLLEN = '#f2a516';
 // Six legs, all from the thorax's underside, measured off the reference's
 // legs: fore legs reaching forward with their knees forward, hind legs
 // reaching back with their knees back, the far side a little behind and
-// above the near so each shows past the other.
+// above the near so each shows past the other. They are drawn three
+// quarters as long as the reference's: at full length they stood her
+// thorax 8px above the flower, much taller than a bumblebee stands, and her
+// footprint taller than the page's room over a card.
+const LEG_LENGTH = 0.75;
+const leg = (l: InsectLeg): InsectLeg => ({ ...l, femur: l.femur * LEG_LENGTH, tibia: l.tibia * LEG_LENGTH, tarsus: l.tarsus * LEG_LENGTH });
 const LEGS: readonly InsectLeg[] = [
-  { pair: 'fore', far: false, hip: { x: 14.75, y: 8.59 }, femur: 2.5, tibia: 2.3, tarsus: 2.2, reach: 4.2, bend: 1, lean: 43, curl: 25 },
-  { pair: 'fore', far: true, hip: { x: 14.45, y: 8.45 }, femur: 2.4, tibia: 2.2, tarsus: 2.1, reach: 2.6, bend: 1, lean: 40, curl: 25 },
-  { pair: 'mid', far: false, hip: { x: 13.35, y: 8.88 }, femur: 2.05, tibia: 2.15, tarsus: 1.95, reach: 2.6, bend: 1, lean: 40, curl: 20 },
-  { pair: 'mid', far: true, hip: { x: 12.6, y: 8.75 }, femur: 2.05, tibia: 2.1, tarsus: 1.9, reach: 0.5, bend: 1, lean: 20, curl: 20 },
-  { pair: 'hind', far: false, hip: { x: 10.54, y: 8.74 }, femur: 1.85, tibia: 2.9, tarsus: 2, reach: -3.8, bend: -1, lean: -41, curl: 20 },
-  { pair: 'hind', far: true, hip: { x: 9.6, y: 8.4 }, femur: 2.6, tibia: 2.5, tarsus: 2.3, reach: -4.9, bend: -1, lean: -45, curl: 20 },
+  leg({ pair: 'fore', far: false, hip: { x: 14.75, y: 8.59 }, femur: 2.5, tibia: 2.3, tarsus: 2.2, reach: 4.2, bend: 1, lean: 43, curl: 25 }),
+  leg({ pair: 'fore', far: true, hip: { x: 14.45, y: 8.45 }, femur: 2.4, tibia: 2.2, tarsus: 2.1, reach: 2.6, bend: 1, lean: 40, curl: 25 }),
+  leg({ pair: 'mid', far: false, hip: { x: 13.35, y: 8.88 }, femur: 2.05, tibia: 2.15, tarsus: 1.95, reach: 2.6, bend: 1, lean: 40, curl: 20 }),
+  leg({ pair: 'mid', far: true, hip: { x: 12.6, y: 8.75 }, femur: 2.05, tibia: 2.1, tarsus: 1.9, reach: 0.5, bend: 1, lean: 20, curl: 20 }),
+  leg({ pair: 'hind', far: false, hip: { x: 10.54, y: 8.74 }, femur: 1.85, tibia: 2.9, tarsus: 2, reach: -3.8, bend: -1, lean: -41, curl: 20 }),
+  leg({ pair: 'hind', far: true, hip: { x: 9.6, y: 8.4 }, femur: 2.6, tibia: 2.5, tarsus: 2.3, reach: -4.9, bend: -1, lean: -45, curl: 20 }),
 ];
 const NEAR_HIND = 4;
 const LOOK: LegLook = {
@@ -79,6 +84,13 @@ const ANTENNA = '#4a4a50';
 // buff-tailed bumblebee, nearly level with the body, so tilted with it.
 const BEAT: WingBeat = { front: -5, back: -125, ghost: 0.35, fan: 0.12, colour: '#f4e6c6' };
 const FAR_BEAT: WingBeat = { ...BEAT, front: BEAT.front + 8, back: BEAT.back + 8, ghost: 0.3, fan: 0.08 };
+// The stroke plane is nearly level with the body, so from the side the
+// wings sweep along her back rather than up over it: the fan and its
+// ghosts are drawn flattened about the hinge, as a level circle is seen
+// from a little above.
+const STROKE_FLAT = 0.55;
+// How far a bonk throws her nose up, degrees.
+const KNOCK = 25;
 // Nose up hovering, nearly level at her cruising speed (page px/s).
 export const PITCHING: Pitching = { hover: -38, cruise: -8, speed: 70 };
 
@@ -88,7 +100,7 @@ const CRAWL = insectGait(LEGS, 'tetrapod', 1.3, 0.55);
 const SCURRY = insectGait(LEGS, 'tripod', 1.8, 0.7);
 
 // What she is doing, as far as the drawing cares.
-export type BeePose = 'perch' | 'crawl' | 'scurry' | 'hover' | 'fly' | 'land';
+export type BeePose = 'perch' | 'crawl' | 'scurry' | 'hover' | 'fly' | 'land' | 'bonk';
 export type RigBee = {
   pose: BeePose;
   seed: number;
@@ -101,6 +113,9 @@ export type RigBee = {
   // How far her wings are going, 0 folded to 1 beating: lifting off, the
   // blur fades in as the folded wings fade out.
   wings: number;
+  // Bonked, how long since her head met the wall (ms): she recoils nose up
+  // and settles.
+  knocked?: number;
 };
 export type BeeLook = { now: number; still: boolean };
 
@@ -127,6 +142,13 @@ function hold(b: RigBee, now: number): Hold {
       const hang = hangAt(b.speed, 60);
       return { pitch, bob: hoverBob(b.seed, now, 0.8, 1.3), abdomen: -6 * hang + 2, head: 8 * hang, legs: (hips) => airLegs(LEGS, hips, { hang, reach: 0, pitch }) };
     }
+    case 'bonk': {
+      // Knocked back off a wall: nose up 25 degrees, settling in a damped
+      // swing at 3Hz, legs splayed, the abdomen swinging down.
+      const t = (b.knocked ?? 0) / 1000;
+      const pitch = -KNOCK * Math.exp(-t / 0.25) * Math.cos(2 * Math.PI * 3 * t);
+      return { pitch, bob: 0, abdomen: -8, head: 4, legs: (hips) => airLegs(LEGS, hips, { hang: 1, reach: 0.5, pitch }) };
+    }
     case 'land': {
       // The last moment before touching down: legs stretched down and
       // forward to meet the bell.
@@ -148,7 +170,8 @@ function wingsOf(far: boolean, beating: number): Layer[] {
   const picture = far ? farWings : nearWings;
   const folded: Layer = { kind: 'group', turn: turnAbout(far ? FAR_TILT : 0, HINGE), opacity: beating > 0 ? 1 - beating : undefined, layers: [picture] };
   const blur = wingBlur(blurWing(picture), far ? FAR_BEAT : BEAT, beating, far ? 'far wing blur' : 'wing blur');
-  return beating >= 1 ? blur : [folded, ...blur];
+  const flat: Layer[] = blur.length ? [{ kind: 'group', turn: turnAbout(0, HINGE), foreshorten: STROKE_FLAT, layers: blur }] : [];
+  return beating >= 1 ? flat : [folded, ...flat];
 }
 
 // The pollen load in the basket on her near hind tibia, as a filled
@@ -212,12 +235,13 @@ export function beeRig(bee: RigBee, look: BeeLook): RigPose {
 // is toward her tail; mirrored when she faces left.
 export type Reach = { behind: number; ahead: number; up: number; down: number };
 export const REACH: Record<BeePose, Reach> = {
-  perch: { behind: 12, ahead: 10.5, up: 7, down: 9 },
-  crawl: { behind: 12.5, ahead: 10.5, up: 7.5, down: 9 },
-  scurry: { behind: 12.5, ahead: 10.5, up: 7.5, down: 9 },
-  hover: { behind: 12.5, ahead: 10, up: 14, down: 13.5 },
-  fly: { behind: 12.5, ahead: 12, up: 13.5, down: 12.5 },
-  land: { behind: 12, ahead: 11, up: 12.5, down: 11 },
+  perch: { behind: 12, ahead: 10.5, up: 7, down: 7 },
+  crawl: { behind: 12.25, ahead: 10.25, up: 7.5, down: 7 },
+  scurry: { behind: 12.25, ahead: 10.25, up: 7.5, down: 7 },
+  hover: { behind: 10.75, ahead: 9.75, up: 11.75, down: 13.25 },
+  fly: { behind: 12, ahead: 11.5, up: 11, down: 12.5 },
+  land: { behind: 11.75, ahead: 10.75, up: 8.5, down: 9.25 },
+  bonk: { behind: 12.25, ahead: 12.25, up: 9, down: 10.5 },
 };
 
 // Where her collar is in a pose, for the lab to line a key pose up by.
