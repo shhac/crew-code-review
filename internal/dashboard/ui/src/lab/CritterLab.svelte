@@ -12,7 +12,7 @@
   import { GAZE_EASE } from '../lib/theme/rig/gaze';
   import { easeTo } from '../lib/theme/rig/life';
   import Rig from '../lib/theme/rig/Rig.svelte';
-  import { drawingsOf, gazeOf, paceOf, posesOf, type Critter } from './critters/critter';
+  import { drawingsOf, gazeOf, liftOf, paceOf, posesOf, type Critter } from './critters/critter';
   import { CRITTERS, critterNamed } from './critters/registry';
   import { drawingFor, overlay } from './drawings';
   import { allPartNames, keepParts, partArt } from './rig-parts';
@@ -64,7 +64,7 @@
   // The box placement allows this pose on the page.
   $: box = rig && rig.box(moment);
   // A flier hovers above the floor; a walker stands on it.
-  $: lift = rig?.lift ?? 0;
+  $: lift = rig ? liftOf(rig, mode) : 0;
   $: apart = view ? view.apart(mode) : 'pieces';
 
   function choose(c: Critter) {

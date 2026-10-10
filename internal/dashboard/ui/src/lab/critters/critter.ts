@@ -34,8 +34,9 @@ export type RigCritter = Shown & {
   // The box placement allows it on the page, which may change as it moves.
   box: (at: Moment) => Size;
   // A flier hovers this far (page px) above the stage's floor, its anchor
-  // in the air rather than on the ledge.
-  lift?: number;
+  // in the air rather than on the ledge; one that both stands and flies
+  // (a bird) says so mode by mode.
+  lift?: number | ((mode: string) => number);
   // How far its head would turn toward the cursor, standing at the stage's
   // anchor; one without it does not look.
   gaze?: (dir: 1 | -1, cursor: Point | null) => number;
@@ -77,6 +78,8 @@ export const gazeOf = (critter: Critter, dir: 1 | -1, cursor: Point | null): num
   if (critter.kind !== 'rig' || !critter.gaze) return 0;
   return critter.gaze(dir, cursor);
 };
+
+export const liftOf = (rig: RigCritter, mode: string): number => (typeof rig.lift === 'function' ? rig.lift(mode) : rig.lift ?? 0);
 
 export const drawingsOf = (critter: Critter): Record<string, Drawing> => (critter.kind === 'rig' ? critter.drawings : undefined) ?? {};
 

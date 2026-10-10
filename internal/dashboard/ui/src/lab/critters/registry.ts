@@ -5,12 +5,13 @@ import { bee } from './bee';
 import type { Critter } from './critter';
 import { cupid } from './cupid';
 import { fox } from './fox';
+import { gull } from './gull';
 import { hare } from './hare';
 import { hedgehog } from './hedgehog';
 import { rabbit } from './rabbit';
 import { robin } from './robin';
 import { spider } from './spider';
 
-export const CRITTERS: readonly Critter[] = [hedgehog, fox, spider, robin, rabbit, cupid, hare, bee];
+export const CRITTERS: readonly Critter[] = [hedgehog, fox, spider, robin, rabbit, cupid, hare, bee, gull];
 
 export const critterNamed = (name: string | null): Critter | undefined => CRITTERS.find((c) => c.name === name);
