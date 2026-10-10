@@ -1,6 +1,6 @@
 import manifest from './robin-parts/manifest.json' with { type: 'json' };
+import { smooth } from '../math';
 
-const smooth = (value: number) => value * value * (3 - 2 * value);
 const pulse = (time: number, start: number, duration: number) => {
   const progress = (time - start) / duration;
   return progress <= 0 || progress >= 1 ? 0 : Math.sin(Math.PI * smooth(progress));

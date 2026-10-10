@@ -1,10 +1,7 @@
 import type { Bird } from './robin';
+import { smooth } from '../math';
 import { mixPartsPose, partsPose, type PartsPose } from './parts-pose';
 
-const smooth = (value: number) => {
-  const t = Math.max(0, Math.min(1, value));
-  return t * t * (3 - 2 * t);
-};
 const standing = () => partsPose(0, 'still');
 
 // The scene owns travel and randomness. This player only articulates the bird
