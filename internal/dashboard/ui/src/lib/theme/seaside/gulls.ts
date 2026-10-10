@@ -5,7 +5,7 @@ import { apart, sign } from '../math';
 import type { Cursor, Point } from '../pointer';
 import { between, maxBy, type Rand } from '../seed';
 import {
-  airborne, anchorOf, call, claims, createGull, fresh, idle, middleOf, reconcileGull, restingGull, stepGull, takeOff, MOVING,
+  airborne, anchorOf, call, claimsIn, createGull, fresh, idle, middleOf, reconcileGull, restingGull, stepGull, takeOff, MOVING,
   type Airspace, type Gull,
 } from './gull';
 import { AIR, reachOf } from './gull-poses';
@@ -95,7 +95,7 @@ function planFor(gull: Gull, others: readonly Gull[], scene: PageMap, now: numbe
   const f = scene.floors.get(gull.floor);
   if (!f || !inView(f, scene) || !idle(gull)) return null;
   const { view } = airspace(scene);
-  return planSwoop({ air: view, gull, home: { floor: gull.floor, x: gull.x }, cursor, taken: claims(others), also: berthsOf(others, scene, now) });
+  return planSwoop({ air: view, gull, home: { floor: gull.floor, x: gull.x }, cursor, taken: claimsIn(others, scene), also: berthsOf(others, scene, now) });
 }
 
 // Off it goes along a plan, from where it stands.
@@ -140,7 +140,7 @@ function takingOff(g: Gulls, scene: PageMap, now: number, cursor: Cursor | null)
   if (!ready) return g;
   const others = g.gulls.filter((o) => o.id !== ready.id);
   const still = cursor && now - cursor.at >= MOVING;
-  const plan = still ? planSwoop({ air: airspace(scene).view, gull: ready, home: { floor: ready.floor, x: ready.x }, cursor, taken: claims(others), also: berthsOf(others, scene, now) }) : null;
+  const plan = still ? planSwoop({ air: airspace(scene).view, gull: ready, home: { floor: ready.floor, x: ready.x }, cursor, taken: claimsIn(others, scene), also: berthsOf(others, scene, now) }) : null;
   const off = plan && plan.from === ready.x ? launch(ready, plan, scene, now) : null;
   const next = off ?? (still ? call(ready, now) : { ...ready, mode: 'stand' as const, since: now, until: now });
   return { ...g, gulls: g.gulls.map((x) => (x.id === next.id ? next : x)) };

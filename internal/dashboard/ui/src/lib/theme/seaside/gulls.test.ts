@@ -6,6 +6,7 @@ import { fixed, seeded, steps } from '../test-scene';
 import { airborne, gullView, standingAt, fresh, type Gull } from './gull';
 import { cursorAt, OBSTACLES, OPEN, page, rule } from './gull-fixtures';
 import { poseBox } from './gull-poses';
+import { roomToTakeOff } from './swoop';
 import { COOLDOWN, createGulls, reconcileGulls, restingGulls, stepGulls, STILL, type Gulls } from './gulls';
 
 const p = page();
@@ -32,6 +33,13 @@ describe('gulls together', () => {
     expect(new Set(g.gulls.map((x) => x.id)).size).toBe(3);
     const narrow = page(OBSTACLES, [[1, { ...rule, right: rule.left + 160 }]]);
     expect(createGulls(narrow, 0, fixed(0.5)).target).toBe(2);
+  });
+
+  it('places one where it could take off, when the others cannot', () => {
+    for (const seed of [1, 2, 3, 4, 5]) {
+      const g = createGulls(p, 0, seeded(seed));
+      expect(g.gulls.some((x) => roomToTakeOff(p, x.floor, x.x)), `seed ${seed}`).toBe(true);
+    }
   });
 
   it('swoops one gull at a cursor left still for 5s, while the others watch it', () => {
@@ -99,9 +107,12 @@ describe('gulls together', () => {
       const now = i * 50;
       expect(s.gulls.filter(airborne).length).toBeLessThanOrEqual(1);
       const ground = s.gulls.filter((x) => !x.flight && x.mode !== 'away');
+      // Apart on one ledge, and on ledges near enough above or below each
+      // other to share their space (the rule and the cards 22px under it).
+      const at = (g: Gull) => ({ x: p.floors.get(g.floor)!.left + g.x, y: p.floors.get(g.floor)!.y });
       for (const a of ground) {
         for (const b of ground) {
-          if (a.id < b.id && a.floor === b.floor) expect(Math.abs(a.x - b.x), `${now}`).toBeGreaterThanOrEqual(99);
+          if (a.id < b.id && Math.abs(at(a).y - at(b).y) < 40) expect(Math.abs(at(a).x - at(b).x), `${now}`).toBeGreaterThanOrEqual(99);
         }
       }
       for (const g of s.gulls) {

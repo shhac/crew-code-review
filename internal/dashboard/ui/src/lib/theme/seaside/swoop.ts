@@ -44,7 +44,11 @@ const FLARE_RUN = Math.sqrt(FLARE ** 2 - FLARE_DROP ** 2);
 const NEAR = 12;
 const FAR = 160;
 const GRID = 8;
+// A route is planned through at most PASSES pass points that have a clear
+// dive into them, of the PASS_LOOK nearest: the very nearest are often
+// where no dive fits above them (under the top of main, say).
 const PASSES = 6;
+const PASS_LOOK = 80;
 // The dive heads within this many degrees of the cursor.
 const AIMED = 35;
 // The dive starts back along the approach and above the pass point; the
@@ -166,6 +170,19 @@ export const aimOff = (a: Point, p: Point, cursor: Point) => {
   return degrees(Math.acos(Math.max(-1, Math.min(1, d.x * c.x + d.y * c.y))));
 };
 
+// Whether a gull standing at x on a ledge could take off from there, one
+// way or the other: the run's 18px on a clear run, and the column ahead.
+export function roomToTakeOff(scene: PageMap, floor: number, x: number): boolean {
+  const f = scene.floors.get(floor);
+  if (!f) return false;
+  const runs = runsOf(f, scene, GULL);
+  return ([1, -1] as const).some((dir) => {
+    const lo = Math.min(x, x + dir * RUN_LENGTH), hi = Math.max(x, x + dir * RUN_LENGTH);
+    const end = x + dir * COLUMN.length;
+    return runs.some((r) => r.lo <= lo && hi <= r.hi) && roomOver(f, scene, GULL, Math.min(x, end), Math.max(x, end)) >= COLUMN.height;
+  });
+}
+
 // What a plan asks of the page again and again, worked out once: each
 // ledge's clear runs and its page with its own card dipped into, whether a
 // spot has its column of air to take off or land, and each flare.
@@ -282,26 +299,35 @@ export function planSwoop(ask: SwoopAsk): Plan | null {
   if (!f) return null;
   const plan = planner(air, taken, cursor);
   const home = ask.home && staysPut(ask.home, page, GULL, taken) ? [ask.home] : [];
-  const heads = passPoints(air, cursor, also).slice(0, PASSES).flatMap((p) => ([1, -1] as const).flatMap((s) => DIVES.flatMap(({ back, up }) => {
+  // The dives at a pass point, each with its pull-up, that are clear.
+  const headsAt = (p: Point) => ([1, -1] as const).flatMap((s) => DIVES.flatMap(({ back, up }) => {
     const a = { x: p.x - s * back, y: p.y - up };
     if (aimOff(a, p, cursor) > AIMED) return [];
     const dive = leg('dive', 'stoop', straight(a, p));
     const b = { x: p.x + s * PULL.on, y: p.y - PULL.up };
     const pull = leg('pullup', 'flap', { from: p, c1: add(p, scale(unit(sub(p, a)), 25)), c2: { x: b.x - s * 25, y: b.y + 6 }, to: b });
-    return [{ s, a, dive, pull }];
-  })));
-  for (const { s, a, dive, pull } of heads) {
-    if (!legClear(air, dive, also) || !legClear(air, pull, also)) continue;
-    const off = takeOff(plan, f, gull, a, unit(sub(dive.curve.to, a)), also);
-    if (!off) continue;
-    const head = [...off.legs, dive, pull];
-    const sofar = routeLength(head) + Math.abs(off.x - gull.x);
-    for (const land of plan.landings(pull.curve.to, home)) {
-      const flare = plan.flareOnto(land);
-      // A cruise is never shorter than the straight way to its flare.
-      if (!flare || sofar + apart(pull.curve.to, flare.curve.from) + FLARE > MAX_LENGTH) continue;
-      const tail = comeDown(air, plan, pull.curve.to, { x: s, y: -0.3 }, land, also);
-      if (tail && sofar + routeLength(tail) <= MAX_LENGTH) return { floor: gull.floor, from: off.x, legs: [...head, ...tail], land, length: routeLength([...head, ...tail]) };
+    return legClear(air, dive, also) && legClear(air, pull, also) ? [{ s, a, dive, pull }] : [];
+  }));
+  // Nearest the cursor first, the first PASSES with a clear dive into them,
+  // of the first PASS_LOOK.
+  const passes = passPoints(air, cursor, also).slice(0, PASS_LOOK);
+  const tried = { passes: 0 };
+  for (const p of passes) {
+    if (tried.passes >= PASSES) break;
+    const heads = headsAt(p);
+    if (heads.length) tried.passes++;
+    for (const { s, a, dive, pull } of heads) {
+      const off = takeOff(plan, f, gull, a, unit(sub(dive.curve.to, a)), also);
+      if (!off) continue;
+      const head = [...off.legs, dive, pull];
+      const sofar = routeLength(head) + Math.abs(off.x - gull.x);
+      for (const land of plan.landings(pull.curve.to, home)) {
+        const flare = plan.flareOnto(land);
+        // A cruise is never shorter than the straight way to its flare.
+        if (!flare || sofar + apart(pull.curve.to, flare.curve.from) + FLARE > MAX_LENGTH) continue;
+        const tail = comeDown(air, plan, pull.curve.to, { x: s, y: -0.3 }, land, also);
+        if (tail && sofar + routeLength(tail) <= MAX_LENGTH) return { floor: gull.floor, from: off.x, legs: [...head, ...tail], land, length: routeLength([...head, ...tail]) };
+      }
     }
   }
   return null;

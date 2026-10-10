@@ -387,12 +387,14 @@ building:
   flight's curves and the boxes they were found clear by.
 - **The dive.** As decided, plus a fourth, steep stoop (40px back, 80px up)
   for air that is only a narrow column (a side margin); it is still aimed
-  within 35 degrees of the cursor. Up to six pass points are tried, nearest
-  the cursor first; the first wholly clear route through one wins. Of the
-  gulls that could go, the one with the shortest route (its walk counted)
-  goes.
+  within 35 degrees of the cursor. Pass points are tried nearest the cursor
+  first, up to six that have a clear dive into them, of the eighty nearest
+  (on the page the very nearest are often right under the top of `main`,
+  with no room for a dive above them); the first wholly clear route through
+  one wins. Of the gulls that could go, the one with the shortest route (its
+  walk counted) goes.
 - **Taking off.** The first three spots within a 60px walk with room to take
-  off (the 18px run on a clear run, 40px clear over 56px ahead) are tried,
+  off (the 18px run on a clear run, the column ahead; see "The columns") are tried,
   each with two climbs: rising straight away, or flying out level first
   (over the rest of its own card) and coming round into the dive. A gull
   that must walk is `ready`: it struts there (the strut pose) and plans
@@ -400,11 +402,21 @@ building:
   if no route is clear now it gives the long call instead.
 - **Landing.** Its home spot first, then the spots nearest the end of the
   pull-up, on a 24px grid of the clear runs in view, 100px from the others
-  and 80px from the cursor, with the 40px column behind; up to four are
+  and 80px from the cursor, with the column behind; up to four are
   tried. It lands facing the way it flies and keeps that facing through the
   touchdown and the call; turning to the cursor (the 1.2s rule) comes after.
   Landing already facing the cursor's side would have cut the landing spots
   by half for a turn the stand gives a moment later.
+- **Somewhere to take off from.** On the dashboard's pages the room to take
+  off is scarce: the first row of cards has 22px over it, so it is mostly a
+  stretch of the heading's rule clear of the title and the search box. So
+  when the gulls are placed, if none of the others stands with room to take
+  off, one is placed where there is; otherwise a resting cursor would almost
+  always get the long call. (Found by e2e on the queue page: three gulls on
+  the card tops, none able to fly.)
+- **Apart across ledges.** Gulls keep 100px apart not only on one ledge but
+  on ledges within 40px above or below each other: a gull on a card's top
+  22px under the heading's rule stood in the feathers of one on the rule.
 - **The cooldown waits.** A cursor resting within 30s of the last swoop is
   not called at; the swoop comes when the 30s are up if the cursor is still
   resting there. Calling at once would spend the resting place on the lesser

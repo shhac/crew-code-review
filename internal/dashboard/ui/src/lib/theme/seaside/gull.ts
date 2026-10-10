@@ -2,15 +2,15 @@ import type { Air } from '../air';
 import { anchor, placed, type Anchored } from '../anchored';
 import type { Box, Ledge, PageMap, Run } from '../floors';
 import {
-  bodyOf, clampTo, lengthOf, pageAt, pointClaim, roomiest, runUnder, staysPut, towardTarget,
+  bodyOf, clampTo, lengthOf, pageAt, pointClaim, roomiest, runUnder, spots, staysPut, towardTarget,
   type Claim,
 } from '../ledges';
 import { apart, clamp01, mix, sign, smooth } from '../math';
 import type { Cursor, Point } from '../pointer';
-import { between, type Rand } from '../seed';
+import { between, pick, type Rand } from '../seed';
 import type { GullPose } from './gull-rig';
 import { GULL, MIDDLE } from './gull-poses';
-import { flightOf, inFlight, replan, RUN_OUT, stillClear, type Flight, type FlightMode } from './swoop';
+import { flightOf, inFlight, replan, roomToTakeOff, RUN_OUT, stillClear, type Flight, type FlightMode } from './swoop';
 
 // One herring gull: standing and strutting along the ledges, eyeing the
 // cursor and following it while it moves, a swoop flown along its planned
@@ -107,26 +107,58 @@ export function anchorOf(g: Gull, page: PageMap, now: number): Point | null {
   return f ? pageAt(f, g.x) : null;
 }
 
+// Ledges this near one above the other are one place to keep apart on: a
+// gull on a card's top 22px under a heading's rule stands in the feathers
+// of one on the rule above it.
+const NEAR_LEDGE = 40;
+
+// The others' claims, and each again on every ledge near enough above or
+// below its own to share its space.
+export function claimsIn(others: readonly Gull[], scene: PageMap): Claim[] {
+  return claims(others).flatMap((c) => {
+    const f = scene.floors.get(c.floor);
+    if (!f) return [c];
+    const near = [...scene.floors].filter(([id, g]) => id !== c.floor && Math.abs(g.y - f.y) < NEAR_LEDGE);
+    return [c, ...near.map(([id, g]) => ({ floor: id, lo: c.lo + f.left - g.left, hi: c.hi + f.left - g.left }))];
+  });
+}
+
 // The body's middle: what a cursor is near to or far from.
 export function middleOf(g: Gull, page: PageMap, now: number): Point | null {
   const at = anchorOf(g, page, now);
   return at && { x: at.x, y: at.y - MIDDLE };
 }
 
+// Placed standing: on a ledge with no gull first, then the longest free
+// stretch. Where none of the others stands with room to take off, one is
+// placed where there is (a page's take-off room is often only a stretch of
+// its heading's rule), so a cursor left still can be swooped at.
 export function createGull(scene: PageMap, now: number, rand: Rand, others: readonly Gull[] = [], self: Self = fresh(0)): Gull | null {
-  const spot = roomiest(scene, claims(others), GULL, MIN_SPOT);
+  const taken = claimsIn(others, scene);
+  const idleFor = () => now + between(rand, ...IDLE);
+  const facing = (): 1 | -1 => (rand() < 0.5 ? -1 : 1);
+  const launcher = others.some((o) => !o.flight && o.mode !== 'away' && roomToTakeOff(scene, o.floor, o.x));
+  const launches = launcher ? [] : spots(scene, taken, GULL, MIN_SPOT).flatMap((s) => {
+    const count = Math.floor((s.room.hi - s.room.lo) / 8) + 1;
+    return Array.from({ length: count }, (_, i) => s.room.lo + i * 8).filter((x) => roomToTakeOff(scene, s.floor, x)).map((x) => ({ floor: s.floor, x }));
+  });
+  if (launches.length) {
+    const at = pick(rand, launches);
+    return standingAt(self, at.floor, at.x, now, idleFor(), facing());
+  }
+  const spot = roomiest(scene, taken, GULL, MIN_SPOT);
   if (!spot) return null;
-  return standingAt(self, spot.floor, between(rand, spot.room.lo, spot.room.hi), now, now + between(rand, ...IDLE), rand() < 0.5 ? -1 : 1);
+  return standingAt(self, spot.floor, between(rand, spot.room.lo, spot.room.hi), now, idleFor(), facing());
 }
 
 // Reduced motion: standing still where it stood, while that spot stays
 // clear, so a scroll never moves it; a gull in flight stands at its
 // landing spot if it can; else in the middle of the best free stretch.
 export function restingGull(scene: PageMap, previous: Gull | null, others: readonly Gull[] = [], self: Self = previous ?? fresh(0), avoid: readonly Gull[] = others): Gull | null {
-  const taken = claims(others);
+  const taken = claimsIn(others, scene);
   const at = previous && (previous.flight ? previous.flight.land : previous.mode === 'away' ? null : previous);
   if (previous && at && staysPut(at, scene, GULL, taken)) return standingAt(self, at.floor, at.x, 0, Infinity, previous.dir);
-  const spot = roomiest(scene, claims(avoid), GULL, MIN_SPOT);
+  const spot = roomiest(scene, claimsIn(avoid, scene), GULL, MIN_SPOT);
   return spot ? standingAt(self, spot.floor, (spot.room.lo + spot.room.hi) / 2, 0, Infinity) : null;
 }
 
@@ -142,7 +174,7 @@ export type Airspace = { air: () => { room: Pick<Air, 'page' | 'room'>; view: Pi
 // standing somewhere new, clear of `avoid`, without animation.
 export function reconcileGull(g: Gull, scene: PageMap, now: number, rand: Rand, others: readonly Gull[], avoid: readonly Gull[], space: Airspace, cursor: Point | null = null): Gull | null {
   if (g.mode === 'away') return g;
-  const taken = claims(others);
+  const taken = claimsIn(others, scene);
   if (g.flight) {
     const { room, view } = space.air();
     if (stillClear(room, g.flight, now, taken, space.berths)) return g;
@@ -243,7 +275,7 @@ export function stepGull(g: Gull, scene: PageMap, now: number, dt: number, rand:
   if (g.flight) return fly(g, g.flight, scene, now, dt);
   const f = scene.floors.get(g.floor);
   if (!f) return g;
-  const taken = claims(others);
+  const taken = claimsIn(others, scene);
   if (flyer && (idle(g) || g.mode === 'ready')) {
     const here = pageAt(f, g.x, MIDDLE);
     const watching = g.mode === 'eye' && g.watch === flyer.id ? g : { ...g, mode: 'eye' as const, since: now, target: g.x, watch: flyer.id, glance: null };
