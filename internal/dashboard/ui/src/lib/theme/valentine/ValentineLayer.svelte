@@ -47,7 +47,7 @@
       page = measured;
       floors = measured.floors;
       petals = scatterPetals(floors, measured.obstacles);
-      air = airOf(measured, measured.main ?? null, SPOT);
+      air = airOf(measured, SPOT);
       group = place(group, air, previous, time);
     },
     frame(time, step) {

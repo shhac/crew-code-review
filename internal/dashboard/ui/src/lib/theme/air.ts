@@ -23,7 +23,8 @@ const NOWHERE: Box = { left: 0, right: 0, top: 0, bottom: 0 };
 
 // The air on this page: main's box, and every point in view where a
 // footprint of `reach` fits.
-export function airOf(page: PageMap, main: Box | null, reach: Reach): Air {
+export function airOf(page: PageMap, reach: Reach): Air {
+  const main = page.main;
   const room = main ? { left: main.left + EDGE, right: main.right - EDGE, top: main.top + EDGE, bottom: main.bottom - EDGE } : NOWHERE;
   const view = main ? {
     left: Math.max(EDGE, room.left), right: Math.min(page.width - EDGE, room.right),

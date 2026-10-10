@@ -45,8 +45,8 @@ stretch right of a short title is usually all there is.
   each widened by 4px. Card boxes count here, unlike for the ledge walkers'
   6px reach: a cupid over a card's empty middle would read as covering the
   card, and an arrow crossing one would read as shooting it. It is worked
-  out with each measurement (`airOf`: the `PageMap` and `main`'s box, read
-  in the same frame). Two boxes come of it: the room (all of `main`, in
+  out with each measurement (`airOf`: the `PageMap`, which carries `main`'s box,
+  read in the same frame). Two boxes come of it: the room (all of `main`, in
   view or not), which a cupid already somewhere must stay inside, since a
   scroll carries it out of view and back with its ledge; and the view (the
   part of it inside the window, 6px in), where new spots, the ends of

@@ -20,5 +20,5 @@ export const cards: Obstacle[] = [
 
 export const page = (obstacles: readonly Obstacle[] = [TITLE, SUBTITLE, INPUT, ...cards], floors: [number, Ledge][] = [[1, rule], [2, board], [3, side]]): PageMap =>
   ({ floors: new Map(floors), obstacles, width: 1440, height: 900 });
-export const airFor = (p: PageMap = page(), main: Box = MAIN): Air => airOf(p, main, SPOT);
+export const airFor = (p: PageMap = page(), main: Box = MAIN): Air => airOf({ ...p, main }, SPOT);
 export const still = (x: number, y: number, at = 0): Cursor => ({ x, y, at });

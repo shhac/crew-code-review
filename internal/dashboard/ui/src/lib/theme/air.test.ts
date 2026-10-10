@@ -18,7 +18,7 @@ describe('the air', () => {
   });
 
   it('is nowhere without main', () => {
-    expect(airOf(page(), null, SPOT).spots).toEqual([]);
+    expect(airOf(page(), SPOT).spots).toEqual([]);
   });
 
   it('keeps a gap round every obstacle', () => {
