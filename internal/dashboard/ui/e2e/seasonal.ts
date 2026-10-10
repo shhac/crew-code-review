@@ -85,6 +85,15 @@ export const SETS: readonly SeasonalSet[] = [
     min: { 1440: 2, 1024: 2, 390: 2 }, still: 'sit', settle: 400,
   },
   {
+    // Each bee is on a bluebell clump or the shelf, never a moss rim. On a
+    // phone the shelf is hidden and the stacked cards are too close for
+    // clumps, so the metrics page has one flower with room for a bee.
+    theme: 'bluebells', overlay: '[data-bluebells]', shelf: '.bluebells-shelf', accent: 'rgb(155, 156, 244)',
+    animal: 'bee', drawn: 'image, [data-stroke]', decoration: '[data-moss]',
+    parts: [['[data-moss]', 'path'], ['[data-clump]', 'image'], ['[data-cushion]', 'image']],
+    min: { 1440: 2, 1024: 2, 390: 1 }, still: 'perch', settle: 400,
+  },
+  {
     // The wasps circle the cake in the rail's air, so they are the shelf's,
     // and there are none on a phone, where the shelf is hidden. The bunting
     // is the overlay's, hung in the gaps between ledges.

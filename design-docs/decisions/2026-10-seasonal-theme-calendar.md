@@ -9,8 +9,8 @@ consolidation were not started. Revised the same day after a read-only
 review by Codex (`gpt-5.6-terra`), which corrected two claims about the code
 and tightened the refactor's contract. Since built: February (Valentine's,
 2026-10-10), March (Mad March hares, 2026-10-10), April (Easter egg hunt,
-2026-10-10), June (Village fête, 2026-10-10), July (summer tennis,
-2026-10-11), August (Seaside, 2026-10-11).
+2026-10-10), May (bluebell wood, 2026-10-10), June (Village fête,
+2026-10-10), July (summer tennis, 2026-10-11), August (Seaside, 2026-10-11).
 
 ## The problem
 
@@ -79,12 +79,14 @@ all twelve. Easter can fall in late March; an April-long egg hunt still works.
   egg behind it. Built as two or three European rabbits; sources and method
   are in `design-docs/easter/`.
 
-### May: Bluebell wood
+### May: Bluebell wood (built)
 
 - **Shelf**: bluebells.
 - **Ledges**: moss with small clumps of bluebells.
 - **Animal**: a bumblebee bumbles from flower to flower, dodges the cursor, and
-  now and then bonks into a card wall and bounces off.
+  now and then bonks into a card wall and bounces off. Built as two or three
+  buff-tailed bumblebee queens on the insect rig; sources, the airspace
+  contract and method are in `design-docs/bluebells/`.
 
 ### June: Village fête (built)
 

@@ -60,12 +60,12 @@ KEYS:
   dashboard.tailscale.mode             "" | serve | funnel
   dashboard.usage_poll_interval        engine usage refresh cadence (default 10m)
   dashboard.theme                      auto | none | halloween | bonfire | christmas |
-                                       aurora | valentine | hares | easter | fete |
-                                       wimbledon | seaside (auto: the set in season:
-                                       aurora Jan, valentine Feb, hares Mar, easter Apr,
-                                       fete Jun, wimbledon Jul, seaside Aug, halloween
-                                       Oct, bonfire Nov, christmas Dec; none in other
-                                       months)
+                                       aurora | valentine | hares | easter | bluebells |
+                                       fete | wimbledon | seaside (auto: the set in
+                                       season: aurora Jan, valentine Feb, hares Mar,
+                                       easter Apr, bluebells May, fete Jun, wimbledon
+                                       Jul, seaside Aug, halloween Oct, bonfire Nov,
+                                       christmas Dec; none in other months)
   store.path                           DuckDB file location
 
 EXAMPLES:

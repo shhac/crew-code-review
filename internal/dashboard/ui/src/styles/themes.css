@@ -92,6 +92,22 @@
   background-attachment: fixed;
 }
 
+/* Bluebell violet for the bluebell wood, clear of the info blue, January's
+   teal, Easter's lilac (a month away) and the default lime. */
+:root[data-theme="bluebells"] {
+  --accent: #9b9cf4;
+  --accent-edge: rgba(155, 156, 244, .3);
+  --accent-ring: rgba(155, 156, 244, .35);
+  --rule: #9b9cf4;
+}
+
+/* A faint violet haze low in the corner by the bluebells, behind
+   everything. */
+:root[data-theme="bluebells"] body {
+  background-image: radial-gradient(ellipse 45% 40% at 0% 100%, rgba(155, 156, 244, .05), transparent 70%);
+  background-attachment: fixed;
+}
+
 /* Raspberry jam for the village fete, the Victoria sandwich's filling: a
    deeper, redder pink than Valentine's rose, and bluer than the bad ink's
    salmon. */

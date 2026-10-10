@@ -510,8 +510,8 @@ deliberately.
 - **Logs**: a live tail of the daemon's own log.
 
 **Seasonal themes.** `dashboard.theme` adds decorations to the dashboard: `auto` (the
-default) switches a set on in its season: the northern lights in January, Valentine's in February, Mad March hares in March, an Easter egg hunt in April, a village fete in June, summer tennis in July, the seaside in August, Halloween in October, Bonfire Night in November and Christmas throughout December. `none` turns
-decorations off, and naming a set (`aurora`, `valentine`, `hares`, `easter`, `fete`, `wimbledon`, `seaside`, `halloween`, `bonfire` or `christmas`) forces it on. They are purely cosmetic and
+default) switches a set on in its season: the northern lights in January, Valentine's in February, Mad March hares in March, an Easter egg hunt in April, a bluebell wood in May, a village fete in June, summer tennis in July, the seaside in August, Halloween in October, Bonfire Night in November and Christmas throughout December. `none` turns
+decorations off, and naming a set (`aurora`, `valentine`, `hares`, `easter`, `bluebells`, `fete`, `wimbledon`, `seaside`, `halloween`, `bonfire` or `christmas`) forces it on. They are purely cosmetic and
 never block a click. Reduced-motion users get the decorations without the
 animation. To preview a set whatever the date, add `?theme=halloween` to the
 URL.
@@ -582,6 +582,17 @@ passing makes one sit up, one that lingers makes it thump and bolt for cover,
 and now and then one nudges a new egg into a ledge end. Reduced motion shows
 the rabbits sitting still and the hunt as it stands. Preview with
 `?theme=easter`; design notes: [Easter egg hunt](design-docs/easter/README.md).
+
+May is a bluebell wood: a clump of native bluebells growing from a mossy
+mound on the rail, and a low rim of moss along the page's ledges with small
+clumps of bluebells and cushions of moss where there is room. Two or three
+buff-tailed bumblebees work up a clump bell by bell, warm up and lift off,
+and bumble to another flower, the shelf's too, through the rail's air above
+it; a cursor moving close makes one dart out of its way, and now and then
+one flies head first into a card's side, bounces off and hovers, dazed. They
+are never over text, controls or charts. Reduced motion shows the bees
+perched still. Preview with `?theme=bluebells`; design notes:
+[Bluebell wood](design-docs/bluebells/README.md).
 
 June is a village fete: a cake stall on the rail (a coconut shy, a prize
 Victoria sandwich with its rosette, three jars of jam on a tablecloth), and

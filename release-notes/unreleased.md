@@ -92,6 +92,16 @@ three rabbits sit, groom and hop on stepping legs, sit up at a passing
 cursor, thump and bolt when it lingers, and now and then leave a new egg.
 Reduced motion keeps a still scene.
 
+May now has a bluebell wood (`dashboard.theme` `bluebells`, on by default
+under `auto` from 1 to 31 May). The rail shows a clump of native bluebells
+growing from a mossy mound; the page gets a rim of moss along its ledges with
+small clumps of bluebells and cushions of moss, and two or three buff-tailed
+bumblebees that work up a clump bell by bell, warm up and lift off, bumble to
+another flower (the shelf's too, through the rail), dart out of a moving
+cursor's way, and now and then fly head first into a card's side and bounce
+off, dazed. They are never over text, controls or charts. Reduced motion keeps
+them perched and still.
+
 June now has a village fete (`dashboard.theme` `fete`, on by default under
 `auto` from 1 to 30 June). The rail shows a cake stall: a coconut shy, a
 prize Victoria sandwich and three jars of jam. Bunting hangs in the gaps
