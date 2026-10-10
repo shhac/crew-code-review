@@ -1,6 +1,6 @@
 # Bluebell wood (2026-10-10)
 
-**Status**: pre-production draft (decisions settled, not built).
+**Status**: being built (shelf and moss built; bees in progress).
 
 **Pins**: written against `ea7e9d5`. Code-internal; the page measurements
 below were taken on the running preview at that commit.
@@ -269,16 +269,25 @@ Both. A bee visits a ledge clump or the shelf, never a moss rim.
 ### Moss and clumps (the ledge quirk)
 
 - **Moss** is drawn in code: one stroked and filled path per ledge, a lumpy
-  cushion 2 to 4px tall in two greens with seeded bumps, wherever
+  cushion 1.2 to 3.6px tall (under 4 with its outline) in two greens with
+  seeded bumps 3 to 9px wide on a slow seeded swell along the ledge, so it
+  thickens and thins as moss does rather than reading as a trim, wherever
   `clearRuns(f, obstacles, 5)` says 5px is clear (card tops and heading rules
-  alike, never under heading text, as January's frost).
-- **Clumps** are the three bluebell clumps cut from `ledge-clumps.png`,
-  drawn 20px tall, in seeded 140px slots along each ledge, kept where
+  alike, never under heading text, as January's frost). It keeps 10px in
+  from a ledge's ends (a card's corners are rounded; 6 left it hanging in the
+  air over the curve) and its outline never hangs below the ledge.
+- **Clumps** are the three bluebell clumps cut from `ledge-clumps.png`, the
+  tallest drawn 20px tall (the others 18.75 and 17.75, at the same scale), in
+  seeded 140px slots along each ledge, kept where
   `clearRuns(f, obstacles, 26, { reach: 6 })` holds over the clump's width
-  plus 10px each side (room for a bee to perch). At most 3 a ledge and 12 a
-  page, shared out a ledge at a time (the frost glints' lesson). The two
-  plain moss cushions from the same sheet sit in empty slots on ledges with
-  room for 8px, at most 6 a page.
+  plus 10px each side (room for a bee to perch) and the moss runs under it. A
+  slot is seeded by its ledge and its index along the ledge, not by the clear
+  run it falls in, so a clump keeps its place (and its key, which a bee's
+  flower is) when text elsewhere on its ledge changes. At most 3 a ledge and
+  12 a page, shared out a ledge at a time (the frost glints' lesson). The two
+  plain moss cushions from the same sheet (9px tall) sit in slots with no
+  clump where 10px are clear, at most 6 a page. Each clump and cushion is
+  mirrored or not by its seed.
 - **Life.** A bell under a perched bee dips 1px, eased. Nothing else moves;
   under reduced motion nothing moves at all.
 
@@ -470,8 +479,8 @@ matches, at 12 file px per drawing unit.
   `rig/`.
 - **Antennae, in code.** Two strokes each: scape, then flagellum from the
   elbow, the far one behind the head.
-- **Shelf and clumps.** `bluebell-shelf.png` exported for the shelf (about
-  124x62 on the page) with its four perch fractions; `ledge-clumps.png`
+- **Shelf and clumps.** `bluebell-shelf.png` exported for the shelf (115.5x72
+  on the page; see "As built") with its four perch fractions; `ledge-clumps.png`
   split into its three clumps and two moss cushions (`art.py`'s `poses`).
 
 ## Art
@@ -546,6 +555,28 @@ are long; flying, the ghost wings at the ends of the stroke, at full
 length, reach well above the 21px hover target. Narrowing the stroke, or
 foreshortening the ghosts, is the owner's call before the footprints
 settle.
+
+## As built
+
+`design-docs/bluebells/export.py` (run with `uv run`) keys, crops and writes
+every shipped picture and prints each one's bells, which `bluebells/art.ts`
+holds. A bell is found as a blob of the bells' blue between their outlines;
+its perch is the middle of its top edge, as fractions of its picture's box.
+
+| Source | Shipped | On the page | Bells |
+| --- | --- | --- | --- |
+| `bluebell-shelf.png` | `bluebell-shelf.webp` (2x) | 115.5x72 | 26 found; the four on the leftmost stem are the shelf's perches |
+| `ledge-clumps.png` | `clump-0.webp`, `clump-1.webp`, `clump-2.webp` (4x) | 21.5x18.75, 24x20, 16.75x17.75 | 4, 6 and 2 |
+| `ledge-clumps.png` | `cushion-0.webp`, `cushion-1.webp` (4x) | 16.75x9, 23.25x9 | none |
+
+- **The shelf** is drawn 72px tall rather than the 62 first planned: at 62
+  the clump came out 100px wide, small on the 168px stage beside the other
+  months' shelves (the aurora's kit is 124 wide), and its bells, the bees'
+  landing places, were under 5px. At 72 it is 115.5 wide, centred on the
+  stage. The shelf's perches are the four bells of its leftmost stem, which
+  hang one above another from the stem's tip: one stem, so a bee works up it
+  bell by bell as on a ledge clump, rather than crawling across from one stem
+  to another, which bees do not do.
 
 ## Verification (for the owner)
 

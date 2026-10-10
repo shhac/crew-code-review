@@ -3,11 +3,23 @@
 # ///
 """Keys, crops and exports the bluebell wood's art. Run: uv run design-docs/bluebells/export.py
 
-The steps are shared with the other themes (../art.py). The bee is put on
-one scale like every animal, but not by its eye: art.py's feature measures
-a dark blob, and a bumblebee's eye sits in a black head, so the blob it
-finds is the whole head. The golden band across the abdomen (T2) is measured
-instead, by its area, which holds whatever angle the abdomen is drawn at.
+The steps are shared with the other themes (../art.py). The shelf is
+exported at twice its display size; the ledge clumps and moss cushions,
+which are small on the page, at four times, all five cut from one sheet at
+its empty column runs and drawn at one scale (the tallest clump CLUMP px
+tall), so a cushion is as big beside a clump as it was drawn.
+
+A bee perches on top of a bell, so every bell of every flower is found in
+the art (each a blob of the bells' blue between their outlines) and printed
+as the middle of its top edge, in fractions of the exported box: the
+perches bluebells/art.ts holds. They are measured again here whenever the
+art is regenerated.
+
+The bee is put on one scale like every animal, but not by its eye: art.py's
+feature measures a dark blob, and a bumblebee's eye sits in a black head, so
+the blob it finds is the whole head. The golden band across the abdomen
+(T2) is measured instead, by its area, which holds whatever angle the
+abdomen is drawn at.
 """
 from collections import deque
 from pathlib import Path
@@ -17,11 +29,20 @@ import numpy as np
 from PIL import Image
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from art import MARGIN, EyeScale, cut, keyed, opaque, pale  # noqa: E402
+from art import MARGIN, EyeScale, crop, cut, export, keyed, opaque, pale, poses  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
 OUT = HERE.parents[1] / 'internal/dashboard/ui/src/lib/theme/bluebells'
 LAB = HERE.parents[1] / 'internal/dashboard/ui/src/lab'
+# Display height in page px, and file px to each.
+SHELF = (72, 2)
+CLUMP = (20, 4)
+# Left to right in ledge-clumps.png.
+PIECES = ['clump-0', 'cushion-0', 'clump-1', 'cushion-1', 'clump-2']
+# Blobs of blue smaller than this share of the piece's area are a sliver of
+# a bell between two lines, not a bell.
+SPECK = 0.0008
+
 # The bee's pictures are all on one scale, its golden band's: BAND drawing
 # units across (the square root of its area), written at RES file pixels
 # per unit. bee-rig.ts draws a unit as a page pixel, so the bee is 18px from
@@ -103,7 +124,66 @@ def stripes(rgba: np.ndarray) -> np.ndarray:
 MASKS = {'bee-abdomen': stripes, 'bee-thorax': stripes, 'bee-head': eye, 'bee-wings': pale}
 
 
-def main() -> None:
+def blue(rgba: np.ndarray) -> np.ndarray:
+    r, g, b = (rgba[..., i].astype(int) for i in range(3))
+    return (rgba[..., 3] > 200) & (b > 110) & (b - g > 70) & (b - r > 15)
+
+
+def blobs(mask: np.ndarray) -> list[list[tuple[int, int]]]:
+    seen = np.zeros(mask.shape, bool)
+    found = []
+    for start in zip(*np.nonzero(mask)):
+        if seen[start]:
+            continue
+        seen[start] = True
+        todo, blob = deque([start]), []
+        while todo:
+            y, x = todo.popleft()
+            blob.append((y, x))
+            for n in ((y + 1, x), (y - 1, x), (y, x + 1), (y, x - 1)):
+                if 0 <= n[0] < mask.shape[0] and 0 <= n[1] < mask.shape[1] and mask[n] and not seen[n]:
+                    seen[n] = True
+                    todo.append(n)
+        found.append(blob)
+    return found
+
+
+def bells(rgba: np.ndarray) -> list[tuple[float, float]]:
+    """The top of each bell, as fractions of the piece's box: the middle of
+    the bell's blue across, a little above its highest blue row (its
+    outline)."""
+    h, w = rgba.shape[:2]
+    tops = []
+    for blob in blobs(blue(rgba)):
+        if len(blob) < SPECK * h * w:
+            continue
+        ys, xs = zip(*blob)
+        top = min(ys)
+        row = [x for y, x in blob if y <= top + max(2, (max(ys) - top) // 6)]
+        tops.append(((min(row) + max(row)) / 2 / w, max(0, top - 0.03 * (max(ys) - top) - 1) / h))
+    return sorted(tops, key=lambda t: -t[1])
+
+
+def report(name: str, art: np.ndarray, size: tuple[int, int], density: int) -> None:
+    print(f'{name}: display {size[0] / density:g}x{size[1] / density:g}')
+    for x, y in bells(art):
+        print(f'  bell {x:.3f}, {y:.3f}')
+
+
+def flowers() -> None:
+    OUT.mkdir(exist_ok=True)
+    shelf = crop(keyed(HERE / 'bluebell-shelf.png'))
+    height, density = SHELF
+    report('bluebell-shelf', shelf, export(shelf, OUT, 'bluebell-shelf', density * height / shelf.shape[0]), density)
+    pieces = dict(zip(PIECES, (crop(p) for p in poses(keyed(HERE / 'ledge-clumps.png'), len(PIECES)))))
+    height, density = CLUMP
+    tallest = max(p.shape[0] for p in pieces.values())
+    for name, art in pieces.items():
+        report(name, art, export(art, OUT, name, density * height / tallest), density)
+
+
+
+def bee() -> None:
     scale = EyeScale(HERE, BANDS, BAND, RES, measure=band)
     scale.reference('bee-standing.png', LAB, 'bee-reference')
     x, y = collar('bee-standing', BANDS['bee-standing.png'], STANDING_COLLAR)
@@ -113,6 +193,11 @@ def main() -> None:
         x, y = collar(f'bee-pose-{pose}', band_seed, collar_seed)
         print(f'bee-pose-{pose}: collar at {x:.2f}, {y:.2f}')
     scale.parts(cut(keyed(HERE / 'bee-parts.png'), PARTS), 'bee-parts.png', OUT, masks=MASKS)
+
+
+def main() -> None:
+    flowers()
+    bee()
 
 
 if __name__ == '__main__':

@@ -1,4 +1,5 @@
 import type { Scene } from '../scenes';
+import BluebellsLayer from './BluebellsLayer.svelte';
+import BluebellsShelf from './BluebellsShelf.svelte';
 
-// Not drawn yet: the set shows nothing until its parts are named here.
-export default {} satisfies Scene;
+export default { Shelf: BluebellsShelf, Layer: BluebellsLayer } satisfies Scene;
