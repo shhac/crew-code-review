@@ -232,17 +232,18 @@ export function boxOf(w: Wasp, places: Places, now: number): Box | null {
 }
 
 // What the drawing needs: its pose, which way it faces, its size (a little
-// smaller on the far side of its orbit), its bank into a turn and how far it
-// has walked feeding (for its tripod).
-export type WaspView = Point & { pose: WaspPose; face: number; scale: number; bank: number; walked: number };
+// smaller on the far side of its orbit) and how far it has walked feeding
+// (for its tripod). There is no bank: a tilt would take her past the
+// footprints her rig is measured to.
+export type WaspView = Point & { pose: WaspPose; face: number; scale: number; walked: number };
 export function waspView(w: Wasp, places: Places, now: number, still = false): WaspView | null {
-  const p = where(w, places, now);
+  const p = still ? standOf(w.id, places) : where(w, places, now);
   if (!p) return null;
-  const base = { ...p, face: w.face, scale: 1, bank: 0, walked: 0 };
+  const base = { ...p, face: w.face, scale: 1, walked: 0 };
   if (still) return { ...base, pose: 'standing' };
   if (w.mode === 'circle' && !flying(w, now)) {
     const theta = thetaAt(w, now);
-    return { ...base, pose: 'hover', scale: 0.95 + 0.05 * Math.sin(theta), bank: -10 * Math.cos(theta) * w.spin };
+    return { ...base, pose: 'hover', scale: 0.95 + 0.05 * Math.sin(theta) };
   }
   if (w.mode === 'feed' || w.mode === 'rest') return { ...base, pose: 'feed', walked: shuffleAt(w.seed, now - w.since).walked };
   return { ...base, pose: poseOf(w) };
@@ -603,4 +604,14 @@ function stillFits(w: Wasp, world: World): boolean {
   }
   if (w.mode === 'circle' || w.mode === 'dodge' || (w.mode === 'return' && onOrbit(w, places))) return orbitFits(w.id, world);
   return within(zoneOf(w.id, places), air.air);
+}
+
+// A test's cue (?theme-cue=land): wasp 0, circling, goes in to inspect the
+// cake now, and so lands and feeds, rather than after its random laps.
+export function inspectNow(wasps: readonly Wasp[], world: World): Wasp[] {
+  return inTurn(wasps, (w, others) => {
+    const here = where(w, world.places, world.now);
+    if (w.id !== 0 || w.mode !== 'circle' || !here) return w;
+    return toInspect(w, here, world, others) ?? w;
+  });
 }

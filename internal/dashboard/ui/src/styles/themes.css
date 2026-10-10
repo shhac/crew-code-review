@@ -92,6 +92,16 @@
   background-attachment: fixed;
 }
 
+/* Raspberry jam for the village fete, the Victoria sandwich's filling: a
+   deeper, redder pink than Valentine's rose, and bluer than the bad ink's
+   salmon. */
+:root[data-theme="fete"] {
+  --accent: #e8709f;
+  --accent-edge: rgba(232, 112, 159, .3);
+  --accent-ring: rgba(232, 112, 159, .35);
+  --rule: #e8709f;
+}
+
 /* Shared click-through scene, below dialogs (50). */
 .seasonal-overlay { position: fixed; inset: 0; z-index: 40; pointer-events: none; overflow: hidden; }
 :root[data-theme="christmas"] {

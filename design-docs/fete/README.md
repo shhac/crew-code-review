@@ -1,10 +1,9 @@
 # Village fête (2026-10-10)
 
-**Status**: being built. Done: the shelf, the wasp's parts and their
-export, the bunting's pure model, the wasps' pure behaviour model. Waiting
-on the phase C kits: the shared gaps and rail air (c-surfaces) for the
-bunting's layer and the wasps' air, and the insect rig (c-insects) for the
-wasp's wings, legs and antennae. Not switched on yet.
+**Status**: built and shown under `?theme=fete`: the shelf, the bunting
+on the shared gaps (`FeteLayer.svelte`), the two wasps in the rail's air
+(`FeteShelf.svelte`) on the insect rig, the seasonal contract's row and
+`e2e/fete.spec.ts`. Not switched on yet.
 
 **Pins**: written against `b45e997`. Code-internal.
 
@@ -404,6 +403,34 @@ the plan above, each because building showed it:
 - **Chased while feeding**, it flees straight from its spot: the first leg
   of the flee is its take-off.
 
+### The page, as built
+
+- **Bunting** (`FeteLayer.svelte`): every gap `measureGaps` finds, hung by
+  `hangAll` with each gap's own `gapDepth`, redrawn every frame from the
+  latest page map and the swings kept by string id, so it follows every
+  remeasure. A brush's speed is the stroke's length over the time since the
+  last stroke. Pennants carry `data-pennant` and each string `data-bunting`
+  (its id), which the seasonal contract checks against the content.
+- **Wasps** (`FeteShelf.svelte`): the shelf measures its rail air
+  (`measureRailAir`, watched by `watchRailSky`), turns it into the stage's
+  coordinates with June's exit lane (`waspAir`), and steps the pair in its
+  own `sceneLoop`. The cursor is the passive hovering mouse or pen, in the
+  stage's coordinates, with its speed between moves; it is forgotten on a
+  press, leaving the window, blur, a hidden tab and a reduced-motion change.
+  A turn about is drawn by scaling her through edge-on over 120ms; there is
+  no bank, which would tilt her past her measured footprint. Each wasp's rig
+  carries `data-wasp` (its mode), `data-pose` and `data-id`.
+- **The cue** `?theme-cue=land` sends wasp 0 in to inspect the cake at once,
+  so the e2e can watch it land and feed frame by frame.
+- **e2e**: the seasonal contract's row (`e2e/seasonal.ts`) gives the wasps a
+  home in the shelf and says there are none on a phone, which it asserts
+  (two optional fields, `home` and `none`, added for June). `e2e/fete.spec.ts`
+  checks the bunting under the hero and across the gutters and a brushed swag
+  swinging and settling; every frame of a cued landing and of a chase keeping
+  to the rail's air (under the nav, above the identity chip, off the page,
+  out past the window only along the lane); wasp 1 resting on its jar when a
+  short window leaves no room for the high orbit; and the phone.
+
 ### Wasp behaviour
 
 A pure model in the stage's coordinates, stepped each frame like the
@@ -458,9 +485,14 @@ blur, a hidden tab and a reduced-motion change.
 
 ### Accent
 
-Sweet pea `#f39ac0`, a cotton-print pink well away from the bad-status ink
-(`#ea8478`, a salmon) and from every other month's accent. Only the accent
-tokens move. A proposal: easy to change in `styles/themes.css`.
+Raspberry jam `#e8709f`, the Victoria sandwich's filling. *As built*: the
+first proposal, sweet pea `#f39ac0`, sat within a few steps of Valentine's
+rose (`#f48fb8`) and of August's proposed seaside-rock pink (`#f49ac1`);
+raspberry is a deeper, redder pink than either, and bluer than the bad-status
+ink (`#ea8478`, a salmon). Every other cotton-print colour of the bunting is
+taken or too near a status colour (cornflower by the chart blue, buttercup by
+Bonfire's gold, sage by the app's own greens). Only the accent tokens move. A
+proposal: easy to change in `styles/themes.css`.
 
 ## Research
 
