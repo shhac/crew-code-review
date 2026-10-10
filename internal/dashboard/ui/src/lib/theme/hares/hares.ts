@@ -1,14 +1,15 @@
-import { clearance, inView, reachOf, type PageMap } from '../floors';
+import { inView, reachOf, type PageMap } from '../floors';
 import { inTurn, placeInTurn } from '../group';
+import { bodyOf, clampTo, pageAt, roomOver, runAt, runsOf } from '../ledges';
 import { apart, clamp, sign } from '../math';
 import type { Cursor, Point } from '../pointer';
 import { between, type Rand } from '../seed';
 import {
-  BOLT_SPEED, BOX_GAP, BOX_SPAN, CHASE_GAP, CHASE_SPEED, CLEAR, claimsOfHares, clampTo, fresh, HALF, holds, placeHare, POSES, SPACING, sittingAt,
+  BOLT_SPEED, BOX_GAP, BOX_SPAN, CHASE_GAP, CHASE_SPEED, claimsOfHares, fresh, HALF, HARE, holds, placeHare, POSES, SPACING, sittingAt,
   stepHare, TALL, tallAt, type Hare, type Mode,
 } from './hare';
 import type { HarePose } from './hare-rig';
-import { arcPoint, bodyOf, claimsOf, pageAt, placeOn, plan, REACH, runAt, runsOf, sweptClear, type Claim, type Place, type Trail } from './trail';
+import { arcPoint, claimsOf, placeOn, plan, sweptClear, type Claim, type Place, type Trail } from './trail';
 
 // The hares on the page together: two, or three where the page has room,
 // hare 0 the jill and the others jacks. They graze apart (hare.ts); now and
@@ -83,7 +84,7 @@ function claimsBut(group: Hares, scene: PageMap, but: readonly number[], runs: r
 const BOUND = reachOf(POSES.bound);
 const LEAP = reachOf(POSES.leap);
 const planning = (claims: Claim[], extra: { budget: number; ledges: number; from?: Point | null; toward?: number }, rand: Rand) =>
-  ({ clear: CLEAR, body: BOUND, air: LEAP, claims, spacing: SPACING, rand, ...extra });
+  ({ clear: HARE.clear, body: BOUND, air: LEAP, claims, spacing: SPACING, rand, ...extra });
 
 // --- Placing -----------------------------------------------------------
 
@@ -92,7 +93,7 @@ const planning = (claims: Claim[], extra: { budget: number; ledges: number; from
 function boxSpots(scene: PageMap): { floor: number; mid: number; length: number }[] {
   return [...scene.floors].flatMap(([floor, f]) => {
     if (!inView(f, scene)) return [];
-    return runsOf(f, scene, TALL).map((r) => bodyOf(r, HALF)).filter((b) => b.hi - b.lo >= CHASE_GAP).map((b) => ({ floor, mid: (b.lo + b.hi) / 2, length: b.hi - b.lo }));
+    return runsOf(f, scene, { ...HARE, clear: TALL }).map((r) => bodyOf(r, HALF)).filter((b) => b.hi - b.lo >= CHASE_GAP).map((b) => ({ floor, mid: (b.lo + b.hi) / 2, length: b.hi - b.lo }));
   });
 }
 
@@ -118,13 +119,13 @@ export function createHares(scene: PageMap, now: number, rand: Rand): Hares {
 function boxRoom(scene: PageMap, floor: number, a: number, b: number): boolean {
   const f = scene.floors.get(floor);
   const mid = (a + b) / 2;
-  return !!f && clearance(f, scene.obstacles, mid - BOX_SPAN / 2, mid + BOX_SPAN / 2, REACH) >= TALL;
+  return !!f && roomOver(f, scene, HARE, mid - BOX_SPAN / 2, mid + BOX_SPAN / 2) >= TALL;
 }
 
 // Whether nothing (no other hare) stands between two on one clear run.
 function sameRun(scene: PageMap, a: Hare, b: Hare, all: readonly Hare[]): boolean {
   const f = a.floor === b.floor ? scene.floors.get(a.floor) : undefined;
-  const run = f && runAt(f, scene, CLEAR, a.x);
+  const run = f && runAt(f, scene, HARE, a.x);
   if (!run || b.x < run.lo || b.x > run.hi) return false;
   const [lo, hi] = [Math.min(a.x, b.x), Math.max(a.x, b.x)];
   return !all.some((h) => h.id !== a.id && h.id !== b.id && h.floor === a.floor && h.x > lo && h.x < hi);
@@ -218,7 +219,7 @@ function advanceBout(group: Hares, scene: PageMap, now: number, rand: Rand): Har
   // go, and they graze.
   const away = sign(jack.x - jill.x);
   const f = scene.floors.get(jack.floor);
-  const run = f && runAt(f, scene, CLEAR, jack.x);
+  const run = f && runAt(f, scene, HARE, jack.x);
   const room = run ? bodyOf(run, HALF) : { lo: jack.x, hi: jack.x };
   const target = clampTo(room, jill.x + away * (SPACING + between(rand, 2, 40)));
   return { ...update(group, { ...jill, mode: 'sit', until: now + between(rand, 2500, 4000) }, { ...jack, mode: 'lope', target, dir: away }), bout: null };
@@ -347,7 +348,7 @@ function trailHolds(run: Run, scene: PageMap): boolean {
     if (s.kind === 'away') return scene.floors.has(s.from.floor) && scene.floors.has(s.to.floor);
     if (s.kind === 'run') {
       const f = scene.floors.get(s.floor);
-      const r = f && runAt(f, scene, CLEAR, s.from);
+      const r = f && runAt(f, scene, HARE, s.from);
       return !!r && Math.min(s.from, s.to) >= r.lo && Math.max(s.from, s.to) <= r.hi;
     }
     const a = scene.floors.get(s.from.floor), b = scene.floors.get(s.to.floor);
@@ -396,7 +397,7 @@ const partnerOf = (group: Hares, h: Hare) => (group.bout ? (h.id === group.bout.
 // A hare pulled back onto the run under it, if there still is one.
 function clamped(h: Hare, scene: PageMap): Hare | null {
   const f = scene.floors.get(h.floor);
-  const run = f && runAt(f, scene, CLEAR, clamp(h.x, 0, f.right - f.left));
+  const run = f && runAt(f, scene, HARE, clamp(h.x, 0, f.right - f.left));
   if (!f || !run) return null;
   const room = bodyOf(run, HALF);
   if (room.hi < room.lo) return null;

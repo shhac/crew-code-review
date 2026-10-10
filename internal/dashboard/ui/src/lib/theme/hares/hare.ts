@@ -1,8 +1,9 @@
-import { clearance, inView, type Ledge, type PageMap, type Run } from '../floors';
+import type { Ledge, PageMap, Run } from '../floors';
+import { bodyOf, clampTo, roomiest, roomOver, runAt, staysPut, type Claim, type Walker } from '../ledges';
 import { sign } from '../math';
-import { between, maxBy, pick, type Rand } from '../seed';
+import { between, pick, type Rand } from '../seed';
 import type { HarePose } from './hare-rig';
-import { bodyOf, REACH, runAt, runsOf, type Claim } from './trail';
+import { REACH } from './trail';
 
 // One brown hare's day on the ledges, between the bouts and bolts the group
 // runs (hares.ts): grazing, sitting up, loping a little way, freezing at a
@@ -60,6 +61,8 @@ export const BOLT_SPEED = 120;
 // The widest a hare on a ledge ever is, so its whole body stays on a run.
 export const HALF = Math.max(POSES.graze.width, POSES.bound.width) / 2;
 const MIN_SPOT = 2 * HALF + 8;
+// How a hare stands on the ledges, day to day.
+export const HARE: Walker = { clear: CLEAR, reach: REACH, half: HALF, spacing: SPACING };
 
 export type Mode =
   | 'graze' | 'sit' | 'lope'
@@ -91,10 +94,8 @@ export type Hare = {
 export type Self = Pick<Hare, 'id' | 'seed' | 'walked'>;
 export const fresh = (id: number): Self => ({ id, seed: id + 1, walked: 0 });
 
-const length = (r: Run) => r.hi - r.lo;
-export const clampTo = (r: Run, x: number) => Math.max(r.lo, Math.min(r.hi, x));
 // Whether the stretch round x has room to sit up tall (or box) there.
-export const tallAt = (f: Ledge, scene: PageMap, x: number, width: number) => clearance(f, scene.obstacles, x - width / 2, x + width / 2, REACH) >= TALL;
+export const tallAt = (f: Ledge, scene: PageMap, x: number, width: number) => roomOver(f, scene, HARE, x - width / 2, x + width / 2) >= TALL;
 
 export function sittingAt(self: Self, f: Ledge, floor: number, x: number, scene: PageMap, now: number, rand: Rand, dir: 1 | -1 = 1): Hare {
   return { ...self, floor, x, dir, mode: 'graze', until: now + between(rand, 2000, 6000), target: x, tall: tallAt(f, scene, x, POSES.sit.width) };
@@ -102,32 +103,11 @@ export function sittingAt(self: Self, f: Ledge, floor: number, x: number, scene:
 
 // Where the others are and where they are going, as stretches of ledge.
 export const claimsOfHares = (others: readonly Hare[]): Claim[] => others.map((o) => ({ floor: o.floor, lo: Math.min(o.x, o.target), hi: Math.max(o.x, o.target) }));
-const clearOf = (claims: readonly Claim[], floor: number, lo: number, hi: number) => !claims.some((c) => c.floor === floor && c.hi > lo - SPACING && c.lo < hi + SPACING);
 
-// A run with the stretches near the claims taken out.
-function freeOf(r: Run, claims: readonly Claim[]): Run[] {
-  return [...claims].sort((a, b) => a.lo - b.lo).reduce<Run[]>((left, c) => left.flatMap((p) => [
-    { lo: p.lo, hi: Math.min(p.hi, c.lo - SPACING) },
-    { lo: Math.max(p.lo, c.hi + SPACING), hi: p.hi },
-  ].filter((q) => q.hi >= q.lo)), [r]);
-}
-
-// Where a hare could sit: every clear run in view long enough, as the
-// stretch its middle may use, away from the others; ledges with no hare on
-// them first, so they spread out.
-export function spots(scene: PageMap, claims: readonly Claim[]): { floor: number; room: Run }[] {
-  const all = [...scene.floors].flatMap(([floor, f]) => {
-    if (!inView(f, scene)) return [];
-    const near = claims.filter((c) => c.floor === floor);
-    return runsOf(f, scene, CLEAR).filter((r) => length(r) >= MIN_SPOT).flatMap((r) => freeOf(bodyOf(r, HALF), near).map((room) => ({ floor, room })));
-  });
-  const empty = all.filter((s) => !claims.some((c) => c.floor === s.floor));
-  return empty.length ? empty : all;
-}
-
-// A hare placed somewhere new: on the roomiest free stretch, sitting there.
+// A hare placed somewhere new: on the roomiest free stretch (on a ledge with
+// no hare on it where there is one), sitting there.
 export function placeHare(scene: PageMap, now: number, rand: Rand, others: readonly Hare[], self: Self, middle = false): Hare | null {
-  const spot = maxBy(spots(scene, claimsOfHares(others)), (s) => length(s.room));
+  const spot = roomiest(scene, claimsOfHares(others), HARE, MIN_SPOT);
   const f = spot && scene.floors.get(spot.floor);
   if (!spot || !f) return null;
   const x = middle ? (spot.room.lo + spot.room.hi) / 2 : between(rand, spot.room.lo, spot.room.hi);
@@ -137,18 +117,13 @@ export function placeHare(scene: PageMap, now: number, rand: Rand, others: reado
 // Whether a hare can stay where it is: all of it on a clear run, no other
 // hare too close (one it is boxing aside), and a box still with its tall
 // room.
-export function holds(hare: Hare, scene: PageMap, others: readonly Hare[], partner: number | null = null): boolean {
-  const f = scene.floors.get(hare.floor);
-  const run = f && runAt(f, scene, CLEAR, hare.x);
-  if (!f || !run || hare.x < bodyOf(run, HALF).lo - 1e-9 || hare.x > bodyOf(run, HALF).hi + 1e-9) return false;
-  const rest = others.filter((o) => o.id !== partner);
-  return clearOf(claimsOfHares(rest), hare.floor, hare.x, hare.x);
-}
+export const holds = (hare: Hare, scene: PageMap, others: readonly Hare[], partner: number | null = null) =>
+  staysPut(hare, scene, HARE, claimsOfHares(others.filter((o) => o.id !== partner)), 1e-9);
 
 // The stretch a hare may lope in: its run, between its nearest neighbours,
 // keeping SPACING from each.
 function lane(hare: Hare, f: Ledge, scene: PageMap, others: readonly Hare[], trails: readonly Claim[]): Run | null {
-  const run = runAt(f, scene, CLEAR, hare.x);
+  const run = runAt(f, scene, HARE, hare.x);
   if (!run) return null;
   const room = bodyOf(run, HALF);
   const near = [...claimsOfHares(others), ...trails].filter((c) => c.floor === hare.floor);
@@ -189,7 +164,7 @@ function makeRoom(hare: Hare, f: Ledge, scene: PageMap, others: readonly Hare[],
   if (!close.length) return null;
   const nearest = close.reduce((a, b) => (Math.abs(b.x - hare.x) < Math.abs(a.x - hare.x) ? b : a));
   const away = sign(hare.x - nearest.x);
-  const run = runAt(f, scene, CLEAR, hare.x);
+  const run = runAt(f, scene, HARE, hare.x);
   const room = run ? bodyOf(run, HALF) : { lo: hare.x, hi: hare.x };
   const target = clampTo(room, nearest.x + away * (SPACING + 2));
   const clear = !others.some((o) => o.id !== nearest.id && o.floor === hare.floor && Math.abs(o.x - target) < SPACING);

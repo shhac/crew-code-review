@@ -1,4 +1,7 @@
-import { clearRuns, clearance, inView, type Ledge, type PageMap, type Run } from '../floors';
+import { inView, type Ledge, type PageMap, type Run } from '../floors';
+import {
+  bodyOf, clearOf, ledgeEnds, lengthOf, pageAt, pointClaim, roomiest, RUNS, runAt, runsOf, runUnder, spare, staysPut, widthOf, within, type Claim, type Walker,
+} from '../ledges';
 import { apart, clamp01, sign } from '../math';
 import type { Cursor, Point } from '../pointer';
 import { between, maxBy, pick, type Rand } from '../seed';
@@ -35,7 +38,6 @@ export const BOLT = 90;
 // ledge, counting REACH into the empty edge of a card or rule above.
 const CLEAR = 27;
 const REACH = 6;
-const RUNS = { inset: 8, step: 4 };
 const HALF = POSES.hop.width / 2;
 const MIN_SPOT = 2 * HALF + 4;
 const MIN_ENTRY = 90;
@@ -106,18 +108,9 @@ export type Rabbit = {
   left: { floor: number; end: End } | null;
 };
 
-const runs = (f: Ledge, scene: PageMap) => clearRuns(f, scene.obstacles, CLEAR, { ...RUNS, reach: REACH });
-const length = (r: Run) => r.hi - r.lo;
-const runAt = (f: Ledge, scene: PageMap, x: number) => runs(f, scene).find((r) => r.lo <= x && x <= r.hi) ?? null;
-const body = (r: Run): Run => ({ lo: r.lo + HALF, hi: r.hi - HALF });
-const within = (r: Run, x: number) => r.lo <= x && x <= r.hi;
-const widthOf = (f: Ledge) => f.right - f.left;
-// The ends of a run that are also ends of its ledge.
-function ends(f: Ledge, r: Run): number[] {
-  const first = r.lo < RUNS.inset + RUNS.step, last = r.hi > widthOf(f) - RUNS.inset - RUNS.step;
-  return [...(first ? [r.lo] : []), ...(last ? [r.hi] : [])];
-}
-const pagePoint = (f: Ledge, x: number, lift = 0): Point => ({ x: f.left + x, y: f.y - lift });
+const RABBIT: Walker = { clear: CLEAR, reach: REACH, half: HALF, spacing: SPACING };
+const runs = (f: Ledge, scene: PageMap) => runsOf(f, scene, RABBIT);
+const body = (r: Run): Run => bodyOf(r, HALF);
 
 // Who a rabbit is, kept across every change of place.
 type Self = Pick<Rabbit, 'id' | 'seed' | 'walked'>;
@@ -135,36 +128,18 @@ const become = (r: Rabbit, mode: Mode, now: number, over: Partial<Rabbit> = {}):
 export const targetOf = (r: Pick<Rabbit, 'x' | 'hops' | 'hop' | 'dir'>) => (r.hop ? r.hop.x + r.dir * (r.hops + 1) * HOP_LENGTH : r.x + r.dir * r.hops * HOP_LENGTH);
 
 // Where the others are, or are going.
-type Claim = { floor: number; x: number };
 const claims = (others: readonly Rabbit[]): Claim[] => others.flatMap((o) => [
-  ...(o.mode === 'away' ? [] : [{ floor: o.floor, x: o.x }, { floor: o.floor, x: targetOf(o) }]),
-  ...(o.trip ? [{ floor: o.trip.floor, x: o.trip.entry }, { floor: o.trip.floor, x: o.trip.x }] : []),
+  ...(o.mode === 'away' ? [] : [pointClaim(o.floor, o.x), pointClaim(o.floor, targetOf(o))]),
+  ...(o.trip ? [pointClaim(o.trip.floor, o.trip.entry), pointClaim(o.trip.floor, o.trip.x)] : []),
 ]);
-const clearOf = (taken: readonly Claim[], floor: number, a: number, b: number) =>
-  !taken.some((c) => c.floor === floor && c.x > Math.min(a, b) - SPACING && c.x < Math.max(a, b) + SPACING);
+const clear = (claimed: readonly Claim[], floor: number, a: number, b: number) => clearOf(claimed, floor, a, b, SPACING);
 
-function freeOf(r: Run, cuts: readonly number[]): Run[] {
-  return [...cuts].sort((a, b) => a - b).reduce<Run[]>((left, c) => left.flatMap((p) => [
-    { lo: p.lo, hi: Math.min(p.hi, c - SPACING) },
-    { lo: Math.max(p.lo, c + SPACING), hi: p.hi },
-  ].filter((q) => q.hi >= q.lo)), [r]);
-}
-
-// Where a rabbit could sit: every clear run in view long enough, as the
-// stretch its middle may use, away from the others. Ledges with no rabbit
-// come first, so they spread out.
-function spots(scene: PageMap, taken: readonly Claim[]): { floor: number; room: Run }[] {
-  const all = [...scene.floors].flatMap(([floor, f]) => {
-    if (!inView(f, scene)) return [];
-    const cuts = taken.filter((c) => c.floor === floor).map((c) => c.x);
-    return runs(f, scene).filter((r) => length(r) >= MIN_SPOT).flatMap((r) => freeOf(body(r), cuts).map((room) => ({ floor, room })));
-  });
-  const empty = all.filter((s) => !taken.some((c) => c.floor === s.floor));
-  return empty.length ? empty : all;
-}
+// Where a rabbit could sit: the longest clear run in view, away from the
+// others, on a ledge with no rabbit where there is one.
+const roomiestSpot = (scene: PageMap, others: readonly Rabbit[]) => roomiest(scene, claims(others), RABBIT, MIN_SPOT);
 
 export function createRabbit(scene: PageMap, now: number, rand: Rand, others: readonly Rabbit[] = [], self: Self = fresh(0)): Rabbit | null {
-  const spot = maxBy(spots(scene, claims(others)), (s) => length(s.room));
+  const spot = roomiestSpot(scene, others);
   if (!spot) return null;
   return sitAt(self, spot.floor, between(rand, spot.room.lo, spot.room.hi), now, between(rand, 2000, 6000), rand() < 0.5 ? -1 : 1);
 }
@@ -173,17 +148,12 @@ export function createRabbit(scene: PageMap, now: number, rand: Rand, others: re
 // otherwise in the middle of a free stretch, clear of `avoid`.
 export function restingRabbit(scene: PageMap, previous: Rabbit | null, others: readonly Rabbit[] = [], self: Self = previous ?? fresh(0), avoid: readonly Rabbit[] = others): Rabbit | null {
   const still = (r: Rabbit): Rabbit => ({ ...r, walked: AT_REST, until: Infinity });
-  if (previous && staysPut(previous, scene, others)) return still(sitAt(self, previous.floor, previous.x, 0, Infinity, previous.dir));
-  const spot = maxBy(spots(scene, claims(avoid)), (s) => length(s.room));
+  if (previous && sitsStill(previous, scene, others)) return still(sitAt(self, previous.floor, previous.x, 0, Infinity, previous.dir));
+  const spot = roomiestSpot(scene, avoid);
   return spot ? still(sitAt(self, spot.floor, (spot.room.lo + spot.room.hi) / 2, 0, Infinity)) : null;
 }
 
-function staysPut(r: Rabbit, scene: PageMap, others: readonly Rabbit[]): boolean {
-  if (r.mode === 'away') return false;
-  const f = scene.floors.get(r.floor);
-  const run = f && runAt(f, scene, r.x);
-  return !!run && within(body(run), r.x) && clearOf(claims(others), r.floor, r.x, r.x);
-}
+const sitsStill = (r: Rabbit, scene: PageMap, others: readonly Rabbit[]) => r.mode !== 'away' && staysPut(r, scene, RABBIT, claims(others));
 
 const leaving = (r: Rabbit) => r.mode === 'exit' || (r.mode === 'bolt' && r.trip !== null);
 
@@ -195,11 +165,11 @@ const leaving = (r: Rabbit) => r.mode === 'exit' || (r.mode === 'bolt' && r.trip
 export function reconcileRabbit(r: Rabbit, scene: PageMap, now: number, rand: Rand, others: readonly Rabbit[] = [], avoid: readonly Rabbit[] = others): Rabbit | null {
   if (r.mode === 'away') return r;
   const f = scene.floors.get(r.floor);
-  const run = f && runAt(f, scene, Math.max(RUNS.inset, Math.min(widthOf(f) - RUNS.inset, r.x)));
-  const crowded = !clearOf(claims(others), r.floor, r.x, targetOf(r));
+  const run = f && runUnder(f, scene, RABBIT, r.x);
+  const crowded = !clear(claims(others), r.floor, r.x, targetOf(r));
   const coming = r.mode === 'enter' || leaving(r);
-  if (!f || !run || length(run) < 2 * HALF || crowded || (!coming && !within(body(run), r.x))) return createRabbit(scene, now, rand, avoid, r);
-  if (leaving(r)) return ends(f, run).some((e) => Math.abs(e - targetOf(r)) <= HOP_LENGTH) ? r : settle(r, now);
+  if (!f || !run || lengthOf(run) < 2 * HALF || crowded || (!coming && !within(body(run), r.x))) return createRabbit(scene, now, rand, avoid, r);
+  if (leaving(r)) return ledgeEnds(f, run).some((e) => Math.abs(e - targetOf(r)) <= HOP_LENGTH) ? r : settle(r, now);
   if (coming) return r;
   const room = body(run);
   const hops = Array.from({ length: r.hops + 1 }, (_, n) => r.hops - n).find((n) => within(room, targetOf({ ...r, hops: n }))) ?? 0;
@@ -235,17 +205,14 @@ export function poseOf(r: Pick<Rabbit, 'mode' | 'tall'>): Pose {
 export function rabbitView(r: Rabbit, scene: PageMap): RabbitView | null {
   const f = scene.floors.get(r.floor);
   if (!f || r.mode === 'away') return null;
-  return { ...pagePoint(f, r.x), pose: poseOf(r), dir: r.dir, opacity: fade(r, f) };
+  return { ...pageAt(f, r.x), pose: poseOf(r), dir: r.dir, opacity: fade(r, f) };
 }
 
-const centre = (r: Rabbit, f: Ledge): Point => pagePoint(f, r.x, POSES.sit.height / 2);
+const centre = (r: Rabbit, f: Ledge): Point => pageAt(f, r.x, POSES.sit.height / 2);
 
 // How much clear space is left above a pose standing at x (negative when it
 // does not fit).
-const spare = (f: Ledge, scene: PageMap, pose: Pose, x: number) => {
-  const half = POSES[pose].width / 2;
-  return clearance(f, scene.obstacles, x - half, x + half, REACH) - POSES[pose].height;
-};
+const spareFor = (f: Ledge, scene: PageMap, pose: Pose, x: number) => spare(f, scene, RABBIT, POSES[pose], x);
 
 const settle = (r: Rabbit, now: number, restless = 3000): Rabbit =>
   become(r, 'sit', now, { until: now + restless, hops: 0, hop: null, trip: null, egg: null, near: null, scare: null });
@@ -284,7 +251,7 @@ export type CanLay = (floor: number, end: End) => boolean;
 // it sits on.
 function moveOn(r: Rabbit, scene: PageMap, now: number, rand: Rand, taken: readonly Claim[], othersBusy: boolean, canLay: CanLay): Rabbit {
   const f = scene.floors.get(r.floor);
-  const run = f && runAt(f, scene, r.x);
+  const run = f && runAt(f, scene, RABBIT, r.x);
   if (!f || !run) return settle(r, now);
   const roll = rand();
   const out = !othersBusy && roll < 1 / 3 ? way(r, f, run, scene, rand, taken, null) : null;
@@ -301,7 +268,7 @@ function moveOn(r: Rabbit, scene: PageMap, now: number, rand: Rand, taken: reado
 type Along = { away: Point | null; bolt: boolean };
 function along(r: Rabbit, f: Ledge, run: Run, scene: PageMap, now: number, rand: Rand, taken: readonly Claim[], { away, bolt }: Along = { away: null, bolt: false }): Rabbit {
   const room = body(run);
-  const xs = taken.filter((c) => c.floor === r.floor).map((c) => c.x);
+  const xs = taken.filter((c) => c.floor === r.floor).map((c) => c.lo);
   const lane = {
     lo: Math.max(room.lo, ...xs.filter((x) => x < r.x).map((x) => x + SPACING)),
     hi: Math.min(room.hi, ...xs.filter((x) => x > r.x).map((x) => x - SPACING)),
@@ -309,7 +276,7 @@ function along(r: Rabbit, f: Ledge, run: Run, scene: PageMap, now: number, rand:
   const reach = (d: -1 | 1) => (d < 0 ? r.x - lane.lo : lane.hi - r.x);
   const sides = ([-1, 1] as const).filter((d) => reach(d) >= MIN_MOVE);
   const side = away ? maxBy(sides, (d) => Math.abs(f.left + r.x + d * MIN_MOVE - away.x)) : maxBy(sides, reach);
-  if (!side && bolt) return alertAt(settle(r, now), f, now, rand, spare(f, scene, 'alert', r.x) >= 0);
+  if (!side && bolt) return alertAt(settle(r, now), f, now, rand, spareFor(f, scene, 'alert', r.x) >= 0);
   if (!side) return settle(r, now, between(rand, RESTLESS.lo, RESTLESS.hi));
   const far = bolt ? reach(side) : Math.min(reach(side), between(rand, MIN_MOVE, MAX_MOVE));
   return hopToward(r, bolt ? 'bolt' : 'hop', now, r.x + side * far);
@@ -318,13 +285,13 @@ function along(r: Rabbit, f: Ledge, run: Run, scene: PageMap, now: number, rand:
 // A free ledge end its own run reaches, to leave an egg at: where it stands
 // to nudge it there, its nose at the egg, and which end.
 function layingSpot(r: Rabbit, f: Ledge, run: Run, scene: PageMap, taken: readonly Claim[], canLay: CanLay): { x: number; end: End } | null {
-  const options = ends(f, run).flatMap((e) => {
+  const options = ledgeEnds(f, run).flatMap((e) => {
     const end: End = e === run.lo ? 'left' : 'right';
     const at = end === 'left' ? EGG_IN + NOSE : widthOf(f) - EGG_IN - NOSE;
     const hops = Math.round(Math.abs(at - r.x) / HOP_LENGTH);
     const x = r.x + sign(at - r.x) * hops * HOP_LENGTH;
-    const fits = hops > 0 && within({ lo: run.lo + POSES.nudge.width / 2 - EGG_IN, hi: run.hi - POSES.nudge.width / 2 + EGG_IN }, x) && spare(f, scene, 'nudge', x) >= 0;
-    return fits && canLay(r.floor, end) && clearOf(taken, r.floor, r.x, x) ? [{ x: at, end }] : [];
+    const fits = hops > 0 && within({ lo: run.lo + POSES.nudge.width / 2 - EGG_IN, hi: run.hi - POSES.nudge.width / 2 + EGG_IN }, x) && spareFor(f, scene, 'nudge', x) >= 0;
+    return fits && canLay(r.floor, end) && clear(taken, r.floor, r.x, x) ? [{ x: at, end }] : [];
   });
   return options[0] ?? null;
 }
@@ -333,8 +300,8 @@ function layingSpot(r: Rabbit, f: Ledge, run: Run, scene: PageMap, taken: readon
 // the nearer) to another ledge in view; null if there is none.
 type Way = { trip: Trip; exit: number };
 function way(r: Rabbit, f: Ledge, run: Run, scene: PageMap, rand: Rand, taken: readonly Claim[], away: Point | null): Way | null {
-  const open = ends(f, run).filter((x) => clearOf(taken, r.floor, r.x, x));
-  const exit = maxBy(open, (x) => (away ? apart(pagePoint(f, x), away) : -Math.abs(x - r.x)));
+  const open = ledgeEnds(f, run).filter((x) => clear(taken, r.floor, r.x, x));
+  const exit = maxBy(open, (x) => (away ? apart(pageAt(f, x), away) : -Math.abs(x - r.x)));
   const ways = entries(r, scene, rand, taken);
   const to = away ? maxBy(ways, (e) => apart(e.at, away)) : ways.length ? pick(rand, ways) : undefined;
   return exit !== undefined && to ? { trip: to.trip, exit } : null;
@@ -343,11 +310,11 @@ function way(r: Rabbit, f: Ledge, run: Run, scene: PageMap, rand: Rand, taken: r
 function entries(r: Rabbit, scene: PageMap, rand: Rand, taken: readonly Claim[]): { trip: Trip; at: Point }[] {
   return [...scene.floors].flatMap(([floor, g]) => {
     if (floor === r.floor || !inView(g, scene)) return [];
-    return runs(g, scene).filter((run) => length(run) >= MIN_ENTRY).flatMap((run) => ends(g, run).flatMap((entry) => {
+    return runs(g, scene).filter((run) => lengthOf(run) >= MIN_ENTRY).flatMap((run) => ledgeEnds(g, run).flatMap((entry) => {
       const inward = entry === run.lo ? 1 : -1;
-      const hops = Math.max(2, Math.floor(between(rand, 30 + HALF, length(run) - HALF) / HOP_LENGTH));
+      const hops = Math.max(2, Math.floor(between(rand, 30 + HALF, lengthOf(run) - HALF) / HOP_LENGTH));
       const x = entry + inward * hops * HOP_LENGTH;
-      return within(body(run), x) && clearOf(taken, floor, entry, x) ? [{ trip: { floor, entry, x }, at: pagePoint(g, entry) }] : [];
+      return within(body(run), x) && clear(taken, floor, entry, x) ? [{ trip: { floor, entry, x }, at: pageAt(g, entry) }] : [];
     }));
   });
 }
@@ -381,7 +348,7 @@ function alertAt(r: Rabbit, f: Ledge, now: number, rand: Rand, roomy: boolean): 
 export const rouse = (r: Rabbit, scene: PageMap, now: number, rand: Rand): Rabbit => {
   const f = scene.floors.get(r.floor);
   if (!f || (r.mode !== 'sit' && r.mode !== 'groom' && r.mode !== 'alert')) return r;
-  return alertAt(r, f, now, rand, spare(f, scene, 'alert', r.x) >= 0);
+  return alertAt(r, f, now, rand, spareFor(f, scene, 'alert', r.x) >= 0);
 };
 
 // One step of a rabbit, given the others. dt is in milliseconds. canLay
@@ -399,32 +366,32 @@ export function stepRabbit(start: Rabbit, scene: PageMap, now: number, dt: numbe
     case 'groom': {
       const seen = notice(r, f, now, cursor);
       if (seen.lingered && !othersBusy) return become(seen.r, 'thump', now, { until: now + THUMP, near: null, scare: cursor && { x: cursor.x, y: cursor.y } });
-      if (seen.passing || seen.lingered) return alertAt(seen.r, f, now, rand, spare(f, scene, 'alert', r.x) >= 0);
+      if (seen.passing || seen.lingered) return alertAt(seen.r, f, now, rand, spareFor(f, scene, 'alert', r.x) >= 0);
       if (now < r.until) return seen.r;
       if (r.mode !== 'sit') return settle(seen.r, now, between(rand, RESTLESS.lo, RESTLESS.hi));
-      if (rand() < 0.25 && spare(f, scene, 'groom', r.x) >= 0) return become(seen.r, 'groom', now, { until: now + GROOM });
+      if (rand() < 0.25 && spareFor(f, scene, 'groom', r.x) >= 0) return become(seen.r, 'groom', now, { until: now + GROOM });
       return moveOn(seen.r, scene, now, rand, taken, othersBusy, canLay);
     }
     case 'thump': {
       if (now < r.until) return r;
-      const run = runAt(f, scene, r.x);
+      const run = runAt(f, scene, RABBIT, r.x);
       if (!run) return settle(r, now);
-      const from = r.scare ?? cursor ?? pagePoint(f, r.x - r.dir * 40);
+      const from = r.scare ?? cursor ?? pageAt(f, r.x - r.dir * 40);
       const out = way(r, f, run, scene, rand, taken, from);
       return out ? leave(r, 'bolt', now, out) : along(r, f, run, scene, now, rand, taken, { away: from, bolt: true });
     }
     case 'nudge': {
       if (now < r.until || !r.egg) return r;
-      const run = runAt(f, scene, r.x);
+      const run = runAt(f, scene, RABBIT, r.x);
       const after = { ...r, egg: null, left: { floor: r.floor, end: r.egg } };
-      return run ? along(after, f, run, scene, now, rand, taken, { away: pagePoint(f, r.egg === 'left' ? 0 : widthOf(f)), bolt: false }) : settle(after, now);
+      return run ? along(after, f, run, scene, now, rand, taken, { away: pageAt(f, r.egg === 'left' ? 0 : widthOf(f)), bolt: false }) : settle(after, now);
     }
     default: {
       const { r: moved, done } = hopping(r, now, dt, r.mode === 'bolt' ? BOLT : SPEED, rand);
       if (!done) return moved;
       if (leaving(moved)) return become(moved, 'away', now, { until: now + between(rand, AWAY.lo, AWAY.hi) });
       if (moved.egg) return become(moved, 'nudge', now, { until: now + NUDGE, dir: moved.egg === 'left' ? -1 : 1 });
-      if (moved.mode === 'bolt') return alertAt(settle(moved, now), f, now, rand, spare(f, scene, 'alert', moved.x) >= 0);
+      if (moved.mode === 'bolt') return alertAt(settle(moved, now), f, now, rand, spareFor(f, scene, 'alert', moved.x) >= 0);
       return settle(moved, now, between(rand, RESTLESS.lo, RESTLESS.hi));
     }
   }
@@ -434,7 +401,7 @@ export function stepRabbit(start: Rabbit, scene: PageMap, now: number, dt: numbe
 // go; if not, it turns up sitting somewhere else.
 function arrive(r: Rabbit, scene: PageMap, now: number, rand: Rand, others: readonly Rabbit[]): Rabbit {
   const t = r.trip;
-  if (t && stillOpen(t, scene) && clearOf(claims(others), t.floor, t.entry, t.x)) {
+  if (t && stillOpen(t, scene) && clear(claims(others), t.floor, t.entry, t.x)) {
     return hopToward({ ...r, floor: t.floor, x: t.entry, from: t.entry, trip: null }, 'enter', now, t.x);
   }
   return createRabbit(scene, now, rand, others, r) ?? { ...r, until: now + 2000 };
@@ -443,6 +410,6 @@ function arrive(r: Rabbit, scene: PageMap, now: number, rand: Rand, others: read
 function stillOpen(t: Trip, scene: PageMap): boolean {
   const g = scene.floors.get(t.floor);
   if (!g || !inView(g, scene)) return false;
-  const run = runAt(g, scene, t.entry);
-  return !!run && ends(g, run).includes(t.entry) && within(body(run), t.x);
+  const run = runAt(g, scene, RABBIT, t.entry);
+  return !!run && ledgeEnds(g, run).includes(t.entry) && within(body(run), t.x);
 }
