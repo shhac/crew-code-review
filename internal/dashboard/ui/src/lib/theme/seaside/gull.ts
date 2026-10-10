@@ -8,7 +8,8 @@ import {
 import { apart, clamp01, mix, sign, smooth } from '../math';
 import type { Cursor, Point } from '../pointer';
 import { between, type Rand } from '../seed';
-import { GULL, LIFT, type Pose } from './gull-poses';
+import type { GullPose } from './gull-rig';
+import { GULL, MIDDLE } from './gull-poses';
 import { flightOf, inFlight, replan, RUN_OUT, stillClear, type Flight, type FlightMode } from './swoop';
 
 // One herring gull: standing and strutting along the ledges, eyeing the
@@ -97,13 +98,19 @@ export const claims = (others: readonly Gull[]): Claim[] => others.flatMap((o) =
   return [pointClaim(o.floor, o.x), pointClaim(o.floor, o.target)];
 });
 
-// The body's middle on the page now, on a ledge or in flight; null out of
-// sight or with its ledge gone.
-export function middleOf(g: Gull, page: PageMap, now: number): Point | null {
+// Where its anchor (the point between its feet) is on the page now, on a
+// ledge or in flight; null out of sight or with its ledge gone.
+export function anchorOf(g: Gull, page: PageMap, now: number): Point | null {
   if (g.mode === 'away') return null;
   if (g.flight) return inFlight(page, g.flight, now)?.at ?? null;
   const f = page.floors.get(g.floor);
-  return f ? pageAt(f, g.x, LIFT) : null;
+  return f ? pageAt(f, g.x) : null;
+}
+
+// The body's middle: what a cursor is near to or far from.
+export function middleOf(g: Gull, page: PageMap, now: number): Point | null {
+  const at = anchorOf(g, page, now);
+  return at && { x: at.x, y: at.y - MIDDLE };
 }
 
 export function createGull(scene: PageMap, now: number, rand: Rand, others: readonly Gull[] = [], self: Self = fresh(0)): Gull | null {
@@ -207,7 +214,7 @@ function following(g: Gull, f: Ledge, cursor: Cursor, room: Run): number | null 
 // too close, follow one moving near, eye one still near, or wander when
 // none is about.
 function onLedge(g: Gull, f: Ledge, scene: PageMap, now: number, rand: Rand, cursor: Cursor | null, taken: readonly Claim[]): Gull {
-  const here = pageAt(f, g.x, LIFT);
+  const here = pageAt(f, g.x, MIDDLE);
   const room = lane(g, f, scene, taken) ?? { lo: g.x, hi: g.x };
   if (cursor && apart(cursor, here) < TOO_CLOSE) {
     const away = clampTo(room, g.x + sign(here.x - cursor.x) * STEP_AWAY);
@@ -238,7 +245,7 @@ export function stepGull(g: Gull, scene: PageMap, now: number, dt: number, rand:
   if (!f) return g;
   const taken = claims(others);
   if (flyer && (idle(g) || g.mode === 'ready')) {
-    const here = pageAt(f, g.x, LIFT);
+    const here = pageAt(f, g.x, MIDDLE);
     const watching = g.mode === 'eye' && g.watch === flyer.id ? g : { ...g, mode: 'eye' as const, since: now, target: g.x, watch: flyer.id, glance: null };
     return face(watching, sign(flyer.at.x - here.x), now);
   }
@@ -259,11 +266,11 @@ export function stepGull(g: Gull, scene: PageMap, now: number, dt: number, rand:
       const heading = retarget !== null && Math.abs(retarget - g.target) > 6 ? strutTo(g, retarget, now) : g;
       const moved = towardTarget(heading, (STRUT * dt) / 1000);
       if (moved.x !== moved.target) return { ...moved, turned: moved.dir !== g.dir ? now : moved.turned };
-      return eyeing(cursor, pageAt(f, moved.x, LIFT)) && !moving(cursor, now) ? { ...moved, mode: 'eye', since: now } : stand(moved, now, rand, !cursor);
+      return eyeing(cursor, pageAt(f, moved.x, MIDDLE)) && !moving(cursor, now) ? { ...moved, mode: 'eye', since: now } : stand(moved, now, rand, !cursor);
     }
     case 'eye':
       // Done watching, or nothing left to eye.
-      if (g.watch !== null || !eyeing(cursor, pageAt(f, g.x, LIFT))) return stand(g, now, rand);
+      if (g.watch !== null || !eyeing(cursor, pageAt(f, g.x, MIDDLE))) return stand(g, now, rand);
       return onLedge(g, f, scene, now, rand, cursor, taken);
     default:
       return onLedge(g, f, scene, now, rand, cursor, taken);
@@ -294,39 +301,42 @@ export function takeOff(g: Gull, flight: Flight, now: number): Gull {
   return { ...g, flight, mode: 'run', since: now, watch: null, glance: null };
 }
 
-// What the drawing needs: the body's middle on the page, the pose, the way
+// What the drawing needs: its anchor on the page, the pose, the way
 // it faces and how far through a turn round (0 to 1), the way it is heading
 // in flight, wingbeats, how far through its timed mode (the call's posture
 // keeps time with this), how visible, and what it eyes.
 export type GullView = Point & {
-  pose: Pose; dir: 1 | -1; turn: number; heading: Point; beat: number; walked: number;
+  pose: GullPose; dir: 1 | -1; turn: number; heading: Point; beat: number; walked: number;
   mode: Mode; since: number; opacity: number; glance: number;
+  // How far through a flare, a settle or a long call it is, 0 to 1.
+  t: number;
 };
 
 export function gullView(g: Gull, page: PageMap, now: number): GullView | null {
-  const base = { dir: g.dir, turn: clamp01((now - g.turned) / TURN), heading: { x: g.dir, y: 0 }, beat: g.beat, walked: g.walked, mode: g.mode, since: g.since, opacity: 1, glance: 0 };
+  const base = { dir: g.dir, turn: clamp01((now - g.turned) / TURN), heading: { x: g.dir, y: 0 }, beat: g.beat, walked: g.walked, mode: g.mode, since: g.since, opacity: 1, glance: 0, t: 0 };
   if (g.mode === 'away') {
     const at = g.gone && placed(page, g.gone);
     const opacity = 1 - (now - g.since) / FADE;
-    return at && opacity > 0 ? { ...base, ...at, pose: 'flight', opacity } : null;
+    return at && opacity > 0 ? { ...base, ...at, pose: 'flap', opacity } : null;
   }
   if (g.flight) {
     const at = inFlight(page, g.flight, now);
-    return at && { ...base, ...at.at, pose: at.leg.pose, heading: at.heading, turn: 1 };
+    return at && { ...base, ...at.at, pose: at.leg.pose, heading: at.heading, turn: 1, t: clamp01(at.u) };
   }
   const f = page.floors.get(g.floor);
   if (!f) return null;
   const glancing = g.glance && now - g.glance.at < GLANCE ? g.glance.side : 0;
-  return { ...base, ...pageAt(f, g.x, LIFT), pose: groundPose(g, now), glance: glancing };
+  const timed = g.mode === 'call' ? CALL : g.mode === 'touchdown' ? TOUCHDOWN : 0;
+  return { ...base, ...pageAt(f, g.x), pose: groundPose(g), glance: glancing, t: timed ? clamp01((now - g.since) / timed) : 0 };
 }
 
-function groundPose(g: Gull, now: number): Pose {
+function groundPose(g: Gull): GullPose {
   switch (g.mode) {
     case 'strut': case 'ready': return 'strut';
     case 'eye': return 'eye';
     case 'call': return 'call';
-    // Flare to stand: wings held up a moment, then folded.
-    case 'touchdown': return now - g.since < TOUCHDOWN / 2 ? 'flare' : 'stand';
+    // Wings held up a moment, then folded.
+    case 'touchdown': return 'settle';
     default: return 'stand';
   }
 }

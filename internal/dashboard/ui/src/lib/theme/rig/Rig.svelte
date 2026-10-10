@@ -9,6 +9,9 @@
   export let x: number;
   export let y: number;
   export let dir: 1 | -1 = 1;
+  // Narrowed across about where it stands (1 as drawn, negative mirrored),
+  // as an animal turning round on the spot is seen.
+  export let squash = 1;
   export let opacity = 1;
   // Marks the pose's guides: where it stands and where its joints are.
   export let guides = false;
@@ -19,7 +22,7 @@
   width={pose.width * pose.scale}
   height={pose.height * pose.scale}
   viewBox="0 0 {pose.width} {pose.height}"
-  style="left: {x - pose.anchor.x * pose.scale}px; top: {y - pose.anchor.y * pose.scale}px; opacity: {opacity}; transform: scaleX({dir}); transform-origin: {pose.anchor.x * pose.scale}px 0"
+  style="left: {x - pose.anchor.x * pose.scale}px; top: {y - pose.anchor.y * pose.scale}px; opacity: {opacity}; transform: scaleX({dir * squash}); transform-origin: {pose.anchor.x * pose.scale}px 0"
   {...$$restProps}
 >
   <Layers layers={pose.layers} />

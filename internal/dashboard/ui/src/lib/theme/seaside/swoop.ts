@@ -1,11 +1,11 @@
-import { around, GAP, sweeps, type Air } from '../air';
+import { around, fitsAir, GAP, sweeps, sweptPath, type Air, type Envelope } from '../air';
 import { fromLedge, toLedge } from '../anchored';
-import { cubic, lengthOf, samples, type Curve } from '../curves';
+import { cubic, lengthOf, type Curve } from '../curves';
 import { inView, type Box, type Ledge, type Obstacle, type PageMap } from '../floors';
 import { clearOf, pageAt, roomOver, runsOf, spare, staysPut, type Claim } from '../ledges';
 import { apart, clamp01, degrees, sign } from '../math';
 import type { Point } from '../pointer';
-import { AIR, GROUND, GULL, LIFT, type AirPose } from './gull-poses';
+import { AIR, GULL, type AirPose } from './gull-poses';
 
 // The swoop at a cursor left still: where the gull pulls up beside it (the
 // pass point), the route there and on to a landing spot, and whether every
@@ -34,10 +34,9 @@ const PULL_UP = 350;
 // Two run-out steps of 6px after touching down.
 export const RUN_OUT = 12;
 // The flare is the last 30px before touchdown. It begins high enough that
-// the flight pose's lowered wings, just before it, keep clear of the card
-// it lands on.
+// the flapping pose just before it keeps clear of the card it lands on.
 const FLARE = 30;
-const FLARE_DROP = AIR.flight.down - LIFT + GAP + 2;
+const FLARE_DROP = AIR.flap.down + GAP + 2;
 const FLARE_RUN = Math.sqrt(FLARE ** 2 - FLARE_DROP ** 2);
 
 // The pass point: the swoop's box wholly in air, at least NEAR from the
@@ -55,8 +54,9 @@ const PULL = { on: 80, up: 40 };
 // A walk to a take-off spot is at most this long, tried in these steps.
 export const MAX_WALK = 60;
 const WALK_STEP = 15;
-// Taking off or landing needs this much clear above this much ledge.
-const COLUMN = { height: 40, length: 56 };
+// Taking off or landing needs this much ledge clear to the height of its
+// wings raised to beat (or to brake), and the gap air keeps round them.
+const COLUMN = { height: Math.max(AIR.takeoff.up, AIR.flare.up) + GAP, length: 56 };
 // A landing is this far from the cursor, at least.
 const CURSOR_ROOM = 80;
 const LANDINGS = 4;
@@ -123,22 +123,27 @@ export function inFlight(page: PageMap, f: Flight, now: number): InFlight | null
 // its feet and its lowered wings a few pixels into the card's empty top
 // edge, which covers nothing. The legs that touch a ledge are checked
 // against a page where that one card's box starts DIP px lower.
-const DIP = AIR.flight.down - LIFT + GAP + 2;
-const STEP = 8;
+const DIP = Math.max(AIR.takeoff.down, AIR.flare.down, AIR.flap.down) + GAP + 2;
 const ownCard = (f: Ledge, o: Obstacle) => !!o.block && Math.abs(o.top - f.y) <= 1 && o.left <= f.left + 1 && o.right >= f.right - 1;
 export function touching(air: Pick<Air, 'page' | 'room'>, f: Ledge): Pick<Air, 'page' | 'room'> {
   const obstacles = air.page.obstacles.map((o) => (ownCard(f, o) ? { ...o, top: o.top + DIP } : o));
   return { ...air, page: { ...air.page, obstacles } };
 }
 
-// Whether a leg's pose, swept along its curve, stays in the air, clear of
-// `also` (the other gulls). Its boxes are taken STEP px apart and each
-// neighbouring pair is tested as one (air.ts's sweeps), so nothing between
-// them is missed: every pose is wider and taller than that.
-export function legClear(air: Pick<Air, 'page' | 'room'>, l: Pick<Leg, 'pose' | 'curve'>, also: readonly Box[] = []): boolean {
-  const boxes = samples((t) => cubic(l.curve, t), STEP).map((s) => around(s.p, AIR[l.pose]));
-  return sweeps(air, boxes, also);
-}
+// Whether legs, each swept with its own pose's envelope (air.ts's
+// sweptPath), stay in the air, clear of `also` (the other gulls); and the
+// boxes they were found clear by, for the debug overlay.
+// The footprints are as wide either side of the anchor, so an envelope is
+// the same whichever way the gull faces.
+const envelope = (pose: AirPose): Envelope => {
+  const r = AIR[pose];
+  return { left: r.half, right: r.half, up: r.up, down: r.down };
+};
+const segment = (l: Pick<Leg, 'pose' | 'curve'>) =>
+  ({ curve: { from: l.curve.from, control1: l.curve.c1, control2: l.curve.c2, to: l.curve.to }, envelope: envelope(l.pose) });
+export const swept = (air: Pick<Air, 'page' | 'room'>, legs: readonly Pick<Leg, 'pose' | 'curve'>[], also: readonly Box[] = []) =>
+  sweptPath(legs.map(segment), fitsAir(air, also));
+export const legClear = (air: Pick<Air, 'page' | 'room'>, l: Pick<Leg, 'pose' | 'curve'>, also: readonly Box[] = []): boolean => swept(air, [l], also).clear;
 
 // Every pass point for a cursor, nearest first: the swoop's box wholly in
 // air and never over the cursor, 12 to 160px from it, on an 8px grid.
@@ -146,13 +151,13 @@ export function passPoints(air: Pick<Air, 'page' | 'room'>, cursor: Point, also:
   const steps = Math.floor(FAR / GRID);
   const grid = Array.from({ length: (2 * steps + 1) ** 2 }, (_, i) => ({ x: cursor.x + GRID * ((i % (2 * steps + 1)) - steps), y: cursor.y + GRID * (Math.floor(i / (2 * steps + 1)) - steps) }));
   // Only what is within reach of the grid can be in the way.
-  const reach = FAR + AIR.swoop.half + GAP + 1;
+  const reach = FAR + Math.max(AIR.stoop.half, AIR.stoop.up) + GAP + 1;
   const near = air.page.obstacles.filter((o) => o.right > cursor.x - reach && o.left < cursor.x + reach && o.bottom > cursor.y - reach && o.top < cursor.y + reach);
   const local = { ...air, page: { ...air.page, obstacles: near } };
   return grid
     .filter((p) => apart(p, cursor) >= NEAR && apart(p, cursor) <= FAR)
     .sort((a, b) => apart(a, cursor) - apart(b, cursor))
-    .filter((p) => !contains(around(p, AIR.swoop), cursor) && sweeps(local, [around(p, AIR.swoop)], also));
+    .filter((p) => !contains(around(p, AIR.stoop), cursor) && sweeps(local, [around(p, AIR.stoop)], also));
 }
 
 // The angle between the dive and the line from its start to the cursor.
@@ -194,7 +199,7 @@ function planner(air: Pick<Air, 'page' | 'room'>, taken: readonly Claim[], curso
   // Landing at x flying dir: the column behind it, and 80px from the cursor.
   const landAt = (floor: number, x: number, dir: 1 | -1) => {
     const f = page.floors.get(floor)!;
-    return column([floor, x, sign(-dir)]) && (!cursor || apart(pageAt(f, x, LIFT), cursor) >= CURSOR_ROOM);
+    return column([floor, x, sign(-dir)]) && (!cursor || apart(pageAt(f, x), cursor) >= CURSOR_ROOM);
   };
   // Every spot in view a gull could stand at, 24px apart, clear of the
   // others.
@@ -203,7 +208,7 @@ function planner(air: Pick<Air, 'page' | 'room'>, taken: readonly Claim[], curso
     return runs(floor).flatMap((r) => {
       const lo = r.lo + GULL.half, hi = r.hi - GULL.half;
       const count = Math.max(0, Math.floor((hi - lo) / 24) + 1);
-      return Array.from({ length: count }, (_, i) => ({ floor, x: lo + i * 24, at: pageAt(f, lo + i * 24, LIFT) })).filter((s) => clearOf(taken, floor, s.x, s.x, GULL.spacing));
+      return Array.from({ length: count }, (_, i) => ({ floor, x: lo + i * 24, at: pageAt(f, lo + i * 24) })).filter((s) => clearOf(taken, floor, s.x, s.x, GULL.spacing));
     });
   });
   // Up to four landings for a flight coming from `from`: those in `first`
@@ -222,7 +227,7 @@ function planner(air: Pick<Air, 'page' | 'room'>, taken: readonly Claim[], curso
   // The flare onto a landing, if clear.
   const flareOnto = memo((l: Landing): Leg | null => {
     const f = page.floors.get(l.floor)!;
-    const touch = pageAt(f, l.x - l.dir * RUN_OUT, LIFT);
+    const touch = pageAt(f, l.x - l.dir * RUN_OUT);
     const from = { x: touch.x - l.dir * FLARE_RUN, y: touch.y - FLARE_DROP };
     const flare = leg('flare', 'flare', { from, c1: { x: from.x + l.dir * 12, y: from.y + 2 }, c2: { x: touch.x - l.dir * 6, y: touch.y - 6 }, to: touch });
     return legClear(dipped(l.floor), flare) ? flare : null;
@@ -239,7 +244,7 @@ function comeDown(air: Pick<Air, 'page' | 'room'>, plan: Planner, from: Point, o
   const to = flare.curve.from;
   const span = Math.max(40, apart(from, to));
   const k = 0.35 * span;
-  const cruise = [0, 0.3, 0.6, -0.2].map((bow) => leg('cruise', 'flight', {
+  const cruise = [0, 0.3, 0.6, -0.2].map((bow) => leg('cruise', 'flap', {
     from,
     c1: add(from, add(scale(unit(out), k), { x: 0, y: -bow * span })),
     c2: { x: to.x - l.dir * k, y: to.y - bow * span },
@@ -280,9 +285,9 @@ export function planSwoop(ask: SwoopAsk): Plan | null {
   const heads = passPoints(air, cursor, also).slice(0, PASSES).flatMap((p) => ([1, -1] as const).flatMap((s) => DIVES.flatMap(({ back, up }) => {
     const a = { x: p.x - s * back, y: p.y - up };
     if (aimOff(a, p, cursor) > AIMED) return [];
-    const dive = leg('dive', 'swoop', straight(a, p));
+    const dive = leg('dive', 'stoop', straight(a, p));
     const b = { x: p.x + s * PULL.on, y: p.y - PULL.up };
-    const pull = leg('pullup', 'flight', { from: p, c1: add(p, scale(unit(sub(p, a)), 25)), c2: { x: b.x - s * 25, y: b.y + 6 }, to: b });
+    const pull = leg('pullup', 'flap', { from: p, c1: add(p, scale(unit(sub(p, a)), 25)), c2: { x: b.x - s * 25, y: b.y + 6 }, to: b });
     return [{ s, a, dive, pull }];
   })));
   for (const { s, a, dive, pull } of heads) {
@@ -315,7 +320,7 @@ function takeOff(plan: Planner, f: Ledge, gull: { floor: number; x: number }, a:
     return plan.takeOffAt(gull.floor, x, dir) ? [{ x, dir }] : [];
   }).slice(0, 3);
   for (const { x, dir } of spots) {
-    const from = pageAt(f, x, LIFT);
+    const from = pageAt(f, x);
     const lift = { x: from.x + dir * RUN_LENGTH, y: from.y - 3 };
     const run = leg('run', 'takeoff', straight(from, lift));
     if (!legClear(ground, run, also)) continue;
@@ -324,7 +329,7 @@ function takeOff(plan: Planner, f: Ledge, gull: { floor: number; x: number }, a:
       { c1: { x: lift.x + dir * 30, y: lift.y - 12 }, c2: add(a, scale(unit(sub(a, lift)), -30)) },
       { c1: { x: lift.x + dir * out, y: lift.y - 12 }, c2: add(a, scale(into, -40)) },
     ];
-    const climb = climbs.map((c) => leg('climb', 'flight', { from: lift, ...c, to: a })).find((c) => legClear(ground, c, also));
+    const climb = climbs.map((c) => leg('climb', 'flap', { from: lift, ...c, to: a })).find((c) => legClear(ground, c, also));
     if (climb) return { x, legs: [run, climb] };
   }
   return null;
@@ -340,6 +345,16 @@ export function replan(air: Pick<Air, 'page' | 'room'>, here: Point, heading: Po
     if (legs) return { legs, land, length: routeLength(legs) };
   }
   return null;
+}
+
+// A flight's legs on the page now, or null with its ledge gone: what the
+// debug overlay draws, with the boxes they are found clear by.
+export function routeOf(page: PageMap, f: Flight): Leg[] | null {
+  const legs = f.legs.map((l) => {
+    const curve = fromLedge(page, f.floor, l.curve);
+    return curve && { ...l, curve };
+  });
+  return legs.every((l) => l) ? legs.flatMap((l) => l ?? []) : null;
 }
 
 // A plan as a flight starting now, held by its landing ledge; from is the
@@ -362,7 +377,7 @@ export function stillClear(air: Pick<Air, 'page' | 'room'>, f: Flight, now: numb
   const g = page.floors.get(f.land.floor);
   const at = inFlight(page, f, now);
   if (!g || !at) return false;
-  if (!staysPut(f.land, page, GULL, taken) || spare(g, page, GULL, GROUND.strut, f.land.x) < 0) return false;
+  if (!staysPut(f.land, page, GULL, taken) || spare(g, page, GULL, { width: 2 * GULL.half, height: GULL.clear }, f.land.x) < 0) return false;
   const leaving = page.floors.get(f.from);
   return f.legs.slice(at.index).every((l, i) => {
     const curve = fromLedge(page, f.floor, l.curve)!;

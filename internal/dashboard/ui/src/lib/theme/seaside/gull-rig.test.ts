@@ -5,13 +5,16 @@ import type { Layer, RigPose } from '../rig/rig';
 import { FOOTPRINTS, gullRig, SCALE, type GullPose, type RigGull } from './gull-rig';
 
 const gull = (pose: GullPose, over: Partial<RigGull> = {}): RigGull => ({ pose, walked: 0, seed: 1, beat: 0, t: 0, ...over });
-const POSES: GullPose[] = ['stand', 'strut', 'forage', 'takeoff', 'flap', 'glide', 'stoop', 'flare', 'settle'];
+const POSES: GullPose[] = ['stand', 'strut', 'forage', 'eye', 'call', 'takeoff', 'flap', 'glide', 'stoop', 'flare', 'settle'];
 const OPEN = 3900;
 
 // Every moment of a pose: two strides, four wingbeats (a take-off from its
 // wings opening to its settled flap), the whole of a flare and a settle.
 function moments(pose: GullPose): RigPose[] {
-  return Array.from({ length: 240 }, (_, i) => gullRig(gull(pose, { walked: i * 0.6, beat: pose === 'takeoff' ? -0.5 + i / 50 : i / 60, t: i / 239 }), { now: i * 37, still: false }));
+  // The head turned every way it can toward what it eyes.
+  return Array.from({ length: 240 }, (_, i) => gullRig(gull(pose, { walked: i * 0.6, beat: pose === 'takeoff' ? -0.5 + i / 50 : i / 60, t: i / 239 }), {
+    now: i * 37, still: false, gaze: -30 + (60 * (i % 40)) / 39,
+  }));
 }
 const most = (rigs: readonly RigPose[], of: (r: RigPose) => number) => Math.max(...rigs.map(of));
 const below = (r: RigPose) => (rigBounds(r).bottom - r.anchor.y) * r.scale;

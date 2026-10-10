@@ -1,4 +1,6 @@
+import { clamp, mix, smooth } from '../math';
 import type { Point } from '../pointer';
+import { gazeFrom } from '../rig/gaze';
 import { airLegsTo, birdLegsTo, birdWalk, headBob, stepRise, type AirLegs, type BirdLeg } from '../rig/bird';
 import { restingFeet, stepping, type Limb } from '../rig/gait';
 import { blinking, breath } from '../rig/life';
@@ -12,7 +14,8 @@ import drumstickArt from './gull-drumstick.webp';
 import flightBodyArt from './gull-flight-body.webp';
 import handUnderArt from './gull-hand-under.webp';
 import handArt from './gull-hand.webp';
-import headArt from './gull-head.webp';
+import headArt from './gull-head-upper.webp';
+import mandibleArt from './gull-mandible.webp';
 import tailFannedArt from './gull-tail-fanned.webp';
 import tailArt from './gull-tail.webp';
 import tarsusFurArt from './gull-tarsus-fur.webp';
@@ -22,12 +25,13 @@ import curledArt from './gull-toes-curled.webp';
 import toesFurArt from './gull-toes-fur.webp';
 import toesArt from './gull-toes.webp';
 
-// The herring gull put together from its parts, the bird kit's test bird
-// (rig/bird.ts's legs and walk, rig/wings.ts's wings and flight poses),
-// which August's owner takes over: a body with its folded wing and a head
-// over its breast, on two legs posed in code; in the air, the body without
-// its folded wing, a tail closed or fanned, and two wings each of an arm and
-// a hand. Facing right, on the ledge at ANCHOR.
+// The herring gull put together from its parts, on the bird kit
+// (rig/bird.ts's legs and walk, rig/wings.ts's wings and flight poses): a
+// body with its folded wing and a head over its breast, its lower mandible
+// a piece of its own that opens for the long call, on two legs posed in
+// code; in the air, the body without its folded wing, a tail closed or
+// fanned, and two wings each of an arm and a hand. Facing right, on the
+// ledge at ANCHOR.
 //
 // The parts were cut from one drawing of the gull standing square
 // (design-docs/seaside/gull-standing.png), and the drawing units are that
@@ -45,7 +49,17 @@ const FRAME: Frame = { width: 26.7, height: 19.2, anchor: ANCHOR, scale: SCALE }
 export const REFERENCE = { x: 1, y: 1, width: 24.67, height: 17.33 };
 const BODY = { x: 1.83, y: 5.34, width: 19.58, height: 8.17 };
 const FLIGHT_BODY = { x: 4.21, y: 5.45, width: 18.08, height: 8.33 };
-const HEAD = { x: 16.31, y: 1, width: 9.42, height: 10.25 };
+const HEAD = { x: 16.39, y: 1.19, width: 9.33, height: 9.83 };
+// The lower mandible, as it sits closed under the upper, and the corner of
+// the gape it opens about.
+const MANDIBLE = { x: 21.98, y: 2.82, width: 3.75, height: 1.83 };
+const GAPE = { x: 22.15, y: 3.05 };
+// Where the upper mandible's edge runs to near its hooked tip, and the
+// lower's, closed: the gape between them is drawn in code, orange-red, as
+// a herring gull's mouth is.
+const UPPER_EDGE = { x: 24.9, y: 3.35 };
+const LOWER_EDGE = { x: 24.9, y: 3.4 };
+const GAPE_FILL = '#e4572e';
 const TAIL = { x: 0.3, y: 7.3, width: 5.67, height: 3.17 };
 const TAIL_FANNED = { x: 0.15, y: 6.6, width: 5.83, height: 5.5 };
 const TAIL_ROOT = { x: 5.4, y: 8.9 };
@@ -115,34 +129,96 @@ const GULL_AIR: AirLegs = {
   reaching: { ankle: { x: 0.25, y: 0.85 }, lean: 45 },
 };
 
-export type GullPose = 'stand' | 'strut' | 'forage' | 'takeoff' | 'flap' | 'glide' | 'stoop' | 'flare' | 'settle';
+export type GullPose = 'stand' | 'strut' | 'forage' | 'eye' | 'call' | 'takeoff' | 'flap' | 'glide' | 'stoop' | 'flare' | 'settle';
 // What the drawing reads of a gull: its pose, how far it has walked, its
-// wingbeats so far (`beat`) and how far through a flare or a settle it is
-// (`t`, 0 to 1).
+// wingbeats so far (`beat`) and how far through a flare, a settle or a long
+// call it is (`t`, 0 to 1).
 export type RigGull = { pose: GullPose; walked: number; seed: number; beat: number; t: number };
-export type GullLook = { now: number; still: boolean };
+// When it is drawn; whether it is still (reduced motion); and how far its
+// head turns toward what it eyes (degrees, nose down positive, eased by the
+// layer). Turning round is the layer's: it narrows the whole drawing.
+export type GullLook = { now: number; still: boolean; gaze?: number };
+
+// Eyeing something, a gull stands tall, its neck stretched up and its head
+// raised (the eye key pose), turning a little further toward what it eyes:
+// further down than up, so its head stays inside the 27px every ledge
+// animal has (the key pose's full lift would need 31).
+const EYE_TILT = -2;
+const GAZE = { up: -4, down: 20 };
+const STRETCH = { dx: 0.35, dy: -0.3 };
+// The long call, over its 1.6s (the seaside note): the bill brought down
+// and forward for 0.3s, the head swung up over 0.25s, held 0.8s with the
+// bill wide open and three small pulses of the head, then closed and
+// lowered over 0.25s (All About Birds; Filchagov).
+const CALL = { down: 0.3 / 1.6, up: 0.55 / 1.6, hold: 1.35 / 1.6 };
+const CALL_DOWN = 12;
+const CALL_UP = -10;
+// The call throws the head back about the top of the neck, where a gull's
+// skull meets it, so the bill rises without the crown rising with it.
+const NAPE = { x: 20.4, y: 4.6 };
+const BILL_OPEN = 26;
 
 const image = (name: string, src: string, box: { x: number; y: number; width: number; height: number }, hidden = false): Layer =>
   ({ kind: 'image', name, src, ...box, hidden });
 
 // The head, turned as `head` says (nodded, slid along the body), its eye
-// blinking.
-const headLayer = (gull: RigGull, look: GullLook, head: Turn): Layer => ({
-  kind: 'group', turn: head,
-  layers: [image('head', headArt, HEAD), ...lidLayers(!look.still && blinking(gull.seed, look.now), EYE, 0.28, FACE)],
-});
+// blinking, its bill open by `open` (0 to 1): the lower mandible turned down
+// about the gape's corner, the orange-red gape showing between.
+function headLayer(gull: RigGull, look: GullLook, head: Turn, open = 0): Layer {
+  const jaw = turnAbout(open * BILL_OPEN, GAPE);
+  const gape: Layer[] = open > 0.02 ? [{ kind: 'stroke', name: 'gape', points: [GAPE, UPPER_EDGE, turned(jaw, LOWER_EDGE)], width: 0.12, colour: '#7a2a12', fill: GAPE_FILL }] : [];
+  return {
+    kind: 'group', turn: head,
+    layers: [
+      ...gape,
+      { kind: 'group', turn: jaw, layers: [image('lower mandible', mandibleArt, MANDIBLE)] },
+      image('head', headArt, HEAD),
+      ...lidLayers(!look.still && blinking(gull.seed, look.now), EYE, 0.28, FACE),
+    ],
+  };
+}
+
+// Where the head is through the long call, t of the way: its nod (nose down
+// positive), how far it is lifted, and how far the bill is open.
+export function callPose(t: number): { angle: number; lift: number; open: number } {
+  if (t < CALL.down) return { angle: CALL_DOWN * smooth(t / CALL.down), lift: 0, open: 0 };
+  if (t < CALL.up) {
+    const u = smooth((t - CALL.down) / (CALL.up - CALL.down));
+    return { angle: mix(CALL_DOWN, CALL_UP, u), lift: u, open: smooth((u - 0.4) / 0.6) };
+  }
+  if (t < CALL.hold) {
+    // Three pulses, one for each note.
+    const pulse = Math.sin((3 * Math.PI * (t - CALL.up)) / (CALL.hold - CALL.up)) ** 2;
+    return { angle: CALL_UP - 2 * pulse, lift: 1, open: 1 - 0.15 * pulse };
+  }
+  const u = smooth((t - CALL.hold) / (1 - CALL.hold));
+  return { angle: mix(CALL_UP, 0, u), lift: 1 - u, open: 1 - smooth(u / 0.6) };
+}
 
 // Stood on the ledge (or taking off before its feet leave it, or settled
 // after touchdown): each foot planted under its hip.
 const planted = (hips: readonly Point[]) => birdLegsTo(LEGS, hips, restingFeet(LEGS, hips, FEET));
 
-type Ground = { body: Turn; head: Turn; limbs: (hips: readonly Point[]) => Limb[] };
+type Ground = { body: Turn; head: Turn; open: number; limbs: (hips: readonly Point[]) => Limb[] };
 
-// On the ledge: standing, strutting or foraging.
+// On the ledge: standing, strutting or foraging, eyeing something or giving
+// the long call.
 function onGround(gull: RigGull, look: GullLook): Ground {
-  if (look.still || gull.pose === 'stand') {
-    const breathe = look.still ? 0 : 0.12 * breath(gull.seed, look.now, 3600);
-    return { body: turnAbout(0, MIDDLE, 0, -breathe), head: turnAbout(0, NECK), limbs: planted };
+  const breathe = look.still ? 0 : 0.12 * breath(gull.seed, look.now, 3600);
+  const body = turnAbout(0, MIDDLE, 0, -breathe);
+  if (look.still) return { body, head: turnAbout(0, NECK), open: 0, limbs: planted };
+  if (gull.pose === 'eye') {
+    const angle = EYE_TILT + clamp(look.gaze ?? 0, GAZE.up, GAZE.down);
+    return { body, head: turnAbout(angle, NECK, STRETCH.dx, STRETCH.dy), open: 0, limbs: planted };
+  }
+  if (gull.pose === 'call') {
+    const { angle, lift, open } = callPose(gull.t);
+    // Brought down about the neck, thrown back about the nape: either way
+    // its crown stays down.
+    return { body, head: turnAbout(angle, angle > 0 ? NECK : NAPE, STRETCH.dx * lift, 0), open, limbs: planted };
+  }
+  if (gull.pose === 'stand') {
+    return { body, head: turnAbout(clamp(look.gaze ?? 0, GAZE.up, GAZE.down) / 2, NECK), open: 0, limbs: planted };
   }
   const gait = gull.pose === 'forage' ? FORAGE : STRUT;
   const walked = gull.walked / SCALE;
@@ -155,6 +231,7 @@ function onGround(gull: RigGull, look: GullLook): Ground {
   return {
     body: turnAbout(0, MIDDLE, 0, -rise),
     head: turnAbout(forage ? 6 : 0, NECK, forage ? 0.6 * headBob(walked, gait, THRUST) : 0, rise),
+    open: 0,
     limbs: (hips) => birdLegsTo(LEGS, hips, feet(hips), steps, GROUND),
   };
 }
@@ -211,19 +288,31 @@ const jointGuides = (limbs: readonly Limb[]) => limbs.flatMap((l) => [
   { name: 'toes (metatarsophalangeal joint)', at: l.foot },
 ]);
 
-export function gullRig(gull: RigGull, look: GullLook): RigPose {
-  const grounded = gull.pose === 'stand' || gull.pose === 'strut' || gull.pose === 'forage';
-  if (!grounded && !look.still) return flying(gull, look);
-  const { body, head, limbs } = onGround(gull, look);
+const GROUNDED = new Set<GullPose>(['stand', 'strut', 'forage', 'eye', 'call']);
+
+function standing(gull: RigGull, look: GullLook): RigPose {
+  const { body, head, open, limbs } = onGround(gull, look);
   const hips = LEGS.map((s) => turned(body, s.hip));
   const legs = limbs(hips);
   return {
     ...FRAME,
     // The legs start inside the body, the hips high in it.
-    layers: legsAround(LEGS, legs, { kind: 'group', turn: body, layers: [image('body', bodyArt, BODY), headLayer(gull, look, head)] }),
-    guides: [{ name: 'stands here', at: ANCHOR }, { name: 'eye', at: turned(body, turned(head, EYE)) }, ...jointGuides(legs)],
+    layers: legsAround(LEGS, legs, { kind: 'group', turn: body, layers: [image('body', bodyArt, BODY), headLayer(gull, look, head, open)] }),
+    guides: [
+      { name: 'stands here', at: ANCHOR }, { name: 'eye', at: turned(body, turned(head, EYE)) },
+      { name: 'gape', at: turned(body, turned(head, GAPE)) }, ...jointGuides(legs),
+    ],
   };
 }
+
+export function gullRig(gull: RigGull, look: GullLook): RigPose {
+  if (!GROUNDED.has(gull.pose) && !look.still) return flying(gull, look);
+  return standing(gull, look);
+}
+
+// How far its head turns toward what it eyes, from how far away: a gull
+// eyes a cursor 360px off (the seaside note).
+export const gazeAt = gazeFrom({ eye: EYE, anchor: ANCHOR, scale: SCALE, look: 20, reach: 360 });
 
 // The lab's speeds: a strut about three steps a second, foraging two.
 export const STRUT_SPEED = 20;
@@ -233,7 +322,8 @@ export const FORAGE_SPEED = 13;
 // measures them.
 export type Footprint = { width: number; height: number; down?: number };
 export const FOOTPRINTS: Record<GullPose, Footprint> = {
-  stand: { width: 36.5, height: 26 }, strut: { width: 36.5, height: 26 }, forage: { width: 41.5, height: 26 },
+  stand: { width: 39.5, height: 26.5 }, strut: { width: 36.5, height: 26 }, forage: { width: 41.5, height: 26 },
+  eye: { width: 42.5, height: 27 }, call: { width: 44.5, height: 27 },
   takeoff: { width: 44, height: 45, down: 6 }, flap: { width: 41, height: 39 }, glide: { width: 41, height: 26 },
   stoop: { width: 48, height: 26 }, flare: { width: 48, height: 44, down: 6 }, settle: { width: 44, height: 44 },
 };

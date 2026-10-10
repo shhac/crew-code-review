@@ -4,8 +4,8 @@ import { cubic, samples } from '../curves';
 import type { Box, Ledge, Obstacle, PageMap } from '../floors';
 import { apart } from '../math';
 import type { Point } from '../pointer';
-import { lower, OPEN, page, rule } from './gull-fixtures';
-import { AIR, LIFT } from './gull-poses';
+import { INPUT, lower, OPEN, page, rule, SUBTITLE, TITLE } from './gull-fixtures';
+import { AIR } from './gull-poses';
 import { airspace } from './gulls';
 import { aimOff, flightOf, flightTime, inFlight, passPoints, planSwoop, replan, stillClear, type Leg, type Plan } from './swoop';
 
@@ -35,7 +35,7 @@ describe('the pass point', () => {
     for (const cursor of [OPEN, { x: 600, y: 300 }, { x: 1100, y: 470 }, { x: 260, y: 900 }]) {
       const passes = passPoints(view(p), cursor);
       for (const q of passes) {
-        const box = around(q, AIR.swoop);
+        const box = around(q, AIR.stoop);
         expect(apart(q, cursor)).toBeGreaterThanOrEqual(12);
         expect(apart(q, cursor)).toBeLessThanOrEqual(160);
         expect(cursor.x >= box.left && cursor.x <= box.right && cursor.y >= box.top && cursor.y <= box.bottom).toBe(false);
@@ -45,9 +45,12 @@ describe('the pass point', () => {
     }
   });
 
-  it('comes close to a cursor over open air, and there is none in the middle of a table of text', () => {
+  it('comes close to a cursor over open air, and finds none more than 160px from clear air', () => {
     expect(apart(passPoints(view(), OPEN)[0], OPEN)).toBeLessThanOrEqual(16);
-    expect(passPoints(view(), { x: 640, y: 330 })).toEqual([]);
+    // The wide card running on down the page, a table all the way.
+    const deep = page([TITLE, SUBTITLE, INPUT, { left: 290, right: 994, top: 182, bottom: 1100, block: true }]);
+    expect(passPoints(view(deep), { x: 640, y: 700 })).toEqual([]);
+    expect(passPoints(view(deep), { x: 640, y: 330 }).every((q) => q.y < 182)).toBe(true);
   });
 });
 
@@ -57,7 +60,7 @@ describe('a swoop', () => {
     const plan = planSwoop(ask(p, OPEN))!;
     expect(plan).not.toBeNull();
     expect(plan.legs.map((l) => l.mode)).toEqual(['run', 'climb', 'dive', 'pullup', 'cruise', 'flare']);
-    expect(plan.legs.map((l) => l.pose)).toEqual(['takeoff', 'flight', 'swoop', 'flight', 'flight', 'flare']);
+    expect(plan.legs.map((l) => l.pose)).toEqual(['takeoff', 'flap', 'stoop', 'flap', 'flap', 'flare']);
     expect(covers(p, plan.legs, lower, ledgeOf(p, plan.land.floor))).toEqual([]);
     expect(plan.length).toBeLessThanOrEqual(900);
     // Aimed at the cursor, passing beside it.
@@ -66,8 +69,8 @@ describe('a swoop', () => {
     expect(apart(dive.curve.to, OPEN)).toBeLessThanOrEqual(160);
     // It lands where it can stand, 80px from the cursor.
     const g = ledgeOf(p, plan.land.floor);
-    expect(apart({ x: g.left + plan.land.x, y: g.y - LIFT }, OPEN)).toBeGreaterThanOrEqual(80);
-    expect(plan.legs.at(-1)!.curve.to.y).toBeCloseTo(g.y - LIFT);
+    expect(apart({ x: g.left + plan.land.x, y: g.y }, OPEN)).toBeGreaterThanOrEqual(80);
+    expect(plan.legs.at(-1)!.curve.to.y).toBeCloseTo(g.y);
   });
 
   it('takes the run two steps and 0.45s, the pull-up 0.35s, and speeds up into the dive and slows in the flare', () => {

@@ -5,10 +5,10 @@ import { apart, sign } from '../math';
 import type { Cursor, Point } from '../pointer';
 import { between, maxBy, type Rand } from '../seed';
 import {
-  airborne, call, claims, createGull, fresh, idle, middleOf, reconcileGull, restingGull, stepGull, takeOff, MOVING,
+  airborne, anchorOf, call, claims, createGull, fresh, idle, middleOf, reconcileGull, restingGull, stepGull, takeOff, MOVING,
   type Airspace, type Gull,
 } from './gull';
-import { AIR, GROUND, LIFT } from './gull-poses';
+import { AIR, reachOf } from './gull-poses';
 import { berths, flightOf, planSwoop, type Plan } from './swoop';
 
 // The gulls on the page together: how many to keep, and the group's rules
@@ -60,13 +60,13 @@ export function airspace(page: PageMap): { room: Pick<Air, 'page' | 'room'>; vie
 // The boxes a route keeps clear of: every other gull where it is and where
 // it is going, as big as it will be there.
 function berthsOf(others: readonly Gull[], page: PageMap, now: number): Box[] {
-  const ground = { half: GROUND.strut.width / 2, up: GROUND.call.height - LIFT, down: LIFT };
+  const ground = reachOf('call');
   return berths(others.flatMap((o) => {
-    const at = middleOf(o, page, now);
+    const at = anchorOf(o, page, now);
     if (!at) return [];
     const f = page.floors.get(o.floor);
     const to = !o.flight && f ? { x: f.left + o.target, y: at.y } : null;
-    return [{ at, to, reach: o.flight ? AIR.flight : ground }];
+    return [{ at, to, reach: o.flight ? AIR.flap : ground }];
   }));
 }
 

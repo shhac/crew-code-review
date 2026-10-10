@@ -1,5 +1,7 @@
 import { FOOTPRINTS, FORAGE_SPEED, gullRig, EYE, REFERENCE, STRUT_SPEED, type GullPose, type RigGull } from '../../lib/theme/seaside/gull-rig';
 import type { Drawing } from '../drawings';
+import gullCall from '../gull-pose-call.webp';
+import gullEye from '../gull-pose-eye.webp';
 import gullFlapDown from '../gull-pose-flap-down-2.webp';
 import gullFlapUp from '../gull-pose-flap-up.webp';
 import gullFlare from '../gull-pose-flare-2.webp';
@@ -10,13 +12,14 @@ import gullWalkContact from '../gull-pose-walk-contact.webp';
 import gullWalkPass from '../gull-pose-walk-pass.webp';
 import type { Moment, RigCritter } from './critter';
 
-// The herring gull, the bird kit's test bird: its ground poses on the
-// stage's floor, its flight poses held up in the air above it. Take-off,
-// the flare and the settle each replay on a loop so they can be scrubbed
-// through, at the seaside note's wingbeats: 2.8 a second cruising, 4 in the
-// quick strokes of taking off and landing (Blake 1948).
+// The herring gull: its ground poses on the stage's floor, its flight
+// poses held up in the air above it. Take-off, the flare, the settle and
+// the long call each replay on a loop so they can be scrubbed through, at
+// the seaside note's wingbeats: 2.8 a second cruising, 4 in the quick
+// strokes of taking off and landing (Blake 1948).
 const MODES: { label: string; pose: GullPose; every?: number; beats?: number }[] = [
   { label: 'stand', pose: 'stand' }, { label: 'strut', pose: 'strut' }, { label: 'forage', pose: 'forage' },
+  { label: 'eye', pose: 'eye' }, { label: 'call', pose: 'call', every: 1600 },
   { label: 'take-off', pose: 'takeoff', every: 1500, beats: 4 }, { label: 'flap', pose: 'flap', beats: 2.8 },
   { label: 'glide', pose: 'glide' }, { label: 'stoop', pose: 'stoop' },
   { label: 'flare', pose: 'flare', every: 600, beats: 4 }, { label: 'settle', pose: 'settle', every: 900 },
@@ -33,6 +36,8 @@ const DRAWINGS: Record<string, Drawing> = {
   standing: { src: gullReference, ...REFERENCE, at: REFERENCE, mode: 'stand' },
   'walk contact': byEye(gullWalkContact, 24.67, 17.08, { x: 20.4, y: 1.45 }, 'strut'),
   'walk pass': byEye(gullWalkPass, 24.67, 17.08, { x: 20.46, y: 1.45 }),
+  eye: byEye(gullEye, 24.17, 20.92, { x: 19.53, y: 1.84 }, 'eye'),
+  call: byEye(gullCall, 25.42, 22.75, { x: 19.9, y: 3.07 }, 'call'),
   'take-off': byEye(gullTakeoff, 28.17, 25.67, { x: 23.69, y: 10.72 }, 'take-off'),
   'flap up': byEye(gullFlapUp, 25.5, 19.25, { x: 20.84, y: 12.02 }, 'flap'),
   'flap down': byEye(gullFlapDown, 26.92, 17.75, { x: 22.44, y: 1.42 }),

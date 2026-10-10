@@ -1,9 +1,11 @@
 # /// script
 # dependencies = ["pillow", "numpy"]
 # ///
-"""Keys, crops and exports the seaside gull's art. Run: uv run design-docs/seaside/export.py
+"""Keys, crops and exports the seaside art. Run: uv run design-docs/seaside/export.py
 
-The steps are shared with the other themes (../art.py). The gull's pictures
+The steps are shared with the other themes (../art.py). The shelf's chips,
+bucket and spade and 99 are one picture, exported at twice its display
+size. The gull's pictures
 are all put on one scale, the eye's, so every pose is the same bird; they
 are written at RES pixels per drawing unit, and gull-rig.ts sets how big a
 drawing unit is on the page. It is put together from parts cut from
@@ -12,14 +14,17 @@ the body and head in gull-parts.png, the body as it is in flight in
 gull-flight-body.png (an edit of gull-parts.png's body, in place, so on its
 scale), the tail closed and fanned in gull-flight-parts.png, the spread
 wing's four pieces in gull-wings.png and the leg's pieces in
-gull-limbs-3.png. Each part is printed with where it sat in the reference:
+gull-limbs-3.png. Its head is also cut at the bill in gull-bill.png (an
+edit of gull-parts.png's head): the head with only the upper mandible, and
+the lower mandible on its own, which opens for the long call. Each part is printed with where it sat in the reference:
 its place in the rig. The sizes printed are what the rig lays out.
 """
 from pathlib import Path
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from art import EyeScale, crop, cut, export, export_with_fur, keyed  # noqa: E402
+from art import EyeScale, crop, cut, export, export_with_fur, keyed, opaque  # noqa: E402
+import numpy as np  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
 OUT = HERE.parents[1] / 'internal/dashboard/ui/src/lib/theme/seaside'
@@ -30,12 +35,12 @@ LAB = HERE.parents[1] / 'internal/dashboard/ui/src/lab'
 EYE = 0.3
 RES = 12
 # Where each sheet's eye is (source pixels), measured by eye.
-EYES = {'gull-standing.png': (1178, 147), 'gull-parts.png': (1572, 210)}
+EYES = {'gull-standing.png': (1178, 147), 'gull-parts.png': (1572, 210), 'gull-bill.png': (737, 181)}
 # Key poses of the same gull, drawn from gull-standing.png, that the rig's
 # poses are tuned toward; the lab lays each over its mode.
 KEY_POSES = {
     'walk-contact': (1178, 147), 'walk-pass': (1178, 147), 'takeoff': (1166, 428), 'flap-up': (1168, 577),
-    'flap-down-2': (1222, 218), 'swoop': (1265, 538), 'flare-2': (1130, 358),
+    'flap-down-2': (1222, 218), 'swoop': (1265, 538), 'flare-2': (1130, 358), 'eye': (1086, 120), 'call': (1040, 163),
 }
 # The wing's pieces, each drawn flat with its span up the picture, and how
 # long each is in drawing units: shoulder to tip about the gull's length
@@ -56,16 +61,36 @@ DRUMSTICK = 0.95
 TARSUS = 0.74
 TOES = (4.1, (0.17, 0.17))
 CURLED = (0.2, 0.1)
+# The shelf kit's height on the shelf, in page pixels.
+KIT_HEIGHT = 64
+
+
+def yellow(rgba: np.ndarray) -> np.ndarray:
+    """The bill: what to place the lower mandible by, which by its shape
+    alone fits anywhere along the reference's outline."""
+    r, g, b = (rgba[..., i].astype(int) for i in range(3))
+    return opaque(rgba) & (r > 180) & (g > 150) & (b < 120)
+
+
+def shelf() -> None:
+    kit = crop(keyed(HERE / 'seaside-kit-2.png'))
+    size = export(kit, OUT, 'seaside-kit', 2 * KIT_HEIGHT / kit.shape[0])
+    print(f'seaside-kit: display {size[0] / 2:g}x{size[1] / 2:g}')
 
 
 def main() -> None:
     OUT.mkdir(exist_ok=True)
+    shelf()
     gull = EyeScale(HERE, EYES, EYE, RES)
     for sheet in EYES:
         print(f'{sheet}: eye {gull.px(sheet):.1f}px')
     gull.reference('gull-standing.png', LAB, 'gull-reference')
     gull.key_poses('gull-pose-', KEY_POSES, LAB)
-    gull.parts(cut(keyed(HERE / 'gull-parts.png'), ['gull-body', 'gull-head']), 'gull-parts.png', OUT)
+    # The whole head is not drawn: gull-bill.png's two pieces are.
+    body = cut(keyed(HERE / 'gull-parts.png'), ['gull-body', 'gull-head'])['gull-body']
+    gull.parts({'gull-body': body}, 'gull-parts.png', OUT)
+    bill = cut(keyed(HERE / 'gull-bill.png'), ['gull-head-upper', 'gull-mandible'])
+    gull.parts(bill, 'gull-bill.png', OUT, masks={'gull-mandible': yellow})
     # Edited in place from gull-parts.png, so on its scale. Matched to the
     # standing body by shape: it lost the tail and folded wingtips behind.
     flight = crop(keyed(HERE / 'gull-flight-body.png'))

@@ -105,7 +105,8 @@ describe('a swoop flown', () => {
 
   it('is drawn in the pose of each leg along the way', () => {
     const poses = new Set(run(g, 0, flightTime(flight)).frames.map((f, i) => gullView(f, p, (i + 1) * 16)!.pose));
-    expect(poses).toEqual(new Set(['takeoff', 'flight', 'swoop', 'flare']));
+    // Touching down at the very end, it settles.
+    expect(poses).toEqual(new Set(['takeoff', 'flap', 'stoop', 'flare', 'settle']));
   });
 
   it('flies on through a layout change that leaves its way clear', () => {

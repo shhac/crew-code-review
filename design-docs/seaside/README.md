@@ -326,9 +326,8 @@ the accent is CSS and does not touch it.)
 low drift (168x9, its crest under the bucket), drawn by the same `driftPath`
 as the ledges' drifts with the same three sands, a few grains and a 7px
 cockle from `shellPaths` at its right-hand foot. Nothing moves, so reduced
-motion changes nothing. The art is exported by its own step,
-`design-docs/seaside/export_shelf.py`, while the gull's `export.py` is the
-bird kit's; it joins `export.py` when those files are handed over.
+motion changes nothing. `export.py` exports the kit with the gull's
+pictures (it had its own step while the gull's files were the bird kit's).
 
 ### The sand drifts
 
@@ -352,28 +351,40 @@ while building:
 
 ### The gulls' behaviour model
 
-Pure, with tests, before the rig: `gull-poses.ts` (the footprints, the
-note's numbers until the rig test pins the real ones), `swoop.ts` (the pass
-point, the route and its clearance), `gull.ts` (one gull) and `gulls.ts`
-(the group). Settled while building:
+Pure, with tests: `gull-poses.ts` (the footprints, read from the rig's,
+which its test measures), `swoop.ts` (the pass point, the route and its
+clearance), `gull.ts` (one gull) and `gulls.ts` (the group). Settled while
+building:
 
-- **One point for every pose.** A gull is placed by its body's middle,
-  `LIFT` (14px) above its feet on a ledge; ground footprints stand on the
-  feet, air footprints reach about the middle. A route is the middle's path.
+- **One point for every pose.** A gull is placed by its rig's anchor, the
+  point between its feet, in the air as on a ledge (the bird kit's rig
+  holds it there through take-off and landing), and every footprint stands
+  on it, `down` reaching below. A route is the anchor's path, so a take-off
+  starts and a landing ends exactly on the ledge. (The model first used the
+  body's middle; the kit's footprints made the anchor the simpler point.)
+  The body's middle, 11px up, is what a cursor is near to or far from.
 - **Air** is `air.ts`'s (the cupids'): `airOf`'s bounds, taken on a bare
   page so it does not work out hover spots for every point of the page (a
   gull never hovers), minus the page's obstacles widened by `GAP`. New
   routes keep to the part of `main` in view; a flight under way is checked
   against all of `main` after a scroll.
-- **Touching a ledge.** The run, the climb from it and the flare onto a
-  ledge dip a few pixels into the empty top edge of the card under that
-  ledge (the take-off pose's feet, the flight pose's lowered wings as it
-  lifts off). Those legs are checked against a page where that one card's
-  box starts 15px lower (`DIP`); text, controls and charts in it count as
-  ever. Ignoring the card altogether let a climb cut across a card's
-  corner.
-- **The flare** starts 15px up and 26px back from touchdown (its 30px), high
-  enough that the flight pose just before it clears the card it lands on.
+- **Touching a ledge.** The run and the flare onto a ledge reach 6px below
+  it (the take-off and flare footprints' `down`: feet pushing off and
+  reaching to land), into the empty top edge of the card under that ledge.
+  The legs that touch a ledge are checked against a page where that one
+  card's box starts 12px lower (`DIP`); text, controls and charts in it
+  count as ever. Ignoring the card altogether let a climb cut across a
+  card's corner.
+- **The columns.** Taking off needs the 56px of ledge ahead clear to the
+  take-off footprint's height (45px, wings raised to their first stroke)
+  plus air's 4px gap, 49px in all; landing likewise with the flare's 44.
+  The note's 40px was the key poses'; the rig's measured wings reach higher.
+- **The flare** starts 6px up and 29px back from touchdown (its 30px), so
+  the flapping pose just before it clears the card it lands on.
+- **Swept with the kit.** Each leg is one piece of `air.ts`'s `sweptPath`
+  with its pose's envelope, checked by `fitsAir` (the hull subdivision the
+  robin's routes use); the debug overlay (`?theme-debug=1`) draws a
+  flight's curves and the boxes they were found clear by.
 - **The dive.** As decided, plus a fourth, steep stoop (40px back, 80px up)
   for air that is only a narrow column (a side margin); it is still aimed
   within 35 degrees of the cursor. Up to six pass points are tried, nearest
@@ -565,7 +576,7 @@ as style references. Every pose is an edit of `gull-standing.png`.
 
 | Source | Prompt, in short | Shipped as | Display size |
 | --- | --- | --- | --- |
-| `seaside-kit-2.png` | chips in plain chip paper with a wooden fork, a red bucket with a yellow spade, a 99 with a flake stood in a sand heap; an edit of a first generation whose chips came out as cubes and whose cone balanced on its point | `seaside-kit.webp` (`export_shelf.py`, at twice its display size) | 114x64 on the shelf |
+| `seaside-kit-2.png` | chips in plain chip paper with a wooden fork, a red bucket with a yellow spade, a 99 with a flake stood in a sand heap; an edit of a first generation whose chips came out as cubes and whose cone balanced on its point | `seaside-kit.webp` (at twice its display size) | 114x64 on the shelf |
 | `gull-standing.png` | an adult herring gull standing square, side on, facing right: plumage, bill and gonys spot, pale eye with orange ring, pink legs with the intertarsal joint showing, webbed feet with a raised hallux | the lab's reference (not yet) | 36.5x25.5 page px |
 | `gull-pose-walk-contact.png` | the strut as the near foot lands, the far heel lifting | the lab's overlay (not yet) | same eye scale |
 | `gull-pose-walk-pass.png` | mid-stride, the swinging foot folded, toes down | the lab's overlay | |
@@ -581,6 +592,7 @@ as style references. Every pose is an edit of `gull-standing.png`.
 | `gull-flight-body.png` | an edit of `gull-parts.png`'s body, in place: folded wing, wingtips and tail taken off, the back closed as a grey mantle | `gull-flight-body.webp` | |
 | `gull-flight-parts.png` | the tail closed and fanned, soft at the root (its first piece, an egg-shaped body, is not used) | `gull-tail.webp`, `gull-tail-fanned.webp` | laid at the rump by hand |
 | `gull-wings.png` | the spread wing flat, seen from above and from below, each cut at the wrist: arm and hand, span up the picture, leading edge right | `gull-arm.webp`, `gull-hand.webp`, `-under` of each | arm 10.5, hand 11.5 drawing units long |
+| `gull-bill.png` | an edit of `gull-parts.png`'s head: the head with its lower mandible taken off (the upper closed along the gape line), and the lower mandible alone with its red gonys spot | `gull-head-upper.webp`, `gull-mandible.webp` (placed by the bill's yellow) | placed where they sat |
 | `gull-limbs-3.png` | the leg's pieces: the drumstick (feathered at the knee end), the tarsus, the webbed foot flat and with its toes drawn together; the first try (not kept) was refused by the image tool and the second drew hands | `gull-drumstick`, `gull-tarsus`, `gull-toes`, `gull-toes-curled` (`.webp` and `-fur.webp`) | bars by the reference leg's thickness, feet by its foot's length |
 
 Each prompt followed the seasonal brief's template (header, image spec,
@@ -603,6 +615,27 @@ shortcuts for the owner to refine: the flight body's grey mantle reads a
 little like a folded wing; the wings are drawn about 0.9 of the bird's
 length, longer than the key poses but shorter than life; landing and
 taking off hold the anchor on the floor (a route lifts it).
+
+As the owner built on it:
+
+- **Eye**: the head lifted 2 degrees and slid up and forward a little
+  (the neck stretched), then turned toward what it eyes: up to 4 degrees up
+  and 20 down. The eye key pose lifts the head about 25 degrees on a long
+  stretched neck; the rig's box would then need 31px over the ledge, past
+  the 27px every ledge animal has, so the drawing keeps the posture and not
+  the full lift. Standing, the head turns half as far.
+- **The long call**: as timed in "Gull behaviour", the bill brought down
+  about the neck, then thrown up 10 degrees (12 with the pulses) about the
+  nape, where the skull meets it, so the crown does not rise. The open bill
+  carries the call: the lower mandible (its own piece, cut by
+  `gull-bill.png`) turns down 26 degrees about the gape's corner over an
+  orange-red gape drawn in code. The full throw-back of the key pose would
+  need 30px, as this note foresaw; not worth a second rule.
+- **The turn**: the layer draws the whole gull narrowing to nothing and
+  widening the other way over 0.2s (`Rig`'s new optional `squash`), rather
+  than snapping round.
+- **Footprints** (the rig test, the head turned every way it can): stand
+  39.5x26.5, strut 36.5x26, eye 42.5x27, call 44.5x27.
 
 ## Verification (for the build)
 
