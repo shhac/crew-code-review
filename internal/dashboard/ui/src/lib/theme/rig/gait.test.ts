@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { cycleLength, rotate } from '../spidergait';
-import { flexion, gaitPhase, legsTo, restingFeet, roll, stepping, steppingFeet, stepsOf, type Gait, type QuadLeg } from './gait';
+import { beatsFor, flexion, flightAt, flightLift, flightsOf, gaitPhase, legsTo, onSoles, restingFeet, roll, stepping, steppingFeet, stepsOf, type Gait, type Landings, type QuadLeg } from './gait';
 
 const GROUND = 20;
 // Beats for [fore, hind], or a lone leg stepping on the first.
@@ -138,5 +138,66 @@ describe('a sole walker', () => {
     const [before, after] = [at(0.7499 * cycle), at(0.7501 * cycle)];
     expect(Math.hypot(after.foot.x - before.foot.x, after.foot.y - before.foot.y)).toBeLessThan(0.01);
     expect(Math.abs(after.paw - before.paw)).toBeLessThan(0.1);
+  });
+});
+
+describe('bounding', () => {
+  // Legs as a rig lists them: far hind, far fore, near hind, near fore.
+  const toes = { kind: 'toes', length: 3, lean: 20, fold: 40 } as const;
+  const LEGS: QuadLeg[] = [
+    { ...hind, far: true, walksOn: toes }, { ...fore, far: true }, { ...hind, walksOn: toes }, { ...fore },
+  ];
+  // A half-bound: forefeet one after the other, then the hind pair together,
+  // then a flight to the next forefoot.
+  const HALF_BOUND: Landings = { fore: { near: 0, far: 0.08 }, hind: { near: 0.45, far: 0.45 } };
+  const gait = (stance: number, landings = HALF_BOUND): Gait => ({ stride: 6, lift: 2, stance, beats: beatsFor(LEGS, landings) });
+  const landsAt = (g: Gait) => stepsOf(0, g).map((_, i) => {
+    const cycle = cycleLength(g.stride, g.stance);
+    // The first moment in a cycle each foot is down having just been up.
+    return Array.from({ length: 1000 }, (_, k) => k / 1000).find((p) => stepsOf(p * cycle, g)[i].down && !stepsOf(((p - 0.001 + 1) % 1) * cycle, g)[i].down);
+  });
+
+  it('lands each foot when the landings say', () => {
+    const at = landsAt(gait(0.25));
+    expect(at[3]).toBeCloseTo(0, 2);
+    expect(at[1]).toBeCloseTo(0.08, 2);
+    expect(at[0]).toBeCloseTo(0.45, 2);
+    expect(at[2]).toBeCloseTo(0.45, 2);
+  });
+
+  it('finds the flights, the long one after the hind feet push off', () => {
+    const flights = flightsOf(gait(0.25));
+    expect(flights).toHaveLength(2);
+    const [gathered, extended] = [...flights].sort((a, b) => a.from - b.from);
+    expect(gathered.from).toBeCloseTo(0.33);
+    expect(gathered.length).toBeCloseTo(0.12);
+    expect(extended.from).toBeCloseTo(0.7);
+    expect(extended.length).toBeCloseTo(0.3);
+    expect(flightAt(0.85, gait(0.25))?.t).toBeCloseTo(0.5);
+    expect(flightAt(0.5, gait(0.25))).toBeNull();
+  });
+
+  it('has no flight when the feet are down long enough to overlap, as in a slow hop', () => {
+    const hop: Landings = { fore: { near: 0, far: 0.1 }, hind: { near: 0.5, far: 0.5 } };
+    expect(flightsOf(gait(0.6, hop))).toEqual([]);
+    expect(flightLift(0.3, gait(0.6, hop), 3)).toBe(0);
+  });
+
+  it('carries the body up through a flight and down again, highest mid-flight', () => {
+    const g = gait(0.25);
+    expect(flightLift(0.85, g, 3)).toBeCloseTo(3);
+    expect(flightLift(0.71, g, 3)).toBeLessThan(0.5);
+    expect(flightLift(0.39, g, 3)).toBeCloseTo(1.2);
+    expect(flightLift(0.2, g, 3)).toBe(0);
+  });
+
+  it('lets a toe walker down onto its whole foot, the hock behind the toes on the ground', () => {
+    const [sat] = legsTo(onSoles([LEGS[2]], 1), [LEGS[2].hip], [{ x: 4, y: GROUND }]);
+    expect(sat.ankle.y).toBeCloseTo(GROUND);
+    expect(sat.ankle.x).toBeCloseTo(1);
+    const [up] = legsTo(onSoles([LEGS[2]], 0), [LEGS[2].hip], [{ x: 4, y: GROUND }]);
+    expect(up.ankle.y).toBeLessThan(GROUND - 2.5);
+    // The forelegs are left on their toes.
+    expect(onSoles(LEGS, 1)[3]).toEqual(LEGS[3]);
   });
 });

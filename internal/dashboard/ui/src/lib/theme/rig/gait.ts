@@ -131,3 +131,75 @@ function limbOf(spec: QuadLeg, hip: Point, foot: Point, step?: Step): Limb {
 // walker's feet.
 export const legsTo = (specs: readonly QuadLeg[], hips: readonly Point[], feet: readonly Point[], steps: readonly Step[] = []): Limb[] =>
   specs.map((s, i) => limbOf(s, hips[i], feet[i], steps[i]));
+
+// Hares and rabbits do not walk or trot: they bound. Their gaits are
+// asymmetrical (Hildebrand 1977), named by when each foot lands: a bound
+// lands each pair together; a half-bound its hind pair together and its
+// forefeet one after the other; the slow hop of a grazing hare or a rabbit
+// sets its forefeet down one then the other and swings its hind pair
+// forward together to land near them. Faster, the hind feet land ahead of
+// where the forefeet were set, and the body flies between the hind feet
+// pushing off and the forefeet landing (an extended suspension).
+
+// When in the cycle (0 to 1) each foot lands, the near and the far of each
+// pair.
+export type Landings = { fore: { near: number; far: number }; hind: { near: number; far: number } };
+
+const fract = (n: number) => n - Math.floor(n);
+
+// The beats (stepsOf's) that land each foot when Landings says, in the
+// rig's order of legs.
+export const beatsFor = (specs: readonly QuadLeg[], landings: Landings): number[] =>
+  specs.map((s) => {
+    const pair = s.fore ? landings.fore : landings.hind;
+    return fract(1 - (s.far ? pair.far : pair.near));
+  });
+
+// A stretch of the cycle when no foot is down: where it starts (0 to 1) and
+// how long it lasts, as shares of the cycle.
+export type Flight = { from: number; length: number };
+
+// A gait's flights: none for a walk or a slow hop.
+export function flightsOf(gait: Gait): Flight[] {
+  // Each foot's time down, unwrapped a cycle either way so the ones running
+  // past the cycle's end merge with those at its start.
+  const downs = gait.beats.flatMap((b) => [-1, 0, 1].map((k) => fract(1 - b) + k)).sort((a, b) => a - b);
+  const merged = downs.reduce<{ from: number; to: number }[]>((all, from) => {
+    const last = all.at(-1);
+    const to = from + gait.stance;
+    return last && from <= last.to ? [...all.slice(0, -1), { from: last.from, to: Math.max(last.to, to) }] : [...all, { from, to }];
+  }, []);
+  return merged.slice(1).flatMap((next, i) => {
+    const end = merged[i].to;
+    return end >= 0 && end < 1 && next.from - end > 1e-9 ? [{ from: end, length: next.from - end }] : [];
+  });
+}
+
+// Where in a flight the animal is at this phase of its cycle (0 leaving the
+// ground to 1 landing), and that flight's length; null while a foot is down.
+export function flightAt(phase: number, gait: Gait): { t: number; length: number } | null {
+  const p = fract(phase);
+  const flight = flightsOf(gait).find((f) => fract(p - f.from) < f.length);
+  return flight ? { t: fract(p - flight.from) / flight.length, length: flight.length } : null;
+}
+
+// How far the body rises at this phase: a parabola over each flight, its
+// peak `height` for the longest flight and lower for shorter ones, so a gait
+// with a flight phase carries its body up off the ground and down again.
+export function flightLift(phase: number, gait: Gait, height: number): number {
+  const at = flightAt(phase, gait);
+  if (!at) return 0;
+  const longest = Math.max(...flightsOf(gait).map((f) => f.length));
+  return height * (at.length / longest) * 4 * at.t * (1 - at.t);
+}
+
+// Toe walkers let down onto their whole foot by `amount`: 0 on their toes
+// as specified, 1 flat, the bone up from the toes laid along the ground
+// behind them from the hock to the toes. A hare or rabbit sits so, on its
+// long hind feet, and runs on its toes. By default the hind legs only.
+export const onSoles = (specs: readonly QuadLeg[], amount: number, which: (s: QuadLeg) => boolean = (s) => !s.fore): QuadLeg[] =>
+  specs.map((s) => {
+    const on = s.walksOn;
+    if (on?.kind !== 'toes' || !which(s)) return s;
+    return { ...s, walksOn: { ...on, lean: on.lean + (90 - on.lean) * clamp(amount, 0, 1) } };
+  });
