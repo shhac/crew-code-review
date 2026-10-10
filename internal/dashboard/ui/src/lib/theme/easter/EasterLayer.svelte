@@ -66,13 +66,15 @@
     gazes = look(next.rabbits, cursor, dt);
   }
 
-  // The brand's box and its words', for the counter to sit beside them.
+  // The brand's box and each line of its words as set (a line's own box is
+  // as wide as the widest), for the counter to sit beside them.
   function measureBrand(): Point | null {
     const brand = document.querySelector('.rail .brand');
     const words = brand?.querySelector('span');
     if (!brand || !words) return null;
     const box = brand.getBoundingClientRect();
-    return box.width > 0 ? tallySpot(box, words.getBoundingClientRect()) : null;
+    const set = (line: Element) => { const range = document.createRange(); range.selectNodeContents(line); return range.getBoundingClientRect(); };
+    return box.width > 0 ? tallySpot(box, Array.from(words.children, set)) : null;
   }
 
   onMount(() => ledgeScene({
