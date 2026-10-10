@@ -491,6 +491,7 @@ flower sheets, 99% of the blue pixels sit below 36 on that measure.
 | `ledge-clumps.png` | the ledge quirk | three small bluebell clumps on moss cushions and two plain cushions, in a row, few large bells to read at 20px |
 | `bee-standing.png` | the reference | a buff-tailed queen standing side-on facing right: three body sections with a waist, six legs all from the thorax with their segments, four opaque wings folded back and lifted, elbowed antennae, a pollen basket with a load |
 | `bee-pose-*.png` | key poses | edits of `bee-standing.png`, one per mode (below) |
+| `bee-parts.png` | the bee's parts | edit of `bee-standing.png`: the abdomen, the thorax with legs, wings and joint knobs taken off, the head with its antennae taken off and its back edge soft, and the near pair of wings as one piece, each at the reference's own size and angle |
 
 A first reference had its six legs spread evenly along the body, the hind
 pair under the abdomen, like a caterpillar's; it was replaced by one with
@@ -517,6 +518,34 @@ outline).
 | `bee-pose-fly.png` | fly: body nearly level, wings up, legs tucked, hind legs trailing |
 | `bee-pose-land.png` | land: legs reaching forward and down |
 | `bee-pose-bonk.png` | bonk: recoiling nose up from a wall on its right, legs splayed |
+
+The bee was cut and rigged by the insect kit's agent, to prove the kit
+(`rig/wing-blur.ts`, `rig/hexapod.ts`, `rig/antennae.ts`,
+`rig/insect-flight.ts`) on her, and handed to this month's owner as
+`bluebells/bee-rig.ts`. `bee-parts.png` was edited on 2026-10-10 by the
+Codex CLI (`gpt-5.6-terra`, built-in `$imagegen`), two tries from one
+prompt; the second was kept, since the first drew the wing pair mirrored
+(its root on the left). `export.py` writes the reference and key poses for
+the lab and the four parts for the rig, all on one scale: the golden T2
+band, measured by its area (art.py's `EyeScale` takes the measure as an
+argument), 3.2 drawing units across, at 12 file pixels a unit and one page
+pixel a unit, so she is 18px long. Parts are placed by the stripes
+(abdomen, thorax), the eye's brown and glint (head) and the pale wing
+(wings), each checked by laying them back over the reference. The legs are
+measured off the reference's (hips, knees, tibiotarsal joints and claws)
+and drawn as strokes: at 18px a femur is under a pixel thick, and leg art
+would blur away; the pollen basket is a filled stroke on the near hind
+tibia (the far one is hidden behind her, as in the drawing).
+
+Measured footprints (page px from the thorax's centre, every moment of the
+cycle, `REACH` in `bee-rig.ts`; the box is the whole drawing's, rotated
+wing pictures counted by their corners): perch 22.5 wide by 16 tall,
+crawl 23x16.5, hover 22.5x27.5, fly 24.5x26, land 23x23.5. Standing and
+crawling she is taller than the 13px target because the reference's legs
+are long; flying, the ghost wings at the ends of the stroke, at full
+length, reach well above the 21px hover target. Narrowing the stroke, or
+foreshortening the ghosts, is the owner's call before the footprints
+settle.
 
 ## Verification (for the owner)
 

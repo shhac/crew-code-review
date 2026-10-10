@@ -169,3 +169,33 @@ test('the cupid draws its bow in code, the arrow nocked only while it draws', as
   await page.waitForTimeout(300);
   expect(await big(page).innerHTML()).toBe(still);
 });
+
+test('the bee proves the insect rig: legs and antennae in code, a steady wing blur, every part decoded', async ({ page }) => {
+  const legs = () => big(page).locator('[data-stroke="near legs"], [data-stroke="far legs"]').evaluateAll((els) => els.map((el) => el.getAttribute('d')));
+  await page.goto('/lab/critters.html#animal=bee&mode=crawl');
+  await expect(big(page)).toBeVisible();
+  const sizes = await decoded(page);
+  expect(sizes.length).toBeGreaterThanOrEqual(5);
+  expect(sizes.every((n) => n > 0)).toBe(true);
+  // Six legs, each its bones and claws, outlined then coloured.
+  expect(await legs()).toHaveLength(48);
+  await expect(big(page).locator('[data-stroke="near antenna"]')).toHaveCount(2);
+  const first = await legs();
+  await expect.poll(legs).not.toEqual(first);
+  await expect(big(page).locator('[data-stroke="wing blur"]')).toHaveCount(0);
+  // Hovering, the wings are a fan and two faint wings, held still from
+  // frame to frame while the body bobs.
+  await page.goto('/lab/critters.html#animal=bee&mode=hover&frame=0');
+  await expect(big(page).locator('[data-stroke="wing blur"]')).toHaveCount(1);
+  const fan = () => big(page).locator('[data-stroke="wing blur"]').getAttribute('d');
+  const at0 = await fan();
+  await page.getByRole('button', { name: 'forward a frame' }).click();
+  expect(await fan()).toBe(at0);
+  await page.getByLabel('reduced motion').check();
+  await expect(big(page).locator('[data-stroke="wing blur"]')).toHaveCount(0);
+  await expect(big(page).locator('[data-lid]')).toHaveCount(0);
+  await page.getByRole('button', { name: 'play' }).click();
+  const still = await big(page).innerHTML();
+  await page.waitForTimeout(300);
+  expect(await big(page).innerHTML()).toBe(still);
+});
