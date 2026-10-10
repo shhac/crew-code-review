@@ -1,4 +1,4 @@
-import { airOf, type Air } from '../air';
+import { boundsOf, type Air } from '../air';
 import { inView, type Box, type PageMap } from '../floors';
 import { inTurn, placeIds, regroup, troupeSize } from '../group';
 import { apart, sign } from '../math';
@@ -23,6 +23,12 @@ import { berths, flightOf, planSwoop, type Plan } from './swoop';
 export const STILL = 5000;
 const REST_MOVE = 24;
 export const COOLDOWN = 30000;
+// How long a cursor must rest, and the swoops be apart: as above, or, cued
+// by a test (`?theme-cue=swoop`), as soon as the cursor has stopped moving
+// and with no wait between swoops.
+export type Pace = { still: number; cooldown: number };
+export const PACE: Pace = { still: STILL, cooldown: COOLDOWN };
+export const CUED: Pace = { still: MOVING, cooldown: 0 };
 // A neighbour this near answers a long call half the time, a little later.
 const ANSWER_REACH = 300;
 const ANSWER_ODDS = 0.5;
@@ -49,12 +55,12 @@ export function createGulls(scene: PageMap, now: number, rand: Rand): Gulls {
   return group(target, three.slice(0, target));
 }
 
-// The air a route may use: main's box less the page's obstacles. Only its
-// bounds are taken from airOf, on a bare page, so no hover spots are
-// worked out for every point of the page: a gull never hovers.
+// The air a route may use: main's box (all of it, or the part in the
+// window) inset 6px, less the page's obstacles. Only air.ts's bounds are
+// taken, so no hover spots are worked out: a gull never hovers.
 export function airspace(page: PageMap): { room: Pick<Air, 'page' | 'room'>; view: Pick<Air, 'page' | 'room'> } {
-  const bare = airOf({ ...page, obstacles: [], floors: new Map() }, { half: 0, up: 0, down: 0 });
-  return { room: { page, room: bare.room }, view: { page, room: bare.view } };
+  const { room, view } = boundsOf(page);
+  return { room: { page, room }, view: { page, room: view } };
 }
 
 // The boxes a route keeps clear of: every other gull where it is and where
@@ -108,14 +114,14 @@ function launch(gull: Gull, plan: Plan, scene: PageMap, now: number): Gull | nul
 // the air or on its way to take off and the last swoop long enough ago:
 // the gull with the shortest clear swoop (its walk to take off counted)
 // goes; with none, the gull nearest the cursor gives it the long call.
-function restingCursor(g: Gulls, scene: PageMap, now: number, cursor: Cursor | null): Gulls {
-  if (!cursor || now - cursor.at < STILL || g.spent) return g;
+function restingCursor(g: Gulls, scene: PageMap, now: number, cursor: Cursor | null, pace: Pace): Gulls {
+  if (!cursor || now - cursor.at < pace.still || g.spent) return g;
   if (g.gulls.some((x) => airborne(x) || x.mode === 'ready')) return g;
   const free = g.gulls.filter((x) => idle(x) && !!scene.floors.get(x.floor) && inView(scene.floors.get(x.floor)!, scene));
   if (!free.length) return g;
   // Too soon after the last: it waits, and goes once the time is up if the
   // cursor is still resting there.
-  if (now - g.swooped < COOLDOWN) return g;
+  if (now - g.swooped < pace.cooldown) return g;
   const plans = free.flatMap((x) => {
     const plan = planFor(x, g.gulls.filter((o) => o.id !== x.id), scene, now, cursor);
     return plan ? [{ x, plan, cost: plan.length + Math.abs(plan.from - x.x) }] : [];
@@ -172,7 +178,7 @@ function answered(g: Gulls, scene: PageMap, now: number): Gulls {
 
 // One step for all of them: each in turn, seeing the others as they now are
 // and any gull in the air (to watch it); then the group's swoops and calls.
-export function stepGulls(g: Gulls, scene: PageMap, now: number, dt: number, rand: Rand, cursor: Cursor | null): Gulls {
+export function stepGulls(g: Gulls, scene: PageMap, now: number, dt: number, rand: Rand, cursor: Cursor | null, pace: Pace = PACE): Gulls {
   const flier = g.gulls.find((x) => x.flight);
   const at = flier && middleOf(flier, scene, now);
   const watching = flier && at ? { id: flier.id, at } : null;
@@ -180,6 +186,6 @@ export function stepGulls(g: Gulls, scene: PageMap, now: number, dt: number, ran
   const moved = { ...g, gulls: inTurn(g.gulls, step) };
   // The resting place is spent until the cursor moves well away from it.
   const spent = g.spent && cursor && apart(cursor, g.spent) >= REST_MOVE ? null : g.spent;
-  const next = restingCursor(takingOff({ ...moved, spent }, scene, now, cursor), scene, now, cursor);
+  const next = restingCursor(takingOff({ ...moved, spent }, scene, now, cursor), scene, now, cursor, pace);
   return answered(hearing(next, g.gulls, scene, now, rand), scene, now);
 }

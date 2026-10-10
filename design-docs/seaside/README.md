@@ -122,7 +122,8 @@ Every existing flier (the robin) and every walker so far is held to one rule:
 never drawn over text, controls or charts. A gull swooping at a cursor that
 is usually over content is the hardest case yet, so the rule is spelled out.
 
-- **Air** is the box of `main` clipped to the viewport and inset 4px, minus
+- **Air** is the box of `main` clipped to the viewport and inset 6px (air.ts's
+  inset, which every flier shares; this note first said 4), minus
   every obstacle `measurePage` returns (rendered text, controls, charts, and
   every card's box as a block, with the 6px reach into a block's bottom edge
   only for poses touching a ledge). Ledges are not obstacles: a heading rule
@@ -363,9 +364,9 @@ building:
   starts and a landing ends exactly on the ledge. (The model first used the
   body's middle; the kit's footprints made the anchor the simpler point.)
   The body's middle, 11px up, is what a cursor is near to or far from.
-- **Air** is `air.ts`'s (the cupids'): `airOf`'s bounds, taken on a bare
-  page so it does not work out hover spots for every point of the page (a
-  gull never hovers), minus the page's obstacles widened by `GAP`. New
+- **Air** is `air.ts`'s: `boundsOf`'s room and view (main inset 6px, all of
+  it or the part in the window; no hover spots are worked out, as a gull
+  never hovers), minus the page's obstacles widened by `GAP`. New
   routes keep to the part of `main` in view; a flight under way is checked
   against all of `main` after a scroll.
 - **Touching a ledge.** The run and the flare onto a ledge reach 6px below
@@ -424,10 +425,12 @@ building:
 - **Planning cost.** About 20ms for a plan on a 1440-wide page, once per
   resting place for each free gull; the checks a plan repeats (each ledge's
   runs, the columns, each flare) are worked out once per plan.
-- **Touch** (unresolved): `ledgeScene` keeps the last pointer position for
-  touch as well as mouse and pen, so a finger lifted and left would count as
-  a resting cursor. The gulls cannot tell; a shared fix (a cursor that knows
-  it hovers) is for `layout.ts`, and is reported rather than worked round.
+- **Touch**: the surfaces kit made `ledgeScene`'s cursor a hovering mouse
+  or pen only, so a finger lifted and left is no resting cursor, and touch
+  gets no swoops, as decided.
+- **The cue**: `?theme-cue=swoop` (cue.ts) has a cursor swooped at as soon
+  as it stops (1s) with no cooldown, so the e2e spec need not wait 5s and
+  30s.
 
 ## Research: the herring gull
 

@@ -7,7 +7,8 @@ import { CATCH_UP, ROUTES, seedRandom, watchCovered, WIDTHS } from './seasonal';
 // eye the cursor and swoop at one left still. What every set keeps
 // (palette, inert overlay, counts, content clear, a still scene) is
 // seasonal.spec.ts's; this is the seaside's own: the swoop, which is timed,
-// so its every frame is watched.
+// so it is cued (`?theme-cue=swoop`: as soon as the cursor stops) and its
+// every frame is watched.
 
 const gulls = (page: Page) => page.locator('[data-seaside] [data-gull]');
 const modes = (page: Page) => gulls(page).evaluateAll((els) => els.map((el) => el.getAttribute('data-gull')));
@@ -75,7 +76,7 @@ test('a cursor left still in clear air is swooped at by one gull, through clear 
   test.setTimeout(90_000);
   await seedRandom(page);
   await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto('/?theme=seaside');
+  await page.goto('/?theme=seaside&theme-cue=swoop');
   await expect.poll(() => gulls(page).count()).toBeGreaterThanOrEqual(2);
   await expect(page.locator('.rail nav a')).toHaveCount(7);
   await page.waitForTimeout(1000);
@@ -83,7 +84,7 @@ test('a cursor left still in clear air is swooped at by one gull, through clear 
   // box to queue a pull request.
   await page.mouse.move(700, 80);
   await page.mouse.move(740, 60, { steps: 4 });
-  const { seen, covered } = await watchSwoop(page, 25_000);
+  const { seen, covered } = await watchSwoop(page, 15_000);
   expect(seen).toEqual(expect.arrayContaining(['run', 'climb', 'dive', 'pullup', 'flare', 'touchdown', 'call']));
   expect(covered).toEqual([]);
   // Only one went, and the others watched it.
@@ -94,7 +95,7 @@ test('reduced motion stands every gull still, and no swoop comes', async ({ page
   test.setTimeout(60_000);
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto('/?theme=seaside');
+  await page.goto('/?theme=seaside&theme-cue=swoop');
   await expect(page.locator('.rail nav a')).toHaveCount(7);
   await expect.poll(() => gulls(page).count()).toBeGreaterThanOrEqual(2);
   await page.waitForTimeout(500);
@@ -103,7 +104,7 @@ test('reduced motion stands every gull still, and no swoop comes', async ({ page
   expect(new Set(before.map(([mode]) => mode))).toEqual(new Set(['stand']));
   await page.mouse.move(700, 80);
   await page.mouse.move(740, 60, { steps: 4 });
-  await page.waitForTimeout(6500);
+  await page.waitForTimeout(2500);
   expect(await where()).toEqual(before);
 });
 

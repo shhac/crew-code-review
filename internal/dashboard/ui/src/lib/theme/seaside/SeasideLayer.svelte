@@ -5,6 +5,7 @@
   // pointer events.
   import { onMount } from 'svelte';
   import { samePage, type Ledge, type PageMap } from '../floors';
+  import { cueOf } from '../cue';
   import Geometry from '../Geometry.svelte';
   import { ledgeScene, placeTroupe } from '../layout';
   import type { Cursor, Point } from '../pointer';
@@ -13,7 +14,7 @@
   import { reconcileBeaches, shellPaths, type Beach } from './drifts';
   import { middleOf, gullView, type Gull, type GullView } from './gull';
   import { gazeAt, gullRig } from './gull-rig';
-  import { airspace, createGulls, reconcileGulls, restingGulls, stepGulls, type Gulls } from './gulls';
+  import { airspace, createGulls, CUED, PACE, reconcileGulls, restingGulls, stepGulls, type Gulls } from './gulls';
   import { routeOf, swept } from './swoop';
 
   let floors: ReadonlyMap<number, Ledge> = new Map();
@@ -30,6 +31,8 @@
   // A glance about after a wander: down at the ledge ahead, or a little up.
   const glance = (side: number) => (side > 0 ? 10 : -4);
   const debug = new URLSearchParams(location.search).get('theme-debug') === '1';
+  // A test's cue: swoop at a cursor as soon as it stops.
+  const pace = cueOf(['swoop'] as const) ? CUED : PACE;
 
   type Shown = { gull: Gull; view: GullView };
   $: views = (group?.gulls ?? []).flatMap((gull): Shown[] => {
@@ -79,7 +82,7 @@
     frame(time, step) {
       now = time;
       if (!step) return;
-      group = group && stepGulls(group, scene, time, step.dt, Math.random, step.cursor);
+      group = group && stepGulls(group, scene, time, step.dt, Math.random, step.cursor, pace);
       gazes = gazing(views, step.cursor, step.dt);
     },
     stroke() {},

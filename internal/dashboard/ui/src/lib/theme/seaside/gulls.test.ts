@@ -7,7 +7,7 @@ import { airborne, gullView, standingAt, fresh, type Gull } from './gull';
 import { cursorAt, OBSTACLES, OPEN, page, rule } from './gull-fixtures';
 import { poseBox } from './gull-poses';
 import { roomToTakeOff } from './swoop';
-import { COOLDOWN, createGulls, reconcileGulls, restingGulls, stepGulls, STILL, type Gulls } from './gulls';
+import { COOLDOWN, createGulls, CUED, reconcileGulls, restingGulls, stepGulls, STILL, type Gulls } from './gulls';
 
 const p = page();
 const trace = (g: Gulls, from: number, to: number, cursor: (t: number) => Cursor | null, rand: () => number = seeded(3), s: PageMap = p) =>
@@ -56,6 +56,16 @@ describe('gulls together', () => {
     const runs = states.filter((s, i) => i > 0 && s.gulls.some((x) => x.mode === 'run') && !states[i - 1].gulls.some((x) => x.mode === 'run'));
     expect(runs).toHaveLength(1);
     expect(states.at(-1)!.gulls.every((x) => x.watch === null)).toBe(true);
+  });
+
+  it('swoops as soon as the cursor stops, with no wait between swoops, when a test cues it', () => {
+    const moved = (t: number) => (t < 6000 ? cursorAt(OPEN.x, OPEN.y, 0) : cursorAt(OPEN.x + 40, OPEN.y + 30, 6000));
+    const states = steps(three(), 0, 16000, (x, t) => stepGulls(x, p, t, 50, seeded(3), moved(t), CUED));
+    const starts = states.flatMap((s, i) => (i > 0 && s.swooped !== states[i - 1].swooped ? [i * 50] : []));
+    expect(starts[0]).toBeLessThanOrEqual(1100);
+    // The new resting place gets its swoop (or, with none clear, its call)
+    // well inside the 30s the cooldown would ask.
+    expect(states.at(-1)!.spent).toEqual({ x: OPEN.x + 40, y: OPEN.y + 30 });
   });
 
   it('waits for the cursor to move 24px and for 30s since the last swoop before another', () => {
