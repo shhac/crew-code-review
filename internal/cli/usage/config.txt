@@ -59,7 +59,11 @@ KEYS:
   dashboard.addr                       listen address (default 127.0.0.1:8330)
   dashboard.tailscale.mode             "" | serve | funnel
   dashboard.usage_poll_interval        engine usage refresh cadence (default 10m)
-  dashboard.theme                      auto | none | halloween | christmas (auto: Halloween in October, Christmas in December)
+  dashboard.theme                      auto | none | halloween | bonfire | christmas |
+                                       aurora | valentine | hares | easter (auto: the
+                                       set in season: aurora Jan, valentine Feb, hares
+                                       Mar, easter Apr, halloween Oct, bonfire Nov,
+                                       christmas Dec; none in other months)
   store.path                           DuckDB file location
 
 EXAMPLES:
