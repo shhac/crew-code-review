@@ -359,13 +359,27 @@ the plan above, each because building showed it:
 - **The upper orbit is higher.** With the plan's numbers (centre 38px above
   the cake) the two bands' boxes overlapped by 10px, so "a footprint plus
   6px apart" did not hold. Its height is now worked out from the low band's
-  top (`orbitOf`): 52px above the cake's top, so it needs 70px of air above
-  the cake rather than 60, and the low one 28. A 1024x768 window (54px)
-  gets the low orbit only, with wasp 1 resting on its jar.
-- **Footprints are anchored at the thorax**, the same point flying or
-  standing; standing, it is 5px above what it stands on (`STAND`). The
-  sizes are the targets above; the rig's tests will hold its drawing to
-  them once the insect kit lands.
+  top (`orbitOf`), a footprint and 6px above it (with the measured
+  footprints below, about 59px above the cake's top).
+- **Footprints are anchored at the middle of her body** (at the waist's
+  height, a little behind the thorax), the same point flying or standing,
+  so she reaches about as far either way and turning about does not move
+  her; standing, it is 6.3px above what she stands on (`STAND`, from the
+  rig). They are measured from the rig over every pose's whole cycle and
+  are larger than the first targets, mostly in height: the blur's ghost
+  wings reach well above her and her long legs hang below her in the air.
+
+  | Pose | Planned | As built (half-width, up, down) |
+  | --- | --- | --- |
+  | standing | 20x10 | 10, 4, 7.5 |
+  | feed | 20x10 | 10.5, 4, 7.5 |
+  | hover | 18x16 | 9.5, 11.5, 11 |
+  | land | 18x15 | 9.5, 11, 11 |
+  | cruise | 20x13 | 10, 11.5, 10.5 |
+
+  With these the low orbit needs 32px of air above the cake's top and the
+  high one 80, so a 1024x768 window (54px) gets the low orbit only, with
+  wasp 1 resting on its jar, and a 1440x900 one both.
 - **Routes are lines with rounded corners**, not single cubics: a single
   curve cannot go across under the high band and then up the air's left
   edge without cutting the corner into it, which is the only way out for
@@ -641,6 +655,31 @@ pixels, and on a wasp they run from the eye's outline into the whole black
 thorax. The parts are placed by matching their pattern of yellow and black
 (`matched`), since a black or striped part's outline alone fits anywhere
 inside the wasp.
+
+**The rig, as built** (`fete/wasp-rig.ts`, on the insect kit's
+`rig/wing-blur.ts`, `rig/hexapod.ts`, `rig/antennae.ts` and
+`rig/insect-flight.ts`). One page scale for every pose, 16/22.7 page pixels
+per drawing unit, so she is 16px from her jaws to the tip of her gaster.
+Her parts sit where `export.py` printed them; the pivots (the petiole at
+(12.7, 6.9), the neck at (20.3, 5.9), the wing hinge at the tegula at
+(15.8, 3.4)) and the six coxae, femur, tibia and tarsus lengths are measured
+off the reference by eye on a unit grid. The open wing is drawn so the
+forewing is 12 units long, about three fifths of her body, as a worker's is:
+the hover pose drew it nearly as long as the wasp. The blur is the kit's: a
+110 degree stroke, its two end wings faint, and the shimmering third wing at
+a seeded place in the stroke each frame (`shimmer`); flying fast, the
+stroke sweeps 70 degrees further back over her gaster. Hovering she is 30
+degrees nose up (the plan said 35; the long hanging hind legs read better
+a little flatter), her legs hanging part way (`hang` 0.45); landing 25 up,
+legs reaching down; cruising 10 up, legs drawn in. Feeding she crouches 2.5
+units, nose 7 degrees down, head bowed 30, and shuffles on a slow tripod
+(`walked` from the model), her antennae tapping the sugar in turn. Her
+gaster pulses at rest; her antennae flick on the kit's seeded schedule
+(`flicking`) and lean toward a cursor. The lab (`src/lab/critters/wasp.ts`)
+lays each key pose over the rig eye to eye (export.py prints each one's eye)
+and draws each footprint; looked at zoomed and at twice page size after each
+change: the feeding crouch and the cruise's swept wings came from those
+looks.
 
 What was looked at and kept: the shelf art reads at shelf size, with the
 cake's flat sugared top clear for a landing (the rosette's tails dip a few

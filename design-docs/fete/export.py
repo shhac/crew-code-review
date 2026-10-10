@@ -51,35 +51,54 @@ KEY_POSES = {'hover': (1040, 360), 'cruise': (1100, 410), 'land': (1040, 380), '
 HINGE = (1066, 597)
 
 
-def iris(path: Path, seed: tuple[int, int]) -> float:
-    """The eye's size: the square root of the area of the dark grey inside
-    its black outline, which holds still whatever angle the eye is drawn
-    at, where its box would not."""
+def grey_eye(path: Path, seed: tuple[int, int]) -> tuple[float, tuple[float, float]]:
+    """The dark grey inside the eye's black outline: the square root of its
+    area, which holds still whatever angle the eye is drawn at where its box
+    would not, and its middle (source pixels)."""
     total = np.asarray(Image.open(path).convert('RGB')).astype(int).sum(axis=-1)
     grey = (total > 90) & (total < 230)
     start = (seed[1], seed[0])
-    seen, todo, count = {start}, deque([start]), 0
+    seen, todo, points = {start}, deque([start]), []
     while todo:
         y, x = todo.popleft()
-        count += 1
+        points.append((y, x))
         for n in ((y + 1, x), (y - 1, x), (y, x + 1), (y, x - 1)):
             if 0 <= n[0] < grey.shape[0] and 0 <= n[1] < grey.shape[1] and grey[n] and n not in seen:
                 seen.add(n)
                 todo.append(n)
-    return count ** 0.5
+    ys, xs = zip(*points)
+    return len(points) ** 0.5, (sum(xs) / len(xs), sum(ys) / len(ys))
+
+
+def iris(path: Path, seed: tuple[int, int]) -> float:
+    return grey_eye(path, seed)[0]
+
+
+def cropped_at(path: Path) -> tuple[int, int]:
+    """Where crop(keyed(path)) starts in the source (x, y)."""
+    art = keyed(path)
+    ys, xs = np.nonzero(art[..., 3] > 8)
+    return max(0, xs.min() - 6), max(0, ys.min() - 6)
 
 
 class IrisScale(EyeScale):
-    def px(self, sheet: str, seed: tuple[int, int] | None = None) -> float:
-        return iris(self.here / sheet, seed or self.eyes[sheet])
-
     def key_poses(self, prefix: str, seeds: dict[str, tuple[int, int]], out: Path, key=keyed) -> None:
+        """Each key pose, and the middle of its eye in its own drawing units:
+        where the lab lines it up with the rig's eye."""
         for pose, seed in seeds.items():
             name = f'{prefix}{pose}'
             path = self.here / f'{name}.png'
-            eye = iris(path, seed)
-            size = export(crop(key(path)), out, name, self.eye / eye * self.res)
-            print(f'{name}: eye {eye:.1f}px; drawing units {self.units(size)}')
+            eye, (ex, ey) = grey_eye(path, seed)
+            k = self.eye / eye * self.res
+            size = export(crop(key(path)), out, name, k)
+            left, top = cropped_at(path)
+            print(f'{name}: eye {eye:.1f}px; drawing units {self.units(size)}; eye at {(ex - left) * k / self.res:.2f}, {(ey - top) * k / self.res:.2f}')
+
+    def reference_eye(self, sheet: str) -> None:
+        """The middle of the reference's eye, in the rig's drawing units."""
+        _, (ex, ey) = grey_eye(self.here / sheet, self.eyes[sheet])
+        left, top = cropped_at(self.here / sheet)
+        print(f'eye: {(ex - left) / self.per_unit() + self.margin:.2f}, {(ey - top) / self.per_unit() + self.margin:.2f}')
 
     def placed(self, name: str, art: np.ndarray, out: Path, scale: float, k: float, mask=None) -> tuple[int, int]:
         size = export(art, out, name, scale)
@@ -143,8 +162,9 @@ def table() -> None:
 
 
 def wasp() -> None:
-    scale = IrisScale(HERE, EYES, EYE, RES)
+    scale = IrisScale(HERE, EYES, EYE, RES, measure=iris)
     units = {'wasp-reference': scale.reference('wasp-standing.png', LAB, 'wasp-reference')}
+    scale.reference_eye('wasp-standing.png')
     scale.key_poses('wasp-pose-', KEY_POSES, LAB)
     parts = cut(keyed(HERE / 'wasp-parts.png'), PARTS)
     units.update(scale.parts(parts, 'wasp-parts.png', OUT))

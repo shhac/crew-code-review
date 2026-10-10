@@ -199,3 +199,32 @@ test('the bee proves the insect rig: legs and antennae in code, a steady wing bl
   await page.waitForTimeout(300);
   expect(await big(page).innerHTML()).toBe(still);
 });
+
+test('the wasp stands on the insect rig: six legs and antennae in code, a shimmering blur in flight, every part decoded', async ({ page }) => {
+  const legs = () => big(page).locator('[data-stroke="near legs"], [data-stroke="far legs"]').evaluateAll((els) => els.map((el) => el.getAttribute('d')));
+  await page.goto('/lab/critters.html#animal=wasp&mode=feed');
+  await expect(big(page)).toBeVisible();
+  const sizes = await decoded(page);
+  expect(sizes.length).toBeGreaterThanOrEqual(4);
+  expect(sizes.every((n) => n > 0)).toBe(true);
+  expect(await legs()).toHaveLength(48);
+  await expect(big(page).locator('[data-stroke="near antenna"]')).toHaveCount(2);
+  // Feeding, she shuffles on a slow tripod.
+  const first = await legs();
+  await expect.poll(legs).not.toEqual(first);
+  await expect(big(page).locator('[data-stroke="wing blur"]')).toHaveCount(0);
+  // Hovering, the blur's fan holds still from frame to frame.
+  await page.goto('/lab/critters.html#animal=wasp&mode=hover&frame=0');
+  await expect(big(page).locator('[data-stroke="wing blur"]')).toHaveCount(1);
+  const fan = () => big(page).locator('[data-stroke="wing blur"]').getAttribute('d');
+  const at0 = await fan();
+  await page.getByRole('button', { name: 'forward a frame' }).click();
+  expect(await fan()).toBe(at0);
+  await page.getByLabel('reduced motion').check();
+  await expect(big(page).locator('[data-stroke="wing blur"]')).toHaveCount(0);
+  await expect(big(page).locator('[data-lid]')).toHaveCount(0);
+  await page.getByRole('button', { name: 'play' }).click();
+  const still = await big(page).innerHTML();
+  await page.waitForTimeout(300);
+  expect(await big(page).innerHTML()).toBe(still);
+});

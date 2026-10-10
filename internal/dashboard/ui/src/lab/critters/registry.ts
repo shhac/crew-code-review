@@ -11,7 +11,8 @@ import { hedgehog } from './hedgehog';
 import { rabbit } from './rabbit';
 import { robin } from './robin';
 import { spider } from './spider';
+import { wasp } from './wasp';
 
-export const CRITTERS: readonly Critter[] = [hedgehog, fox, spider, robin, rabbit, cupid, hare, bee, gull];
+export const CRITTERS: readonly Critter[] = [hedgehog, fox, spider, robin, rabbit, cupid, hare, bee, gull, wasp];
 
 export const critterNamed = (name: string | null): Critter | undefined => CRITTERS.find((c) => c.name === name);

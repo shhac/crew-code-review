@@ -3,7 +3,7 @@ import { meets } from '../air';
 import type { Box } from '../floors';
 import type { Rand } from '../seed';
 import { inWaspAir, waspAir, windowEdge, type WaspAir } from './air';
-import { FOOTPRINTS } from './footprints';
+import { STAND } from './footprints';
 import { CAKE, JAR } from './table';
 import {
   APART, SPACE, bandOf, boxOf, claimsOf, orbitFits, orbitOf, placeWasps, reconcileWasps, spotOf, stepWasps, waspView, where, zoneOf,
@@ -84,9 +84,9 @@ describe('the wasps\' air', () => {
     expect(zone0.bottom).toBeLessThanOrEqual(low.bottom);
   });
 
-  it('needs about 30px above the cake for the low orbit and 70 for the high one', () => {
-    expect(CAKE.y - bandOf(orbitOf(0, places)).top).toBeCloseTo(28, 0);
-    expect(CAKE.y - bandOf(orbitOf(1, places)).top).toBeCloseTo(70, 0);
+  it('needs about 32px above the cake for the low orbit and 80 for the high one', () => {
+    expect(CAKE.y - bandOf(orbitOf(0, places)).top).toBeCloseTo(31.5, 0);
+    expect(CAKE.y - bandOf(orbitOf(1, places)).top).toBeCloseTo(80, 0);
     expect([0, 1].map((id) => orbitFits(id, { air: TALL, places }))).toEqual([true, true]);
     expect([0, 1].map((id) => orbitFits(id, { air: MEDIUM, places }))).toEqual([true, false]);
     expect([0, 1].map((id) => orbitFits(id, { air: SHORT, places }))).toEqual([false, false]);
@@ -110,7 +110,7 @@ describe('placing the wasps', () => {
       const view = waspView(w, places, 5000, true)!;
       expect(view.pose).toBe('standing');
       expect(view.x).toBeCloseTo(spotOf(w.id, places).x);
-      expect(view.y + FOOTPRINTS.standing.down).toBeCloseTo(spotOf(w.id, places).y);
+      expect(view.y + STAND).toBeCloseTo(spotOf(w.id, places).y);
     });
   });
 });
