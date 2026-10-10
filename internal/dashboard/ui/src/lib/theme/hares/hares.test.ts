@@ -279,6 +279,22 @@ describe('a layout change mid-run', () => {
     expect(trouble(after, low)).toEqual([]);
   });
 
+  it('ends a box whose bout was dropped, so the pair go on and another bout can start', () => {
+    const { g, now } = first((x) => x.hares.length === 3 && x.hares.filter((h) => h.mode === 'box').length === 2 && !x.runs.length);
+    const third = g.hares.find((h) => h.mode !== 'box')!;
+    // The third placed afresh drops the bout, though the box keeps its room.
+    const after = reconcileHares({ ...g, hares: g.hares.filter((h) => h.id !== third.id) }, page(), now + 1, seeded(9));
+    expect(after.bout).toBeNull();
+    expect(trouble(after, page())).toEqual([]);
+    const later = run(after, page(), now + 1, 8_000, seeded(4));
+    expect(later.hares.filter((h) => h.mode === 'box' || h.mode === 'boxed')).toEqual([]);
+    const bouts = { started: false };
+    run(later, page(), now + 8_001, 40_000, seeded(5), () => null, (x) => {
+      bouts.started ||= x.bout !== null;
+    });
+    expect(bouts.started).toBe(true);
+  });
+
   it('lets a trail that still holds run on, the same hares on it', () => {
     const { g, now } = first((x) => x.runs.length > 0 && x.runs.every((r) => r.at > 40));
     // Something new far from every trail: a control at the far left of the

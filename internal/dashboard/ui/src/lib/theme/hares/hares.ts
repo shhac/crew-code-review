@@ -6,7 +6,7 @@ import type { Cursor, Point } from '../pointer';
 import { between, type Rand } from '../seed';
 import { alarm, bolt } from './alarm';
 import { advanceBout, boxRoom, COURTING, endChase, startBout, type Bout } from './bout';
-import { CHASE_GAP, fresh, HALF, HARE, holds, placeHare, sittingAt, sitUp, stepHare, TALL, tallHere, type Hare, type Mode } from './hare';
+import { CHASE_GAP, fresh, HALF, HARE, holds, placeHare, sittingAt, sitUp, stepHare, TALL, tallHere, type Hare } from './hare';
 import type { HarePose } from './hare-rig';
 import { advanceRuns, memberOf, pagePoint, placeOf, runOf, sAt, trailHolds, update, type Run } from './runs';
 import { claimsOf, placeOn } from './trail';
@@ -139,16 +139,14 @@ function fixBoxing(hares: Hare[], scene: PageMap, now: number): { hares: Hare[];
   return { hares: hares.map((h) => (h.mode === 'box' ? { ...h, mode: 'standoff', until: now + 1500 } : h)), stoodDown: true };
 }
 
-// With its bout dropped, a hare coming up to box or done boxing has nothing
-// left to go on to, so it sits up. A pair still boxing has kept its room
-// (any without it is already a stand-off) and is left to box.
-const LEFT_WAITING: readonly Mode[] = COURTING.filter((m) => m !== 'box');
-
 // The bout goes on only while nothing it relies on changed (no trail
-// dropped, no hare placed afresh); it ends with a box stood down.
+// dropped, no hare placed afresh); it ends with a box stood down. With it
+// dropped, every hare in it sits up: coming up to box, boxing or done
+// boxing, there is no bout left to take it on, and a pair left boxing would
+// stay boxed for good, so no other bout could start.
 function keepBout(bout: Bout | null, changed: boolean, boxing: { hares: Hare[]; stoodDown: boolean }, scene: PageMap, now: number, rand: Rand): Pick<Hares, 'hares' | 'bout'> {
   const kept = changed ? null : bout;
-  if (!kept) return { hares: boxing.hares.map((h) => (LEFT_WAITING.includes(h.mode) ? sitUp(h, scene, now, rand) : h)), bout: null };
+  if (!kept) return { hares: boxing.hares.map((h) => (COURTING.includes(h.mode) ? sitUp(h, scene, now, rand) : h)), bout: null };
   return { hares: boxing.hares, bout: boxing.stoodDown ? null : kept };
 }
 
