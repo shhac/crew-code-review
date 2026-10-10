@@ -1,4 +1,5 @@
 import { clearance, inView, type Ledge, type PageMap, type Run } from '../floors';
+import { sign } from '../math';
 import { between, maxBy, pick, type Rand } from '../seed';
 import type { HarePose } from './hare-rig';
 import { bodyOf, REACH, runAt, runsOf, type Claim } from './trail';
@@ -91,7 +92,6 @@ export type Self = Pick<Hare, 'id' | 'seed' | 'walked'>;
 export const fresh = (id: number): Self => ({ id, seed: id + 1, walked: 0 });
 
 const length = (r: Run) => r.hi - r.lo;
-const sign = (d: number): 1 | -1 => (d < 0 ? -1 : 1);
 export const clampTo = (r: Run, x: number) => Math.max(r.lo, Math.min(r.hi, x));
 // Whether the stretch round x has room to sit up tall (or box) there.
 export const tallAt = (f: Ledge, scene: PageMap, x: number, width: number) => clearance(f, scene.obstacles, x - width / 2, x + width / 2, REACH) >= TALL;

@@ -1,4 +1,5 @@
 import { clearRuns, clearance, inView, type Ledge, type PageMap, type Run } from '../floors';
+import { apart, clamp01, sign } from '../math';
 import type { Cursor, Point } from '../pointer';
 import { between, maxBy, pick, type Rand } from '../seed';
 import type { End } from './hunt';
@@ -110,7 +111,6 @@ const length = (r: Run) => r.hi - r.lo;
 const runAt = (f: Ledge, scene: PageMap, x: number) => runs(f, scene).find((r) => r.lo <= x && x <= r.hi) ?? null;
 const body = (r: Run): Run => ({ lo: r.lo + HALF, hi: r.hi - HALF });
 const within = (r: Run, x: number) => r.lo <= x && x <= r.hi;
-const sign = (d: number): 1 | -1 => (d < 0 ? -1 : 1);
 const widthOf = (f: Ledge) => f.right - f.left;
 // The ends of a run that are also ends of its ledge.
 function ends(f: Ledge, r: Run): number[] {
@@ -118,7 +118,6 @@ function ends(f: Ledge, r: Run): number[] {
   return [...(first ? [r.lo] : []), ...(last ? [r.hi] : [])];
 }
 const pagePoint = (f: Ledge, x: number, lift = 0): Point => ({ x: f.left + x, y: f.y - lift });
-const dist = (a: Point, b: Point) => Math.hypot(a.x - b.x, a.y - b.y);
 
 // Who a rabbit is, kept across every change of place.
 type Self = Pick<Rabbit, 'id' | 'seed' | 'walked'>;
@@ -216,7 +215,7 @@ export type RabbitView = Point & { pose: Pose; dir: 1 | -1; opacity: number };
 function fade(r: Rabbit, f: Ledge): number {
   if (leaving(r)) {
     const end = r.dir === 1 ? widthOf(f) - RUNS.inset : RUNS.inset;
-    return Math.max(0, Math.min(1, ((end - r.x) * r.dir) / FADE));
+    return clamp01(((end - r.x) * r.dir) / FADE);
   }
   if (r.mode === 'enter') return Math.min(1, Math.abs(r.x - r.from) / FADE);
   return 1;
@@ -335,9 +334,9 @@ function layingSpot(r: Rabbit, f: Ledge, run: Run, scene: PageMap, taken: readon
 type Way = { trip: Trip; exit: number };
 function way(r: Rabbit, f: Ledge, run: Run, scene: PageMap, rand: Rand, taken: readonly Claim[], away: Point | null): Way | null {
   const open = ends(f, run).filter((x) => clearOf(taken, r.floor, r.x, x));
-  const exit = maxBy(open, (x) => (away ? dist(pagePoint(f, x), away) : -Math.abs(x - r.x)));
+  const exit = maxBy(open, (x) => (away ? apart(pagePoint(f, x), away) : -Math.abs(x - r.x)));
   const ways = entries(r, scene, rand, taken);
-  const to = away ? maxBy(ways, (e) => dist(e.at, away)) : ways.length ? pick(rand, ways) : undefined;
+  const to = away ? maxBy(ways, (e) => apart(e.at, away)) : ways.length ? pick(rand, ways) : undefined;
   return exit !== undefined && to ? { trip: to.trip, exit } : null;
 }
 
@@ -363,7 +362,7 @@ function leave(r: Rabbit, mode: 'exit' | 'bolt', now: number, out: Way): Rabbit 
 // How long a cursor has been close, and whether it is passing near enough
 // to make it sit up, or has lingered long enough to make it thump.
 function notice(r: Rabbit, f: Ledge, now: number, cursor: Cursor | null): { r: Rabbit; passing: boolean; lingered: boolean } {
-  const away = cursor ? dist(cursor, centre(r, f)) : Infinity;
+  const away = cursor ? apart(cursor, centre(r, f)) : Infinity;
   const near = away < NEAR ? r.near ?? now : null;
   const passing = !!cursor && now - cursor.at < MOVING && away < PASSING;
   return { r: { ...r, near }, passing, lingered: near !== null && now - near >= LINGER };

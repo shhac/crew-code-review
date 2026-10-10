@@ -1,5 +1,6 @@
 import type { PageMap } from '../floors';
 import { inTurn, placeInTurn } from '../group';
+import { apart } from '../math';
 import type { Cursor, Point } from '../pointer';
 import type { Rand } from '../seed';
 import type { End } from './hunt';
@@ -58,7 +59,7 @@ export function stepRabbits(group: Rabbits, scene: PageMap, now: number, dt: num
   const warn = (before: Rabbit, after: Rabbit, other: Rabbit) => {
     const at = before.mode !== 'thump' && after.mode === 'thump' ? pointOf(after, scene) : null;
     const there = at && pointOf(other, scene);
-    return at && there && Math.hypot(at.x - there.x, at.y - there.y) <= WARN_REACH ? rouse(other, scene, now, rand) : other;
+    return at && there && apart(at, there) <= WARN_REACH ? rouse(other, scene, now, rand) : other;
   };
   return { ...group, rabbits: inTurn(group.rabbits, step, warn) };
 }

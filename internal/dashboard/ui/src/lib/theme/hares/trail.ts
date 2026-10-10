@@ -1,4 +1,5 @@
 import { clearRuns, inView, type Ledge, type PageMap, type Run } from '../floors';
+import { apart, clamp, sign } from '../math';
 import type { Point } from '../pointer';
 import { between, maxBy, type Rand } from '../seed';
 
@@ -70,7 +71,6 @@ export type PlanOptions = {
 export type Claim = { floor: number; lo: number; hi: number; box?: { left: number; right: number; top: number; bottom: number } };
 
 const segLength = (s: Segment) => (s.kind === 'run' ? Math.abs(s.to - s.from) : s.length);
-const sign = (d: number): 1 | -1 => (d < 0 ? -1 : 1);
 export const runsOf = (f: Ledge, scene: PageMap, clear: number) => clearRuns(f, scene.obstacles, clear, { ...RUNS, reach: REACH });
 export const runAt = (f: Ledge, scene: PageMap, clear: number, x: number): Run | null => runsOf(f, scene, clear).find((r) => r.lo <= x && x <= r.hi) ?? null;
 // The part of a run a hare's middle may use, so all of it is on the run.
@@ -87,7 +87,7 @@ export const trailOf = (segments: Segment[]): Trail => ({ segments, length: segm
 
 // Where a hare is, s along the trail (clamped to it).
 export function placeOn(trail: Trail, s: number): Place {
-  const at = Math.max(0, Math.min(trail.length, s));
+  const at = clamp(s, 0, trail.length);
   const found = trail.segments.reduce<{ left: number; place: Place | null }>((acc, seg, i) => {
     if (acc.place) return acc;
     const length = segLength(seg);
@@ -143,7 +143,7 @@ export function clearAt(p: Point, box: Box, scene: PageMap, avoid: readonly Rect
 
 // Whether a whole arc is clear, sampled every SAMPLE px along it.
 export function sweptClear(p: Point, q: Point, hop: number, box: Box, scene: PageMap, avoid: readonly Rect[] = []): boolean {
-  const count = Math.max(2, Math.ceil(Math.hypot(q.x - p.x, q.y - p.y) / SAMPLE));
+  const count = Math.max(2, Math.ceil(apart(q, p) / SAMPLE));
   return Array.from({ length: count + 1 }, (_, i) => arc(p, q, hop, i / count)).every((at) => clearAt(at, box, scene, avoid));
 }
 
@@ -180,7 +180,7 @@ function leapsFrom(fid: number, f: Ledge, x: number, dir: 1 | -1, scene: PageMap
       const hops = Array.from({ length: HOP_MAX - HOP_MIN + 1 }, (_, i) => HOP_MAX - i);
       const hop = hops.find((h) => sweptClear(p, q, h, opts.air, scene, avoid));
       if (hop === undefined) return [];
-      const length = Math.hypot(q.x - p.x, q.y - p.y);
+      const length = apart(q, p);
       return [{ segment: { kind: 'leap', from: { floor: fid, x }, to: { floor: gid, x: land }, hop, length }, floor: gid, x: land, dir, at: q }];
     });
   });
@@ -208,7 +208,7 @@ function choose(hops: readonly Hop[], opts: PlanOptions): Hop | undefined {
   const toward = hops.filter((h) => h.floor === opts.toward);
   if (toward.length) return toward[0];
   const from = opts.from;
-  if (from) return maxBy(hops, (h) => Math.hypot(h.at.x - from.x, h.at.y - from.y));
+  if (from) return maxBy(hops, (h) => apart(h.at, from));
   return hops.length ? hops[Math.floor(between(opts.rand, 0, hops.length - 0.001))] : undefined;
 }
 

@@ -1,5 +1,6 @@
 import type { PageMap } from '../floors';
 import { inTurn, placeInTurn } from '../group';
+import { apart } from '../math';
 import type { Cursor, Point } from '../pointer';
 import { between, type Rand } from '../seed';
 import { createFox, fresh, reconcileFox, restingFox, stepFox, type Fox } from './fox';
@@ -60,7 +61,7 @@ export function stepFoxes(group: Foxes, scene: PageMap, now: number, dt: number,
     const roused = before.mode === 'asleep' && after.mode === 'waking' && after.startled;
     const at = roused ? foxPoint(after, scene) : null;
     const there = at && other.mode === 'asleep' ? foxPoint(other, scene) : null;
-    return at && there && Math.hypot(at.x - there.x, at.y - there.y) <= LOOK_REACH ? { ...other, look: now + between(rand, 1200, 2000) } : other;
+    return at && there && apart(at, there) <= LOOK_REACH ? { ...other, look: now + between(rand, 1200, 2000) } : other;
   };
   return { ...group, foxes: inTurn(group.foxes, step, lookUp) };
 }

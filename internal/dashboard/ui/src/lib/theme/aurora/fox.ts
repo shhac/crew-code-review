@@ -1,4 +1,5 @@
 import { clearRuns, clearance, inView, type Ledge, type PageMap, type Run } from '../floors';
+import { apart, clamp01, sign } from '../math';
 import type { Cursor, Point } from '../pointer';
 import { between, maxBy, pick, type Rand } from '../seed';
 
@@ -102,7 +103,6 @@ const clampTo = (r: Run, x: number) => Math.max(r.lo, Math.min(r.hi, x));
 const HALF = POSES.trot.width / 2;
 const body = (r: Run): Run => ({ lo: r.lo + HALF, hi: r.hi - HALF });
 const within = (r: Run, x: number) => r.lo <= x && x <= r.hi;
-const sign = (d: number): 1 | -1 => (d < 0 ? -1 : 1);
 const flip = (d: 1 | -1): 1 | -1 => (d === 1 ? -1 : 1);
 // The ends of a run that are also ends of its ledge, where the fox can come
 // and go out of sight.
@@ -201,7 +201,7 @@ export function reconcileFox(fox: Fox, scene: PageMap, now: number, rand: Rand, 
 export type FoxView = Point & { pose: Pose; dir: 1 | -1; opacity: number };
 
 // How far through its leap the fox is, 0 to 1.
-export const leapt = (fox: Pick<Fox, 'until'>, now: number) => Math.max(0, Math.min(1, 1 - (fox.until - now) / LEAP));
+export const leapt = (fox: Pick<Fox, 'until'>, now: number) => clamp01(1 - (fox.until - now) / LEAP);
 
 // Leaving, it fades over the last FADE px before its ledge's end; entering,
 // over the first FADE px from the other's.
@@ -232,7 +232,6 @@ export function poseOf(fox: Pick<Fox, 'mode' | 'ear' | 'look'>, now: number): Po
 }
 
 const centre = (fox: Fox, f: Ledge): Point => pagePoint(f, fox.x, POSES.curled.height / 2);
-const dist = (a: Point, b: Point) => Math.hypot(a.x - b.x, a.y - b.y);
 
 // How much clear space is left above a pose over the stretch from x0 to x1
 // (its centre's travel); negative when it does not fit.
@@ -268,8 +267,8 @@ function depart(fox: Fox, scene: PageMap, now: number, rand: Rand, cursor: Curso
   };
   // Out by the end away from the cursor, or else the nearer one.
   const open = ends(f, run).filter((x) => clearOf(taken, fox.floor, fox.x, x));
-  const exit = maxBy(open, (x) => (avoid ? dist(pagePoint(f, x), avoid) : -Math.abs(x - fox.x)));
-  const way = exit === undefined ? undefined : choose(entries(fox, scene, rand, taken), (e, from) => dist(e.at, from));
+  const exit = maxBy(open, (x) => (avoid ? apart(pagePoint(f, x), avoid) : -Math.abs(x - fox.x)));
+  const way = exit === undefined ? undefined : choose(entries(fox, scene, rand, taken), (e, from) => apart(e.at, from));
   if (exit !== undefined && way) return { ...fox, mode: 'exit', target: exit, dir: sign(exit - fox.x), trip: way.trip };
   // Along its own run, stopping SPACING short of the nearest fox each way.
   const room = body(run);
@@ -313,7 +312,7 @@ function walk(fox: Fox, dt: number): Fox {
 // Asleep, it still hears the cursor: how long it has been close, and whether
 // it is passing near enough to twitch an ear.
 function notice(fox: Fox, f: Ledge, now: number, cursor: Cursor | null): Fox {
-  const away = cursor ? dist(cursor, centre(fox, f)) : Infinity;
+  const away = cursor ? apart(cursor, centre(fox, f)) : Infinity;
   const near = away < NEAR ? fox.near ?? now : null;
   const passing = !!cursor && now - cursor.at < MOVING && away < EAR_REACH && now >= fox.earRest;
   return passing ? { ...fox, near, ear: now + EAR, earRest: now + EAR + EAR_REST } : { ...fox, near };

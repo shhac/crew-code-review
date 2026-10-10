@@ -1,5 +1,6 @@
 import { clearance, inView, type PageMap } from '../floors';
 import { inTurn, placeInTurn } from '../group';
+import { apart, clamp, sign } from '../math';
 import type { Cursor, Point } from '../pointer';
 import { between, type Rand } from '../seed';
 import {
@@ -40,7 +41,6 @@ export type Run = { kind: 'chase' | 'bolt' | 'trip'; trail: Trail; at: number; s
 export type Bout = { jill: number; jack: number; round: 1 | 2 };
 export type Hares = { target: number; hares: Hare[]; runs: Run[]; bout: Bout | null; nextBout: number };
 
-const sign = (d: number): 1 | -1 => (d < 0 ? -1 : 1);
 const sAt = (run: Run, m: Member) => Math.max(m.start, run.at - m.lag);
 const runOf = (group: Hares, id: number) => group.runs.find((r) => r.members.some((m) => m.id === id)) ?? null;
 const memberOf = (run: Run, id: number) => run.members.find((m) => m.id === id)!;
@@ -227,7 +227,7 @@ function middleOf(group: Hares, hare: Hare, scene: PageMap): Point | null {
   const at = pagePoint(placeOf(group, hare), scene);
   return at && { x: at.x, y: at.y - 12 };
 }
-const near = (a: Point | null, b: Point, reach: number) => !!a && Math.hypot(a.x - b.x, a.y - b.y) < reach;
+const near = (a: Point | null, b: Point, reach: number) => !!a && apart(a, b) < reach;
 const freeze = (hare: Hare, now: number, rand: Rand): Hare => ({ ...hare, mode: 'freeze', until: now + between(rand, 700, 1100) });
 
 // A moving cursor coming near freezes them: every hare on a ledge within
@@ -392,7 +392,7 @@ const partnerOf = (group: Hares, h: Hare) => (group.bout ? (h.id === group.bout.
 // A hare pulled back onto the run under it, if there still is one.
 function clamped(h: Hare, scene: PageMap): Hare | null {
   const f = scene.floors.get(h.floor);
-  const run = f && runAt(f, scene, CLEAR, Math.max(0, Math.min(f.right - f.left, h.x)));
+  const run = f && runAt(f, scene, CLEAR, clamp(h.x, 0, f.right - f.left));
   if (!f || !run) return null;
   const room = bodyOf(run, HALF);
   if (room.hi < room.lo) return null;
