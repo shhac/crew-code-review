@@ -1,4 +1,4 @@
-import type { Box, Obstacle, PageMap, Reach } from './floors';
+import { meets, type Box, type Obstacle, type PageMap, type Reach } from './floors';
 import type { Point } from './pointer';
 
 // The page's open air, for things that fly: the box of `main` (never the
@@ -47,7 +47,7 @@ function gridIn(room: Box): Point[] {
 
 export const around = (p: Point, r: Reach): Box => ({ left: p.x - r.half, right: p.x + r.half, top: p.y - r.up, bottom: p.y + r.down });
 export const union = (a: Box, b: Box): Box => ({ left: Math.min(a.left, b.left), right: Math.max(a.right, b.right), top: Math.min(a.top, b.top), bottom: Math.max(a.bottom, b.bottom) });
-export const meets = (a: Box, b: Box) => a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
+export { meets } from './floors';
 
 // Whether a point is inside a box, edges included: a flier in view.
 export const inAir = (view: Box, p: Point) => p.x >= view.left && p.x <= view.right && p.y >= view.top && p.y <= view.bottom;

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { clearance, clearRuns, measureFloors, reachOf, samePage } from './floors';
+import { clearance, clearRuns, measureFloors, reachOf, samePage, wallRuns, walls, type Ledge, type PageMap } from './floors';
+import { dashboardPage } from './test-scene';
 import { fits } from './spiderwalk/model';
 
 // measureFloors only needs querySelectorAll and rects, so a fake page stands
@@ -134,5 +135,81 @@ describe('clearance', () => {
 describe('reachOf', () => {
   it('stands a walker on its anchor, half its width either way and its height up', () => {
     expect(reachOf({ width: 30, height: 24 })).toEqual({ half: 15, up: 24, down: 0 });
+  });
+});
+
+describe('walls', () => {
+  // The dashboard fixture's cards (2, 3, 4) under its heading rule (1), with
+  // main beside a 236px rail.
+  const MAIN = { left: 236, right: 1440, top: 0, bottom: 1600 };
+  const withMain = (p: PageMap): PageMap => ({ ...p, main: MAIN });
+  const plus = (p: PageMap, id: number, f: Ledge): PageMap => ({
+    ...p, floors: new Map([...p.floors, [id, f]]),
+    obstacles: [...p.obstacles, ...(f.base > f.y ? [{ left: f.left, right: f.right, top: f.y, bottom: f.base, block: true }] : [])],
+  });
+  const card = (left: number, right: number, y: number, base: number): Ledge => ({ left, right, y, base, room: 22, headroom: 22, kind: 'card' });
+
+  it('gives each card its two sides, and headings, panels and short cards none', () => {
+    const page = plus(plus(dashboardPage(), 5, card(300, 900, 500, 500)), 6, card(300, 900, 600, 620));
+    expect(walls(page).map((w) => w.id)).toEqual(['2:l', '2:r', '3:l', '3:r', '4:l', '4:r']);
+    expect(walls(page)[0]).toEqual({ id: '2:l', floor: 2, side: -1, x: 300, top: 182, bottom: 400 });
+    expect(walls(page)[1]).toMatchObject({ side: 1, x: 646 });
+  });
+
+  it('are exactly the sides the spiders and the overlay already used', () => {
+    const page = dashboardPage();
+    const implicit = [...page.floors.values()].filter((f) => f.base > f.y).flatMap((f) => [f.left, f.right].map((x) => ({ x, top: f.y, bottom: f.base })));
+    expect(walls(page).map(({ x, top, bottom }) => ({ x, top, bottom }))).toEqual(implicit);
+  });
+
+  it('leaves out a nested card side facing into its parent, but keeps one only partly covered', () => {
+    const nested = plus(dashboardPage(), 5, card(1030, 1290, 250, 350));
+    expect(walls(nested).filter((w) => w.floor === 5)).toEqual([]);
+    const partly = plus(dashboardPage(), 5, card(1290, 1400, 300, 500));
+    expect(walls(partly).filter((w) => w.floor === 5).map((w) => w.id)).toEqual(['5:l', '5:r']);
+  });
+
+  it('keeps its ids across a scroll and a card growing', () => {
+    const page = dashboardPage();
+    const scrolled: PageMap = {
+      ...page,
+      floors: new Map([...page.floors].map(([id, f]) => [id, { ...f, y: f.y - 100, base: f.base - 100 }])),
+      obstacles: page.obstacles.map((o) => ({ ...o, top: o.top - 100, bottom: o.bottom - 100 })),
+    };
+    expect(walls(scrolled).map((w) => [w.id, w.top])).toEqual(walls(page).map((w) => [w.id, w.top - 100]));
+    const grown = dashboardPage([], [card(300, 646, 182, 600), card(660, 1006, 182, 400), card(1020, 1300, 182, 400)]);
+    expect(walls(grown).map((w) => w.id)).toEqual(walls(page).map((w) => w.id));
+    expect(walls(grown)[0].bottom).toBe(600);
+  });
+});
+
+describe('wallRuns', () => {
+  const MAIN = { left: 236, right: 1440, top: 0, bottom: 1600 };
+  const page = (extra: PageMap['obstacles'] = []): PageMap => ({ ...dashboardPage(extra), main: MAIN });
+  const wall = (p: PageMap, id: string) => walls(p).find((w) => w.id === id)!;
+
+  it('runs the length of the wall, inset at each end, where nothing stands in front', () => {
+    expect(wallRuns(wall(page(), '2:l'), page(), 34)).toEqual([{ lo: 8, hi: 208 }]);
+    expect(wallRuns(wall(page(), '4:r'), page(), 34, { inset: 4, step: 2 })).toEqual([{ lo: 4, hi: 214 }]);
+  });
+
+  it('stops at text beside the wall, and at content just inside it', () => {
+    const beside = page([{ left: 280, right: 296, top: 250, bottom: 266 }]);
+    expect(wallRuns(wall(beside, '2:l'), beside, 34)).toEqual([{ lo: 8, hi: 64 }, { lo: 88, hi: 208 }]);
+    const inside = page([{ left: 301, right: 340, top: 300, bottom: 316 }]);
+    expect(wallRuns(wall(inside, '2:l'), inside, 34)).toEqual([{ lo: 8, hi: 116 }, { lo: 136, hi: 208 }]);
+  });
+
+  it('stops at a neighbouring card closer than the depth, and at the edge of main', () => {
+    expect(wallRuns(wall(page(), '2:r'), page(), 34)).toEqual([]);
+    expect(wallRuns(wall(page(), '2:r'), page(), 12)).toEqual([{ lo: 8, hi: 208 }]);
+    expect(wallRuns(wall(page(), '2:l'), page(), 70)).toEqual([]);
+    expect(wallRuns(wall(page(), '2:l'), page(), 64)).toEqual([{ lo: 8, hi: 208 }]);
+  });
+
+  it('stops at the window, and needs main measured', () => {
+    const short = { ...page(), height: 300 };
+    expect(wallRuns(wall(short, '2:l'), short, 34)).toEqual([{ lo: 8, hi: 116 }]);
+    expect(wallRuns(wall(page(), '2:l'), dashboardPage(), 34)).toEqual([]);
   });
 });

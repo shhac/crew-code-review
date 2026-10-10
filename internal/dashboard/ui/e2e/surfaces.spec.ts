@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { coveredContent } from './content';
 
 // The shared surfaces the debug overlay draws (?theme-debug=1), read back off
 // the real layout: each drawing must agree with the elements it was measured
@@ -38,3 +39,39 @@ test('the rail air runs from the sky down through the shelf, and only where the 
   await expect(page.locator('.theme-shelf')).toBeHidden();
   await expect(page.locator('[data-rail-air]')).toHaveCount(0);
 });
+
+// Every wall stands on a drawn ledge's end, and its shaded runs (where a box
+// 34px deep fits beside it) are never over content.
+const wallErrors = (page: Page) => page.evaluate(() => {
+  const floors = [...document.querySelectorAll('.geometry [data-floor-id]')].map((g) => {
+    const line = g.querySelector('.floor')!;
+    return { id: g.getAttribute('data-floor-id'), left: Number(line.getAttribute('x1')), right: Number(line.getAttribute('x2')), y: Number(line.getAttribute('y1')) };
+  });
+  return [...document.querySelectorAll('.geometry [data-wall-id]')].flatMap((g) => {
+    const id = g.getAttribute('data-wall-id')!;
+    const [floor, side] = id.split(':');
+    const line = g.querySelector('.wall')!;
+    const f = floors.find((c) => c.id === floor);
+    const x = Number(line.getAttribute('x1'));
+    const ok = f && x === (side === 'l' ? f.left : f.right) && Number(line.getAttribute('y1')) === f.y;
+    return ok ? [] : [`${id} is not on its ledge`];
+  });
+});
+
+for (const width of [1440, 1024]) {
+  test(`walls stand on the card sides and shade only clear air at ${width}px`, async ({ page }, info) => {
+    await page.setViewportSize({ width, height: 900 });
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    for (const path of ['/', '/metrics', '/history']) {
+      await page.goto(`${path}?theme=halloween&theme-debug=1`);
+      await expect(page.locator('.geometry [data-wall-id]').first()).toBeAttached();
+      if (path === '/metrics') await expect(page.locator('.metric-kpis > div')).toHaveCount(6);
+      await expect.poll(() => wallErrors(page), { message: path }).toEqual([]);
+      expect(await coveredContent(page.locator('.geometry [data-wall-id]'), '.wall-run'), path).toEqual([]);
+      if (path === '/') {
+        await expect(page.locator('.geometry .wall-run').first()).toBeAttached();
+        await page.screenshot({ path: info.outputPath(`walls-${width}.png`) });
+      }
+    }
+  });
+}

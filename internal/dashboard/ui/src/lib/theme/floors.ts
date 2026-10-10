@@ -78,6 +78,8 @@ function idOf(el: Measurable): number {
 }
 
 const spans = (a: { left: number; right: number }, b: { left: number; right: number }) => a.left < b.right && b.left < a.right;
+// Whether two boxes overlap; touching edges do not.
+export const meets = (a: Box, b: Box) => spans(a, b) && a.top < b.bottom && b.top < a.bottom;
 const overlaps = (a: Floor, b: Floor) => Math.abs(a.y - b.y) < SAME_EDGE && spans(a, b);
 const headroom = (f: Floor, all: Floor[]) => Math.min(Infinity, ...all.filter((g) => g.y < f.y && spans(f, g)).map((g) => f.y - g.y));
 
@@ -179,3 +181,66 @@ export const inView = (f: Ledge, scene: PageMap) => f.y >= TOP_MARGIN && f.y <= 
 export const samePage = (a: PageMap, b: PageMap) => a.width === b.width && a.height === b.height
   && JSON.stringify(a.main) === JSON.stringify(b.main)
   && JSON.stringify([...a.floors]) === JSON.stringify([...b.floors]) && JSON.stringify(a.obstacles) === JSON.stringify(b.obstacles);
+
+// A card's side, in viewport px, with the side its open air is on (-1: to its
+// left). id is the ledge's id with l or r, so a wall lives as long as its
+// card's element does. A point on a wall is held as d, px down from its top,
+// so it rides with its card on scroll as ledge-local x does.
+export type Wall = { id: string; floor: number; side: -1 | 1; x: number; top: number; bottom: number };
+
+// A card shorter than this has no side worth the name.
+const MIN_WALL = 24;
+// A side whose outer strip this wide lies wholly inside another card faces
+// into that card (it is nested in it), so it is no wall.
+const STRIP = 4;
+// Between a wall and its card's content: kept clear of content too, so
+// whatever touches the side is never touching text.
+const SKIN = 2;
+
+// The box beside w, from its x outward (or inward, for a negative width).
+const besideWall = (w: Wall, width: number, top: number, bottom: number): Box => {
+  const far = w.x + w.side * width;
+  return { left: Math.min(w.x, far), right: Math.max(w.x, far), top, bottom };
+};
+
+const holds = (outer: Box, inner: Box) => outer.left <= inner.left && outer.right >= inner.right && outer.top <= inner.top && outer.bottom >= inner.bottom;
+
+// Every card's two sides, from the page map alone, so they describe the same
+// layout as its ledges and obstacles (which must have been measured: they are
+// how a nested card's inner side is told apart). Headings and the
+// leaderboard's panel have no sides, as their ledges have no base.
+export function walls(page: PageMap): Wall[] {
+  const cards = page.obstacles.filter((o) => o.block);
+  return [...page.floors].flatMap(([floor, f]) => {
+    if (f.kind !== 'card' || f.base - f.y < MIN_WALL) return [];
+    const sides: Wall[] = [
+      { id: `${floor}:l`, floor, side: -1, x: f.left, top: f.y, bottom: f.base },
+      { id: `${floor}:r`, floor, side: 1, x: f.right, top: f.y, bottom: f.base },
+    ];
+    return sides.filter((w) => !cards.some((c) => holds(c, besideWall(w, STRIP, w.top, w.bottom))));
+  });
+}
+
+// The stretches of w, in wall-local d, where a box depth px deep stands clear
+// in front of it: off every obstacle (another card included), inside main
+// and the window, with nothing but the card's empty edge just inside the
+// side. Sampled every step px, kept inset px from the wall's ends.
+export function wallRuns(w: Wall, page: PageMap, depth: number, { inset = 8, step = 4 } = {}): Run[] {
+  const { main } = page;
+  if (!main) return [];
+  const view = { left: 0, right: page.width, top: 0, bottom: page.height };
+  const content = page.obstacles.filter((o) => !o.block);
+  const open = (d: number) => {
+    const top = w.top + d - step / 2;
+    const bottom = top + step;
+    const front = besideWall(w, depth, top, bottom);
+    return holds(main, front) && holds(view, front) && !page.obstacles.some((o) => meets(front, o))
+      && !content.some((o) => meets(besideWall(w, -SKIN, top, bottom), o));
+  };
+  const count = Math.max(0, Math.floor((w.bottom - w.top - 2 * inset) / step) + 1);
+  const ds = Array.from({ length: count }, (_, i) => inset + i * step).filter(open);
+  return ds.reduce<Run[]>((runs, d) => {
+    const last = runs.at(-1);
+    return last && last.hi === d - step ? [...runs.slice(0, -1), { lo: last.lo, hi: d }] : [...runs, { lo: d, hi: d }];
+  }, []);
+}
