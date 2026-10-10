@@ -1,5 +1,5 @@
 import type { PageMap } from '../floors';
-import { inTurn, placeInTurn } from '../group';
+import { inTurn, placeIds, regroup, troupeSize } from '../group';
 import { apart } from '../math';
 import type { Cursor, Point } from '../pointer';
 import type { Rand } from '../seed';
@@ -17,34 +17,24 @@ const WARN_REACH = 260;
 // they were placed), and each one.
 export type Rabbits = { target: number; rabbits: Rabbit[] };
 
-const placeAll = (ids: readonly number[], place: (others: Rabbit[], id: number) => Rabbit | null) => placeInTurn<number, Rabbit>(ids, (id, placed) => place(placed, id));
-
 export function createRabbits(scene: PageMap, now: number, rand: Rand): Rabbits {
-  const three = placeAll([0, 1, 2], (others, id) => createRabbit(scene, now, rand, others, fresh(id)));
-  const target = three.length === 3 ? 3 : 2;
+  const three = placeIds<Rabbit>([0, 1, 2], (others, id) => createRabbit(scene, now, rand, others, fresh(id)));
+  const target = troupeSize(three);
   return { target, rabbits: three.slice(0, target) };
 }
 
-// Each kept where it can be, in id order so the same one wins a crowded
-// spot; one that must move is placed clear of every other; then any
-// missing placed afresh, up to the target and never beyond it, so scrolling
-// never adds rabbits.
-type Keep = (r: Rabbit, settled: Rabbit[], all: Rabbit[]) => Rabbit | null;
-function regroup(group: Rabbits, keep: Keep, place: (others: Rabbit[], id: number) => Rabbit | null): Rabbits {
-  const kept = placeInTurn<Rabbit, Rabbit>(group.rabbits, (r, settled) => keep(r, settled, [...settled, ...group.rabbits.filter((o) => o.id > r.id)]));
-  const missing = Array.from({ length: group.target }, (_, id) => id).filter((id) => !kept.some((r) => r.id === id));
-  const added = placeAll(missing, (others, id) => place([...kept, ...others], id));
-  return { ...group, rabbits: [...kept, ...added].sort((a, b) => a.id - b.id) };
-}
-
+// Each kept where it can be (group.ts's regroup), one that must move placed
+// clear of every other; then any missing placed afresh.
 export function reconcileRabbits(group: Rabbits, scene: PageMap, now: number, rand: Rand): Rabbits {
-  return regroup(group, (r, settled, all) => reconcileRabbit(r, scene, now, rand, settled, all), (others, id) => createRabbit(scene, now, rand, others, fresh(id)));
+  const rabbits = regroup(group.rabbits, group.target, (r, settled, all) => reconcileRabbit(r, scene, now, rand, settled, all), (others, id) => createRabbit(scene, now, rand, others, fresh(id)));
+  return { ...group, rabbits };
 }
 
 // Reduced motion: all sitting, each kept where it sat where it still can be.
 export function restingRabbits(scene: PageMap, previous: Rabbits | null): Rabbits {
   const group = previous ?? { target: createRabbits(scene, 0, () => 0.5).target, rabbits: [] };
-  return regroup(group, (r, settled, all) => restingRabbit(scene, r, settled, r, all), (others, id) => restingRabbit(scene, null, others, fresh(id)));
+  const rabbits = regroup(group.rabbits, group.target, (r, settled, all) => restingRabbit(scene, r, settled, r, all), (others, id) => restingRabbit(scene, null, others, fresh(id)));
+  return { ...group, rabbits };
 }
 
 const pointOf = (r: Rabbit, scene: PageMap): Point | null => {

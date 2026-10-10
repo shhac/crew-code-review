@@ -1,5 +1,5 @@
 import type { PageMap } from '../floors';
-import { inTurn, placeInTurn } from '../group';
+import { inTurn, placeIds, regroup, troupeSize } from '../group';
 import { apart } from '../math';
 import type { Cursor, Point } from '../pointer';
 import { between, type Rand } from '../seed';
@@ -16,36 +16,24 @@ const LOOK_REACH = 220;
 // they were placed), and each one.
 export type Foxes = { target: number; foxes: Fox[] };
 
-// Placed one after another, each away from those before it.
-const placeAll = (ids: readonly number[], place: (others: Fox[], id: number) => Fox | null) => placeInTurn<number, Fox>(ids, (id, placed) => place(placed, id));
-
 export function createFoxes(scene: PageMap, now: number, rand: Rand): Foxes {
-  const three = placeAll([0, 1, 2], (others, id) => createFox(scene, now, rand, others, fresh(id)));
-  const target = three.length === 3 ? 3 : 2;
+  const three = placeIds<Fox>([0, 1, 2], (others, id) => createFox(scene, now, rand, others, fresh(id)));
+  const target = troupeSize(three);
   return { target, foxes: three.slice(0, target) };
 }
 
-// Each kept where it can be, in id order so the same fox wins a crowded
-// spot every time; one that must move is placed clear of every other fox,
-// those still to come as they were, so it lands in nobody's way. Then any
-// missing placed afresh, up to the target and never beyond it, so scrolling
-// never adds foxes.
-type Keep = (fox: Fox, settled: Fox[], all: Fox[]) => Fox | null;
-function regroup(group: Foxes, keep: Keep, place: (others: Fox[], id: number) => Fox | null): Foxes {
-  const kept = placeInTurn<Fox, Fox>(group.foxes, (fox, settled) => keep(fox, settled, [...settled, ...group.foxes.filter((o) => o.id > fox.id)]));
-  const missing = Array.from({ length: group.target }, (_, id) => id).filter((id) => !kept.some((f) => f.id === id));
-  const added = placeAll(missing, (others, id) => place([...kept, ...others], id));
-  return { ...group, foxes: [...kept, ...added].sort((a, b) => a.id - b.id) };
-}
-
+// Each kept where it can be (group.ts's regroup), one that must move placed
+// clear of every other fox; then any missing placed afresh.
 export function reconcileFoxes(group: Foxes, scene: PageMap, now: number, rand: Rand): Foxes {
-  return regroup(group, (fox, settled, all) => reconcileFox(fox, scene, now, rand, settled, all), (others, id) => createFox(scene, now, rand, others, fresh(id)));
+  const foxes = regroup(group.foxes, group.target, (fox, settled, all) => reconcileFox(fox, scene, now, rand, settled, all), (others, id) => createFox(scene, now, rand, others, fresh(id)));
+  return { ...group, foxes };
 }
 
 // Reduced motion: all asleep, each kept where it lay where it still can be.
 export function restingFoxes(scene: PageMap, previous: Foxes | null): Foxes {
   const group = previous ?? { target: createFoxes(scene, 0, () => 0.5).target, foxes: [] };
-  return regroup(group, (fox, settled, all) => restingFox(scene, fox, settled, fox, all), (others, id) => restingFox(scene, null, others, fresh(id)));
+  const foxes = regroup(group.foxes, group.target, (fox, settled, all) => restingFox(scene, fox, settled, fox, all), (others, id) => restingFox(scene, null, others, fresh(id)));
+  return { ...group, foxes };
 }
 
 const foxPoint = (fox: Fox, scene: PageMap): Point | null => {
