@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { anchor, around } from '../air';
+import { around } from '../air';
+import { anchor } from '../anchored';
 import { seeded } from '../test-scene';
 import { clearRoute, cupidView, dodge, flightCurve, fresh, hoverAt, reconcileCupid, routes, stepCupid, where, type Cupid } from './cupid';
 import { airFor, page } from './fixtures';

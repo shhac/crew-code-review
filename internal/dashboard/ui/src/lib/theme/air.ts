@@ -1,4 +1,4 @@
-import type { Box, Ledge, Obstacle, PageMap, Reach } from './floors';
+import type { Box, Obstacle, PageMap, Reach } from './floors';
 import type { Point } from './pointer';
 
 // The page's open air, for things that fly: the box of `main` (never the
@@ -72,24 +72,4 @@ export function sweeps(air: Pick<Air, 'page' | 'room'>, boxes: readonly Box[], a
   const near = air.page.obstacles.filter((o) => !ignore(o) && meets(all, { left: o.left - GAP - 1, right: o.right + GAP + 1, top: o.top - GAP - 1, bottom: o.bottom + GAP + 1 }));
   if (boxes.length === 1) return fits(air, boxes[0], also, near);
   return boxes.slice(1).every((b, i) => fits(air, union(boxes[i], b), also, near));
-}
-
-// A point in the air, held relative to a ledge (an offset from its left end
-// and its line), so it rides with the page on scroll.
-export type Anchored = { floor: number; dx: number; dy: number };
-
-// Nearest ledge to p, by how far p is from the ledge's line.
-export function anchor(page: PageMap, p: Point): Anchored | null {
-  const best = [...page.floors].reduce<{ id: number; f: Ledge; d: number } | null>((b, [id, f]) => {
-    const x = Math.max(f.left, Math.min(f.right, p.x));
-    const d = Math.hypot(p.x - x, p.y - f.y);
-    return b && b.d <= d ? b : { id, f, d };
-  }, null);
-  return best && { floor: best.id, dx: p.x - best.f.left, dy: p.y - best.f.y };
-}
-
-// Where an anchored point is now, or null with its ledge gone.
-export function placed(page: PageMap, a: Anchored): Point | null {
-  const f = page.floors.get(a.floor);
-  return f ? { x: f.left + a.dx, y: f.y + a.dy } : null;
 }

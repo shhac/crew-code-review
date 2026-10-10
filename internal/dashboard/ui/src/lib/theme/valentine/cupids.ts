@@ -1,5 +1,6 @@
 import { around, inAir, sweeps, type Air } from '../air';
-import { heading, lengthOf, quadratic, samples, type Arc } from '../curves';
+import { fromLedge, progress, toLedge } from '../anchored';
+import { arcFrom, heading, lengthOf, quadratic, samples, type Arc } from '../curves';
 import { inView, type Box, type Ledge, type Obstacle, type PageMap } from '../floors';
 import { inTurn, placeIds, regroup, troupeSize } from '../group';
 import { apart } from '../math';
@@ -80,23 +81,14 @@ export function restingCupids(air: Air, previous: Cupids | null): Cupids {
   return { ...group, cupids, flying: null, stuck: [], bursts: [] };
 }
 
-const origin = (page: PageMap, floor: number): Point | null => {
-  const f = page.floors.get(floor);
-  return f ? { x: f.left, y: f.y } : null;
-};
-const shiftArc = (a: Arc, by: Point): Arc => ({ from: { x: a.from.x + by.x, y: a.from.y + by.y }, via: { x: a.via.x + by.x, y: a.via.y + by.y }, to: { x: a.to.x + by.x, y: a.to.y + by.y } });
-
 // An arrow's arc on the page now, or null with its ledge gone.
-export function arrowArc(page: PageMap, f: Flying): Arc | null {
-  const o = origin(page, f.floor);
-  return o && shiftArc(f.arc, o);
-}
+export const arrowArc = (page: PageMap, f: Flying): Arc | null => fromLedge(page, f.floor, f.arc);
 
 // Where an arrow's tip is, and the way it points (degrees, page), now.
 export function arrowAt(page: PageMap, f: Flying, now: number): (Point & { angle: number }) | null {
   const arc = arrowArc(page, f);
   if (!arc) return null;
-  const t = Math.max(0, Math.min(1, (now - f.start) / f.duration));
+  const t = progress(f, now);
   const h = heading(arc, t);
   return { ...quadratic(arc, t), angle: (Math.atan2(h.y, h.x) * 180) / Math.PI };
 }
@@ -190,11 +182,7 @@ function arrowStillClear(f: Flying, air: Air, cupids: readonly Cupid[], now: num
   const g = air.page.floors.get(f.floor);
   const arc = arrowArc(air.page, f);
   if (!g || !arc || !landable(g, air.page.obstacles, arc.to.x - g.left)) return false;
-  // The way still to go is the arc from t on: by de Casteljau, from the
-  // point at t, its control a t of the way from the old one to the end.
-  const t = Math.max(0, Math.min(1, (now - f.start) / f.duration));
-  const via = { x: arc.via.x + (arc.to.x - arc.via.x) * t, y: arc.via.y + (arc.to.y - arc.via.y) * t };
-  return clearArc(air, { from: quadratic(arc, t), via, to: arc.to }, g, shieldOf(air, cupids.filter((c) => c.id !== f.by), now));
+  return clearArc(air, arcFrom(arc, progress(f, now)), g, shieldOf(air, cupids.filter((c) => c.id !== f.by), now));
 }
 
 // The shooter's bow at the end of its aim: loosed along its arc if that is
@@ -204,12 +192,12 @@ function loose(group: Cupids, air: Air, c: Cupid, now: number, rand: Rand): Cupi
   const target = c.target;
   const at = where(c, air.page, now);
   const g = target && air.page.floors.get(target.floor);
-  const o = target && origin(air.page, target.floor);
-  if (!target || !at || !g || !o) return lowered;
+  if (!target || !at || !g) return lowered;
   const shot = shotTo(air, at, g, target.x, shieldOf(air, group.cupids.filter((x) => x.id !== c.id), now));
-  if (!shot || shot.dir !== c.dir) return lowered;
+  const held = shot && toLedge(air.page, target.floor, shot.arc);
+  if (!shot || !held || shot.dir !== c.dir) return lowered;
   const length = lengthOf((t) => quadratic(shot.arc, t));
-  const flying: Flying = { key: `${c.id}:${group.count}`, by: c.id, floor: target.floor, arc: shiftArc(shot.arc, { x: -o.x, y: -o.y }), start: now, duration: Math.max(MIN_ARROW, (length / ARROW_SPEED) * 1000), seed: Math.floor(rand() * 1000) };
+  const flying: Flying = { key: `${c.id}:${group.count}`, by: c.id, floor: target.floor, arc: held, start: now, duration: Math.max(MIN_ARROW, (length / ARROW_SPEED) * 1000), seed: Math.floor(rand() * 1000) };
   const cupids = group.cupids.map((x) => (x.id === c.id ? { ...x, mode: 'loose' as const, until: now + LOOSE, target: { ...target, aim: shot.aim } } : x));
   return { ...group, cupids, flying, lastShot: now, count: group.count + 1 };
 }

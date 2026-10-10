@@ -1,8 +1,11 @@
+import { mixPoint } from './math';
 import type { Point } from './pointer';
 
 // The curves things fly along: a cupid's flight, an arrow's arc, a robin's
 // route and a hare's leap. Pure maths on page points; what counts as clear
 // along one is each caller's own rule.
+
+export const shift = (p: Point, by: Point): Point => ({ x: p.x + by.x, y: p.y + by.y });
 
 // A cubic curve, for a flight from spot to spot.
 export type Curve = { from: Point; c1: Point; c2: Point; to: Point };
@@ -23,6 +26,18 @@ export const heading = (a: Arc, t: number): Point => ({
   x: 2 * (1 - t) * (a.via.x - a.from.x) + 2 * t * (a.to.x - a.via.x),
   y: 2 * (1 - t) * (a.via.y - a.from.y) + 2 * t * (a.to.y - a.via.y),
 });
+
+// The rest of an arc from t on: by de Casteljau, from the point at t, its
+// control a t of the way from the old one to the end.
+export const arcFrom = (a: Arc, t: number): Arc => ({ from: quadratic(a, t), via: mixPoint(a.via, a.to, t), to: a.to });
+
+// A curve or an arc moved by an offset, whole.
+export type Path = Curve | Arc;
+export function shiftPath<T extends Path>(path: T, by: Point): T {
+  const ends = { ...path, from: shift(path.from, by), to: shift(path.to, by) };
+  if ('via' in path) return { ...ends, via: shift(path.via, by) };
+  return { ...ends, c1: shift(path.c1, by), c2: shift(path.c2, by) };
+}
 
 // A hop from p to q: straight across, lifted by a parabola that peaks rise
 // above the straight line halfway.

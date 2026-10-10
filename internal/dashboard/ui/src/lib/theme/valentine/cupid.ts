@@ -1,5 +1,6 @@
-import { anchor, around, fits, inAir, linesOf, placed, sweeps, type Air, type Anchored } from '../air';
-import { cubic, lengthOf, samples, type Curve } from '../curves';
+import { around, fits, inAir, linesOf, sweeps, type Air } from '../air';
+import { anchor, fromLedge, placed, progress, toLedge, type Anchored } from '../anchored';
+import { cubic, lengthOf, samples, shift, type Curve } from '../curves';
 import type { PageMap } from '../floors';
 import type { Point } from '../pointer';
 import { apart, smooth } from '../math';
@@ -11,9 +12,10 @@ import { FOOTPRINTS, SPOT, type Footprint } from './footprints';
 // One cupid: where it hovers, how it flits from spot to spot and dodges a
 // cursor whipping past, and what it is doing with its bow (the shot itself,
 // which the group decides, is in cupids.ts). Every place is anchored to a
-// ledge (air.ts), so a cupid rides with the page on scroll; a flight is held
-// relative to the ledge it set off from. design-docs/valentine/README.md has
-// the state table and the airspace contract.
+// ledge (anchored.ts), so a cupid rides with the page on scroll; a flight
+// is held relative to the ledge it set off from.
+// design-docs/valentine/README.md has the state table and the airspace
+// contract.
 
 export type Mode = 'hover' | 'flit' | 'dodge' | 'enter' | 'turn' | 'draw' | 'aim' | 'loose';
 export type Flight = { floor: number; curve: Curve; start: number; duration: number };
@@ -73,25 +75,14 @@ const CALM = 1200;
 const GAZE_REACH = 160;
 const GAZE_EASE = 220;
 
-const shift = (p: Point, by: Point): Point => ({ x: p.x + by.x, y: p.y + by.y });
-const shiftCurve = (c: Curve, by: Point): Curve => ({ from: shift(c.from, by), c1: shift(c.c1, by), c2: shift(c.c2, by), to: shift(c.to, by) });
-const origin = (page: PageMap, floor: number): Point | null => {
-  const f = page.floors.get(floor);
-  return f ? { x: f.left, y: f.y } : null;
-};
-
 // A flight's curve on the page now, or null with its ledge gone.
-export function flightCurve(page: PageMap, f: Flight): Curve | null {
-  const o = origin(page, f.floor);
-  return o && shiftCurve(f.curve, o);
-}
-const flown = (f: Flight, now: number) => Math.max(0, Math.min(1, (now - f.start) / f.duration));
+export const flightCurve = (page: PageMap, f: Flight): Curve | null => fromLedge(page, f.floor, f.curve);
 
 // Where a cupid is now, on the page, or null with its ledge gone.
 export function where(c: Pick<Cupid, 'spot' | 'flight'>, page: PageMap, now: number): Point | null {
   if (!c.flight) return placed(page, c.spot);
   const curve = flightCurve(page, c.flight);
-  return curve && cubic(curve, smooth(flown(c.flight, now)));
+  return curve && cubic(curve, smooth(progress(c.flight, now)));
 }
 
 // What the drawing needs: its pose, how far through a draw or a loose,
@@ -105,7 +96,7 @@ export function cupidView(c: Cupid, page: PageMap, now: number): CupidView | nul
   const base = { ...at, dir: c.dir, progress: 0, speed: 0, accel: 0, opacity };
   if (c.flight) {
     const curve = flightCurve(page, c.flight);
-    const t = flown(c.flight, now), length = curve ? lengthOf((u) => cubic(curve, u)) : 0;
+    const t = progress(c.flight, now), length = curve ? lengthOf((u) => cubic(curve, u)) : 0;
     const seconds = c.flight.duration / 1000;
     const speed = (length * 6 * t * (1 - t)) / seconds, accel = (length * 6 * (1 - 2 * t)) / (seconds * seconds);
     return { ...base, pose: c.mode === 'dodge' && t < 0.35 ? 'dodge' : 'flight', speed, accel };
@@ -137,7 +128,7 @@ export function claims(others: readonly Cupid[], page: PageMap, now: number): Po
     const f = o.flight;
     const curve = f && flightCurve(page, f);
     if (!f || !curve) return [];
-    const done = flown(f, now);
+    const done = progress(f, now);
     return samples((u) => cubic(curve, smooth(done + u * (1 - done))), 8).map((s) => s.p);
   };
   return others.flatMap((o) => {
@@ -175,11 +166,10 @@ export function clearRoute(air: Pick<Air, 'page' | 'room'>, curve: Curve, taken:
 // A flight from where it is to a spot, held relative to the spot's ledge.
 function flightTo(page: PageMap, from: Point, to: Point, curve: Curve, now: number, speed: number): { spot: Anchored; flight: Flight } | null {
   const spot = anchor(page, to);
-  const o = spot && origin(page, spot.floor);
-  if (!spot || !o) return null;
+  const held = spot && toLedge(page, spot.floor, curve);
+  if (!spot || !held) return null;
   const length = lengthOf((t) => cubic(curve, t));
-  const back = { x: -o.x, y: -o.y };
-  return { spot, flight: { floor: spot.floor, curve: shiftCurve(curve, back), start: now, duration: Math.max(MIN_FLIGHT, (length / speed) * 1000) } };
+  return { spot, flight: { floor: spot.floor, curve: held, start: now, duration: Math.max(MIN_FLIGHT, (length / speed) * 1000) } };
 }
 
 // The first clear flight to any of these spots, tried in order.
@@ -224,7 +214,7 @@ export function stepCupid(c: Cupid, air: Air, now: number, dt: number, rand: Ran
   if (c.flight) {
     if (now < c.flight.start + c.flight.duration) {
       const curve = flightCurve(air.page, c.flight);
-      const ahead = curve && cubic(curve, Math.min(1, smooth(flown(c.flight, now)) + 0.02));
+      const ahead = curve && cubic(curve, Math.min(1, smooth(progress(c.flight, now)) + 0.02));
       const dir = ahead && here && Math.abs(ahead.x - here.x) > 0.3 ? (ahead.x > here.x ? 1 : -1) : c.dir;
       return { ...lived, dir };
     }
@@ -293,7 +283,7 @@ export function reconcileCupid(c: Cupid, air: Air, now: number, rand: Rand, othe
   if (!here || !spot) return createCupid(air, now, rand, others, c, SPACING, 'enter');
   if (c.flight) {
     const curve = flightCurve(air.page, c.flight);
-    const left = curve && { from: here, c1: cubic(curve, 0.5 + flown(c.flight, now) / 2), c2: cubic(curve, 0.75 + flown(c.flight, now) / 4), to: curve.to };
+    const left = curve && { from: here, c1: cubic(curve, 0.5 + progress(c.flight, now) / 2), c2: cubic(curve, 0.75 + progress(c.flight, now) / 4), to: curve.to };
     if (left && clearRoute(air, left, taken) && canHover(air, spot, taken)) return c;
   } else if (canHover(air, spot, taken)) {
     return c;

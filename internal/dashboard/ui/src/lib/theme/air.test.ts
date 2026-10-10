@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { airOf, anchor, around, fits, inAir, meets, placed, sweeps } from './air';
+import { airOf, around, fits, inAir, meets, sweeps } from './air';
 import type { Box } from './floors';
 import { airFor, MAIN, page } from './valentine/fixtures';
 import { SPOT } from './valentine/footprints';
@@ -41,13 +41,5 @@ describe('the air', () => {
     const view = { left: 10, right: 20, top: 10, bottom: 20 };
     expect(inAir(view, { x: 10, y: 20 })).toBe(true);
     expect(inAir(view, { x: 9.5, y: 15 })).toBe(false);
-  });
-
-  it('holds a point against its nearest ledge, so it rides with the page', () => {
-    const p = page();
-    const a = anchor(p, { x: 700, y: 120 })!;
-    expect(a.floor).toBe(1);
-    const scrolled = page(p.obstacles, [...p.floors].map(([id, f]) => [id, { ...f, y: f.y - 50 }]));
-    expect(placed(scrolled, a)).toEqual({ x: 700, y: 70 });
   });
 });
