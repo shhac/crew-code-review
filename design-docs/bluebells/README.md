@@ -462,7 +462,9 @@ matches, at 12 file px per drawing unit.
   pollen ball, so a load can come and go), each outlined and as fill only
   (`fill_only`). At 18px a tarsus is under a pixel thick, so tarsi are code
   strokes in the outline colour, with a two-pixel hook for the claws. The
-  far legs a shade darker. `rig/gait.ts`'s quadruped legs do not fit six
+  far legs a shade darker. The drawings mark each leg joint and the wing
+  hinge with a small grey knob; leave those out of the cut pieces, since
+  the fill-only pass already hides the joins. `rig/gait.ts`'s quadruped legs do not fit six
   legs; the owner adds a small hexapod stepping (two alternating tripods,
   driven by distance crawled so planted feet never slide) additively to
   `rig/`.
@@ -496,13 +498,22 @@ every leg on the thorax (a second try, from a prompt spelling out the body
 plan). Of two drawn from that prompt, the one with all six feet showing was
 kept.
 
-Key poses, each an edit of the reference on the same canvas scale:
+Key poses, each an edit of the reference on the same canvas scale. The
+first hover came out nearly level, with a translucent magenta-tinted patch
+by the forelegs; it was redrawn with the tilt spelt out (about 40° now).
+The crawl shows the walk less clearly than asked (most feet down, a
+foreleg raised by the jaws, more groom than stride); it is kept as the
+crawl's posture (low body, folded wings, head down) and the stepping is
+tuned in code against the gait research instead. Every pose keeps six legs
+on the thorax and four wings, and all key cleanly on the dashboard's
+surface (about 0.55% of a bee's pixels are partly transparent, all on its
+outline).
 
 | Pose | Mode |
 | --- | --- |
 | `bee-pose-perch.png` | perch: on top of one bell, head at its base near the stalk, wings folded |
 | `bee-pose-crawl.png` | crawl: walking, wings folded |
-| `bee-pose-hover.png` | hover: body steeply nose up, wings level, legs dangling |
+| `bee-pose-hover.png` | hover: body about 40° nose up, wings spread back, legs dangling |
 | `bee-pose-fly.png` | fly: body nearly level, wings up, legs tucked, hind legs trailing |
 | `bee-pose-land.png` | land: legs reaching forward and down |
 | `bee-pose-bonk.png` | bonk: recoiling nose up from a wall on its right, legs splayed |
