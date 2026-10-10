@@ -1,6 +1,7 @@
-import { inView, type Ledge, type PageMap, type Run } from '../floors';
+import type { Ledge, PageMap, Run } from '../floors';
 import {
-  bodyOf, clampTo, clearOf, ledgeEnds, lengthOf, pageAt, pointClaim, roomiest, runAt, runsOf, runUnder, spare, staysPut, within, type Claim, type Walker,
+  arriving, bodyOf, clampTo, clearOf, entries, exitEnd, ledgeEnds, lengthOf, pageAt, pointClaim, roomiest, runAt, runUnder, spare, staysPut, within,
+  type Claim, type Entry, type Trip, type Walker,
 } from '../ledges';
 import { apart, clamp01, sign } from '../math';
 import type { Cursor, Point } from '../pointer';
@@ -65,7 +66,7 @@ const SPACING = 120;
 export type Mode = 'asleep' | 'waking' | 'stretch' | 'trot' | 'exit' | 'away' | 'enter' | 'settle' | 'crouch' | 'leap' | 'dig';
 // Where a fox changing ledge is going: the end of the ledge it trots in from,
 // and where it will lie down.
-export type Trip = { floor: number; entry: number; x: number };
+export type { Trip };
 export type Fox = {
   id: number;
   // Its own blinks and breaths, so no two foxes keep time.
@@ -97,7 +98,6 @@ export type Fox = {
 // Where it lies or trots, its whole body stays on the clear run, not just
 // its middle, and it keeps SPACING from the other foxes.
 const FOX: Walker = { clear: CLEAR, reach: REACH, half: POSES.trot.width / 2, spacing: SPACING };
-const runs = (f: Ledge, scene: PageMap) => runsOf(f, scene, FOX);
 const body = (r: Run): Run => bodyOf(r, FOX.half);
 const flip = (d: 1 | -1): 1 | -1 => (d === 1 ? -1 : 1);
 
@@ -226,9 +226,8 @@ function depart(fox: Fox, scene: PageMap, now: number, rand: Rand, cursor: Curso
     return items.length ? pick(rand, items) : undefined;
   };
   // Out by the end away from the cursor, or else the nearer one.
-  const open = ledgeEnds(f, run).filter((x) => clear(taken, fox.floor, fox.x, x));
-  const exit = maxBy(open, (x) => (avoid ? apart(pageAt(f, x), avoid) : -Math.abs(x - fox.x)));
-  const way = exit === undefined ? undefined : choose(entries(fox, scene, rand, taken), (e, from) => apart(e.at, from));
+  const exit = exitEnd(f, run, fox, taken, SPACING, avoid);
+  const way = exit === undefined ? undefined : choose(waysOn(fox, scene, rand, taken), (e, from) => apart(e.at, from));
   if (exit !== undefined && way) return { ...fox, mode: 'exit', target: exit, dir: sign(exit - fox.x), trip: way.trip };
   // Along its own run, stopping SPACING short of the nearest fox each way.
   const room = body(run);
@@ -246,15 +245,8 @@ function depart(fox: Fox, scene: PageMap, now: number, rand: Rand, cursor: Curso
 
 // Every way onto another ledge in view: in at one of its ends (at, on the
 // page), to lie down 30px or more inside.
-function entries(fox: Fox, scene: PageMap, rand: Rand, taken: readonly Claim[]): { trip: Trip; at: Point }[] {
-  return [...scene.floors].flatMap(([floor, g]) => {
-    if (floor === fox.floor || !inView(g, scene)) return [];
-    return runs(g, scene).filter((r) => lengthOf(r) >= MIN_ENTRY).flatMap((r) => ledgeEnds(g, r).map((entry) => {
-      const inward = entry === r.lo ? 1 : -1;
-      return { trip: { floor, entry, x: entry + inward * between(rand, 30, lengthOf(r) - 16) }, at: pageAt(g, entry) };
-    })).filter((e) => clear(taken, floor, e.trip.entry, e.trip.x));
-  });
-}
+const waysOn = (fox: Fox, scene: PageMap, rand: Rand, taken: readonly Claim[]): Entry[] =>
+  entries(scene, FOX, fox.floor, MIN_ENTRY, taken, (r, entry, inward) => entry + inward * between(rand, 30, lengthOf(r) - 16));
 
 const settle = (fox: Fox, now: number): Fox => ({ ...fox, mode: 'settle', until: now + SETTLE, trip: null });
 
@@ -338,18 +330,10 @@ export function stepFox(fox: Fox, scene: PageMap, now: number, dt: number, rand:
 // Out of sight, then in at the far ledge's end if that is still somewhere to
 // go; if not, it turns up asleep somewhere else.
 function arrive(fox: Fox, scene: PageMap, now: number, rand: Rand, others: readonly Fox[]): Fox {
-  const trip = fox.trip;
-  if (trip && stillOpen(trip, scene) && clear(claims(others), trip.floor, trip.entry, trip.x)) {
+  const trip = arriving(fox.trip, scene, FOX, claims(others), 'run');
+  if (trip) {
     return { ...fox, floor: trip.floor, x: trip.entry, from: trip.entry, target: trip.x, dir: sign(trip.x - trip.entry), mode: 'enter', trip: null };
   }
   return createFox(scene, now, rand, others, fox) ?? { ...fox, mode: 'away', until: now + 2000 };
 }
 
-// Whether a trip's way in is still there: its ledge in view, its entry still
-// a clear end of that ledge, and the spot it was heading for in the same run.
-function stillOpen(trip: Trip, scene: PageMap): boolean {
-  const g = scene.floors.get(trip.floor);
-  if (!g || !inView(g, scene)) return false;
-  const run = runAt(g, scene, FOX, trip.entry);
-  return !!run && ledgeEnds(g, run).includes(trip.entry) && run.lo <= trip.x && trip.x <= run.hi;
-}

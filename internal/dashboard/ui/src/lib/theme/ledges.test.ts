@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Ledge } from './floors';
-import { clearOf, freeOf, ledgeEnds, pointClaim, roomiest, runUnder, spare, staysPut, type Walker } from './ledges';
+import { arriving, clearOf, entries, exitEnd, freeOf, ledgeEnds, pointClaim, roomiest, runUnder, spare, staysPut, stillOpen, type Walker } from './ledges';
 import { scene } from './test-scene';
 
 const ledge = (left: number, right: number, y: number): Ledge => ({ left, right, y, base: y + 100, room: Infinity, headroom: Infinity });
@@ -51,6 +51,34 @@ describe('keeping walkers apart', () => {
     const page = scene([[1, ledge(0, 900, 300)], [2, ledge(0, 300, 500)]]);
     expect(roomiest(page, [], WALKER, 40)?.floor).toBe(1);
     expect(roomiest(page, [pointClaim(1, 450)], WALKER, 40)?.floor).toBe(2);
+  });
+
+  it('finds the ways in at the ends of other ledges, to where the walker chooses to stop', () => {
+    const page = scene([[1, ledge(0, 400, 300)], [2, ledge(500, 900, 400)]]);
+    const inside = (_: unknown, entry: number, inward: 1 | -1) => entry + inward * 100;
+    expect(entries(page, WALKER, 1, 90, [], inside)).toEqual([
+      { trip: { floor: 2, entry: 8, x: 108 }, at: { x: 508, y: 400 } },
+      { trip: { floor: 2, entry: 392, x: 292 }, at: { x: 892, y: 400 } },
+    ]);
+    expect(entries(page, WALKER, 1, 90, [pointClaim(2, 350)], inside).map((e) => e.trip.entry)).toEqual([8]);
+    expect(entries(page, WALKER, 1, 90, [], () => null)).toEqual([]);
+  });
+
+  it('keeps a trip open while its way in is there, all of the walker on the run for body', () => {
+    const page = scene([[2, ledge(500, 900, 400)]]);
+    expect(stillOpen({ floor: 2, entry: 8, x: 10 }, page, WALKER, 'run')).toBe(true);
+    expect(stillOpen({ floor: 2, entry: 8, x: 10 }, page, WALKER, 'body')).toBe(false);
+    expect(stillOpen({ floor: 2, entry: 100, x: 150 }, page, WALKER, 'run')).toBe(false);
+    expect(arriving({ floor: 2, entry: 8, x: 108 }, page, WALKER, [pointClaim(2, 150)], 'body')).toBeNull();
+  });
+
+  it('leaves by the end away from what scared it, else the nearer', () => {
+    const page = scene([[1, ledge(0, 400, 300)]]);
+    const f = page.floors.get(1)!;
+    const run = { lo: 8, hi: 392 };
+    expect(exitEnd(f, run, { floor: 1, x: 100 }, [], 60, null)).toBe(8);
+    expect(exitEnd(f, run, { floor: 1, x: 100 }, [], 60, { x: 0, y: 300 })).toBe(392);
+    expect(exitEnd(f, run, { floor: 1, x: 100 }, [pointClaim(1, 30)], 60, null)).toBe(392);
   });
 
   it('lets a walker stay with all of it on a run and nobody too close', () => {

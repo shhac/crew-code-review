@@ -1,6 +1,7 @@
-import { inView, type Ledge, type PageMap, type Run } from '../floors';
+import type { Ledge, PageMap, Run } from '../floors';
 import {
-  bodyOf, clearOf, ledgeEnds, lengthOf, pageAt, pointClaim, roomiest, RUNS, runAt, runsOf, runUnder, spare, staysPut, widthOf, within, type Claim, type Walker,
+  arriving, bodyOf, clearOf, entries, exitEnd, ledgeEnds, lengthOf, pageAt, pointClaim, roomiest, RUNS, runAt, runUnder, spare, staysPut, widthOf, within,
+  type Claim, type Entry, type Trip, type Walker,
 } from '../ledges';
 import { apart, clamp01, sign } from '../math';
 import type { Cursor, Point } from '../pointer';
@@ -70,7 +71,7 @@ const NOSE = 17;
 export type Mode = 'sit' | 'alert' | 'groom' | 'hop' | 'nudge' | 'thump' | 'bolt' | 'exit' | 'away' | 'enter';
 // Where a rabbit changing ledge is going: the end it hops in at, and where
 // it will sit.
-export type Trip = { floor: number; entry: number; x: number };
+export type { Trip };
 export type Rabbit = {
   id: number;
   seed: number;
@@ -109,7 +110,6 @@ export type Rabbit = {
 };
 
 const RABBIT: Walker = { clear: CLEAR, reach: REACH, half: HALF, spacing: SPACING };
-const runs = (f: Ledge, scene: PageMap) => runsOf(f, scene, RABBIT);
 const body = (r: Run): Run => bodyOf(r, HALF);
 
 // Who a rabbit is, kept across every change of place.
@@ -300,22 +300,19 @@ function layingSpot(r: Rabbit, f: Ledge, run: Run, scene: PageMap, taken: readon
 // the nearer) to another ledge in view; null if there is none.
 type Way = { trip: Trip; exit: number };
 function way(r: Rabbit, f: Ledge, run: Run, scene: PageMap, rand: Rand, taken: readonly Claim[], away: Point | null): Way | null {
-  const open = ledgeEnds(f, run).filter((x) => clear(taken, r.floor, r.x, x));
-  const exit = maxBy(open, (x) => (away ? apart(pageAt(f, x), away) : -Math.abs(x - r.x)));
-  const ways = entries(r, scene, rand, taken);
+  const exit = exitEnd(f, run, r, taken, SPACING, away);
+  const ways = waysOn(r, scene, rand, taken);
   const to = away ? maxBy(ways, (e) => apart(e.at, away)) : ways.length ? pick(rand, ways) : undefined;
   return exit !== undefined && to ? { trip: to.trip, exit } : null;
 }
 
-function entries(r: Rabbit, scene: PageMap, rand: Rand, taken: readonly Claim[]): { trip: Trip; at: Point }[] {
-  return [...scene.floors].flatMap(([floor, g]) => {
-    if (floor === r.floor || !inView(g, scene)) return [];
-    return runs(g, scene).filter((run) => lengthOf(run) >= MIN_ENTRY).flatMap((run) => ledgeEnds(g, run).flatMap((entry) => {
-      const inward = entry === run.lo ? 1 : -1;
-      const hops = Math.max(2, Math.floor(between(rand, 30 + HALF, lengthOf(run) - HALF) / HOP_LENGTH));
-      const x = entry + inward * hops * HOP_LENGTH;
-      return within(body(run), x) && clear(taken, floor, entry, x) ? [{ trip: { floor, entry, x }, at: pageAt(g, entry) }] : [];
-    }));
+// Every way onto another ledge in view: in at one of its ends, to sit a
+// whole number of hops (two or more) inside, all of it on the run.
+function waysOn(r: Rabbit, scene: PageMap, rand: Rand, taken: readonly Claim[]): Entry[] {
+  return entries(scene, RABBIT, r.floor, MIN_ENTRY, taken, (run, entry, inward) => {
+    const hops = Math.max(2, Math.floor(between(rand, 30 + HALF, lengthOf(run) - HALF) / HOP_LENGTH));
+    const x = entry + inward * hops * HOP_LENGTH;
+    return within(body(run), x) ? x : null;
   });
 }
 
@@ -400,16 +397,10 @@ export function stepRabbit(start: Rabbit, scene: PageMap, now: number, dt: numbe
 // Out of sight, then in at the far ledge's end if that is still somewhere to
 // go; if not, it turns up sitting somewhere else.
 function arrive(r: Rabbit, scene: PageMap, now: number, rand: Rand, others: readonly Rabbit[]): Rabbit {
-  const t = r.trip;
-  if (t && stillOpen(t, scene) && clear(claims(others), t.floor, t.entry, t.x)) {
+  const t = arriving(r.trip, scene, RABBIT, claims(others), 'body');
+  if (t) {
     return hopToward({ ...r, floor: t.floor, x: t.entry, from: t.entry, trip: null }, 'enter', now, t.x);
   }
   return createRabbit(scene, now, rand, others, r) ?? { ...r, until: now + 2000 };
 }
 
-function stillOpen(t: Trip, scene: PageMap): boolean {
-  const g = scene.floors.get(t.floor);
-  if (!g || !inView(g, scene)) return false;
-  const run = runAt(g, scene, RABBIT, t.entry);
-  return !!run && ledgeEnds(g, run).includes(t.entry) && within(body(run), t.x);
-}

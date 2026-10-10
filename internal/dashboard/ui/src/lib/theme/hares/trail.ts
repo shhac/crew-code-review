@@ -1,5 +1,5 @@
 import { inView, type Box, type Ledge, type PageMap, type Reach, type Run } from '../floors';
-import { bodyOf, clearOf, ledgeEnds, pageAt, runAt, runsOf, type Claim as Stretch } from '../ledges';
+import { bodyOf, clearOf, entries, ledgeEnds, pageAt, runAt, runsOf, type Claim as Stretch, type Walker } from '../ledges';
 import { apart, clamp, sign } from '../math';
 import type { Point } from '../pointer';
 import { between, maxBy, type Rand } from '../seed';
@@ -69,8 +69,8 @@ export type PlanOptions = {
 export type Claim = Stretch & { box?: Box };
 
 const segLength = (s: Segment) => (s.kind === 'run' ? Math.abs(s.to - s.from) : s.length);
-// How the ledges are measured for a trail: runs clear to opts.clear.
-const footing = (opts: PlanOptions) => ({ clear: opts.clear, reach: REACH });
+// How a hare on a trail stands on the ledges.
+const walkerOf = (opts: PlanOptions): Walker => ({ clear: opts.clear, reach: REACH, half: opts.body.half, spacing: opts.spacing });
 
 export const trailOf = (segments: Segment[]): Trail => ({ segments, length: segments.reduce((sum, s) => sum + segLength(s), 0) });
 
@@ -157,7 +157,7 @@ function leapsFrom(fid: number, f: Ledge, x: number, dir: 1 | -1, scene: PageMap
   const avoid = opts.claims.flatMap((c) => (c.box ? [c.box] : []));
   return [...scene.floors].flatMap(([gid, g]) => {
     if (gid === fid || visited.includes(gid) || !inView(g, scene)) return [];
-    return runsOf(g, scene, footing(opts)).flatMap((r) => {
+    return runsOf(g, scene, walkerOf(opts)).flatMap((r) => {
       const room = bodyOf(r, opts.body.half);
       const land = dir > 0 ? room.lo : room.hi;
       const q = pageAt(g, land);
@@ -174,19 +174,14 @@ function leapsFrom(fid: number, f: Ledge, x: number, dir: 1 | -1, scene: PageMap
 }
 
 // Every way out of sight off this ledge's end and in at another's, coming
-// in to a clear run reaching that end.
+// in to a clear run reaching that end, with room to go on ONWARD inside.
 function entriesFrom(fid: number, x: number, scene: PageMap, visited: readonly number[], opts: PlanOptions): Hop[] {
-  const half = opts.body.half;
-  return [...scene.floors].flatMap(([gid, g]) => {
-    if (gid === fid || visited.includes(gid) || !inView(g, scene)) return [];
-    return runsOf(g, scene, footing(opts)).flatMap((r) => ledgeEnds(g, r).flatMap((entry) => {
-      const dir: 1 | -1 = entry === r.lo ? 1 : -1;
-      if (r.hi - r.lo < 2 * half + ONWARD) return [];
-      const inward = entry + dir * (half + ONWARD);
-      if (claimed(opts.claims, gid, Math.min(entry, inward), Math.max(entry, inward), opts.spacing)) return [];
-      return [{ segment: { kind: 'away', from: { floor: fid, x }, to: { floor: gid, x: entry }, length: AWAY }, floor: gid, x: entry, dir, at: pageAt(g, entry) }];
+  const w = walkerOf(opts);
+  return entries(scene, w, fid, 2 * w.half + ONWARD, opts.claims, (_, entry, inward) => entry + inward * (w.half + ONWARD))
+    .filter(({ trip }) => !visited.includes(trip.floor))
+    .map(({ trip, at }) => ({
+      segment: { kind: 'away', from: { floor: fid, x }, to: { floor: trip.floor, x: trip.entry }, length: AWAY }, floor: trip.floor, x: trip.entry, dir: sign(trip.x - trip.entry), at,
     }));
-  });
 }
 
 // Of the ways on, the one to take: onto the ledge a trip is heading for;
@@ -206,7 +201,7 @@ function choose(hops: readonly Hop[], opts: PlanOptions): Hop | undefined {
 export function plan(start: Spot, dir: 1 | -1, scene: PageMap, opts: PlanOptions): Trail {
   const step = (at: Spot, d: 1 | -1, segments: Segment[], visited: number[]): Segment[] => {
     const f = scene.floors.get(at.floor);
-    const r = f && runAt(f, scene, footing(opts), at.x);
+    const r = f && runAt(f, scene, walkerOf(opts), at.x);
     if (!f || !r) return segments;
     const used = segments.reduce((sum, s) => sum + segLength(s), 0);
     const lane = laneEnd(f, r, at.floor, at.x, d, opts);

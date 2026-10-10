@@ -1,4 +1,5 @@
 import { clearance, clearRuns, inView, type Ledge, type PageMap, type Run } from './floors';
+import { apart } from './math';
 import type { Point } from './pointer';
 import { maxBy } from './seed';
 
@@ -83,4 +84,45 @@ export function staysPut(at: { floor: number; x: number }, scene: PageMap, w: Wa
   const f = scene.floors.get(at.floor);
   const run = f && runAt(f, scene, w, at.x);
   return !!run && within(bodyOf(run, w.half), at.x, slack) && clearOf(taken, at.floor, at.x, at.x, w.spacing);
+}
+
+// Where a walker changing ledge is going: the end of the ledge it comes in
+// at, and where it will stop.
+export type Trip = { floor: number; entry: number; x: number };
+// A way onto another ledge, and where on the page it comes in.
+export type Entry = { trip: Trip; at: Point };
+
+// Every way onto a ledge in view other than `leaving`: in at an end of one
+// of its clear runs at least minEntry long, to where `inside` says it stops
+// on that run going inward (null for nowhere), clear of the claims.
+export function entries(scene: PageMap, w: Walker, leaving: number, minEntry: number, taken: readonly Claim[], inside: (r: Run, entry: number, inward: 1 | -1) => number | null): Entry[] {
+  return [...scene.floors].flatMap(([floor, g]) => {
+    if (floor === leaving || !inView(g, scene)) return [];
+    return runsOf(g, scene, w).filter((r) => lengthOf(r) >= minEntry).flatMap((r) => ledgeEnds(g, r).flatMap((entry) => {
+      const x = inside(r, entry, entry === r.lo ? 1 : -1);
+      return x !== null && clearOf(taken, floor, entry, x, w.spacing) ? [{ trip: { floor, entry, x }, at: pageAt(g, entry) }] : [];
+    }));
+  });
+}
+
+// Whether a trip's way in is still there: its ledge in view, its entry still
+// a clear end of that ledge, and where it was heading on the same run (with
+// all of its body on it, for 'body').
+export function stillOpen(trip: Trip, scene: PageMap, w: Walker, room: 'run' | 'body'): boolean {
+  const g = scene.floors.get(trip.floor);
+  if (!g || !inView(g, scene)) return false;
+  const run = runAt(g, scene, w, trip.entry);
+  return !!run && ledgeEnds(g, run).includes(trip.entry) && within(room === 'body' ? bodyOf(run, w.half) : run, trip.x);
+}
+
+// The trip a walker out of sight comes in by: still open and clear of the
+// claims; else null, and it turns up somewhere else.
+export const arriving = (trip: Trip | null, scene: PageMap, w: Walker, taken: readonly Claim[], room: 'run' | 'body') =>
+  trip && stillOpen(trip, scene, w, room) && clearOf(taken, trip.floor, trip.entry, trip.x, w.spacing) ? trip : null;
+
+// The end of its run a walker leaves its ledge by: one it can reach clear of
+// the claims, the furthest from `away` when given, else the nearer.
+export function exitEnd(f: Ledge, run: Run, at: { floor: number; x: number }, taken: readonly Claim[], spacing: number, away: Point | null): number | undefined {
+  const open = ledgeEnds(f, run).filter((e) => clearOf(taken, at.floor, at.x, e, spacing));
+  return maxBy(open, (e) => (away ? apart(pageAt(f, e), away) : -Math.abs(e - at.x)));
 }
