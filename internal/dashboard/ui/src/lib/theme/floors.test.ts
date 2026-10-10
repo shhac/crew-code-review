@@ -93,6 +93,13 @@ describe('samePage', () => {
     expect(samePage(map(), map(200, [{ left: 0, right: 12, top: 0, bottom: 10 }]))).toBe(false);
     expect(samePage(map(), map(200, undefined, 900))).toBe(false);
   });
+
+  it('sees main moving on its own as a change, so the air in it is measured again', () => {
+    const main = { left: 240, right: 1000, top: 0, bottom: 1600 };
+    expect(samePage({ ...map(), main }, { ...map(), main: { ...main } })).toBe(true);
+    expect(samePage({ ...map(), main }, { ...map(), main: { ...main, bottom: 1200 } })).toBe(false);
+    expect(samePage({ ...map(), main }, map())).toBe(false);
+  });
 });
 
 describe('clearance', () => {

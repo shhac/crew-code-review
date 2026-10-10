@@ -31,11 +31,6 @@
   $: shown = group ? views(group, page, now) : [];
   $: arrow = group?.flying ? arrowAt(page, group.flying, now) : null;
 
-  function mainBox() {
-    const r = document.querySelector('main')?.getBoundingClientRect();
-    return r ? { left: r.left, right: r.right, top: r.top, bottom: r.bottom } : null;
-  }
-
   // Reduced motion draws a still frame only after a measurement, so the
   // cupids are placed here with everything else.
   function place(current: Cupids | null, next: Air, previous: PageMap, time: number): Cupids {
@@ -52,7 +47,7 @@
       page = measured;
       floors = measured.floors;
       petals = scatterPetals(floors, measured.obstacles);
-      air = airOf(measured, mainBox(), SPOT);
+      air = airOf(measured, measured.main ?? null, SPOT);
       group = place(group, air, previous, time);
     },
     frame(time, step) {

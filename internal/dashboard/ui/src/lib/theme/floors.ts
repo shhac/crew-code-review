@@ -155,13 +155,19 @@ export function clearRuns(f: Ledge, obstacles: readonly Obstacle[], height: numb
 }
 
 // One measurement of everything a scene is placed against, taken together so
-// its ledges and obstacles always describe the same layout.
-export type PageMap = { floors: ReadonlyMap<number, Ledge>; obstacles: readonly Obstacle[]; width: number; height: number };
+// its ledges and obstacles always describe the same layout. main is the box
+// of `main` (absent where there is none, or nothing measured it).
+export type PageMap = { floors: ReadonlyMap<number, Ledge>; obstacles: readonly Obstacle[]; width: number; height: number; main?: Box };
+
+const boxOf = (el: Element | null): Box | undefined => {
+  const r = el?.getBoundingClientRect();
+  return r && { left: r.left, right: r.right, top: r.top, bottom: r.bottom };
+};
 
 // Walking every text node is the costly part, so a scene that never steers
 // around text can leave the obstacles out.
 export function measurePage({ obstacles = true } = {}): PageMap {
-  return { floors: measureFloors(), obstacles: obstacles ? measureObstacles() : [], width: innerWidth, height: innerHeight };
+  return { floors: measureFloors(), obstacles: obstacles ? measureObstacles() : [], width: innerWidth, height: innerHeight, main: boxOf(document.querySelector('main')) };
 }
 
 // Where a creature may newly settle or head for: clear of the top bar and the
@@ -171,4 +177,5 @@ const BOTTOM_MARGIN = 30;
 export const inView = (f: Ledge, scene: PageMap) => f.y >= TOP_MARGIN && f.y <= scene.height - BOTTOM_MARGIN && f.left >= 0 && f.right <= scene.width;
 
 export const samePage = (a: PageMap, b: PageMap) => a.width === b.width && a.height === b.height
+  && JSON.stringify(a.main) === JSON.stringify(b.main)
   && JSON.stringify([...a.floors]) === JSON.stringify([...b.floors]) && JSON.stringify(a.obstacles) === JSON.stringify(b.obstacles);
