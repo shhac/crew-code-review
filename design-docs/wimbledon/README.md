@@ -1,10 +1,7 @@
 # Summer tennis (2026-10-10)
 
-**Status**: being built, on the bird and surfaces kits. Done: the birds'
-parts, the shelf, the court lines, the pure models, the pigeon's and the
-hawk's rigs in the critters lab, and the layer drawing it all (see "As
-built" under each). Still to do: the overlay contract's row, the Linux-font
-check and switching the month on.
+**Status**: built, on the bird and surfaces kits, and switched on for July
+(see "As built" under each section, and "Verification, as built" below).
 
 **Pins**: written against `ea7e9d5` (the hedgehog rebuilt from one drawing and
 the robin kept mounted). Code-internal, except the research sources below.
@@ -831,6 +828,40 @@ glide drawing does (held level, a wing seen side on is a line). It flaps
 
 The critters lab has both (`lab/critters/pigeon.ts`, `hawk.ts`), with the
 key poses laid over their modes eye to eye.
+
+Standing or alert, a pigeon turns its head toward a cursor within 150px,
+or toward the ball when one bounces near it (`gazeAt`, eased by the layer
+as every animal's head turn is). Turned up it tips its bill at most 4
+degrees, and in the alert, stretched as tall as a ledge allows, not at all;
+the stand's footprint is 30.5 x 25 to hold the turn.
+
+## Verification, as built
+
+- Unit tests (vitest): the lines (`lines.test.ts`), the rally
+  (`rally.test.ts`: serves, arcs over the net, volleys from a hover or a
+  stroke and never twice, dead balls, every frame of long runs clear of a
+  low label), the flights (`flight.test.ts`), one pigeon
+  (`pigeon.test.ts`), the flock (`pigeons.test.ts`: placing, flushes and
+  their 8s cap, coming back, never flying over a bird on the ground, and
+  long afternoons of passes and sweeps with every bird and the hawk in air
+  and 6px apart every frame), the hawk (`hawk.test.ts`: lanes, plans,
+  orders, the simulation catching a late bird), everything together
+  (`summer.test.ts`), and the rigs (`pigeon-rig.test.ts`, `hawk-rig.test.ts`:
+  every pose's footprint over its whole motion, feet never below the ledge,
+  bone lengths, the head bob held still over the ground, and the rig inside
+  the model's envelope at every moment of a real take-off and landing).
+- The critters lab (`lab-tests/wimbledon.spec.ts`).
+- e2e: the overlay contract's row for `wimbledon` in `e2e/seasonal.ts`
+  (palette, click-through, below dialogs, at least two pigeons on the roomy
+  pages at 1440, 1024 and 390, nothing over content on any route, the hawk,
+  ball and chalk checked as parts whenever out, a still scene), and
+  `e2e/wimbledon.spec.ts`, which cues a sweep and a rally and checks every
+  animation frame for anything drawn over content, volleys the ball with a
+  stroke across its path, and checks there is no sweep on a phone and no
+  hawk or ball under reduced motion.
+- Linux fonts: the month's specs run in the Playwright image
+  (`mcr.microsoft.com/playwright:v1.62.1-noble` with fonts-dejavu-core, Go
+  and DuckDB as CI installs them).
 
 ## Verification (for the owner)
 

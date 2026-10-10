@@ -102,6 +102,16 @@ air, inspect it and land to feed, and are chased off past the window's edge
 by a cursor darting at them, coming back a little later; there are none on a
 phone. Reduced motion keeps a still scene.
 
+July now has summer tennis (`dashboard.theme` `wimbledon`, on by default
+under `auto` from 1 to 31 July). The rail shows strawberries and cream, a jug
+of fruit cup and an old racquet and ball on mown lawn; chalk court lines run
+along the ledges; two or three pigeons wander the first row of cards, shy
+from a cursor coming close and fly off from one swept past fast; every minute
+or two a Harris's hawk sweeps along their row and they fly away ahead of it
+and come back; and now and then a ball rallies between two cards side by
+side, volleyed back by a cursor swept across its path. Nothing is drawn over
+the page's content. Reduced motion keeps a still scene.
+
 August now has the seaside (`dashboard.theme` `seaside`, on by default under
 `auto` from 1 to 31 August). The rail shows chips, a bucket and spade and a
 99 on a drift of sand; the page gets low drifts of sand along its ledges,

@@ -21,6 +21,7 @@ func TestHandleConfigNamesTheResolvedTheme(t *testing.T) {
 		config.ThemeEaster:    config.ThemeEaster,
 		config.ThemeFete:      config.ThemeFete,
 		config.ThemeSeaside:   config.ThemeSeaside,
+		config.ThemeWimbledon: config.ThemeWimbledon,
 		config.ThemeNone:      config.ThemeNone,
 		"xmas":                config.ThemeNone,
 	} {

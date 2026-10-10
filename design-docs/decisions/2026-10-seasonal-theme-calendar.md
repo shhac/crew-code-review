@@ -9,7 +9,8 @@ consolidation were not started. Revised the same day after a read-only
 review by Codex (`gpt-5.6-terra`), which corrected two claims about the code
 and tightened the refactor's contract. Since built: February (Valentine's,
 2026-10-10), March (Mad March hares, 2026-10-10), April (Easter egg hunt,
-2026-10-10), June (Village fête, 2026-10-10), August (Seaside, 2026-10-11).
+2026-10-10), June (Village fête, 2026-10-10), July (summer tennis,
+2026-10-11), August (Seaside, 2026-10-11).
 
 ## The problem
 
@@ -93,7 +94,7 @@ all twelve. Easter can fall in late March; an April-long egg hunt still works.
 - **Animal** (optional): a wasp circles the cake. Chased off by the cursor, it
   comes back a little later. June works without any animal.
 
-### July: Wimbledon
+### July: Wimbledon (built)
 
 - **Shelf**: strawberries and cream, a jug of Pimm's, a racquet.
 - **Ledges**: grass-court white lines.

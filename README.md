@@ -510,8 +510,8 @@ deliberately.
 - **Logs**: a live tail of the daemon's own log.
 
 **Seasonal themes.** `dashboard.theme` adds decorations to the dashboard: `auto` (the
-default) switches a set on in its season: the northern lights in January, Valentine's in February, Mad March hares in March, an Easter egg hunt in April, a village fete in June, the seaside in August, Halloween in October, Bonfire Night in November and Christmas throughout December. `none` turns
-decorations off, and naming a set (`aurora`, `valentine`, `hares`, `easter`, `fete`, `seaside`, `halloween`, `bonfire` or `christmas`) forces it on. They are purely cosmetic and
+default) switches a set on in its season: the northern lights in January, Valentine's in February, Mad March hares in March, an Easter egg hunt in April, a village fete in June, summer tennis in July, the seaside in August, Halloween in October, Bonfire Night in November and Christmas throughout December. `none` turns
+decorations off, and naming a set (`aurora`, `valentine`, `hares`, `easter`, `fete`, `wimbledon`, `seaside`, `halloween`, `bonfire` or `christmas`) forces it on. They are purely cosmetic and
 never block a click. Reduced-motion users get the decorations without the
 animation. To preview a set whatever the date, add `?theme=halloween` to the
 URL.
@@ -595,6 +595,20 @@ On a phone, where the rail has no shelf, there are no wasps. Reduced motion
 shows the wasps standing on the cake and a jar and the bunting at rest.
 Preview with `?theme=fete`; design notes:
 [Village fete](design-docs/fete/README.md).
+
+July is summer tennis: strawberries and cream, a jug of fruit cup and an
+old racquet and ball on a strip of mown lawn on the rail, and chalk court
+lines along the ledges. Two or three feral pigeons wander the first row of
+cards, walking with a bob of the head and pecking; a cursor coming close
+makes one shy away, and one swept past fast makes it clap up and fly off,
+coming back a few seconds later. Every minute or two a Harris's hawk sweeps
+low along their row and they fly away ahead of it, out of the window, and
+come back one at a time once it has gone. Now and then a ball rallies
+between two cards side by side, the gap between them the net, puffing chalk
+where it bounces on a line; a cursor swept across its path volleys it back.
+Nothing is drawn over text, controls or charts. Reduced motion shows the
+pigeons standing still. Preview with `?theme=wimbledon`; design notes:
+[Summer tennis](design-docs/wimbledon/README.md).
 
 August is the seaside: chips in their paper, a bucket and spade and a 99 on
 a drift of sand on the rail, and low drifts of sand along the page's ledges
