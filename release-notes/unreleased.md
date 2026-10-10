@@ -102,6 +102,14 @@ air, inspect it and land to feed, and are chased off past the window's edge
 by a cursor darting at them, coming back a little later; there are none on a
 phone. Reduced motion keeps a still scene.
 
+August now has the seaside (`dashboard.theme` `seaside`, on by default under
+`auto` from 1 to 31 August). The rail shows chips, a bucket and spade and a
+99 on a drift of sand; the page gets low drifts of sand along its ledges,
+with the odd cockle or winkle; and two or three herring gulls strut the
+ledges, eye the cursor and follow it, swoop at one left still for five
+seconds (through clear air only, never over text, controls or charts), then
+land and give the long call. Reduced motion keeps a still scene.
+
 Seasonal scenes now measure the page through one shared snapshot, and each
 creature decides how much headroom it needs instead of inheriting the
 spider's. Halloween and Christmas render exactly as before. The

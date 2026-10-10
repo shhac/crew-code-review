@@ -1,6 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { coveredContent } from './content';
-import { CATCH_UP, ROUTES, seedRandom, watchCovered, WIDTHS } from './seasonal';
+import { seedRandom } from './seasonal';
 
 // The seaside: chips, a bucket and spade and a 99 on the shelf, drifts of
 // sand with shells along the ledges, and herring gulls that strut them,
@@ -108,23 +107,3 @@ test('reduced motion stands every gull still, and no swoop comes', async ({ page
   expect(await where()).toEqual(before);
 });
 
-// Until the month is switched on and takes its row in seasonal.ts's SETS
-// (which also checks the palette it does not have yet), its gulls and
-// shells are held to the same content rule here, on every page.
-for (const width of WIDTHS) {
-  test(`at ${width}px its gulls and shells cover no text, controls or charts on any page`, async ({ page }) => {
-    test.setTimeout(240_000);
-    await seedRandom(page);
-    await page.setViewportSize({ width, height: 900 });
-    for (const route of ROUTES) {
-      await page.goto(`${route}?theme=seaside`);
-      await expect(page.locator('.rail nav a')).toHaveCount(7);
-      await page.waitForTimeout(400 + CATCH_UP);
-      const look = async () => [
-        ...await coveredContent(gulls(page), 'image', 1),
-        ...await coveredContent(page.locator('[data-seaside] [data-shell]'), 'path', 1),
-      ];
-      expect(await watchCovered(page, look), route).toEqual([]);
-    }
-  });
-}

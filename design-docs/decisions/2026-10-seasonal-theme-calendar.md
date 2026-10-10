@@ -9,7 +9,7 @@ consolidation were not started. Revised the same day after a read-only
 review by Codex (`gpt-5.6-terra`), which corrected two claims about the code
 and tightened the refactor's contract. Since built: February (Valentine's,
 2026-10-10), March (Mad March hares, 2026-10-10), April (Easter egg hunt,
-2026-10-10), June (Village fête, 2026-10-10).
+2026-10-10), June (Village fête, 2026-10-10), August (Seaside, 2026-10-11).
 
 ## The problem
 
@@ -101,13 +101,15 @@ all twelve. Easter can fall in late March; an April-long egg hunt still works.
   scatters them (the championships fly one for exactly this). Every so often a
   ball rallies between two cards, and the cursor can intercept it.
 
-### August: Seaside
+### August: Seaside (built)
 
 - **Shelf**: chips in paper, a bucket and spade, a 99 ice cream.
 - **Ledges**: sand drifts with the odd shell.
 - **Animal**: a herring gull struts along the ledges eyeing the cursor. Left
   still for too long, the cursor gets swooped at; the gull then lands with a
-  squawk.
+  squawk. Built as two or three herring gulls on the bird kit, one swooping
+  at a time through clear air, the squawk the long call's posture; sources,
+  the airspace contract and method are in `design-docs/seaside/`.
 
 ### September: Harvest
 

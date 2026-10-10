@@ -102,6 +102,15 @@
   --rule: #e8709f;
 }
 
+/* The sea on a postcard for the seaside: a deeper, bluer blue than the info
+   ink's pale sky, and clear of the aurora's teal and the summer pinks. */
+:root[data-theme="seaside"] {
+  --accent: #4f8fe8;
+  --accent-edge: rgba(79, 143, 232, .3);
+  --accent-ring: rgba(79, 143, 232, .35);
+  --rule: #4f8fe8;
+}
+
 /* Shared click-through scene, below dialogs (50). */
 .seasonal-overlay { position: fixed; inset: 0; z-index: 40; pointer-events: none; overflow: hidden; }
 :root[data-theme="christmas"] {

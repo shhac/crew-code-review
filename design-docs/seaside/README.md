@@ -1,7 +1,7 @@
 # Seaside (2026-10-10)
 
-**Status**: in build. The shelf and the sand drifts are built (see "As built");
-the gulls are being built on the bird kit.
+**Status**: built and switched on (`auto` turns it on through August); see
+"As built" for what building settled.
 
 **Pins**: written against `ea7e9d5`. Code-internal.
 
@@ -318,6 +318,11 @@ Christmas's parchment, the info blue and the status red (`#d95f52`, which is
 darker and redder). Only the accent tokens move. A proposal: easy to change
 in `styles/themes.css`. (The art keeps clear of pink and magenta for keying;
 the accent is CSS and does not touch it.)
+
+As built: the sea on a postcard, `#4f8fe8`, instead. The rock pink came out
+within a few shades of Valentine's rose (`#f48fb8`), and June's raspberry
+(`#e8709f`) took the pinks besides; a deep sea blue is bluer and darker than
+the info ink's pale sky (`#7fb9ea`) and clear of the aurora's teal.
 
 ## As built
 

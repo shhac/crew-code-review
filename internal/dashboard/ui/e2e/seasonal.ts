@@ -92,6 +92,11 @@ export const SETS: readonly SeasonalSet[] = [
     animal: 'wasp', drawn: 'image, [data-stroke]', decoration: '[data-bunting]', parts: [['[data-bunting] path', 'path']],
     min: { 1440: 2, 1024: 2, 390: 0 }, none: [390], still: 'rest', settle: 400,
   },
+  {
+    theme: 'seaside', overlay: '[data-seaside]', shelf: '.seaside-shelf', accent: 'rgb(79, 143, 232)',
+    animal: 'gull', drawn: 'image', decoration: '.sand', parts: [['[data-shell]', 'path']],
+    min: { 1440: 2, 1024: 2, 390: 2 }, still: 'stand', settle: 400,
+  },
 ];
 
 export const ROUTES = ['/', '/history', '/metrics', '/leaderboard', '/config', '/prompt', '/logs'];

@@ -510,8 +510,8 @@ deliberately.
 - **Logs**: a live tail of the daemon's own log.
 
 **Seasonal themes.** `dashboard.theme` adds decorations to the dashboard: `auto` (the
-default) switches a set on in its season: the northern lights in January, Valentine's in February, Mad March hares in March, an Easter egg hunt in April, a village fete in June, Halloween in October, Bonfire Night in November and Christmas throughout December. `none` turns
-decorations off, and naming a set (`aurora`, `valentine`, `hares`, `easter`, `fete`, `halloween`, `bonfire` or `christmas`) forces it on. They are purely cosmetic and
+default) switches a set on in its season: the northern lights in January, Valentine's in February, Mad March hares in March, an Easter egg hunt in April, a village fete in June, the seaside in August, Halloween in October, Bonfire Night in November and Christmas throughout December. `none` turns
+decorations off, and naming a set (`aurora`, `valentine`, `hares`, `easter`, `fete`, `seaside`, `halloween`, `bonfire` or `christmas`) forces it on. They are purely cosmetic and
 never block a click. Reduced-motion users get the decorations without the
 animation. To preview a set whatever the date, add `?theme=halloween` to the
 URL.
@@ -595,6 +595,16 @@ On a phone, where the rail has no shelf, there are no wasps. Reduced motion
 shows the wasps standing on the cake and a jar and the bunting at rest.
 Preview with `?theme=fete`; design notes:
 [Village fete](design-docs/fete/README.md).
+
+August is the seaside: chips in their paper, a bucket and spade and a 99 on
+a drift of sand on the rail, and low drifts of sand along the page's ledges
+with a shell washed up here and there. Two or three herring gulls strut the
+ledges, eye the cursor and follow it while it moves; leave it still for five
+seconds and one swoops at it through clear air (never over text, controls or
+charts), pulls up beside it, lands and gives the long call with its bill
+wide open, while the others watch. Reduced motion shows the gulls standing
+still. Preview with `?theme=seaside`; design notes:
+[Seaside](design-docs/seaside/README.md).
 
 
 Queue add/reorder/promote are also available as JSON endpoints
