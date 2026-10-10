@@ -13,7 +13,7 @@ from pathlib import Path
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from art import crop, export, export_with_fur, feature, ground, keyed, place, poses, rescaled, rows  # noqa: E402
+from art import EyeScale, crop, cut, export, export_with_fur, keyed, rows  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
 OUT = HERE.parents[1] / 'internal/dashboard/ui/src/lib/theme/aurora'
@@ -27,9 +27,6 @@ FOX = ['fox-curled', 'fox-alert', 'fox-trot', 'fox-bow', 'fox-pounce']
 # the reference's legs.
 SHIPPED = ['fox-curled', 'fox-alert']
 PARTS = ['fox-tail', 'fox-torso', 'fox-head']
-# Drawing units are the reference's, moved by this, so a frame round it has
-# a margin.
-MARGIN = 1
 # The eye's size in drawing units, and file pixels per drawing unit.
 EYE = 1.544
 RES = 12
@@ -53,46 +50,24 @@ TOES = 3.3
 HEEL = (0.3, 0.3)
 
 
-def eye_px(sheet: str) -> float:
-    return feature(HERE / sheet, EYES[sheet])
-
-
-def on_eye(sheet: str) -> float:
-    return EYE / eye_px(sheet) * RES
-
-
 def main() -> None:
     kit = crop(keyed(HERE / 'winter-kit.png'))
     size = export(kit, OUT, 'winter-kit', 2 * 62 / kit.shape[0])
     print(f'winter-kit: display {size[0] / 2:g}x{size[1] / 2:g}')
+    fox = EyeScale(HERE, EYES, EYE, RES)
     units = {}
-    for name, art in zip(FOX, (crop(p) for p in poses(keyed(HERE / 'fox-sheet.png'), len(FOX)))):
+    for name, art in cut(keyed(HERE / 'fox-sheet.png'), FOX).items():
         if name in SHIPPED:
-            units[name] = export(art, OUT, name, on_eye('fox-sheet.png'))
-    # The reference, for the lab to lay over the rig, and where each part sat
-    # in it: their places in the rig.
-    reference = crop(keyed(HERE / 'fox-standing.png'))
-    per_unit = eye_px('fox-standing.png') / EYE
-    units['fox-reference'] = export(reference, LAB, 'fox-reference', on_eye('fox-standing.png'))
-    print(f'fox-reference: at {MARGIN}, {MARGIN}; ground {ground(reference) / per_unit + MARGIN:.2f}')
-    for name, seed in KEY_POSES.items():
-        path = HERE / f'fox-pose-{name}.png'
-        art = crop(keyed(path))
-        w, h = export(art, LAB, f'fox-pose-{name}', EYE / feature(path, seed) * RES)
-        print(f'fox-pose-{name}: drawing units {w / RES:.2f}x{h / RES:.2f}')
-    k = eye_px('fox-standing.png') / eye_px('fox-parts-2.png')
-    for name, art in zip(PARTS, (crop(p) for p in poses(keyed(HERE / 'fox-parts-2.png'), len(PARTS)))):
-        units[name] = export(art, OUT, name, on_eye('fox-parts-2.png'))
-        y, x = place(rescaled(art, k), reference)
-        print(f'{name}: at {x / per_unit + MARGIN:.2f}, {y / per_unit + MARGIN:.2f}')
+            units[name] = export(art, OUT, name, fox.on_eye('fox-sheet.png'))
+    units['fox-reference'] = fox.reference('fox-standing.png', LAB, 'fox-reference')
+    fox.key_poses('fox-pose-', KEY_POSES, LAB)
+    units.update(fox.parts(cut(keyed(HERE / 'fox-parts-2.png'), PARTS), 'fox-parts-2.png', OUT))
     # Each piece also as fur alone, its outline taken out.
     bone, _ = (crop(p) for p in rows(keyed(HERE / 'fox-legs.png'), 2))
     units['fox-leg'] = units['fox-leg-fur'] = export_with_fur(bone, OUT, 'fox-leg', LEG * RES / bone.shape[0])
     haunch = crop(keyed(HERE / 'fox-haunch.png'))
     units['fox-haunch'] = units['fox-haunch-fur'] = export_with_fur(haunch, OUT, 'fox-haunch', HAUNCH * RES / haunch.shape[0])
-    toes = crop(keyed(HERE / 'fox-toes.png'))
-    w, h = export_with_fur(toes, OUT, 'fox-toes', TOES * RES / toes.shape[1])
-    print(f'fox-toes: {w / RES:.2f}x{h / RES:.2f}, heel {w * HEEL[0] / RES:.2f}, {h * HEEL[1] / RES:.2f}')
+    fox.foot('fox-toes', crop(keyed(HERE / 'fox-toes.png')), OUT, TOES, HEEL)
     for name, (w, h) in units.items():
         print(f'{name}: {w}x{h}, drawing units {w / RES:.2f}x{h / RES:.2f}')
 

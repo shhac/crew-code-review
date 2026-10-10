@@ -4,9 +4,11 @@ Each theme's export.py imports this: key the flat magenta background out with
 alpha from min(R,B) - G ramping between 60 and 140 and a half-strength
 despill, crop to the art plus a margin, split pose sheets at their empty
 column (or row) runs, measure a feature (an eye) to put sheets drawn at
-different sizes on one scale, and write WebP.
+different sizes on one scale, and write WebP. EyeScale holds one animal's
+pictures on that scale and prints where each part sat in its reference.
 """
 from collections import deque
+from collections.abc import Callable
 from pathlib import Path
 import subprocess
 import tempfile
@@ -15,6 +17,9 @@ import numpy as np
 from PIL import Image
 
 MARGIN = 6
+
+Mask = Callable[[np.ndarray], np.ndarray]
+Size = tuple[int, int]
 
 
 def keyed(path: Path) -> np.ndarray:
@@ -147,3 +152,85 @@ def export_with_fur(rgba: np.ndarray, out: Path, name: str, scale: float) -> tup
     size = export(rgba, out, name, scale)
     export(fill_only(rgba), out, f'{name}-fur', scale)
     return size
+
+
+def cut(rgba: np.ndarray, names: list) -> dict:
+    """A sheet split into its named pieces, left to right, each cropped."""
+    return dict(zip(names, (crop(p) for p in poses(rgba, len(names)))))
+
+
+class EyeScale:
+    """One animal's pictures put on one scale, the eye's (the one feature
+    every pose shares), so every pose is the same animal: its eye is eye
+    drawing units across, written at res file pixels per unit, and the
+    theme's rig sets how big a unit is on the page. eyes says where each
+    sheet's eye is (source pixels, measured by eye). Drawing units are the
+    reference's, moved by margin so a frame round it has a margin."""
+
+    def __init__(self, here: Path, eyes: dict[str, tuple[int, int]], eye: float, res: int, margin: int = 1):
+        self.here, self.eyes, self.eye, self.res, self.margin = here, eyes, eye, res, margin
+        self.standing = np.zeros((0, 0, 4), np.uint8)
+        self.standing_sheet = ''
+
+    def px(self, sheet: str, seed: tuple[int, int] | None = None) -> float:
+        """The eye's size in a sheet's own pixels."""
+        return feature(self.here / sheet, seed or self.eyes[sheet])
+
+    def on_eye(self, sheet: str) -> float:
+        """File pixels to each of a sheet's pixels."""
+        return self.eye / self.px(sheet) * self.res
+
+    def per_unit(self) -> float:
+        """The reference's pixels to each drawing unit."""
+        return self.px(self.standing_sheet) / self.eye
+
+    def units(self, size: Size) -> str:
+        return f'{size[0] / self.res:.2f}x{size[1] / self.res:.2f}'
+
+    def reference(self, sheet: str, out: Path, name: str, key: Callable[[Path], np.ndarray] = keyed) -> Size:
+        """The whole animal standing square, its anatomy reference: written
+        for the lab to lay over the rig, and kept to place the parts by."""
+        self.standing = crop(key(self.here / sheet))
+        self.standing_sheet = sheet
+        size = export(self.standing, out, name, self.on_eye(sheet))
+        print(f'{name}: {self.units(size)} at {self.margin}, {self.margin}; ground {ground(self.standing) / self.per_unit() + self.margin:.2f}')
+        return size
+
+    def key_poses(self, prefix: str, seeds: dict[str, tuple[int, int]], out: Path, key: Callable[[Path], np.ndarray] = keyed) -> None:
+        """Key poses of the same animal, drawn from the reference, that the
+        rig's poses are tuned toward; the lab lays each over its mode. seeds
+        says where each one's eye is."""
+        for pose, seed in seeds.items():
+            name = f'{prefix}{pose}'
+            path = self.here / f'{name}.png'
+            eye = feature(path, seed)
+            size = export(crop(key(path)), out, name, self.eye / eye * self.res)
+            print(f'{name}: eye {eye:.1f}px; drawing units {self.units(size)}')
+
+    def placed(self, name: str, art: np.ndarray, out: Path, scale: float, k: float, mask: Mask | None = opaque) -> Size:
+        """Writes a part at scale and prints where it sat in the reference,
+        its place in the rig, matched by what mask picks out with the part
+        grown k times onto the reference's pixels. A part with no mask is
+        placed by hand."""
+        size = export(art, out, name, scale)
+        if mask is None:
+            print(f'{name}: {self.units(size)}')
+            return size
+        per_unit = self.per_unit()
+        y, x = place(rescaled(art, k), self.standing, mask=mask)
+        print(f'{name}: {self.units(size)} at {x / per_unit + self.margin:.2f}, {y / per_unit + self.margin:.2f}')
+        return size
+
+    def parts(self, arts: dict[str, np.ndarray], sheet: str, out: Path, mask: Mask = opaque, masks: dict[str, Mask | None] | None = None) -> dict[str, Size]:
+        """The parts cut from the reference into sheet, each placed; masks
+        sets a part's own mask in place of mask."""
+        k = self.px(self.standing_sheet) / self.px(sheet)
+        scale = self.on_eye(sheet)
+        return {name: self.placed(name, art, out, scale, k, (masks or {}).get(name, mask)) for name, art in arts.items()}
+
+    def foot(self, name: str, art: np.ndarray, out: Path, length: float, heel: tuple[float, float]) -> Size:
+        """A foot length drawing units long, and its fur alone; prints where
+        the leg comes down onto it, its heel (fractions of its box)."""
+        w, h = export_with_fur(art, out, name, length * self.res / art.shape[1])
+        print(f'{name}: {self.units((w, h))}, heel {w * heel[0] / self.res:.2f}, {h * heel[1] / self.res:.2f}')
+        return w, h
