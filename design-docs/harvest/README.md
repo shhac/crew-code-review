@@ -1,6 +1,9 @@
 # Harvest (2026-10-10)
 
-**Status**: pre-production draft (decisions settled, not built).
+**Status**: in production. Built so far: the parts and their export, the
+shelf with its flapping scarecrow and its alarm, and the straw and grain.
+The crows wait on the bird kit (legs, gait, flight poses, envelope check)
+and the surfaces kit (off-page exits, the `?theme-cue=` cue).
 
 **Pins**: written against `ea7e9d5` (the hedgehog rebuild and its test
 isolation). Code-internal.
@@ -123,8 +126,18 @@ trigger, since only it knows where its scarecrow is drawn:
   stir 2 degrees in the wind on a slow 4 to 6 second breath.
 - **The signal**: each flapping episode, as it starts, sends one message to
   the page layer through a month-local store (`harvest/alarm.ts`): when it
-  started and where the scarecrow is (its centre, viewport coordinates). The
-  layer never reads the shelf's geometry and never draws into the shelf.
+  started, when its flapping ends, and where the scarecrow is (its centre,
+  viewport coordinates). The layer never reads the shelf's geometry and
+  never draws into the shelf. *As built*: the message also carries `until`,
+  the end of the flapping, sent again with a later `until` each time a
+  stroke adds a flap, since the crows' wait runs from the last flap's end
+  and only the shelf knows when that is.
+- *As built, "add a flap at a time"*: a near stroke mid-episode makes sure
+  there is one more flap after the one it is on (so a cursor that keeps
+  moving past adds a flap each flap, up to eight); a stroke on the first
+  flaps adds nothing, as three are already to come. The arms ease from
+  their stir into the first flap and out of the last over 0.15s, so they
+  never jump to 8 degrees below.
 - **Hidden shelf** (phones, short windows: `offsetParent` null): no
   scarecrow, so no flap and no scatter. The crows still feed, and still come
   and go on their own (below).
@@ -451,7 +464,11 @@ under the jacket's shoulder so no gap shows as it swings, its pivot at the
 shoulder seam. `scarecrow-flap.png` is the key pose for the flap's top. On the
 shelf the scarecrow stands about 64px tall at the left of a 168px stage, with
 the still life (about 76x38) at its feet to the right; the stage keeps room
-above for the arms at the top of the flap.
+above for the arms at the top of the flap. *As built*: the scarecrow is
+66.8x64 at 6px from the stage's left, the still life 72x42 at 6px from its
+right, on a stage 66px tall (the arms at the flap's top stay below the hat,
+so the only room above is for the hat's 1.5px jolt). The sleeves are drawn
+behind the body so their run-on ends tuck under the jacket.
 
 ### The key poses
 
@@ -479,8 +496,7 @@ blue-grey). Style references: `design-docs/bonfire/toffee-apples.png`,
 `bonfire.png` (its guy, for the scarecrow), `design-docs/aurora/winter-kit.png`,
 `design-docs/halloween/pumpkins.png`, and for the crow
 `design-docs/aurora/fox-standing.png` and `bonfire/hedgehog-standing.png`.
-No parts are cut yet and nothing is exported: the owner does that once the
-rig is decided, with an `export.py` on `design-docs/art.py`.
+The parts were cut later, by the owner (below).
 
 | Source | What it is | Prompt summary | Drawn size (key, then crop) |
 | --- | --- | --- | --- |
@@ -498,6 +514,50 @@ rig is decided, with an `export.py` on `design-docs/art.py`.
 
 The crow's sources are each 1536x1024. Rejected and deleted:
 the first take-off, flight and landing poses (wings far too short).
+
+#### Parts (as built, 2026-10-10)
+
+Cut by the same tool and model as image edits of the reference, each on
+magenta. `export.py` (on `art.py`) keys, places and writes every shipped
+file, printing the placements and sizes below.
+
+| Source | What it is | Prompt summary | Shipped |
+| --- | --- | --- | --- |
+| `scarecrow-parts.png` | the scarecrow's four parts, an edit of `scarecrow.png` | the hat alone above; the left sleeve, the body (head completed under the hat, shoulders closed) and the right sleeve, each sleeve's inner end rounded and run on 40px to tuck under the jacket | `scarecrow-{hat,left-arm,body,right-arm}.webp`, laid out 66.8x64 |
+| `crow-parts.png` | the crow's body, head, tail and folded wing, an edit of the reference | a 2x2 sheet; the body closed where the legs, wing and tail were, keeping the feathered trousers; the head's and tail's cut edges soft | `crow-{body,head,tail,wing-folded}.webp` |
+| `crow-wing.png` | the spread wing, seen flat from above | the arm wing (shoulder to wrist, secondaries) and the hand wing (wrist to the fingered primaries), drawn 150px apart | `crow-wing-{arm,hand}.webp` |
+| `crow-limbs.png` | the leg pieces, from the reference's legs | a bare scaled tarsus, the foot from the side (three toes forward, hallux back), the foot curled | `crow-tarsus`, `crow-foot`, `crow-foot-curled` (each with `-fur`) |
+
+How they were placed and sized:
+
+- **The eye scale.** A black crow's eye is not the dark blob `art.py`'s
+  `feature` measures (the whole bird is dark), so `EyeScale` now takes a
+  `measure` (an additive change to `art.py`) and the crow's is its brown
+  iris's widest extent. That puts the eye at 40px in the reference; at
+  `EYE = 1.24` units the reference is 39x27 units with its margins, so the
+  rig's scale is about a page pixel to a unit. The flight redraws measure
+  31 to 33px against the reference's 40, which is the "body a little
+  smaller" the art plan noted; the eye scale puts them back.
+- **Placing the crow's parts.** A part matched by its silhouette fits
+  anywhere inside the bird's, so the body and the folded wing are matched
+  by their black line work, the head by its grey bill and brown eye, and
+  the tail, most of which the reference's folded wing covers, by its tip
+  (its leftmost column lined up with the reference's). `--check <dir>`
+  writes an overlay of the placed parts on the reference to look at.
+- **The spread wing** is sized to 0.95 of the bird's length from the arm's
+  root to the hand's tip (a carrion crow's span is about 2.1 lengths, less
+  the body between the shoulders): the arm piece 16.3 units, the hand 20.7.
+- **The legs** are sized to the reference's: the tarsus 0.85 units thick,
+  the foot 5.6 units long with claws (the reference's foot is 6.7; kept
+  smaller, as the brief asks of feet), the tarsus coming down on it at
+  (0.34, 0.12) of its box.
+- **The scarecrow's sheet** came out a little smaller than the reference, so
+  its parts are laid out on their own scale, 64px tall together; split by
+  their separate shapes (the hat's brim and the head overlap across, so no
+  empty row runs between them), each sleeve placed by its straw cuff (its
+  inner end runs on under the jacket where the reference shows nothing),
+  each swinging about its shoulder 10 source pixels inside the jacket's
+  edge.
 
 ## Verification (for the owner)
 
