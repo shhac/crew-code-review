@@ -58,10 +58,14 @@ export const SETS: readonly SeasonalSet[] = [
     animal: 'hedgehog', drawn: 'image', decoration: '[data-woodpile]', parts: [], min: { 1440: 2, 1024: 1, 390: 1 }, still: 'sniff', settle: 5000,
   },
   {
+    // On a phone the cards fill the width, so the cupids' only open air is
+    // the heading band beside the page's title, and how many fit there is up
+    // to how wide the font sets the title: beside "Review history" Linux's
+    // DejaVu Sans leaves room for one, macOS's system font usually for two.
     theme: 'valentine', overlay: '[data-valentine]', shelf: '.valentine-shelf', accent: 'rgb(244, 143, 184)',
     animal: 'cupid', drawn: 'image, path', decoration: '.petal',
     parts: [['.petal', 'path'], ['[data-arrow] path', 'path'], ['[data-heart]', 'path']],
-    min: { 1440: 2, 1024: 2, 390: 2 }, still: 'hover', settle: 400,
+    min: { 1440: 2, 1024: 2, 390: 1 }, still: 'hover', settle: 400,
   },
   {
     theme: 'hares', overlay: '[data-hares]', shelf: '.hares-shelf', accent: 'rgb(223, 160, 106)',
