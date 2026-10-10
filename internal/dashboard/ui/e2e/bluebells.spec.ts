@@ -37,7 +37,7 @@ test('a moving cursor close to a bee sends it darting off, clear of the page all
   for (let i = 0; i < 20; i++) {
     await page.mouse.move(x - 10 + (i % 2) * 6, y + 6, { steps: 2 });
     seen.modes.add((await bee.getAttribute('data-bee')) ?? '');
-    seen.covered.push(...await coveredContent(bees(page), drawn, 1), ...await overCards(page));
+    seen.covered.push(...await coveredContent(page, [['[data-bluebells] [data-bee]', drawn]], 1), ...await overCards(page));
   }
   expect([...seen.modes].some((m) => m === 'dodge' || m === 'takeoff')).toBe(true);
   expect(seen.covered).toEqual([]);

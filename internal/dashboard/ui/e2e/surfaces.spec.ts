@@ -67,7 +67,7 @@ for (const width of [1440, 1024]) {
       await expect(page.locator('.geometry [data-wall-id]').first()).toBeAttached();
       if (path === '/metrics') await expect(page.locator('.metric-kpis > div')).toHaveCount(6);
       await expect.poll(() => wallErrors(page), { message: path }).toEqual([]);
-      expect(await coveredContent(page.locator('.geometry [data-wall-id]'), '.wall-run'), path).toEqual([]);
+      expect(await coveredContent(page, [['.geometry [data-wall-id]', '.wall-run']]), path).toEqual([]);
       if (path === '/') {
         await expect(page.locator('.geometry .wall-run').first()).toBeAttached();
         await page.screenshot({ path: info.outputPath(`walls-${width}.png`) });
@@ -102,7 +102,7 @@ for (const width of [1440, 1024]) {
       if (path === '/metrics') await expect(page.locator('.metric-kpis > div')).toHaveCount(6);
       if (path === '/config') await expect(page.locator('main .surface').first()).toBeVisible();
       await expect.poll(() => gapErrors(page), { message: path }).toEqual([]);
-      expect(await coveredContent(page.locator('.geometry [data-gap-kind=side]'), 'rect.gap'), path).toEqual([]);
+      expect(await coveredContent(page, [['.geometry [data-gap-kind=side]', 'rect.gap']]), path).toEqual([]);
       seen[path] = await page.locator('.geometry [data-gap-id]').evaluateAll((gs) => gs.map((g) => `${g.getAttribute('data-gap-kind')}${g.hasAttribute('data-court') ? ' court' : ''}`));
       if (path !== '/') await page.screenshot({ path: info.outputPath(`gaps${path.replace('/', '-')}-${width}.png`) });
     }
