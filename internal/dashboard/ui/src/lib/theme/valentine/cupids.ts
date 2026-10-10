@@ -1,9 +1,9 @@
-import { inView, type Ledge, type Obstacle, type PageMap } from '../floors';
+import { around, distance, inAir, sweeps, type Air } from '../air';
+import { heading, lengthOf, quadratic, samples, type Arc } from '../curves';
+import { inView, type Box, type Ledge, type Obstacle, type PageMap } from '../floors';
 import { inTurn, placeInTurn } from '../group';
 import type { Cursor, Point } from '../pointer';
 import type { Rand } from '../seed';
-import { heading, lengthOf, quadratic, samples, type Arc } from '../curves';
-import { around, distance, sweeps, type Air, type Box } from './air';
 import { land, landable, prune, reconcileStuck, slantOf, burstsLeft, type Burst, type Stuck } from './arrows';
 import { createCupid, cupidView, dodge, DASH, fresh, LOOSE, reconcileCupid, restingCupid, shooting, stepCupid, TURN, where, type Cupid } from './cupid';
 import { FOOTPRINTS } from './footprints';
@@ -172,8 +172,6 @@ function landings(air: Air, cursor: Point): { floor: number; f: Ledge; x: number
   }).sort((a, b) => distance({ x: a.f.left + a.x, y: a.f.y }, cursor) - distance({ x: b.f.left + b.x, y: b.f.y }, cursor)).slice(0, NEAREST);
 }
 
-const visible = (air: Air, p: Point) => p.x >= air.view.left && p.x <= air.view.right && p.y >= air.view.top && p.y <= air.view.bottom;
-
 // A cursor still for a second, not yet shot at: the hovering cupid with a
 // clear shot at the landing nearest the cursor turns to draw on it.
 function startShot(group: Cupids, air: Air, now: number, cursor: Cursor): Cupids {
@@ -182,7 +180,7 @@ function startShot(group: Cupids, air: Air, now: number, cursor: Cursor): Cupids
   for (const landing of landings(air, cursor)) {
     const shots = ready.flatMap((c) => {
       const at = where(c, air.page, now);
-      if (!at || !visible(air, at)) return [];
+      if (!at || !inAir(air.view, at)) return [];
       const shot = shotTo(air, at, landing.f, landing.x, shieldOf(air, group.cupids.filter((o) => o.id !== c.id), now));
       return shot ? [{ c, at, shot }] : [];
     }).sort((a, b) => distance(a.at, cursor) - distance(b.at, cursor));

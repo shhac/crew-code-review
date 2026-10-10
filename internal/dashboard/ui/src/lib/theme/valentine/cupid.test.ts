@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
+import { anchor, around } from '../air';
 import { seeded } from '../test-scene';
-import { anchor, around } from './air';
-import { cupidView, dodge, flightCurve, fresh, hoverAt, reconcileCupid, stepCupid, where, type Cupid } from './cupid';
+import { clearRoute, cupidView, dodge, flightCurve, fresh, hoverAt, reconcileCupid, routes, stepCupid, where, type Cupid } from './cupid';
 import { airFor, page } from './fixtures';
 import { FOOTPRINTS } from './footprints';
 
@@ -85,5 +85,15 @@ describe('a cupid', () => {
   it('flies on through a layout change that leaves its way clear', () => {
     const off = stepCupid(hovering(1100, 60, { restless: 0 }), air, 16, 16, seeded(2), null);
     expect(reconcileCupid(off, air, 200, seeded(1))).toBe(off);
+  });
+
+  it('tries a route over or under what is in the way, and refuses one through it', () => {
+    const wall = { left: 640, right: 660, top: 250, bottom: 350 };
+    const air = airFor(page([wall], []));
+    const from = { x: 500, y: 300 }, to = { x: 800, y: 300 };
+    const tried = routes(from, to);
+    const straight = tried.find((r) => r.c1.y === from.y && r.c2.y === to.y)!;
+    expect(clearRoute(air, straight, [])).toBe(false);
+    expect(tried.some((r) => clearRoute(air, r, []))).toBe(true);
   });
 });

@@ -1,9 +1,9 @@
+import { anchor, around, distance, fits, inAir, linesOf, placed, sweeps, type Air, type Anchored } from '../air';
+import { cubic, lengthOf, samples, type Curve } from '../curves';
 import type { PageMap } from '../floors';
 import type { Point } from '../pointer';
 import { easeTo } from '../rig/life';
 import { between, type Rand } from '../seed';
-import { cubic, lengthOf, samples, type Curve } from '../curves';
-import { anchor, around, distance, fits, linesOf, placed, sweeps, type Air, type Anchored } from './air';
 import type { CupidPose } from './cupid-rig';
 import { FOOTPRINTS, SPOT, type Footprint } from './footprints';
 
@@ -196,8 +196,6 @@ export function flyTo(air: Air, from: Point, spots: readonly Point[], taken: rea
   return null;
 }
 
-const inView = (air: Air, p: Point) => p.x >= air.view.left && p.x <= air.view.right && p.y >= air.view.top && p.y <= air.view.bottom;
-
 // Off for a flit of its own accord: to a spot in view 60 to 360px away,
 // tried in a random order, a dozen at most.
 function flit(c: Cupid, air: Air, here: Point, now: number, rand: Rand, taken: readonly Point[]): Cupid {
@@ -243,7 +241,7 @@ export function stepCupid(c: Cupid, air: Air, now: number, dt: number, rand: Ran
     case 'aim': return lived;
     default: {
       const busy = others.some((o) => flying(o) || shooting(o));
-      if (now < c.restless || busy || !here || !inView(air, here)) return lived;
+      if (now < c.restless || busy || !here || !inAir(air.view, here)) return lived;
       return flit(lived, air, here, now, rand, claims(others, air.page, now));
     }
   }

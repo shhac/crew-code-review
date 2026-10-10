@@ -39,7 +39,7 @@ column below the queue on the overview, the page's foot below the last
 card). On a phone the heading is mostly its text and stacked controls; the
 stretch right of a short title is usually all there is.
 
-- **What air is** (`air.ts`): the box of `main` (never the rail, whose nav
+- **What air is** (`lib/theme/air.ts`): the box of `main` (never the rail, whose nav
   is not measured as obstacles) inset 6px, minus every obstacle
   `measurePage` reports (text, controls, charts, and every card's own box),
   each widened by 4px. Card boxes count here, unlike for the ledge walkers'

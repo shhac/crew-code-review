@@ -1,4 +1,4 @@
-import type { Reach } from './air';
+import type { Reach } from '../floors';
 
 // The space each of the cupid's poses takes on the page, from its anchor
 // (the middle of its belly, where it hovers), in page pixels: the box

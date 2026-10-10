@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { seeded } from '../test-scene';
-import { around, type Box } from './air';
+import { around } from '../air';
+import type { Box } from '../floors';
 import { where } from './cupid';
 import { arrowAt, createCupids, reconcileCupids, restingCupids, stepCupids, type Cupids } from './cupids';
 import { airFor, page, still } from './fixtures';

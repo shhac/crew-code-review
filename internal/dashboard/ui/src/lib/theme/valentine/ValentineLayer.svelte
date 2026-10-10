@@ -5,11 +5,11 @@
   // and popping into hearts, and dodges a cursor whipping past. The layer
   // takes no pointer events.
   import { onMount } from 'svelte';
+  import { airOf, around, type Air } from '../air';
   import { samePage, type Ledge, type PageMap } from '../floors';
   import Geometry from '../Geometry.svelte';
   import { ledgeScene } from '../layout';
   import Rig from '../rig/Rig.svelte';
-  import { airOf, around, type Air } from './air';
   import ArrowArt from './ArrowArt.svelte';
   import { HEART_PATH, hearts, opacity, STUCK_LENGTH, wobble } from './arrows';
   import { footprintOf } from './cupid';

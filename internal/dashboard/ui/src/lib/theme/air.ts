@@ -1,5 +1,5 @@
-import type { Ledge, Obstacle, PageMap } from '../floors';
-import type { Point } from '../pointer';
+import type { Box, Ledge, Obstacle, PageMap, Reach } from './floors';
+import type { Point } from './pointer';
 
 // The page's open air, for things that fly: the box of `main` (never the
 // rail, whose nav is not measured), inside the window, minus everything the
@@ -8,10 +8,6 @@ import type { Point } from '../pointer';
 // where its whole footprint, swept along wherever it goes, stays in air.
 // design-docs/valentine/README.md has the contract.
 
-export type Box = { left: number; right: number; top: number; bottom: number };
-// How far a drawing reaches from its anchor: either way across (it is
-// mirrored to face both ways), up and down.
-export type Reach = { half: number; up: number; down: number };
 // room: all of main's box, in view or not, which is what a flier already
 // somewhere must stay inside (a scroll carries it out of view and back);
 // view: the part of it in the window, where new spots, routes' ends and
@@ -50,7 +46,10 @@ function gridIn(room: Box): Point[] {
 
 export const around = (p: Point, r: Reach): Box => ({ left: p.x - r.half, right: p.x + r.half, top: p.y - r.up, bottom: p.y + r.down });
 export const union = (a: Box, b: Box): Box => ({ left: Math.min(a.left, b.left), right: Math.max(a.right, b.right), top: Math.min(a.top, b.top), bottom: Math.max(a.bottom, b.bottom) });
-const meets = (a: Box, b: Box) => a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
+export const meets = (a: Box, b: Box) => a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
+
+// Whether a point is inside a box, edges included: a flier in view.
+export const inAir = (view: Box, p: Point) => p.x >= view.left && p.x <= view.right && p.y >= view.top && p.y <= view.bottom;
 
 // Whether a box is wholly in air: inside the room, and clear of every
 // obstacle (widened by GAP) and of anything else given.

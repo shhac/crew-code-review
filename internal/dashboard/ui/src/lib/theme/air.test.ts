@@ -1,10 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { airOf, anchor, around, fits, placed, sweeps, type Box } from './air';
-import { clearRoute, routes } from './cupid';
-import { airFor, MAIN, page } from './fixtures';
-import { SPOT } from './footprints';
-
-const meets = (a: Box, b: Box) => a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
+import { airOf, anchor, around, fits, inAir, meets, placed, sweeps } from './air';
+import type { Box } from './floors';
+import { airFor, MAIN, page } from './valentine/fixtures';
+import { SPOT } from './valentine/footprints';
 
 describe('the air', () => {
   it('has hover spots only where a whole footprint is clear, inside main and the window', () => {
@@ -39,14 +37,10 @@ describe('the air', () => {
     expect(sweeps(air, [box({ x: 480, y: 300 }), box({ x: 520, y: 300 })])).toBe(false);
   });
 
-  it('tries a route over or under what is in the way, and refuses one through it', () => {
-    const wall = { left: 640, right: 660, top: 250, bottom: 350 };
-    const air = airFor(page([wall], []));
-    const from = { x: 500, y: 300 }, to = { x: 800, y: 300 };
-    const tried = routes(from, to);
-    const straight = tried.find((r) => r.c1.y === from.y && r.c2.y === to.y)!;
-    expect(clearRoute(air, straight, [])).toBe(false);
-    expect(tried.some((r) => clearRoute(air, r, []))).toBe(true);
+  it('counts a point on the edge of the view as in view', () => {
+    const view = { left: 10, right: 20, top: 10, bottom: 20 };
+    expect(inAir(view, { x: 10, y: 20 })).toBe(true);
+    expect(inAir(view, { x: 9.5, y: 15 })).toBe(false);
   });
 
   it('holds a point against its nearest ledge, so it rides with the page', () => {
