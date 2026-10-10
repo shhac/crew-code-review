@@ -36,17 +36,21 @@ narrow for anything with wings, but each page heading has open air beside
 and above its text (the band right of the title and above the heading's
 controls, 60 to 110px tall), and some pages have wide empty stretches (the
 column below the queue on the overview, the page's foot below the last
-card). On a phone the heading is filled by its text and stacked controls,
-and there is rarely any.
+card). On a phone the heading is mostly its text and stacked controls; the
+stretch right of a short title is usually all there is.
 
 - **What air is** (`air.ts`): the box of `main` (never the rail, whose nav
-  is not measured as obstacles), inside the window by 6px, minus every
-  obstacle `measurePage` reports (text, controls, charts, and every card's
-  own box), each widened by 4px. Card boxes count here, unlike for the
-  ledge walkers' 6px reach: a cupid over a card's empty middle would read as
-  covering the card, and an arrow crossing one would read as shooting it. It
-  is measured in one place with the page (`measureAir`: the `PageMap` and
-  `main`'s box from the same frame).
+  is not measured as obstacles) inset 6px, minus every obstacle
+  `measurePage` reports (text, controls, charts, and every card's own box),
+  each widened by 4px. Card boxes count here, unlike for the ledge walkers'
+  6px reach: a cupid over a card's empty middle would read as covering the
+  card, and an arrow crossing one would read as shooting it. It is worked
+  out with each measurement (`airOf`: the `PageMap` and `main`'s box, read
+  in the same frame). Two boxes come of it: the room (all of `main`, in
+  view or not), which a cupid already somewhere must stay inside, since a
+  scroll carries it out of view and back with its ledge; and the view (the
+  part of it inside the window, 6px in), where new spots, the ends of
+  routes and shots are chosen.
 - **Footprints**: each pose's box is the box its drawing stays inside at
   every moment of its motion, wings through the whole wingbeat, bow and
   string at full draw, dangling legs at the ends of their swing, and the
@@ -54,17 +58,34 @@ and there is rarely any.
   half width (it is mirrored to face either way), a reach up and a reach
   down. A rig test samples every pose over its whole cycle and checks the
   drawing never leaves its box (as `fox-rig.test.ts` does, extended for a
-  reach down). The sizes are set from the rig once it is drawn (table
-  below).
-- **Hover spots**: a point where the hover footprint, bob included, sits
-  wholly in air. Candidates are sampled every 16px over the air in view. A
-  spot is anchored to the nearest ledge (its id and an offset from the
-  ledge's left end and line), so a hovering cupid rides with the page on
-  scroll exactly as a ledge walker does; it is re-checked on every
-  measurement.
-- **Routes**: a flit is one cubic curve from spot to spot, its controls set
-  so it leaves and arrives level, with a few bows tried (straight, arched
-  over, dipped under). The route is clear when the flight footprint, swept
+  reach down), sampling whole wingbeats, the slow bob and leg kick, every
+  point of a draw and a loose at every aim from 35 degrees up to 75 down,
+  and flying slow and fast, braking and speeding up (`cupid-rig.test.ts`;
+  `footprints.ts`). In page pixels:
+
+  | Footprint | Either side | Up | Down | Used for |
+  | --- | --- | --- | --- | --- |
+  | hover | 24 | 28 | 17 | hovering, turning, entering |
+  | flight | 23 | 28 | 17 | flits and dodges, swept along the route |
+  | shoot | 24 | 29 | 17 | drawing, aiming and loosing |
+  | dodge | 25 | 28 | 15 | the startled first third of a dodge |
+
+  A hover spot must hold the largest of all four (50 wide, 29 up, 17
+  down), since a cupid may do any of them there. The wings beat out behind
+  the back, so they set the width; the curls and the raised wing set the
+  height.
+- **Hover spots**: a point where that footprint sits wholly in air, and
+  over no ledge's own line (a card top or heading rule: hovering across one
+  read as standing on it; crossing one in flight is fine). Candidates are
+  sampled every 16px over the view. A spot is anchored to the nearest ledge
+  (its id and an offset from the ledge's left end and line), so a hovering
+  cupid rides with the page on scroll exactly as a ledge walker does; it is
+  re-checked on every measurement. First placement prefers spots spread
+  out (as far from the others as it can, up to 300px) and about 50px above
+  a ledge, where its arrows can land, with a little randomness.
+- **Routes**: a flit is one cubic curve from spot to spot, four bows tried
+  in turn (arched over by a fifth of the distance, dipped under, straight,
+  arched higher). The route is clear when the flight footprint, swept
   along the curve, is: the curve is sampled at least every 2px of its length
   and each pair of neighbouring samples is tested as one box covering both,
   so nothing between samples is missed. No route is clear, no flit: it stays
@@ -75,12 +96,17 @@ and there is rarely any.
   going, and the whole remaining route of one in flight. A flit or dodge
   that would pass closer is not taken.
 - **Arrows**: the arrow is a swept effect too. It flies along one quadratic
-  arc from the nock to a landing point on a ledge, and the arc is clear when
-  the arrow's box (its length either way round the point, plus 2px) swept
-  along it stays in air, never within 20px of another cupid. The only
-  exemption is the arrow's tip at the very end, 3px into the card whose top
-  edge it lands in. Arcs are tried at a few heights (a quarter of the
-  distance first) and the first clear one is shot.
+  arc from where it leaves the bow (12px ahead of the cupid's middle and 6px
+  up) to a landing point on a ledge, at most 420px away, and the arc is
+  clear when the arrow's box (its 12px shaft behind its tip, along the arc,
+  plus 2px) swept along it stays in air, never within 20px of another
+  cupid's hover box, and comes down onto the ledge from above (no point of
+  it over the ledge's span is below the ledge's line). The only exemption is
+  the card whose top edge it lands in, which the arc meets only with its
+  tip. Arcs are tried at four heights (their top a quarter of the distance
+  across above the higher end, then two fifths, an eighth and three fifths)
+  and the first clear one that the cupid can aim along (35 degrees up to 75
+  down) is shot.
 - **Landing points**: only ledges in view, at least 16px in from a ledge's
   end, where `clearance` finds 24px clear (with the walkers' 6px reach)
   over the 17px either side of the point: room for the stuck arrow (it stands up to 11px out of
@@ -129,7 +155,7 @@ the time, a random source and the cursor.
 | draw | draw | 0.6s: the bow arm rises toward the target, the string hand pulls back to the jaw | aim |
 | aim | aim (full draw) | 0.45s | loose: the arrow leaves, if its arc is still clear; else hover |
 | loose | release | 0.45s: the string hand follows through past the cheek, the bow arm holds, then lowers | hover |
-| dodge | dodge then flight | it reaches a spot away from the cursor, at about 320px/s | hover, not shooting for 3s |
+| dodge | dodge then flight | it reaches a spot away from the cursor, at about 320px/s | hover; no dodging or shooting for 1.2s from the dodge |
 | enter | hover, fading in | 0.3s | hover |
 
 - **The cursor goes still**: the last mouse or pen hover position (no
@@ -245,10 +271,16 @@ the eye that blinks and aims), no halo, no torch.
   and toward the target while aiming.
 - **One scale**: every picture is exported so the eye is one size, at 12
   file pixels per drawing unit, and `cupid-rig.ts` sets one page scale for
-  every pose.
-- **Key poses** (edits of the reference, `cupid-pose-*.png`): hover, flit,
-  draw and aim (full draw), release and dodge. The critters lab lays each
-  over its mode to tune against.
+  every pose, 1.5 page pixels per unit: the cupid is about 38px from curls
+  to toes.
+- **Key poses** (edits of the reference, `cupid-pose-*.png`): hovering is
+  the reference itself; then flit, aim (full draw, which the draw rises
+  to), release and dodge. The critters lab lays each over its mode, lined
+  up eye to eye with the rig (the poses lean, so standing them on the
+  anchor would not compare like with like). Tuned against them: the flit's
+  forward pitch and trailing legs, the far arm straight out with the near
+  hand at the jaw at full draw, the hand flung back past the ear on the
+  loose, and the dodge leaning back with arms up and legs tucked.
 
 ### The ledges: petals and spent arrows
 
@@ -298,6 +330,20 @@ magenta recipe, the spill taken as that channel's excess over the other
 two, and pulls the green or blue fringe out of the edge pixels.
 
 ## Integration
+
+Shared code, changed additively: the rig (`lib/theme/rig/`) gains a
+`stroke` layer (a polyline in drawing units, with an optional fill) for
+the bow, its string and the arrow, and an optional `far` on an image layer
+(a shade darker, as the far legs are) for the far wing; `layerName`, the
+rig's `Layers.svelte` and the rig tests' reach handle both, and the fox
+and hedgehog draw exactly as before. The critters lab's descriptor gains
+an optional `lift` (a flier hovers that far above the stage's floor) and
+an optional `down` on a footprint (how far below the anchor it reaches),
+which the lab uses to raise the stage point and draw the box; walkers
+leave both unset. `e2e/content.ts`'s `coveredContent` takes an optional
+selector for what in each element is drawn (the cupids' pictures and bow
+strokes; an arrow or heart counts whole), defaulting to the pictures as
+before.
 
 The calendar's checklist for February (done in the activation commit, last):
 `ThemeValentine` in `internal/config/theme.go` (`Themes` and
