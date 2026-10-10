@@ -76,11 +76,22 @@ test('under reduced motion the cursor finds no egg: the hunt holds still too', a
   await page.goto('/?theme=easter');
   await expect.poll(() => page.locator('[data-rabbit]').count()).toBeGreaterThanOrEqual(2);
   await expect(page.locator('.rail nav a')).toHaveCount(7);
-  await page.waitForTimeout(500);
   const hunt = async () => ({
     eggs: await page.locator(`${overlay} g[data-egg]`).evaluateAll((els) => els.map((el) => [el.getAttribute('data-egg'), el.innerHTML])),
     tally: await page.locator(`${overlay} [data-tally]`).getAttribute('data-tally'),
   });
+  // The rabbits are out before the overview's queue, stats and usage have
+  // all arrived, and each of those grows a card when it lands ("last review"
+  // under Now is 18px), carrying the eggs down with their ledges: the eggs
+  // are right to follow. Still is still once the page is, so wait for its
+  // requests to finish (it next polls in 15s) and its drawing to rest.
+  await page.waitForLoadState('networkidle');
+  const rested = async () => {
+    const first = await hunt();
+    await page.waitForTimeout(400);
+    return JSON.stringify(await hunt()) === JSON.stringify(first);
+  };
+  await expect.poll(rested, { intervals: [0] }).toBe(true);
   const before = await hunt();
   const box = (await page.locator(`${overlay} g[data-egg] image`).first().boundingBox())!;
   await page.mouse.move(box.x - 60, box.y, { steps: 2 });
