@@ -16,14 +16,7 @@
   import Overview from './routes/Overview.svelte';
   import Prompt from './routes/Prompt.svelte';
   import ReviewLog from './routes/ReviewLog.svelte';
-  import AuroraLayer from './lib/theme/aurora/AuroraLayer.svelte';
-  import AuroraShelf from './lib/theme/aurora/AuroraShelf.svelte';
-  import BonfireLayer from './lib/theme/bonfire/BonfireLayer.svelte';
-  import BonfireShelf from './lib/theme/bonfire/BonfireShelf.svelte';
-  import ChristmasLayer from './lib/theme/christmas/ChristmasLayer.svelte';
-  import ChristmasShelf from './lib/theme/christmas/ChristmasShelf.svelte';
-  import HalloweenLayer from './lib/theme/halloween/HalloweenLayer.svelte';
-  import HalloweenShelf from './lib/theme/halloween/HalloweenShelf.svelte';
+  import { sceneOf } from './lib/theme/scenes';
   import { markTheme, resolveTheme } from './lib/theme/theme';
 
   type Route = 'overview' | 'history' | 'metrics' | 'leaderboard' | 'config' | 'prompt' | 'logs' | 'review';
@@ -40,6 +33,7 @@
   // up and vanished on load would be worse than one arriving a beat late.
   let theme = resolveTheme('none');
   $: markTheme(theme);
+  $: scene = sceneOf(theme);
 
   const allNav: { route: Route; label: string; path: string }[] = [
     { route: 'overview', label: 'Queue', path: '/' },
@@ -117,15 +111,7 @@
         <a href={item.path} class:active={route === item.route} on:click|preventDefault={() => navigate(item.path)}>{item.label}</a>
       {/each}
     </nav>
-    {#if theme === 'halloween'}
-      <HalloweenShelf />
-    {:else if theme === 'bonfire'}
-      <BonfireShelf />
-    {:else if theme === 'christmas'}
-      <ChristmasShelf />
-    {:else if theme === 'aurora'}
-      <AuroraShelf />
-    {/if}
+    <svelte:component this={scene.Shelf} />
     <ViewerChip viewer={$viewer} />
     <div class:stale={!$feed.ok} class="feed">
       <span class="signal"></span>
@@ -157,12 +143,4 @@
   </main>
 </div>
 
-{#if theme === 'halloween'}
-  <HalloweenLayer />
-{:else if theme === 'bonfire'}
-  <BonfireLayer />
-{:else if theme === 'christmas'}
-  <ChristmasLayer />
-{:else if theme === 'aurora'}
-  <AuroraLayer />
-{/if}
+<svelte:component this={scene.Layer} />

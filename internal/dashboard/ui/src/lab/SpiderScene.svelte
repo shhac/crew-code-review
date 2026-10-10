@@ -3,16 +3,11 @@
   // heading rule, a stack of cards (wall climbs between them), cards side by
   // side across a narrow gap (jumps), one sitting higher than its neighbour
   // (a jump up), and one running past the bottom of the window (a way out).
-  import AuroraLayer from '../lib/theme/aurora/AuroraLayer.svelte';
-  import AuroraShelf from '../lib/theme/aurora/AuroraShelf.svelte';
-  import BonfireLayer from '../lib/theme/bonfire/BonfireLayer.svelte';
-  import BonfireShelf from '../lib/theme/bonfire/BonfireShelf.svelte';
   import ChristmasLayer from '../lib/theme/christmas/ChristmasLayer.svelte';
-  import ChristmasShelf from '../lib/theme/christmas/ChristmasShelf.svelte';
   import LegacyChristmasShelf from './LegacyChristmasShelf.svelte';
-  import HalloweenShelf from '../lib/theme/halloween/HalloweenShelf.svelte';
   import ViewerChip from '../lib/ViewerChip.svelte';
-  import { markTheme, resolveTheme } from '../lib/theme/theme';
+  import { sceneOf } from '../lib/theme/scenes';
+  import { markTheme, resolveTheme, THEMES } from '../lib/theme/theme';
   let theme = resolveTheme('halloween');
   const legacyShelf = new URLSearchParams(location.search).get('shelf') === 'holly';
   let empty = false;
@@ -23,6 +18,7 @@
   let randomValue = .5;
   let blocked = false;
   $: markTheme(theme);
+  $: scene = sceneOf(theme);
   import type { Ledge } from '../lib/theme/floors';
   import HalloweenLayer from '../lib/theme/halloween/HalloweenLayer.svelte';
   import { away, pose, type Choice, type Spider, type World } from '../lib/theme/spiderwalk';
@@ -75,14 +71,10 @@
         <a href="#lab">{label}</a>
       {/each}
     </nav>
-    {#if theme === 'halloween'}
-      <HalloweenShelf />
-    {:else if theme === 'bonfire'}
-      <BonfireShelf />
-    {:else if theme === 'christmas'}
-      {#if legacyShelf}<LegacyChristmasShelf />{:else}<ChristmasShelf />{/if}
-    {:else if theme === 'aurora'}
-      <AuroraShelf />
+    {#if theme === 'christmas' && legacyShelf}
+      <LegacyChristmasShelf />
+    {:else}
+      <svelte:component this={scene.Shelf} />
     {/if}
     <ViewerChip />
     <div class="feed"><span class="signal"></span><span>synthetic</span><small>no daemon connection</small></div>
@@ -110,7 +102,7 @@
   </main>
 </div>
 <div class="controls">
-  <label>theme <select bind:value={theme}><option>halloween</option><option>bonfire</option><option>christmas</option><option>aurora</option><option>none</option></select></label>
+  <label>theme <select bind:value={theme}>{#each THEMES as t}<option>{t}</option>{/each}</select></label>
   <label><input type="checkbox" bind:checked={empty} /> empty</label>
   <label><input type="checkbox" bind:checked={blocked} /> blocked routes</label>
   <label><input type="checkbox" bind:checked={manual} /> manual clock</label>
@@ -130,18 +122,14 @@
   </label>
   <label><input type="checkbox" bind:checked={debug} /> debug</label>
 </div>
+<!-- The spiders and the manual clock are wired to the controls above, so those
+     two layers are mounted here by hand; every other set comes from its scene. -->
 {#if theme === 'halloween'}
 <HalloweenLayer {timeScale} prefer={prefer || undefined} bind:world bind:floors />
-{:else if theme === 'bonfire'}
-<BonfireLayer />
-{:else if theme === 'aurora'}
-<AuroraLayer />
-{:else if theme === 'christmas'}
-{#if manual}
-  <ChristmasLayer clock={() => elapsed} random={() => randomValue} />
+{:else if theme === 'christmas' && manual}
+<ChristmasLayer clock={() => elapsed} random={() => randomValue} />
 {:else}
-  <ChristmasLayer />
-{/if}
+<svelte:component this={scene.Layer} />
 {/if}
 {#if debug && theme === 'halloween'}
   <svg class="debug" width="100%" height="100%" aria-hidden="true">

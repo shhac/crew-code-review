@@ -334,47 +334,58 @@ for (const width of [1440, 480]) {
   });
 }
 
-// Both seasonal shelves must obey the same real rail/identity footer contract.
-for (const theme of ['christmas', 'halloween', 'bonfire', 'aurora']) {
-  test(`${theme} shelf sits above identity and hides on cramped rails`, async ({ page }) => {
-    const api: string[] = [];
-    await page.route('**/api/**', (route) => { api.push(route.request().url()); return route.abort(); });
-    await page.setViewportSize({ width: 1440, height: 900 });
-    await page.goto(`/lab/scene.html?theme=${theme}`);
-    const shelf = page.locator('.shell .rail > .theme-shelf');
-    const identity = page.locator('.rail > .viewer-chip');
-    await expect(shelf).toBeVisible();
-    await expect(identity).toBeVisible();
-    expect(await shelf.evaluate((el) => el.nextElementSibling?.classList.contains('viewer-chip'))).toBe(true);
-    const position = await shelf.evaluate((el) => {
-      const chip = el.nextElementSibling;
-      const nav = el.previousElementSibling;
-      if (!chip || !nav) throw new Error('missing rail footer siblings');
-      const bounds = el.getBoundingClientRect();
-      return {
-        aboveIdentity: chip.getBoundingClientRect().top - bounds.bottom,
-        spaceBelowNav: bounds.top - nav.getBoundingClientRect().bottom,
-        gap: Number.parseFloat(getComputedStyle(el.parentElement!).rowGap),
-        identityMargin: getComputedStyle(chip).marginTop,
-      };
-    });
-    expect(position.aboveIdentity).toBeCloseTo(position.gap, 0);
-    expect(position.spaceBelowNav).toBeGreaterThan(position.gap + 40);
-    expect(position.identityMargin).toBe('0px');
-    for (const viewport of [
-      { width: 1440, height: 640 },
-      { width: 760, height: 900 },
-      { width: 480, height: 900 },
-    ]) {
-      await page.setViewportSize(viewport);
-      await expect(shelf).toBeHidden();
-      await expect(identity).toBeVisible();
-    }
-    await page.setViewportSize({ width: 761, height: 900 });
-    await expect(shelf).toBeVisible();
-    await page.locator('label', { hasText: /^theme/ }).locator('select').selectOption('none');
-    await expect(shelf).toHaveCount(0);
-    await expect(identity).toBeVisible();
-    expect(api).toEqual([]);
+// Every seasonal shelf must obey the same real rail/identity footer contract.
+// The scene registry says which sets have one, so a month's shelf is held to
+// it as soon as its scene names it.
+test('each theme shelf sits above identity and hides on cramped rails', async ({ page }) => {
+  const api: string[] = [];
+  await page.route('**/api/**', (route) => { api.push(route.request().url()); return route.abort(); });
+  await page.goto('/lab/scene.html');
+  const shelved = await page.evaluate(async () => {
+    const registry = '/src/lib/theme/scenes.ts';
+    const { scenes } = await import(registry);
+    return Object.keys(scenes).filter((name) => scenes[name].Shelf);
   });
-}
+  expect(shelved).toEqual(expect.arrayContaining(['halloween', 'bonfire', 'christmas', 'aurora']));
+  for (const theme of shelved) {
+    await test.step(`${theme} shelf`, async () => {
+      await page.setViewportSize({ width: 1440, height: 900 });
+      await page.goto(`/lab/scene.html?theme=${theme}`);
+      const shelf = page.locator('.shell .rail > .theme-shelf');
+      const identity = page.locator('.rail > .viewer-chip');
+      await expect(shelf).toBeVisible();
+      await expect(identity).toBeVisible();
+      expect(await shelf.evaluate((el) => el.nextElementSibling?.classList.contains('viewer-chip'))).toBe(true);
+      const position = await shelf.evaluate((el) => {
+        const chip = el.nextElementSibling;
+        const nav = el.previousElementSibling;
+        if (!chip || !nav) throw new Error('missing rail footer siblings');
+        const bounds = el.getBoundingClientRect();
+        return {
+          aboveIdentity: chip.getBoundingClientRect().top - bounds.bottom,
+          spaceBelowNav: bounds.top - nav.getBoundingClientRect().bottom,
+          gap: Number.parseFloat(getComputedStyle(el.parentElement!).rowGap),
+          identityMargin: getComputedStyle(chip).marginTop,
+        };
+      });
+      expect(position.aboveIdentity).toBeCloseTo(position.gap, 0);
+      expect(position.spaceBelowNav).toBeGreaterThan(position.gap + 40);
+      expect(position.identityMargin).toBe('0px');
+      for (const viewport of [
+        { width: 1440, height: 640 },
+        { width: 760, height: 900 },
+        { width: 480, height: 900 },
+      ]) {
+        await page.setViewportSize(viewport);
+        await expect(shelf).toBeHidden();
+        await expect(identity).toBeVisible();
+      }
+      await page.setViewportSize({ width: 761, height: 900 });
+      await expect(shelf).toBeVisible();
+      await page.locator('label', { hasText: /^theme/ }).locator('select').selectOption('none');
+      await expect(shelf).toHaveCount(0);
+      await expect(identity).toBeVisible();
+    });
+  }
+  expect(api).toEqual([]);
+});
