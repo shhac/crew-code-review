@@ -26,7 +26,7 @@ export function placed(page: PageMap, a: Anchored): Point | null {
 }
 
 // What a ledge's offsets are measured from: its left end, on its line.
-export function ledgeOrigin(page: PageMap, floor: number): Point | null {
+function ledgeOrigin(page: PageMap, floor: number): Point | null {
   const f = page.floors.get(floor);
   return f ? { x: f.left, y: f.y } : null;
 }
