@@ -17,16 +17,13 @@ from pathlib import Path
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from art import crop, export, export_with_fur, feature, ground, keyed, opaque, place, poses, rescaled  # noqa: E402
+from art import EyeScale, crop, cut, export, export_with_fur, keyed, opaque, place, rescaled  # noqa: E402
 import numpy as np  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
 OUT = HERE.parents[1] / 'internal/dashboard/ui/src/lib/theme/hares'
 LAB = HERE.parents[1] / 'internal/dashboard/ui/src/lab'
 PARTS = ['hare-body', 'hare-head', 'hare-ears']
-# Drawing units are the reference's, moved by this, so a frame round it has
-# a margin.
-MARGIN = 1
 # The eye's size in drawing units (its dark outline and pupil together, the
 # blob art.py's feature finds), and file pixels per drawing unit.
 EYE = 1.4
@@ -52,14 +49,6 @@ LEG = 1.15
 # box) the leg comes down: high enough on them that a long foot laid flat,
 # as thick as the leg, rests on the ledge level with their soles.
 TOES = {'hare-hind-toes': (2.6, (0.16, 0.375)), 'hare-fore-toes': (1.7, (0.2, 0.25))}
-
-
-def eye_px(sheet: str) -> float:
-    return feature(HERE / sheet, EYES[sheet])
-
-
-def on_eye(sheet: str) -> float:
-    return EYE / eye_px(sheet) * RES
 
 
 def symmetric(piece: np.ndarray) -> np.ndarray:
@@ -95,45 +84,31 @@ def main() -> None:
         art = crop(keyed(HERE / f'{name}.png'))
         w, h = export(art, OUT, name, density * height / art.shape[0])
         print(f'{name}: display {w / density:g}x{h / density:g}')
+    hare = EyeScale(HERE, EYES, EYE, RES)
     for sheet in EYES:
-        print(f'{sheet}: eye {eye_px(sheet):.1f}px')
-    # The reference, for the lab to lay over the rig, and where each part sat
-    # in it: their places in the rig.
-    reference = crop(keyed(HERE / 'hare-standing.png'))
-    per_unit = eye_px('hare-standing.png') / EYE
-    w, h = export(reference, LAB, 'hare-reference', on_eye('hare-standing.png'))
-    print(f'hare-reference: {w / RES:.2f}x{h / RES:.2f} at {MARGIN}, {MARGIN}; ground {ground(reference) / per_unit + MARGIN:.2f}')
-    for name, seed in KEY_POSES.items():
-        path = HERE / f'hare-pose-{name}.png'
-        eye = feature(path, seed)
-        w, h = export(crop(keyed(path)), LAB, f'hare-pose-{name}', EYE / eye * RES)
-        print(f'hare-pose-{name}: eye {eye:.1f}px; drawing units {w / RES:.2f}x{h / RES:.2f}')
+        print(f'{sheet}: eye {hare.px(sheet):.1f}px')
+    hare.reference('hare-standing.png', LAB, 'hare-reference')
+    hare.key_poses('hare-pose-', KEY_POSES, LAB)
     # The head and ears from the parts sheet; the body from hare-torso-2.png
     # (see the note's Art section). The torso has no eye to measure: it is
     # put on the reference's scale by fitting it to hare-torso.png, an edit
     # that kept the reference's own size and differs only in its haunch.
-    parts = dict(zip(PARTS, (crop(p) for p in poses(keyed(HERE / 'hare-parts.png'), len(PARTS)))))
+    parts = cut(keyed(HERE / 'hare-parts.png'), PARTS)
     first = crop(keyed(HERE / 'hare-torso.png'))
     torso = crop(keyed(HERE / 'hare-torso-2.png'))
     t = fitted(torso, first)
     print(f'hare-torso-2: {t:.3f} of the reference scale')
-    parts['hare-body'] = torso
-    k = eye_px('hare-standing.png') / eye_px('hare-parts.png')
-    for name, art in parts.items():
-        scale = t * on_eye('hare-standing.png') if name == 'hare-body' else on_eye('hare-parts.png')
-        w, h = export(art, OUT, name, scale)
-        y, x = place(rescaled(art, t if name == 'hare-body' else k), reference)
-        print(f'{name}: {w / RES:.2f}x{h / RES:.2f} at {x / per_unit + MARGIN:.2f}, {y / per_unit + MARGIN:.2f}')
+    hare.placed('hare-body', torso, OUT, t * hare.on_eye('hare-standing.png'), t)
+    hare.parts({name: art for name, art in parts.items() if name != 'hare-body'}, 'hare-parts.png', OUT)
     # Each limb piece as drawn and as fur alone, its outline taken out.
-    pieces = dict(zip(LIMBS, (crop(p) for p in poses(keyed(HERE / 'hare-limbs.png'), len(LIMBS)))))
+    pieces = cut(keyed(HERE / 'hare-limbs.png'), LIMBS)
     w, h = export_with_fur(pieces['hare-thigh'], OUT, 'hare-thigh', THIGH * RES / pieces['hare-thigh'].shape[0])
     print(f'hare-thigh: {w / RES:.2f}x{h / RES:.2f}')
     bone = symmetric(pieces['hare-leg'])
     w, h = export_with_fur(bone, OUT, 'hare-leg', LEG * RES / bone.shape[0])
     print(f'hare-leg: {w / RES:.2f}x{h / RES:.2f}')
-    for name, (length, (hx, hy)) in TOES.items():
-        w, h = export_with_fur(pieces[name], OUT, name, length * RES / pieces[name].shape[1])
-        print(f'{name}: {w / RES:.2f}x{h / RES:.2f}, heel {w * hx / RES:.2f}, {h * hy / RES:.2f}')
+    for name, (length, heel) in TOES.items():
+        hare.foot(name, pieces[name], OUT, length, heel)
 
 
 if __name__ == '__main__':
