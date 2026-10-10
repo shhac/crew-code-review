@@ -20,10 +20,18 @@ const overCards = (page: Page) => cupids(page).evaluateAll((els) => {
 });
 
 // Holds the cursor still near the queue's top edge until a cupid shoots,
-// checking the arrow and its hearts at every look.
+// checking the arrow and its hearts at every look. It rests past the end of
+// the heading's subtitle: an arrow comes down from the air above, so the
+// ledges under the subtitle are out of reach, and how far it runs depends on
+// the font (Linux's DejaVu Sans sets it 47px wider than macOS does).
 async function watchShot(page: Page) {
-  await page.mouse.move(680, 280);
-  await page.mouse.move(620, 230, { steps: 4 });
+  const x = await page.locator('main .hero h1 + p').evaluate((el) => {
+    const range = document.createRange();
+    range.selectNodeContents(el);
+    return range.getBoundingClientRect().right + 60;
+  });
+  await page.mouse.move(x + 60, 280);
+  await page.mouse.move(x, 230, { steps: 4 });
   const seen = { arrow: false, hearts: false, covered: [] as string[] };
   for (let i = 0; i < 60 && !(seen.arrow && seen.hearts); i++) {
     await page.waitForTimeout(80);
