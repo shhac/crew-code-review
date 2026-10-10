@@ -68,6 +68,14 @@ arrow into the ledge nearest a cursor that goes still (it pops into hearts
 and stays stuck a while, wobbling), and dodge a cursor whipping past.
 Reduced motion keeps a still scene.
 
+March now has Mad March hares (`dashboard.theme` `hares`, on by default
+under `auto` from 1 to 31 March). The rail shows a pot of daffodils; the page
+gets tufts of grass and daffodil shoots along its ledges, swaying and parting
+at a passing cursor, and two or three brown hares that graze and sit up, box
+where there is room to rear, then chase ledge to ledge in bounding leaps
+(never over text, controls or charts), and freeze with their ears up at a
+cursor coming near, then bolt. Reduced motion keeps a still scene.
+
 April now has an Easter egg hunt (`dashboard.theme` `easter`, on by default
 under `auto` from 1 to 30 April). The rail shows a basket of painted eggs and
 chicks; painted eggs peep from the ends of the page's ledges and pop up when

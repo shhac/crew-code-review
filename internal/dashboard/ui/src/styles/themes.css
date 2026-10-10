@@ -59,6 +59,23 @@
   background-attachment: fixed;
 }
 
+/* Hare russet for Mad March hares: a soft tan, far less saturated than
+   Halloween's orange, redder than Bonfire's gold and the warning amber, and
+   not as pink as the bad ink's salmon. */
+:root[data-theme="hares"] {
+  --accent: #dfa06a;
+  --accent-edge: rgba(223, 160, 106, .3);
+  --accent-ring: rgba(223, 160, 106, .35);
+  --rule: #dfa06a;
+}
+
+/* A faint spring green low in the corner by the daffodils, behind
+   everything. */
+:root[data-theme="hares"] body {
+  background-image: radial-gradient(ellipse 45% 40% at 0% 100%, rgba(140, 193, 82, .05), transparent 70%);
+  background-attachment: fixed;
+}
+
 /* Spring lilac for the Easter egg hunt, clear of the default lime, the info
    blue and the warning amber. */
 :root[data-theme="easter"] {

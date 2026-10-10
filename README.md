@@ -510,8 +510,8 @@ deliberately.
 - **Logs**: a live tail of the daemon's own log.
 
 **Seasonal themes.** `dashboard.theme` adds decorations to the dashboard: `auto` (the
-default) switches a set on in its season: the northern lights in January, Valentine's in February, an Easter egg hunt in April, Halloween in October, Bonfire Night in November and Christmas throughout December. `none` turns
-decorations off, and naming a set (`aurora`, `valentine`, `easter`, `halloween`, `bonfire` or `christmas`) forces it on. They are purely cosmetic and
+default) switches a set on in its season: the northern lights in January, Valentine's in February, Mad March hares in March, an Easter egg hunt in April, Halloween in October, Bonfire Night in November and Christmas throughout December. `none` turns
+decorations off, and naming a set (`aurora`, `valentine`, `hares`, `easter`, `halloween`, `bonfire` or `christmas`) forces it on. They are purely cosmetic and
 never block a click. Reduced-motion users get the decorations without the
 animation. To preview a set whatever the date, add `?theme=halloween` to the
 URL.
@@ -561,6 +561,16 @@ cursor, pops into a few hearts and stays stuck there, wobbling, before it
 fades. A cursor whipping past makes a cupid dodge. Reduced motion shows the
 cupids hovering still. Preview with `?theme=valentine`; design notes:
 [Valentine's](design-docs/valentine/README.md).
+
+March is Mad March hares: a pot of daffodils on the rail, and tufts of grass
+and daffodil shoots along the ledges, swaying in a breeze and parting where
+the cursor brushes them. Two or three brown hares graze and sit up on the
+ledges; now and then a jack lopes up to the jill, they rear up and box where
+there is room, and she bolts, he chasing her ledge to ledge in bounding
+leaps, never over text, controls or charts. A cursor coming near makes them
+freeze, crouched with their ears up, then bolt. Reduced motion shows the
+hares sitting still. Preview with `?theme=hares`; design notes:
+[Mad March hares](design-docs/hares/README.md).
 
 April is an Easter egg hunt: a basket of painted eggs with three chicks on
 the rail. Eggs are tucked into the ends of the page's ledges, only their tops

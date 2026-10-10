@@ -18,7 +18,7 @@ func TestValentineCalendarAndOverrides(t *testing.T) {
 			{time.Date(2027, 2, 28, 23, 59, 0, 0, zone), ThemeValentine},
 			// A leap year's last day of February is still February.
 			{time.Date(2028, 2, 29, 23, 59, 0, 0, zone), ThemeValentine},
-			{time.Date(2027, 3, 1, 0, 0, 0, 0, zone), ThemeNone},
+			{time.Date(2027, 3, 1, 0, 0, 0, 0, zone), ThemeHares},
 		} {
 			if got := (Config{Dashboard: DashboardSettings{Theme: theme}}).DashboardTheme(tc.at); got != tc.want {
 				t.Fatalf("%q at %v: %q, want %q", theme, tc.at, got, tc.want)

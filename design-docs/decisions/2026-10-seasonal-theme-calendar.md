@@ -8,7 +8,8 @@ December (Christmas) were built and the other ten months and the geometry
 consolidation were not started. Revised the same day after a read-only
 review by Codex (`gpt-5.6-terra`), which corrected two claims about the code
 and tightened the refactor's contract. Since built: February (Valentine's,
-2026-10-10), April (Easter egg hunt, 2026-10-10).
+2026-10-10), March (Mad March hares, 2026-10-10), April (Easter egg hunt,
+2026-10-10).
 
 ## The problem
 
@@ -56,13 +57,15 @@ all twelve. Easter can fall in late March; an April-long egg hunt still works.
   by the group rule. The first fliers on the rig; their airspace contract and
   sources are in `design-docs/valentine/`.
 
-### March: Mad March hares
+### March: Mad March hares (built)
 
 - **Shelf**: a pot of daffodils.
 - **Ledges**: tufts of grass and daffodil shoots.
 - **Animal**: two hares box on a wide ledge, then chase each other ledge to
   ledge in bounding leaps. When the cursor comes near they freeze with ears
-  up, then bolt.
+  up, then bolt. Built as two or three brown hares, a jill and her jacks;
+  sources, the leap's airspace contract and method are in
+  `design-docs/hares/`.
 
 ### April: Easter egg hunt (built)
 

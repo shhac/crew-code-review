@@ -8,6 +8,24 @@ import { coveredContent } from './content';
 
 const hares = (page: Page) => page.locator('[data-hare]');
 
+async function serveHares(page: Page) {
+  await page.route('**/api/config', async (route) => {
+    const response = await route.fetch();
+    const config = await response.json();
+    config.theme = 'hares';
+    await route.fulfill({ response, json: config });
+  });
+}
+
+test('the daemon-resolved hares theme decorates the page and takes its palette', async ({ page }) => {
+  await serveHares(page);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/');
+  await expect(page.locator('[data-hares]')).toBeAttached();
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'hares');
+  expect(await page.locator('.brand em').evaluate((el) => getComputedStyle(el).color)).toBe('rgb(223, 160, 106)');
+});
+
 test('the hares theme decorates the page, with at least two hares on the overview', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/?theme=hares');

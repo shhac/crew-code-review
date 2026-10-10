@@ -398,7 +398,10 @@ Hare-only tuning (strides, stances, timings, reaches) stays in
 Hare russet `#dfa06a`: distinct from Halloween's orange (`#ff8f2e`, far more
 saturated), from Bonfire's gold and the warning amber (both yellower), from
 the bad ink's salmon (`#ea8478`, pinker), and from the default lime, which
-spring green would sit too close to. Only the accent tokens move. A proposal:
+spring green would sit too close to, and from Valentine's pink and Easter's lilac.
+Only the accent tokens (and the heading rule's colour, as for the other
+months) move, with a faint spring green glow low in the corner by the
+daffodils, behind everything. A proposal:
 easy to change in `styles/themes.css`.
 
 ### The shelf
@@ -408,7 +411,7 @@ rail keeps no sky effect, as Christmas's does not.
 
 ## Integration
 
-The calendar's checklist, as for the months before: the Go constant, `Themes`
+Switched on 2026-10-10. The calendar's checklist, as for the months before: the Go constant, `Themes`
 and `time.March` in `seasonalThemes`, with calendar, boundary and override
 cases (`hares_test.go`, and the neighbouring months' boundary tests); the
 dashboard config API test; `THEMES`; App's shelf and layer branches; the

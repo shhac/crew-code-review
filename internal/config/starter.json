@@ -141,7 +141,7 @@
       "mode": "",
       "port": 443
     },
-    "//theme_note": "Seasonal decorations over the dashboard, cosmetic only. auto = whichever set is in season (aurora in January, valentine in February, easter in April, halloween in October, bonfire in November, christmas in December), none = never, or name a set to force it on.",
+    "//theme_note": "Seasonal decorations over the dashboard, cosmetic only. auto = whichever set is in season (aurora in January, valentine in February, hares in March, easter in April, halloween in October, bonfire in November, christmas in December), none = never, or name a set to force it on.",
     "theme": "auto"
   }
 }
