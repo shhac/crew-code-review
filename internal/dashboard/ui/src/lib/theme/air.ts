@@ -73,3 +73,70 @@ export function sweeps(air: Pick<Air, 'page' | 'room'>, boxes: readonly Box[], a
   if (boxes.length === 1) return fits(air, boxes[0], also, near);
   return boxes.slice(1).every((b, i) => fits(air, union(boxes[i], b), also, near));
 }
+
+// A flier's path, swept with the box of whatever pose it flies each piece
+// in: July's pigeons and hawk, August's gull and September's crows each
+// plan their own routes, and each route is checked here. A piece is a
+// cubic curve (the robin's FlightCurve has this shape) and an envelope: how
+// far the pose's drawing reaches from the point on the curve, every way,
+// at every moment of its motion (a whole wingbeat, a bank), as its rig test
+// measures it, mirrored to the way it faces along that piece.
+export type Cubic = { from: Point; control1: Point; control2: Point; to: Point };
+export type Envelope = { left: number; right: number; up: number; down: number };
+export type Segment = { curve: Cubic; envelope: Envelope };
+
+// The same envelope facing the other way.
+export const mirrored = (e: Envelope): Envelope => ({ ...e, left: e.right, right: e.left });
+
+// A footprint (rig.ts's page box: its width centred on the point, its
+// height above it and `down` below) as an envelope, facing either way.
+export const envelopeOf = (box: { width: number; height: number; down?: number }): Envelope =>
+  ({ left: box.width / 2, right: box.width / 2, up: box.height, down: box.down ?? 0 });
+
+// Subdivided this many times at most before a piece counts as blocked: as
+// deep as the robin's clearFlight goes.
+const DEPTH = 12;
+
+const hullOf = (c: Cubic, e: Envelope): Box => {
+  const points = [c.from, c.control1, c.control2, c.to];
+  const xs = points.map((p) => p.x), ys = points.map((p) => p.y);
+  return { left: Math.min(...xs) - e.left, right: Math.max(...xs) + e.right, top: Math.min(...ys) - e.up, bottom: Math.max(...ys) + e.down };
+};
+
+const halves = (c: Cubic): [Cubic, Cubic] => {
+  const mid = (a: Point, b: Point): Point => ({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 });
+  const a = mid(c.from, c.control1), b = mid(c.control1, c.control2), d = mid(c.control2, c.to);
+  const e = mid(a, b), f = mid(b, d), middle = mid(e, f);
+  return [{ from: c.from, control1: a, control2: e, to: middle }, { from: middle, control1: f, control2: d, to: c.to }];
+};
+
+// The boxes a piece is checked as: its control hull, which a cubic never
+// leaves, grown by its envelope; where that box is not clear, the two
+// halves' (by de Casteljau, as clearFlight splits them), and so on, so
+// every point of the curve is covered, its exact extremes included, and
+// nothing is checked only at its ends. Null when some part of it, split as
+// far as DEPTH, is still not clear.
+function sweptBoxes(curve: Cubic, envelope: Envelope, clear: (box: Box) => boolean, depth: number): Box[] | null {
+  const box = hullOf(curve, envelope);
+  if (![box.left, box.right, box.top, box.bottom].every(Number.isFinite)) return null;
+  if (clear(box)) return [box];
+  if (depth === DEPTH) return null;
+  const [a, b] = halves(curve);
+  const first = sweptBoxes(a, envelope, clear, depth + 1);
+  if (!first) return null;
+  const second = sweptBoxes(b, envelope, clear, depth + 1);
+  return second && [...first, ...second];
+}
+
+// Whether a path is clear, each piece swept with its own envelope, and the
+// boxes it was found clear by (for the debug overlay to draw). `clear` says
+// whether a box is all in air: a month's own rule (its exits, the rail's
+// sky, the card edges it may reach into), or fitsAir's.
+export function sweptPath(segments: readonly Segment[], clear: (box: Box) => boolean): { clear: boolean; boxes: Box[] } {
+  const found = segments.map((s) => sweptBoxes(s.curve, s.envelope, clear, 0));
+  return { clear: found.every((b) => b !== null), boxes: found.flatMap((b) => b ?? []) };
+}
+
+// A box all in this air (fits), clear of anything else given: the plain
+// rule for sweptPath.
+export const fitsAir = (air: Pick<Air, 'page' | 'room'>, also: readonly Box[] = []) => (box: Box) => fits(air, box, also);
