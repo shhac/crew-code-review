@@ -1,12 +1,13 @@
 import type { Ledge, PageMap, Run } from '../floors';
 import {
-  arriving, bodyOf, clearOf, entries, exitEnd, ledgeEnds, lengthOf, noticing, pageAt, pointClaim, roomiest, RUNS, runAt, runUnder, spare, staysPut, widthOf, within,
-  type Claim, type Entry, type Trip, type Walker,
+  arriving, bodyOf, clearOf, ledgeEnds, lengthOf, noticing, pageAt, pointClaim, roomiest, RUNS, runAt, runUnder, spare, staysPut, widthOf, within,
+  type Claim, type Trip, type Walker,
 } from '../ledges';
-import { apart, clamp01, sign } from '../math';
+import { clamp01, sign } from '../math';
 import type { Cursor, Point } from '../pointer';
-import { between, maxBy, pick, type Rand } from '../seed';
+import { between, type Rand } from '../seed';
 import type { End } from './hunt';
+import { along, leave, moveOn, way } from './rabbit-moves';
 import { HOP_LENGTH, REST, type Pose } from './rabbit-rig';
 
 // European rabbits on the ledges: sitting with their noses twitching,
@@ -39,12 +40,8 @@ export const BOLT = 90;
 // ledge, counting REACH into the empty edge of a card or rule above.
 const CLEAR = 27;
 const REACH = 6;
-const HALF = POSES.hop.width / 2;
+export const HALF = POSES.hop.width / 2;
 const MIN_SPOT = 2 * HALF + 4;
-const MIN_ENTRY = 90;
-// A move along the ledge is at least two hops, at most about seven.
-const MIN_MOVE = 2 * HOP_LENGTH;
-const MAX_MOVE = 140;
 // Rabbits keep at least this far apart, centre to centre.
 export const SPACING = 60;
 // Where the walked distance stands at rest between hops: a whole number of
@@ -61,12 +58,8 @@ export const NUDGE = 900;
 export const THUMP = 500;
 const AWAY = { lo: 1500, hi: 3000 };
 const PAUSE = { lo: 100, hi: 350 };
-const RESTLESS = { lo: 3000, hi: 8000 };
+export const RESTLESS = { lo: 3000, hi: 8000 };
 export const FADE = 14;
-// The egg sits this far in from its ledge's end; a rabbit nudging it stands
-// this far back from it, its nose at the egg.
-const EGG_IN = 10;
-const NOSE = 17;
 
 export type Mode = 'sit' | 'alert' | 'groom' | 'hop' | 'nudge' | 'thump' | 'bolt' | 'exit' | 'away' | 'enter';
 // Where a rabbit changing ledge is going: the end it hops in at, and where
@@ -109,8 +102,8 @@ export type Rabbit = {
   left: { floor: number; end: End } | null;
 };
 
-const RABBIT: Walker = { clear: CLEAR, reach: REACH, half: HALF, spacing: SPACING };
-const body = (r: Run): Run => bodyOf(r, HALF);
+export const RABBIT: Walker = { clear: CLEAR, reach: REACH, half: HALF, spacing: SPACING };
+export const body = (r: Run): Run => bodyOf(r, HALF);
 
 // Who a rabbit is, kept across every change of place.
 type Self = Pick<Rabbit, 'id' | 'seed' | 'walked'>;
@@ -122,7 +115,7 @@ function sitAt(self: Self, floor: number, x: number, now: number, restless: numb
     from: x, egg: null, trip: null, near: null, scare: null, tall: false, was: 'sit', left: null,
   };
 }
-const become = (r: Rabbit, mode: Mode, now: number, over: Partial<Rabbit> = {}): Rabbit => ({ ...r, was: r.mode, mode, since: now, ...over });
+export const become = (r: Rabbit, mode: Mode, now: number, over: Partial<Rabbit> = {}): Rabbit => ({ ...r, was: r.mode, mode, since: now, ...over });
 
 // Where a rabbit's hops will bring it.
 export const targetOf = (r: Pick<Rabbit, 'x' | 'hops' | 'hop' | 'dir'>) => (r.hop ? r.hop.x + r.dir * (r.hops + 1) * HOP_LENGTH : r.x + r.dir * r.hops * HOP_LENGTH);
@@ -132,7 +125,7 @@ const claims = (others: readonly Rabbit[]): Claim[] => others.flatMap((o) => [
   ...(o.mode === 'away' ? [] : [pointClaim(o.floor, o.x), pointClaim(o.floor, targetOf(o))]),
   ...(o.trip ? [pointClaim(o.trip.floor, o.trip.entry), pointClaim(o.trip.floor, o.trip.x)] : []),
 ]);
-const clear = (claimed: readonly Claim[], floor: number, a: number, b: number) => clearOf(claimed, floor, a, b, SPACING);
+export const clear = (claimed: readonly Claim[], floor: number, a: number, b: number) => clearOf(claimed, floor, a, b, SPACING);
 
 // Where a rabbit could sit: the longest clear run in view, away from the
 // others, on a ledge with no rabbit where there is one.
@@ -219,14 +212,14 @@ const centre = (r: Rabbit, f: Ledge): Point => pageAt(f, r.x, POSES.sit.height /
 
 // How much clear space is left above a pose standing at x (negative when it
 // does not fit).
-const spareFor = (f: Ledge, scene: PageMap, pose: Pose, x: number) => spare(f, scene, RABBIT, POSES[pose], x);
+export const spareFor = (f: Ledge, scene: PageMap, pose: Pose, x: number) => spare(f, scene, RABBIT, POSES[pose], x);
 
-const settle = (r: Rabbit, now: number, restless = 3000): Rabbit =>
+export const settle = (r: Rabbit, now: number, restless = 3000): Rabbit =>
   become(r, 'sit', now, { until: now + restless, hops: 0, hop: null, trip: null, egg: null, near: null, scare: null });
 
 // Off on a run of whole hops toward x: as many as fit short of it (or the
 // nearest number, `round`), at least one.
-function hopToward(r: Rabbit, mode: Mode, now: number, x: number, over: Partial<Rabbit> = {}, round = false): Rabbit {
+export function hopToward(r: Rabbit, mode: Mode, now: number, x: number, over: Partial<Rabbit> = {}, round = false): Rabbit {
   const n = Math.abs(x - r.x) / HOP_LENGTH;
   const hops = Math.max(1, round ? Math.round(n) : Math.floor(n + 1e-9));
   return become(r, mode, now, { dir: sign(x - r.x), hops, hop: null, pause: now, ...over });
@@ -251,85 +244,6 @@ function hopping(r: Rabbit, now: number, dt: number, speed: number, rand: Rand):
 
 // Whether the hunt has room for an egg at this end of this ledge.
 export type CanLay = (floor: number, end: End) => boolean;
-
-// Somewhere to go when it gets restless: one time in three out to another
-// ledge in view, one in three to a free ledge end to leave an egg (while no
-// other rabbit is up to something), else along its own run; or nowhere, and
-// it sits on.
-function moveOn(r: Rabbit, scene: PageMap, now: number, rand: Rand, taken: readonly Claim[], othersBusy: boolean, canLay: CanLay): Rabbit {
-  const f = scene.floors.get(r.floor);
-  const run = f && runAt(f, scene, RABBIT, r.x);
-  if (!f || !run) return settle(r, now);
-  const roll = rand();
-  const out = !othersBusy && roll < 1 / 3 ? way(r, f, run, scene, rand, taken, null) : null;
-  if (out) return leave(r, 'exit', now, out);
-  const lay = !othersBusy && roll < 2 / 3 ? layingSpot(r, f, run, scene, taken, canLay) : null;
-  if (lay) return hopToward(r, 'hop', now, lay.x, { egg: lay.end }, true);
-  return along(r, f, run, scene, now, rand, taken);
-}
-
-// Along its own run, at least two hops, stopping SPACING short of the
-// nearest rabbit each way: to the side with more room, or the side away
-// from `away`; bolting, as far as it can that way. With nowhere to go it
-// sits on (bolting, on alert).
-type Along = { away: Point | null; bolt: boolean };
-function along(r: Rabbit, f: Ledge, run: Run, scene: PageMap, now: number, rand: Rand, taken: readonly Claim[], { away, bolt }: Along = { away: null, bolt: false }): Rabbit {
-  const room = body(run);
-  const xs = taken.filter((c) => c.floor === r.floor).map((c) => c.lo);
-  const lane = {
-    lo: Math.max(room.lo, ...xs.filter((x) => x < r.x).map((x) => x + SPACING)),
-    hi: Math.min(room.hi, ...xs.filter((x) => x > r.x).map((x) => x - SPACING)),
-  };
-  const reach = (d: -1 | 1) => (d < 0 ? r.x - lane.lo : lane.hi - r.x);
-  const sides = ([-1, 1] as const).filter((d) => reach(d) >= MIN_MOVE);
-  const side = away ? maxBy(sides, (d) => Math.abs(f.left + r.x + d * MIN_MOVE - away.x)) : maxBy(sides, reach);
-  if (!side && bolt) return alertAt(settle(r, now), scene, now, rand);
-  if (!side) return settle(r, now, between(rand, RESTLESS.lo, RESTLESS.hi));
-  const far = bolt ? reach(side) : Math.min(reach(side), between(rand, MIN_MOVE, MAX_MOVE));
-  return hopToward(r, bolt ? 'bolt' : 'hop', now, r.x + side * far);
-}
-
-// A free ledge end its own run reaches, to leave an egg at: where it stands
-// to nudge it there, its nose at the egg, and which end.
-function layingSpot(r: Rabbit, f: Ledge, run: Run, scene: PageMap, taken: readonly Claim[], canLay: CanLay): { x: number; end: End } | null {
-  const options = ledgeEnds(f, run).flatMap((e) => {
-    const end: End = e === run.lo ? 'left' : 'right';
-    const at = end === 'left' ? EGG_IN + NOSE : widthOf(f) - EGG_IN - NOSE;
-    const hops = Math.round(Math.abs(at - r.x) / HOP_LENGTH);
-    const x = r.x + sign(at - r.x) * hops * HOP_LENGTH;
-    const fits = hops > 0 && within({ lo: run.lo + POSES.nudge.width / 2 - EGG_IN, hi: run.hi - POSES.nudge.width / 2 + EGG_IN }, x) && spareFor(f, scene, 'nudge', x) >= 0;
-    return fits && canLay(r.floor, end) && clear(taken, r.floor, r.x, x) ? [{ x: at, end }] : [];
-  });
-  return options[0] ?? null;
-}
-
-// A way out by one of its ledge's ends (away from `away` when given, else
-// the nearer) to another ledge in view; null if there is none.
-type Way = { trip: Trip; exit: number };
-function way(r: Rabbit, f: Ledge, run: Run, scene: PageMap, rand: Rand, taken: readonly Claim[], away: Point | null): Way | null {
-  const exit = exitEnd(f, run, r, taken, SPACING, away);
-  const ways = waysOn(r, scene, rand, taken);
-  const to = away ? maxBy(ways, (e) => apart(e.at, away)) : ways.length ? pick(rand, ways) : undefined;
-  return exit !== undefined && to ? { trip: to.trip, exit } : null;
-}
-
-// Every way onto another ledge in view: in at one of its ends, to sit a
-// whole number of hops (two or more) inside, all of it on the run.
-function waysOn(r: Rabbit, scene: PageMap, rand: Rand, taken: readonly Claim[]): Entry[] {
-  return entries(scene, RABBIT, r.floor, MIN_ENTRY, taken, (run, entry, inward) => {
-    const hops = Math.max(2, Math.floor(between(rand, 30 + HALF, lengthOf(run) - HALF) / HOP_LENGTH));
-    const x = entry + inward * hops * HOP_LENGTH;
-    return within(body(run), x) ? x : null;
-  });
-}
-
-// Off along its run to its ledge's end by whole hops, to leave by it: past
-// the end by up to a hop, by when it has faded out.
-function leave(r: Rabbit, mode: 'exit' | 'bolt', now: number, out: Way): Rabbit {
-  const hops = Math.max(1, Math.ceil(Math.abs(out.exit - r.x) / HOP_LENGTH));
-  return become(r, mode, now, { dir: sign(out.exit - r.x), hops, hop: null, pause: now, trip: out.trip, egg: null });
-}
-
 // How long a cursor has been close, and whether it is passing near enough
 // to make it sit up, or has lingered long enough to make it thump.
 function notice(r: Rabbit, f: Ledge, now: number, cursor: Cursor | null): { r: Rabbit; passing: boolean; lingered: boolean } {
@@ -342,7 +256,7 @@ export const busy = (r: Rabbit) => ['thump', 'bolt', 'nudge', 'exit', 'away', 'e
 
 // Sat up on alert (tall where there is room), until a while after the
 // cursor has gone.
-function alertAt(r: Rabbit, scene: PageMap, now: number, rand: Rand): Rabbit {
+export function alertAt(r: Rabbit, scene: PageMap, now: number, rand: Rand): Rabbit {
   const f = scene.floors.get(r.floor);
   const roomy = !!f && spareFor(f, scene, 'alert', r.x) >= 0;
   const until = now + between(rand, ALERT.lo, ALERT.hi);
