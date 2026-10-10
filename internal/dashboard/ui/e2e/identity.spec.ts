@@ -1,5 +1,4 @@
 import { expect, test } from '@playwright/test';
-import { DAEMON_PORT } from './fixture.mjs';
 
 // Identity and steering, driven through a proxy that attaches the header the
 // way `tailscale serve` does. The daemon's own tests cover the rules; these
