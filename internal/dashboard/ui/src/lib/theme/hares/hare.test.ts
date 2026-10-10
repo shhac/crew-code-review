@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { CARDS, dashboardPage, fixed, HEADING, seeded } from '../test-scene';
-import { fresh, holds, LOPE_SPEED, placeHare, sittingAt, SPACING, spots, stepHare, type Hare } from './hare';
+import { spots } from '../ledges';
+import { fresh, HARE, holds, LOPE_SPEED, placeHare, sittingAt, SPACING, stepHare, type Hare } from './hare';
 
 const page = dashboardPage();
 // A hare on the heading rule at x (ledge-local: the title covers 0 to
@@ -37,7 +38,7 @@ describe('placing a hare', () => {
 
   it('finds no spot where every ledge is covered, and so places none', () => {
     const covered = dashboardPage([{ left: 0, right: 1440, top: 120, bottom: 181 }]);
-    expect(spots(covered, [])).toEqual([]);
+    expect(spots(covered, [], HARE, 0)).toEqual([]);
     expect(placeHare(covered, 0, fixed(0.5), [], fresh(0))).toBeNull();
   });
 });
