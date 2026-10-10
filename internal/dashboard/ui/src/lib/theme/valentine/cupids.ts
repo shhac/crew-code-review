@@ -7,7 +7,7 @@ import { apart } from '../math';
 import type { Cursor, Point } from '../pointer';
 import type { Rand } from '../seed';
 import { land, landable, prune, reconcileStuck, slantOf, burstsLeft, type Burst, type Stuck } from './arrows';
-import { createCupid, cupidView, dodge, DASH, fresh, LOOSE, reconcileCupid, restingCupid, shooting, stepCupid, TURN, where, type Cupid } from './cupid';
+import { bowRaised, createCupid, cupidView, dodge, DASH, fresh, LOOSE, reconcileCupid, restingCupid, shooting, stepCupid, TURN, where, type Cupid } from './cupid';
 import { FOOTPRINTS } from './footprints';
 
 // The cupids on the page together, and their arrows: how many to keep, the
@@ -53,6 +53,9 @@ const NEAREST = 24;
 const RISES = [0.25, 0.4, 0.12, 0.6];
 
 const empty = (target: number, cupids: Cupid[]): Cupids => ({ target, cupids, flying: null, stuck: [], bursts: [], lastShot: -Infinity, shotAt: -Infinity, stillAt: null, count: 0 });
+// The group with one cupid changed.
+const withCupid = (group: Cupids, id: number, change: (c: Cupid) => Cupid): Cupids => ({ ...group, cupids: group.cupids.map((c) => (c.id === id ? change(c) : c)) });
+const lowerBow = (c: Cupid): Cupid => ({ ...c, mode: 'hover', target: null });
 
 // Placed one after another, each away from those before it.
 export function createCupids(air: Air, now: number, rand: Rand): Cupids {
@@ -170,8 +173,8 @@ function startShot(group: Cupids, air: Air, now: number, cursor: Cursor): Cupids
     const best = shots[0];
     if (!best) continue;
     const target = { floor: landing.floor, x: landing.x, aim: best.shot.aim };
-    const cupids = group.cupids.map((c) => (c.id === best.c.id ? { ...c, mode: 'turn' as const, until: now + TURN, dir: best.shot.dir, target } : c));
-    return { ...marked, cupids, stillAt: { x: cursor.x, y: cursor.y } };
+    const turned = withCupid(marked, best.c.id, (c) => ({ ...c, mode: 'turn', until: now + TURN, dir: best.shot.dir, target }));
+    return { ...turned, stillAt: { x: cursor.x, y: cursor.y } };
   }
   return marked;
 }
@@ -188,7 +191,7 @@ function arrowStillClear(f: Flying, air: Air, cupids: readonly Cupid[], now: num
 // The shooter's bow at the end of its aim: loosed along its arc if that is
 // still clear from where it is now, else lowered.
 function loose(group: Cupids, air: Air, c: Cupid, now: number, rand: Rand): Cupids {
-  const lowered = { ...group, cupids: group.cupids.map((o) => (o.id === c.id ? { ...o, mode: 'hover' as const, target: null } : o)) };
+  const lowered = withCupid(group, c.id, lowerBow);
   const target = c.target;
   const at = where(c, air.page, now);
   const g = target && air.page.floors.get(target.floor);
@@ -198,8 +201,8 @@ function loose(group: Cupids, air: Air, c: Cupid, now: number, rand: Rand): Cupi
   if (!shot || !held || shot.dir !== c.dir) return lowered;
   const length = lengthOf((t) => quadratic(shot.arc, t));
   const flying: Flying = { key: `${c.id}:${group.count}`, by: c.id, floor: target.floor, arc: held, start: now, duration: Math.max(MIN_ARROW, (length / ARROW_SPEED) * 1000), seed: Math.floor(rand() * 1000) };
-  const cupids = group.cupids.map((x) => (x.id === c.id ? { ...x, mode: 'loose' as const, until: now + LOOSE, target: { ...target, aim: shot.aim } } : x));
-  return { ...group, cupids, flying, lastShot: now, count: group.count + 1 };
+  const loosed = withCupid(group, c.id, (x) => ({ ...x, mode: 'loose', until: now + LOOSE, target: { ...target, aim: shot.aim } }));
+  return { ...loosed, flying, lastShot: now, count: group.count + 1 };
 }
 
 // One step for all of them, each in turn seeing the others as they now are;
@@ -209,16 +212,30 @@ function loose(group: Cupids, air: Air, c: Cupid, now: number, rand: Rand): Cupi
 export function stepCupids(group: Cupids, air: Air, now: number, dt: number, rand: Rand, cursor: Cursor | null): Cupids {
   const point = cursor && { x: cursor.x, y: cursor.y };
   const stepped = { ...group, cupids: inTurn(group.cupids, (c, others) => stepCupid(c, air, now, dt, rand, point, others)) };
-  const moved = !cursor || (group.stillAt !== null && apart(group.stillAt, cursor) >= MOVED);
-  const lowered = moved
-    ? { ...stepped, cupids: stepped.cupids.map((c) => (c.mode === 'turn' || c.mode === 'draw' || c.mode === 'aim' ? { ...c, mode: 'hover' as const, target: null } : c)) }
-    : stepped;
-  const aimed = lowered.cupids.find((c) => c.mode === 'aim' && now >= c.until);
-  const loosed = aimed ? loose(lowered, air, aimed, now, rand) : lowered;
+  const lowered = movedOff(group, cursor) ? { ...stepped, cupids: stepped.cupids.map((c) => (bowRaised(c) ? lowerBow(c) : c)) } : stepped;
+  const loosed = looseAimed(lowered, air, now, rand);
   const landed = flyOn(loosed, air, now);
-  const busy = landed.flying || landed.cupids.some(shooting);
-  const ready = cursor && !busy && now - cursor.at >= STILL && cursor.at !== landed.shotAt && now - landed.lastShot >= COOLDOWN;
-  return ready ? startShot({ ...landed, stillAt: null }, air, now, cursor) : { ...landed, stillAt: landed.cupids.some(shooting) ? landed.stillAt : null };
+  return shootIfStill(landed, air, now, cursor);
+}
+
+// Whether the cursor has gone, or moved off where it was still when a bow
+// was drawn at it.
+const movedOff = (group: Cupids, cursor: Cursor | null) => !cursor || (group.stillAt !== null && apart(group.stillAt, cursor) >= MOVED);
+
+// The bow at the end of its aim, if any, loosed.
+function looseAimed(group: Cupids, air: Air, now: number, rand: Rand): Cupids {
+  const aimed = group.cupids.find((c) => c.mode === 'aim' && now >= c.until);
+  return aimed ? loose(group, air, aimed, now, rand) : group;
+}
+
+// A new shot begun at a cursor still long enough, not yet shot at, with
+// nothing in the air or being shot and the last shot cooled; otherwise,
+// once no bow is busy, where the cursor was still is forgotten.
+function shootIfStill(group: Cupids, air: Air, now: number, cursor: Cursor | null): Cupids {
+  const busy = group.flying || group.cupids.some(shooting);
+  const ready = cursor && !busy && now - cursor.at >= STILL && cursor.at !== group.shotAt && now - group.lastShot >= COOLDOWN;
+  if (ready) return startShot({ ...group, stillAt: null }, air, now, cursor);
+  return { ...group, stillAt: group.cupids.some(shooting) ? group.stillAt : null };
 }
 
 // The arrow flown on; landed, it sticks in its ledge and pops into hearts.

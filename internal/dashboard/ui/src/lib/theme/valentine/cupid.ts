@@ -215,8 +215,10 @@ function flit(c: Cupid, air: Air, here: Point, now: number, rand: Rand, taken: r
   return { ...c, ...way, mode: 'flit', dir: facing(way.flight.curve), target: null };
 }
 
-// Whether it is busy with its bow.
-export const shooting = (c: Pick<Cupid, 'mode'>) => c.mode === 'turn' || c.mode === 'draw' || c.mode === 'aim' || c.mode === 'loose';
+// Whether its bow is up, turning to a target, drawn or aimed: a bow a
+// moving cursor lowers again. Shooting counts the loose after it too.
+export const bowRaised = (c: Pick<Cupid, 'mode'>) => c.mode === 'turn' || c.mode === 'draw' || c.mode === 'aim';
+export const shooting = (c: Pick<Cupid, 'mode'>) => bowRaised(c) || c.mode === 'loose';
 export const flying = (c: Pick<Cupid, 'flight'>) => c.flight !== null;
 
 // One step of a cupid's own: its wings, a flight flown on, a flit when it is
