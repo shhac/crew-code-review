@@ -1,4 +1,4 @@
 import type { Scene } from '../scenes';
+import HaresShelf from './HaresShelf.svelte';
 
-// Not drawn yet: the set shows nothing until its parts are named here.
-export default {} satisfies Scene;
+export default { Shelf: HaresShelf } satisfies Scene;
