@@ -1,4 +1,4 @@
-import { clearance, inView, type PageMap } from '../floors';
+import { clearance, inView, reachOf, type PageMap } from '../floors';
 import { inTurn, placeInTurn } from '../group';
 import { apart, clamp, sign } from '../math';
 import type { Cursor, Point } from '../pointer';
@@ -78,8 +78,12 @@ function claimsBut(group: Hares, scene: PageMap, but: readonly number[], runs: r
   return [...boxed, ...runs.filter((r) => !r.members.some((m) => but.includes(m.id))).flatMap((r) => claimsOf(r.trail))];
 }
 
+// Running a trail, a hare takes up a bound's room on a ledge and a leap's in
+// the air.
+const BOUND = reachOf(POSES.bound);
+const LEAP = reachOf(POSES.leap);
 const planning = (claims: Claim[], extra: { budget: number; ledges: number; from?: Point | null; toward?: number }, rand: Rand) =>
-  ({ clear: CLEAR, body: POSES.bound, air: POSES.leap, claims, spacing: SPACING, rand, ...extra });
+  ({ clear: CLEAR, body: BOUND, air: LEAP, claims, spacing: SPACING, rand, ...extra });
 
 // --- Placing -----------------------------------------------------------
 
@@ -347,7 +351,7 @@ function trailHolds(run: Run, scene: PageMap): boolean {
       return !!r && Math.min(s.from, s.to) >= r.lo && Math.max(s.from, s.to) <= r.hi;
     }
     const a = scene.floors.get(s.from.floor), b = scene.floors.get(s.to.floor);
-    return !!a && !!b && sweptClear(pageAt(a, s.from.x), pageAt(b, s.to.x), s.hop, POSES.leap, scene);
+    return !!a && !!b && sweptClear(pageAt(a, s.from.x), pageAt(b, s.to.x), s.hop, LEAP, scene);
   });
 }
 

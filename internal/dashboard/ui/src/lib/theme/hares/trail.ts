@@ -1,4 +1,4 @@
-import { clearRuns, inView, type Ledge, type PageMap, type Run } from '../floors';
+import { clearRuns, inView, type Box, type Ledge, type PageMap, type Reach, type Run } from '../floors';
 import { apart, clamp, sign } from '../math';
 import type { Point } from '../pointer';
 import { between, maxBy, type Rand } from '../seed';
@@ -30,9 +30,6 @@ export type Place =
   | { kind: 'leap'; segment: Extract<Segment, { kind: 'leap' }>; t: number; dir: 1 | -1 }
   | { kind: 'away'; segment: Extract<Segment, { kind: 'away' }> };
 
-// The room a hare needs, in page px: the box its running or flying drawing
-// stays inside (hare-rig.ts's tests check it), anchored at its bottom centre.
-export type Box = { width: number; height: number };
 // How the ledges are measured for a hare: how tall a run must be clear, and
 // how far it may reach past the bottom edge of a card or rule above.
 export const RUNS = { inset: 8, step: 4 };
@@ -53,8 +50,10 @@ const ONWARD = 40;
 
 export type PlanOptions = {
   clear: number;
-  body: Box;
-  air: Box;
+  // The room a hare needs running and flying: the footprints its drawing
+  // stays inside (hare-rig.ts's tests check them).
+  body: Reach;
+  air: Reach;
   // Where other hares are and are going, and their boxes, to keep clear of.
   claims: readonly Claim[];
   spacing: number;
@@ -68,7 +67,7 @@ export type PlanOptions = {
 };
 // A stretch of a ledge another hare is on, or will pass along; and its box
 // on the page where it stands, for a leap to fly clear of.
-export type Claim = { floor: number; lo: number; hi: number; box?: { left: number; right: number; top: number; bottom: number } };
+export type Claim = { floor: number; lo: number; hi: number; box?: Box };
 
 const segLength = (s: Segment) => (s.kind === 'run' ? Math.abs(s.to - s.from) : s.length);
 export const runsOf = (f: Ledge, scene: PageMap, clear: number) => clearRuns(f, scene.obstacles, clear, { ...RUNS, reach: REACH });
@@ -124,16 +123,15 @@ function arc(p: Point, q: Point, hop: number, t: number): Point {
   return { x: p.x + (q.x - p.x) * t, y: p.y + (q.y - p.y) * t - 4 * lift * t * (1 - t) };
 }
 
-type Rect = { left: number; right: number; top: number; bottom: number };
-const overlaps = (a: Rect, b: Rect) => a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
+const overlaps = (a: Box, b: Box) => a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
 
-// Whether a box (anchored at its bottom centre at p) is clear in the air:
+// Whether a footprint standing on p is clear in the air:
 // inside the window; off every piece of content; off every card's box but
 // its empty bottom edge (REACH); never across a ledge's line except by
 // standing on it or reaching REACH up past it from below; and off every
 // other hare.
-export function clearAt(p: Point, box: Box, scene: PageMap, avoid: readonly Rect[] = []): boolean {
-  const r = { left: p.x - box.width / 2, right: p.x + box.width / 2, top: p.y - box.height, bottom: p.y };
+export function clearAt(p: Point, reach: Reach, scene: PageMap, avoid: readonly Box[] = []): boolean {
+  const r = { left: p.x - reach.half, right: p.x + reach.half, top: p.y - reach.up, bottom: p.y + reach.down };
   if (r.left < 0 || r.right > scene.width || r.top < 0 || r.bottom > scene.height) return false;
   const hit = scene.obstacles.some((o) => overlaps(r, o.block ? { ...o, top: o.top + 1, bottom: o.bottom - REACH } : o));
   if (hit) return false;
@@ -142,9 +140,9 @@ export function clearAt(p: Point, box: Box, scene: PageMap, avoid: readonly Rect
 }
 
 // Whether a whole arc is clear, sampled every SAMPLE px along it.
-export function sweptClear(p: Point, q: Point, hop: number, box: Box, scene: PageMap, avoid: readonly Rect[] = []): boolean {
+export function sweptClear(p: Point, q: Point, hop: number, reach: Reach, scene: PageMap, avoid: readonly Box[] = []): boolean {
   const count = Math.max(2, Math.ceil(apart(q, p) / SAMPLE));
-  return Array.from({ length: count + 1 }, (_, i) => arc(p, q, hop, i / count)).every((at) => clearAt(at, box, scene, avoid));
+  return Array.from({ length: count + 1 }, (_, i) => arc(p, q, hop, i / count)).every((at) => clearAt(at, reach, scene, avoid));
 }
 
 const claimed = (claims: readonly Claim[], floor: number, lo: number, hi: number, spacing: number) =>
@@ -154,7 +152,7 @@ const claimed = (claims: readonly Claim[], floor: number, lo: number, hi: number
 // its whole body on it, or spacing short of another hare's claim; and
 // whether that is the run's own end.
 function laneEnd(f: Ledge, r: Run, floor: number, x: number, dir: 1 | -1, opts: PlanOptions): { end: number; open: boolean } {
-  const room = bodyOf(r, opts.body.width / 2);
+  const room = bodyOf(r, opts.body.half);
   const runEnd = dir > 0 ? room.hi : room.lo;
   const ahead = opts.claims.filter((c) => c.floor === floor && (dir > 0 ? c.hi > x : c.lo < x)).map((c) => (dir > 0 ? c.lo - opts.spacing : c.hi + opts.spacing));
   const end = dir > 0 ? Math.min(runEnd, ...ahead) : Math.max(runEnd, ...ahead);
@@ -171,7 +169,7 @@ function leapsFrom(fid: number, f: Ledge, x: number, dir: 1 | -1, scene: PageMap
   return [...scene.floors].flatMap(([gid, g]) => {
     if (gid === fid || visited.includes(gid) || !inView(g, scene)) return [];
     return runsOf(g, scene, opts.clear).flatMap((r) => {
-      const room = bodyOf(r, opts.body.width / 2);
+      const room = bodyOf(r, opts.body.half);
       const land = dir > 0 ? room.lo : room.hi;
       const q = pageAt(g, land);
       const across = (q.x - p.x) * dir;
@@ -189,7 +187,7 @@ function leapsFrom(fid: number, f: Ledge, x: number, dir: 1 | -1, scene: PageMap
 // Every way out of sight off this ledge's end and in at another's, coming
 // in to a clear run reaching that end.
 function entriesFrom(fid: number, x: number, scene: PageMap, visited: readonly number[], opts: PlanOptions): Hop[] {
-  const half = opts.body.width / 2;
+  const half = opts.body.half;
   return [...scene.floors].flatMap(([gid, g]) => {
     if (gid === fid || visited.includes(gid) || !inView(g, scene)) return [];
     return runsOf(g, scene, opts.clear).flatMap((r) => ledgeEnds(g, r).flatMap((entry) => {
@@ -234,7 +232,7 @@ export function plan(start: Spot, dir: 1 | -1, scene: PageMap, opts: PlanOptions
     if (!way) return so;
     // Going away, it runs on to the ledge's very end first.
     const exit: Segment[] = way.segment.kind === 'away' ? [{ kind: 'run', floor: at.floor, from: end, to: way.segment.from.x }] : [];
-    const entered = way.segment.kind === 'away' ? [{ kind: 'run' as const, floor: way.floor, from: way.x, to: way.x + way.dir * opts.body.width / 2 }] : [];
+    const entered = way.segment.kind === 'away' ? [{ kind: 'run' as const, floor: way.floor, from: way.x, to: way.x + way.dir * opts.body.half }] : [];
     const next = entered.length ? { floor: way.floor, x: entered[0].to } : { floor: way.floor, x: way.x };
     return step(next, way.dir, [...so, ...exit, way.segment, ...entered], [...visited, way.floor]);
   };

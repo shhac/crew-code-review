@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest';
+import { reachOf } from '../floors';
 import { CLEAR, POSES, SPACING } from './hare';
 import { CARDS, HEADING, page, seeded } from './fixtures';
 import { arcPoint, AWAY, clearAt, FADE, placeOn, plan, REACH, sweptClear, trailOf, type Claim, type PlanOptions, type Segment } from './trail';
 
+const LEAP = reachOf(POSES.leap);
 const options = (over: Partial<PlanOptions> = {}): PlanOptions => ({
-  clear: CLEAR, body: POSES.bound, air: POSES.leap, claims: [], spacing: SPACING, budget: 2000, ledges: 3, rand: seeded(7), ...over,
+  clear: CLEAR, body: reachOf(POSES.bound), air: LEAP, claims: [], spacing: SPACING, budget: 2000, ledges: 3, rand: seeded(7), ...over,
 });
 const kinds = (segments: readonly Segment[]) => segments.map((s) => s.kind);
 
@@ -27,25 +29,25 @@ describe('a trail', () => {
 describe('the airspace', () => {
   it('lets a box stand on a card, its top reaching up into the empty edge of the rule above', () => {
     const scene = page();
-    expect(clearAt({ x: 400, y: 182 }, { width: 40, height: 27 }, scene)).toBe(true);
-    expect(clearAt({ x: 400, y: 182 }, { width: 40, height: 22 + REACH + 1 }, scene)).toBe(false);
+    expect(clearAt({ x: 400, y: 182 }, reachOf({ width: 40, height: 27 }), scene)).toBe(true);
+    expect(clearAt({ x: 400, y: 182 }, reachOf({ width: 40, height: 22 + REACH + 1 }), scene)).toBe(false);
   });
 
   it('keeps a box off content, out of a card and inside the window', () => {
     const scene = page([{ left: 380, right: 420, top: 170, bottom: 178 }]);
-    expect(clearAt({ x: 400, y: 182 }, { width: 40, height: 20 }, scene)).toBe(false);
-    expect(clearAt({ x: 800, y: 200 }, { width: 40, height: 20 }, scene)).toBe(false);
-    expect(clearAt({ x: 10, y: 182 }, { width: 40, height: 20 }, scene)).toBe(false);
+    expect(clearAt({ x: 400, y: 182 }, reachOf({ width: 40, height: 20 }), scene)).toBe(false);
+    expect(clearAt({ x: 800, y: 200 }, reachOf({ width: 40, height: 20 }), scene)).toBe(false);
+    expect(clearAt({ x: 10, y: 182 }, reachOf({ width: 40, height: 20 }), scene)).toBe(false);
   });
 
   it('checks a whole arc, not just its ends', () => {
     const scene = page();
     const [from, to] = [{ x: 615, y: 182 }, { x: 692, y: 182 }];
-    expect(sweptClear(from, to, 2, POSES.leap, scene)).toBe(true);
+    expect(sweptClear(from, to, 2, LEAP, scene)).toBe(true);
     // Too high an arc crosses the heading rule above.
-    expect(sweptClear(from, to, 8, POSES.leap, scene)).toBe(false);
+    expect(sweptClear(from, to, 8, LEAP, scene)).toBe(false);
     // Text in the gap between the cards blocks it.
-    expect(sweptClear(from, to, 2, POSES.leap, page([{ left: 650, right: 656, top: 165, bottom: 175 }]))).toBe(false);
+    expect(sweptClear(from, to, 2, LEAP, page([{ left: 650, right: 656, top: 165, bottom: 175 }]))).toBe(false);
   });
 });
 
@@ -57,7 +59,7 @@ describe('planning a trail', () => {
     const leap = trail.segments[1];
     if (leap.kind !== 'leap') throw new Error('expected a leap');
     expect(leap.to.floor).toBe(3);
-    for (const t of Array.from({ length: 51 }, (_, i) => i / 50)) expect(clearAt(arcPoint(leap, scene, t)!, POSES.leap, scene)).toBe(true);
+    for (const t of Array.from({ length: 51 }, (_, i) => i / 50)) expect(clearAt(arcPoint(leap, scene, t)!, LEAP, scene)).toBe(true);
     // Its body stays on the clear run, take-off and landing included.
     expect(leap.from.x).toBeLessThanOrEqual(CARDS[0].right - CARDS[0].left - 8 - POSES.bound.width / 2);
     expect(leap.to.x).toBeGreaterThanOrEqual(8 + POSES.bound.width / 2);
