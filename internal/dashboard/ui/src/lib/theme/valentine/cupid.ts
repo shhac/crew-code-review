@@ -2,7 +2,7 @@ import type { PageMap } from '../floors';
 import type { Point } from '../pointer';
 import { easeTo } from '../rig/life';
 import { between, type Rand } from '../seed';
-import { anchor, around, curveAt, distance, fits, lengthOf, linesOf, placed, samples, type Air, type Anchored, type Box, type Curve } from './air';
+import { anchor, around, curveAt, distance, fits, lengthOf, linesOf, placed, samples, sweeps, type Air, type Anchored, type Curve } from './air';
 import type { CupidPose } from './cupid-rig';
 import { FOOTPRINTS, SPOT, type Footprint } from './footprints';
 
@@ -171,12 +171,7 @@ export function routes(a: Point, b: Point): Curve[] {
 // stays in air, and it keeps SPACING from every claim.
 export function clearRoute(air: Pick<Air, 'page' | 'room'>, curve: Curve, taken: readonly Point[], reach = FOOTPRINTS.flight): boolean {
   const points = samples((t) => curveAt(curve, t)).map((s) => s.p);
-  if (!points.every((p) => apart(p, taken))) return false;
-  const boxes: Box[] = points.map((p) => around(p, reach));
-  const near = air.page.obstacles.filter((o) => boxes.some((b) => o.left < b.right + 8 && b.left < o.right + 8 && o.top < b.bottom + 8 && b.top < o.bottom + 8));
-  return boxes.slice(1).every((b, i) => fits(air, {
-    left: Math.min(b.left, boxes[i].left), right: Math.max(b.right, boxes[i].right), top: Math.min(b.top, boxes[i].top), bottom: Math.max(b.bottom, boxes[i].bottom),
-  }, [], near));
+  return points.every((p) => apart(p, taken)) && sweeps(air, points.map((p) => around(p, reach)));
 }
 
 // A flight from where it is to a spot, held relative to the spot's ledge.

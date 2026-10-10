@@ -2,7 +2,7 @@ import { inView, type Ledge, type Obstacle, type PageMap } from '../floors';
 import { inTurn, placeInTurn } from '../group';
 import type { Cursor, Point } from '../pointer';
 import type { Rand } from '../seed';
-import { arcAt, arcHeading, around, distance, fits, lengthOf, samples, type Air, type Arc, type Box } from './air';
+import { arcAt, arcHeading, around, distance, lengthOf, samples, sweeps, type Air, type Arc, type Box } from './air';
 import { land, landable, prune, reconcileStuck, slantOf, burstsLeft, type Burst, type Stuck } from './arrows';
 import { createCupid, cupidView, dodge, DASH, fresh, LOOSE, reconcileCupid, restingCupid, shooting, stepCupid, TURN, where, type Cupid } from './cupid';
 import { FOOTPRINTS } from './footprints';
@@ -126,14 +126,9 @@ function clearArc(air: Pick<Air, 'page' | 'room'>, arc: Arc, f: Ledge, cupids: r
   const own = (o: Obstacle) => !!o.block && Math.abs(o.top - f.y) <= 1 && o.left <= arc.to.x && arc.to.x <= o.right;
   const across = points.filter(({ p }) => p.x >= f.left && p.x <= f.right);
   if (across.some(({ p }) => p.y > f.y + 0.5)) return false;
-  const boxes = points.map(({ t, p }) => arrowBox(p, arcHeading(arc, t)));
-  const all = boxes.reduce((u, b) => ({ left: Math.min(u.left, b.left), right: Math.max(u.right, b.right), top: Math.min(u.top, b.top), bottom: Math.max(u.bottom, b.bottom) }));
-  const near = air.page.obstacles.filter((o) => !own(o) && o.left < all.right + 8 && all.left < o.right + 8 && o.top < all.bottom + 8 && all.top < o.bottom + 8);
-  // The tip ends on the ledge line; its last stretch may meet the ledge's
-  // own card, which is no longer in `near`.
-  return boxes.slice(1).every((b, i) => fits(air, {
-    left: Math.min(b.left, boxes[i].left), right: Math.max(b.right, boxes[i].right), top: Math.min(b.top, boxes[i].top), bottom: Math.max(b.bottom, boxes[i].bottom),
-  }, cupids, near));
+  // The tip ends on the ledge line, so its last stretch meets the ledge's
+  // own card, which is left out.
+  return sweeps(air, points.map(({ t, p }) => arrowBox(p, arcHeading(arc, t))), cupids, own);
 }
 
 // The other cupids, kept 20px clear of by an arrow.

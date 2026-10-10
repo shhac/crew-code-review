@@ -62,12 +62,16 @@ export function fits(air: Pick<Air, 'page' | 'room'>, box: Box, also: readonly B
   return !obstacles.some(near) && !also.some((o) => meets(box, o));
 }
 
-// Whether something whose footprint at each point is `boxAt` can be swept
-// along these points: each neighbouring pair is tested as one box covering
-// both, so nothing between two samples is missed.
-export function sweeps(air: Pick<Air, 'page' | 'room'>, points: readonly Point[], boxAt: (p: Point, i: number) => Box, also: readonly Box[] = [], obstacles?: readonly Obstacle[]): boolean {
-  if (points.length === 1) return fits(air, boxAt(points[0], 0), also, obstacles);
-  return points.slice(1).every((p, i) => fits(air, union(boxAt(points[i], i), boxAt(p, i + 1)), also, obstacles));
+// Whether something taking up these boxes, one after another along a path,
+// stays in air: each neighbouring pair is tested as one box covering both,
+// so nothing between two samples is missed. Only obstacles near the path
+// are looked at; `ignore` leaves some out (the card an arrow lands in).
+export function sweeps(air: Pick<Air, 'page' | 'room'>, boxes: readonly Box[], also: readonly Box[] = [], ignore: (o: Obstacle) => boolean = () => false): boolean {
+  if (!boxes.length) return true;
+  const all = boxes.reduce(union);
+  const near = air.page.obstacles.filter((o) => !ignore(o) && meets(all, { left: o.left - GAP - 1, right: o.right + GAP + 1, top: o.top - GAP - 1, bottom: o.bottom + GAP + 1 }));
+  if (boxes.length === 1) return fits(air, boxes[0], also, near);
+  return boxes.slice(1).every((b, i) => fits(air, union(boxes[i], b), also, near));
 }
 
 // A cubic curve, for a flight from spot to spot.
@@ -92,17 +96,15 @@ export const arcHeading = (a: Arc, t: number): Point => ({
 // Points along a curve at most `step` apart, its ends included, with the t
 // each was taken at. Its length is measured on a fine pass first.
 export function samples(at: (t: number) => Point, step = 2): { t: number; p: Point }[] {
-  const fine = Array.from({ length: 65 }, (_, i) => at(i / 64));
-  const length = fine.slice(1).reduce((sum, p, i) => sum + Math.hypot(p.x - fine[i].x, p.y - fine[i].y), 0);
   // A curve can bunch up, so twice as many as its length asks for.
-  const count = Math.max(1, Math.ceil((2 * length) / step));
+  const count = Math.max(1, Math.ceil((2 * lengthOf(at)) / step));
   return Array.from({ length: count + 1 }, (_, i) => ({ t: i / count, p: at(i / count) }));
 }
 
-export const lengthOf = (at: (t: number) => Point) => {
+export function lengthOf(at: (t: number) => Point): number {
   const fine = Array.from({ length: 65 }, (_, i) => at(i / 64));
   return fine.slice(1).reduce((sum, p, i) => sum + Math.hypot(p.x - fine[i].x, p.y - fine[i].y), 0);
-};
+}
 
 // A point in the air, held relative to a ledge (an offset from its left end
 // and its line), so it rides with the page on scroll.

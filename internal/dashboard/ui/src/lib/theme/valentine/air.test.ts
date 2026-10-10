@@ -36,7 +36,7 @@ describe('the air', () => {
     // Two samples either side of a 1px obstacle: each alone is clear.
     expect(fits(air, box({ x: 480, y: 300 }))).toBe(true);
     expect(fits(air, box({ x: 520, y: 300 }))).toBe(true);
-    expect(sweeps(air, [{ x: 480, y: 300 }, { x: 520, y: 300 }], box)).toBe(false);
+    expect(sweeps(air, [box({ x: 480, y: 300 }), box({ x: 520, y: 300 })])).toBe(false);
   });
 
   it('tries a route over or under what is in the way, and refuses one through it', () => {
