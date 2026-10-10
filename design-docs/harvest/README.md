@@ -1,9 +1,7 @@
 # Harvest (2026-10-10)
 
-**Status**: in production. Built so far: the parts and their export, the
-shelf with its flapping scarecrow and its alarm, the straw and grain, and
-the crows' behaviour model (pure, tested, not yet drawn). The rest of the crows wait on the bird kit (legs, gait, flight poses, envelope check)
-and the surfaces kit (off-page exits, the `?theme-cue=` cue).
+**Status**: built (parts, shelf and alarm, straw and grain, the crows'
+behaviour, rig and layer); not yet switched on by the calendar.
 
 **Pins**: written against `ea7e9d5` (the hedgehog rebuild and its test
 isolation). Code-internal.
@@ -402,6 +400,48 @@ mode (lab spec `lab-tests/crow.spec.ts`).
   51.5x51.5 with 11 below; flare 45.5x50 with 3.5 below; settle 47.5x48.5
   with 3 below. The stand needs 27.5 clear, not 27: the turned head's box
   corner (`WALKER.clear` follows when the layer is built).
+
+### The layer as built (on the surfaces kit, 2026-10-10)
+
+`HarvestLayer.svelte` places the family through `placeTroupe` against a
+`Field` (`field.ts`) and draws each crow from `view.ts`; pecks eat the
+grain, and grain comes back once the crows have left it alone. Decided
+while building, each within the contract:
+
+- **The air** is the surfaces kit's bounds with the top and right exits
+  (`boundsOf(page, ['top', 'right'])`; no hover spots, which would cost a
+  frame on every scroll), cards shrunk so a crow may reach 6px into one
+  (shrunk by 6 plus the air's GAP), and every route swept with the bird
+  kit's `sweptPath`, each piece with its own envelope. On a phone the rail
+  stacks above main, so there is no top exit, only the right.
+- **Taking off and landing low.** Where only a skim fits (a first row of
+  cards under a heading), the full take-off box (51.5 tall) never fitted
+  under the heading text, so no crow could feed there. A route's first
+  piece into a skim is now a low hop (`lift`): the take-off springs off with
+  the wings half raised and skim strokes (51x30.5), and an arrival by a
+  skim lands low (a flare without the raised stroke, pitched up less:
+  43.5x28.5; its settle 47.5x28). The skim line runs 8px above the ledge,
+  not 14, so its envelope clears a heading's text over the first row.
+- **Pitch with the route** is 12 degrees at most, not 20: at 20 the bill
+  and the long tail swung so far that the flight envelope grew by a third.
+  The flap envelope is 52x44 with 6 below (the note's target was 46x58).
+- **Depth.** The stroke eases between a skim's and a full one over 0.25s
+  in flight; a hop's depth is its own (never eased), and settling keeps the
+  depth it landed with, so a low landing settles low.
+- **Placement.** A spot is tried up to 40 times (12 left too many pages
+  with one crow: most heading-rule spots on the queue at 1024 have no way
+  out). A crow the page had no spot for when the family was placed is
+  placed as the others were, with no arrival, once a later layout has one;
+  one that has left comes back by the air.
+- **The cue.** `?theme-cue=scatter` scatters the family 1.2s after it is
+  placed, as if the scarecrow had flapped, its flapping taken to have ended
+  8s before, so the crows start back within 7 to 17s instead of 15 to 25:
+  the whole scatter and return fits a test.
+- **Phones.** At 390 the metrics page has one clear run with a way out (its
+  stacked cards leave 22px between them, too little to stand), so the SETS
+  row asks for one crow at 390; 1440 and 1024 get two.
+- **The accent block** (`styles/themes.css`) landed with the SETS row, not
+  with the activation, since the contract checks the palette.
 
 ### Accent
 

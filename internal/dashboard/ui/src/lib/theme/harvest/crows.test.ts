@@ -60,6 +60,10 @@ describe('the crows', () => {
     expect(two.size).toBe(2);
     const roomy = reconcileCrows(two, field(), 100, seeded(2));
     expect(roomy.crows.length).toBe(2);
+    // One the page had no room for when placed is placed once it has.
+    const one = createCrows(field({ ...PAGE, floors: new Map([[1, card(300, 470, 200)]]) }), 0, seeded(1));
+    expect(modes(one)).toEqual(['scan', 'away']);
+    expect(modes(reconcileCrows(one, field(), 100, seeded(2)))).toEqual(['scan', 'scan']);
   });
 
   it('keep apart and on their runs over a long run, and eat the grain', () => {
@@ -179,7 +183,7 @@ describe('the crows', () => {
     const leaving = { ...standing(0, 1, 300, 1, 0, () => 0), mode: 'depart' as const, flight: leave({ x: 600, y: 200 }, 1440, OPEN, 0, 200) };
     const g: Crows = { crows: [leaving], size: 2, alarm: null, restless: Infinity, landed: -Infinity };
     expect(reconcileCrows(g, f, 300, seeded(1)).crows[0].flight).toBe(leaving.flight);
-    const onlyRight: Field = { ...f, clear: (r) => r[r.length - 1].to.y > 0 };
+    const onlyRight: Field = { ...f, clear: (r) => r.curves[r.curves.length - 1].to.y > 0 };
     const rerouted = reconcileCrows(g, onlyRight, 300, seeded(1)).crows[0];
     expect(rerouted.mode).toBe('depart');
     expect(rerouted.flight).not.toBe(leaving.flight);

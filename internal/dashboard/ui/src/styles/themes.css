@@ -136,6 +136,23 @@
   --rule: #4f8fe8;
 }
 
+/* Blackberry for September's hedgerows, clear of the default lime,
+   Halloween's orange, Bonfire's gold (too near the straw), the warning
+   amber, the info blue and the bad ink's salmon. */
+:root[data-theme="harvest"] {
+  --accent: #c39be0;
+  --accent-edge: rgba(195, 155, 224, .3);
+  --accent-ring: rgba(195, 155, 224, .35);
+  --rule: #c39be0;
+}
+
+/* A low harvest moon's faint warm glow in the top right corner, behind
+   everything. */
+:root[data-theme="harvest"] body {
+  background-image: radial-gradient(ellipse 45% 40% at 100% 0%, rgba(255, 200, 120, .05), transparent 70%);
+  background-attachment: fixed;
+}
+
 /* Shared click-through scene, below dialogs (50). */
 .seasonal-overlay { position: fixed; inset: 0; z-index: 40; pointer-events: none; overflow: hidden; }
 :root[data-theme="christmas"] {

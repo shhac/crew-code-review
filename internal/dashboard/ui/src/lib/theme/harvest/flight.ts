@@ -13,13 +13,16 @@ import type { Point } from '../pointer';
 
 // Speed along the route, px/s, each flight its own.
 export const SPEED = { lo: 180, hi: 240 };
-// The body pitches with the route's slope, at most this far.
-export const PITCH = 20;
+// The body pitches with the route's slope, at most this far: the note's 20
+// degrees swung the bill and the long tail so far up and down that the
+// flight envelope grew by a third.
+export const PITCH = 12;
 // Ends this far past an exit edge, so the whole envelope is off the page.
 export const BEYOND = 64;
-// A skim keeps this far above its ledge: its envelope reaches 28px up and
-// 6px down from its line, so the line runs 14px up with room either side.
-export const SKIM = 14;
+// A skim keeps this far above its ledge: low, so that its envelope (28.5px
+// up from its line) stays under the heading text above a first row of
+// cards.
+export const SKIM = 8;
 // Skims are tried breaking into a climb every this far along the band.
 const SKIM_STEP = 40;
 // Separation between two crows' envelopes in the air, sampled this often.
@@ -27,12 +30,19 @@ export const SEPARATION = 8;
 const SAMPLE = 50;
 
 export type Leg = 'depart' | 'arrive';
-// A flight: its curves, when it started, how long it takes, and which way
+// What each curve of a route is flown as: the hop off or onto the ledge
+// (taking off, or flaring to land) into a climb, the same low into a skim
+// (`lift`, with shallow strokes where the air is low), a skim along the
+// ledge's band, or a climb in full flapping flight. Each has its own
+// envelope.
+export type Piece = 'hop' | 'lift' | 'skim' | 'climb';
+export type Route = { curves: Curve[]; kinds: Piece[] };
+// A flight: its route, when it started, how long it takes, and which way
 // it goes (leaving eases in from the take-off, arriving eases out to the
-// landing). `end` is where it ends: off the page leaving, the spot arriving.
-export type Flight = { curves: Curve[]; start: number; duration: number; leg: Leg };
+// landing).
+export type Flight = Route & { start: number; duration: number; leg: Leg };
 // Whether a route's whole swept envelope stays in air (the kits' check).
-export type Clear = (curves: readonly Curve[], leg: Leg) => boolean;
+export type Clear = (route: Route, leg: Leg) => boolean;
 
 const along = (curves: readonly Curve[]) => curves.map((c) => lengthOf((t) => cubic(c, t)));
 export const routeLength = (curves: readonly Curve[]) => along(curves).reduce((a, b) => a + b, 0);
@@ -63,17 +73,17 @@ export function pointAlong(curves: readonly Curve[], s: number): { p: Point; cur
 
 // Where a flying crow is at now, which way it faces and how far its body
 // pitches (degrees, nose up positive), from the route's slope.
-export function flightAt(f: Flight, now: number): { at: Point; dir: 1 | -1; pitch: number } {
-  const { p, curve, t } = pointAlong(f.curves, progress(f, now));
+export function flightAt(f: Flight, now: number): { at: Point; dir: 1 | -1; pitch: number; kind: Piece } {
+  const { p, curve, t, i } = pointAlong(f.curves, progress(f, now));
   const ahead = cubic(curve, Math.min(1, t + 0.02));
   const behind = cubic(curve, Math.max(0, t - 0.02));
   const dx = ahead.x - behind.x, dy = ahead.y - behind.y;
   const dir: 1 | -1 = dx < 0 ? -1 : 1;
-  return { at: p, dir, pitch: clamp(degrees(Math.atan2(-dy, Math.abs(dx) || 1e-6)), -PITCH, PITCH) };
+  return { at: p, dir, pitch: clamp(degrees(Math.atan2(-dy, Math.abs(dx) || 1e-6)), -PITCH, PITCH), kind: f.kinds[i] };
 }
 
-export function fly(curves: Curve[], leg: Leg, start: number, speed: number): Flight {
-  return { curves, start, leg, duration: (routeLength(curves) / speed) * 1000 };
+export function fly(route: Route, leg: Leg, start: number, speed: number): Flight {
+  return { ...route, start, leg, duration: (routeLength(route.curves) / speed) * 1000 };
 }
 
 // The part of a curve after t, by de Casteljau.
@@ -86,12 +96,13 @@ export function after(c: Curve, t: number): Curve {
 
 // What is left of a flight's route from now: re-checked against new air
 // when the page moves under it.
-export function remaining(f: Flight, now: number): Curve[] {
+export function remaining(f: Flight, now: number): Route {
   const { curve, t, i } = pointAlong(f.curves, progress(f, now));
-  return [after(curve, t), ...f.curves.slice(i + 1)];
+  return { curves: [after(curve, t), ...f.curves.slice(i + 1)], kinds: f.kinds.slice(i) };
 }
 
-const reverse = (curves: readonly Curve[]): Curve[] => [...curves].reverse().map((c) => ({ from: c.to, c1: c.c2, c2: c.c1, to: c.from }));
+const backwards = (curves: readonly Curve[]): Curve[] => [...curves].reverse().map((c) => ({ from: c.to, c1: c.c2, c2: c.c1, to: c.from }));
+const reverse = (r: Route): Route => ({ curves: backwards(r.curves), kinds: [...r.kinds].reverse() });
 const line = (a: Point, b: Point): Curve => ({ from: a, c1: { x: a.x + (b.x - a.x) / 3, y: a.y + (b.y - a.y) / 3 }, c2: { x: a.x + (2 * (b.x - a.x)) / 3, y: a.y + (2 * (b.y - a.y)) / 3 }, to: b });
 
 // A climb from p up and to the right, off the top: leaving the ledge
@@ -112,15 +123,15 @@ function skimTo(p: Point, x: number): Curve[] {
 // The ways off the page from a crow's feet at p, in the note's order: a
 // climb off the top; a skim along its ledge's band to the right edge; a
 // skim to where the climb first fits, then the climb.
-export function departures(p: Point, width: number): Curve[][] {
+export function departures(p: Point, width: number): Route[] {
   const right = width + BEYOND;
   const breaks = Array.from({ length: Math.max(0, Math.floor((width - p.x - 24) / SKIM_STEP)) }, (_, i) => p.x + 24 + SKIM_STEP * (i + 1));
   return [
-    [climb(p)],
-    skimTo(p, right),
-    ...breaks.map((x) => {
+    { curves: [climb(p)], kinds: ['hop'] },
+    { curves: skimTo(p, right), kinds: ['lift', 'skim'] },
+    ...breaks.map((x): Route => {
       const [hop, run] = skimTo(p, x);
-      return [hop, run, climb(run.to)];
+      return { curves: [hop, run, climb(run.to)], kinds: ['lift', 'skim', 'climb'] };
     }),
   ];
 }
@@ -128,7 +139,8 @@ export function departures(p: Point, width: number): Curve[][] {
 // The first clear way off the page from a crow's feet at p, or from the
 // air (a crow turning back, or re-routed after the page moved).
 export function leave(p: Point, width: number, clear: Clear, start: number, speed: number, grounded = true): Flight | null {
-  const options = grounded ? departures(p, width) : [[climb(p)], [line(p, { x: width + BEYOND, y: p.y })]];
+  const aloft: Route[] = [{ curves: [climb(p)], kinds: ['climb'] }, { curves: [line(p, { x: width + BEYOND, y: p.y })], kinds: ['climb'] }];
+  const options = grounded ? departures(p, width) : aloft;
   const route = options.find((r) => clear(r, 'depart'));
   return route ? fly(route, 'depart', start, speed) : null;
 }
@@ -146,7 +158,8 @@ export function landFrom(from: Point, p: Point, clear: Clear, start: number, spe
   const [hop] = skimTo(p, p.x + 24);
   const up = hop.to;
   const side = from.x < up.x ? -1 : 1;
-  const route = [{ from, c1: { x: from.x + (up.x - from.x) / 3, y: from.y + (up.y - from.y) / 3 }, c2: { x: up.x + side * 30, y: up.y }, to: up }, ...reverse([hop])];
+  const approach = { from, c1: { x: from.x + (up.x - from.x) / 3, y: from.y + (up.y - from.y) / 3 }, c2: { x: up.x + side * 30, y: up.y }, to: up };
+  const route: Route = { curves: [approach, ...backwards([hop])], kinds: ['climb', 'lift'] };
   return clear(route, 'arrive') ? fly(route, 'arrive', start, speed) : null;
 }
 

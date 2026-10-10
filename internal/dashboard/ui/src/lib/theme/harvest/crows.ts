@@ -30,7 +30,7 @@ export const SPOT_APART = 90;
 export const SPOT_GRAIN = 30;
 const SPOT_STEP = 10;
 // A spot is tried at most this many times for a way out or in per frame.
-const TRIES = 12;
+const TRIES = 40;
 // Scattered, they take off this far apart, nearest the scarecrow first, and
 // stay away this long after its last flap, each its own time.
 export const STAGGER = { lo: 200, hi: 350 };
@@ -154,7 +154,7 @@ function hear(g: Crows, field: Field, alarm: Alarm | null, now: number, rand: Ra
 function turnBack(c: Crow, field: Field, now: number, rand: Rand): Crow {
   const at = c.flight ? flightAt(c.flight, now).at : null;
   const out = at && leave(at, field.page.width, field.clear, now, speedOf(rand), false);
-  return out ? { ...c, mode: 'depart', since: now, until: Infinity, flight: out } : { ...away(c.id, c.back), wait: c.wait };
+  return out ? { ...c, mode: 'depart', since: now, until: Infinity, flight: out } : { ...away(c.id, c.back), wait: c.wait, from: c.from };
 }
 
 // The crows told to leave whose time has come take off, along a clear way
@@ -236,7 +236,16 @@ export function reconcileCrows(g: Crows, field: Field, now: number, rand: Rand):
   return { ...g, crows };
 }
 
+// A crow that has never been out (the page had no spot for it when the
+// family was placed) is placed as the others were, with no arrival, once
+// the page has one; one that has left comes back by the air.
+const unplaced = (c: Crow) => c.mode === 'away' && c.from === null && c.wait === 0;
+
 function keep(c: Crow, others: readonly Crow[], field: Field, now: number, rand: Rand): Crow {
+  if (unplaced(c)) {
+    const spot = pickSpot(field, claimsOf(others), now, rand);
+    return spot ? standing(c.id, spot.floor, spot.x, rand() < 0.5 ? 1 : -1, now, rand) : c;
+  }
   if (c.mode === 'away') return c;
   if (c.mode === 'depart' || c.mode === 'takeoff') {
     if (c.flight && field.clear(remaining(c.flight, now), 'depart')) return c;
@@ -262,7 +271,7 @@ function keep(c: Crow, others: readonly Crow[], field: Field, now: number, rand:
     if (escapes(field, placed, now)) return placed;
   }
   const spot = pickSpot(field, claimsOf(others), now, rand);
-  return spot ? { ...standing(c.id, spot.floor, spot.x, c.dir, now, rand), wait: c.wait } : away(c.id, now + LOOK_AGAIN);
+  return spot ? { ...standing(c.id, spot.floor, spot.x, c.dir, now, rand), wait: c.wait } : { ...away(c.id, now + LOOK_AGAIN), from: { floor: c.floor, x: c.x } };
 }
 
 // Under reduced motion: every crow standing still. One already standing

@@ -3,7 +3,8 @@ import { apart } from '../math';
 import { flatLayers, firstShut, guideAt, legsOf, lidsOf, pageReach, rigBounds, solesOf } from '../rig/test-rig';
 import type { Layer, RigPose } from '../rig/rig';
 import { BILL } from './crow';
-import { crowRig, FOOTPRINTS, SCALE, type CrowPose, type RigCrow } from './crow-rig';
+import { PITCH } from './flight';
+import { crowRig, FOOTPRINTS, LOW_FOOTPRINTS, SCALE, type CrowPose, type RigCrow } from './crow-rig';
 
 const crow = (pose: CrowPose, over: Partial<RigCrow> = {}): RigCrow => ({ pose, walked: 0, seed: 1, beat: 0, t: 0, ...over });
 const POSES: CrowPose[] = ['stand', 'walk', 'sidle', 'peck', 'alert', 'takeoff', 'flap', 'skim', 'glide', 'flare', 'settle'];
@@ -13,9 +14,12 @@ const look = (now = 0, gaze = 0) => ({ now, still: false, gaze });
 // Every moment of a pose: two strides, four wingbeats (a take-off from its
 // wings opening to its settled flap), the whole of a peck, a flare and a
 // settle, the head turned either way past as far as it goes.
-function moments(pose: CrowPose): RigPose[] {
+function moments(pose: CrowPose, depth = 1): RigPose[] {
   const gaze = (i: number) => [-30, 30, 0][i % 3];
-  return Array.from({ length: 240 }, (_, i) => crowRig(crow(pose, { walked: i * 0.6, beat: pose === 'takeoff' ? -0.5 + i / 50 : i / 60, t: (i % 120) / 119 }), look(i * 37, gaze(i))));
+  // In the air, the body also pitched with the route as far as it goes.
+  const pitched = pose === 'flap' || pose === 'skim' || pose === 'glide';
+  const climb = (i: number) => (pitched ? [-PITCH, 0, PITCH][Math.floor(i / 3) % 3] : 0);
+  return Array.from({ length: 240 }, (_, i) => crowRig(crow(pose, { walked: i * 0.6, beat: pose === 'takeoff' ? -0.5 + i / 50 : i / 60, t: (i % 120) / 119, climb: climb(i), depth }), look(i * 37, gaze(i))));
 }
 const most = (rigs: readonly RigPose[], of: (r: RigPose) => number) => Math.max(...rigs.map(of));
 const below = (r: RigPose) => (rigBounds(r).bottom - r.anchor.y) * r.scale;
@@ -35,17 +39,28 @@ describe('crow rig', () => {
       expect(most(rigs, below)).toBeLessThanOrEqual(down + 1e-9);
     });
   }
+  for (const pose of ['takeoff', 'flare', 'settle'] as const) {
+    it(`stays inside its low footprint while it does ${pose} with a skim's strokes`, () => {
+      const rigs = moments(pose, 0);
+      const { width, height, down = 0 } = LOW_FOOTPRINTS[pose];
+      expect(most(rigs, (r) => Math.max(pageReach(r).left, pageReach(r).right))).toBeLessThanOrEqual(width / 2);
+      expect(most(rigs, (r) => pageReach(r).top)).toBeLessThanOrEqual(height);
+      expect(most(rigs, below)).toBeLessThanOrEqual(down + 1e-9);
+    });
+  }
 
   it('stands, walks and pecks in the room every ledge animal has, at the note’s size', () => {
     for (const pose of ['stand', 'walk', 'sidle', 'peck'] as const) expect(FOOTPRINTS[pose].height).toBeLessThanOrEqual(27.5);
     // The reference stands 26.5px tall from its crown to the ledge.
     expect((27.75 - 1.19) * SCALE).toBeCloseTo(26.5, 0);
-    // Flying, its whole flap stays inside the note's flight envelope.
+    // Flying, its whole flap, pitched with its route, stays inside the
+    // flight envelope (52x50 as built; the note's target was 46x58, before
+    // the body pitched with the route).
     const flap = FOOTPRINTS.flap;
-    expect(flap.width).toBeLessThanOrEqual(46);
+    expect(flap.width).toBeLessThanOrEqual(52);
     expect(flap.height + (flap.down ?? 0)).toBeLessThanOrEqual(58);
-    // Skimming, inside the skim envelope: 28px above its line, 6 below.
-    expect(FOOTPRINTS.skim.height).toBeLessThanOrEqual(28);
+    // Skimming, inside the skim envelope: 28.5px above its line, 6 below.
+    expect(FOOTPRINTS.skim.height).toBeLessThanOrEqual(28.5);
     expect(FOOTPRINTS.skim.down ?? 0).toBeLessThanOrEqual(6);
   });
 

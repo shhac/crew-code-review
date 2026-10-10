@@ -115,6 +115,13 @@ export const SETS: readonly SeasonalSet[] = [
     animal: 'gull', drawn: 'image', decoration: '.sand', parts: [['[data-shell]', 'path']],
     min: { 1440: 2, 1024: 2, 390: 2 }, still: 'stand', settle: 400,
   },
+  {
+    // The crows feed where they can get away; drawn is every picture still
+    // seen (a wing's hidden side lies under its seen one).
+    theme: 'harvest', overlay: '[data-harvest]', shelf: '.harvest-shelf', accent: 'rgb(195, 155, 224)',
+    animal: 'crow', drawn: 'image:not([visibility="hidden"])', decoration: '[data-chaff]', parts: [['[data-chaff]', 'path']],
+    min: { 1440: 2, 1024: 2, 390: 1 }, still: 'scan', settle: 400,
+  },
 ];
 
 export const ROUTES = ['/', '/history', '/metrics', '/leaderboard', '/config', '/prompt', '/logs'];

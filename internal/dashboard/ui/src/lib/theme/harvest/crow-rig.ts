@@ -118,6 +118,11 @@ const FAR_SHOULDER = { x: 26.6, y: 10 };
 // strokes 15 either way (the note), the downstroke 55% of the beat.
 export const FLAP: Flap = { top: 50, bottom: -40, down: 0.55, fold: 70, sweep: 20 };
 export const SKIM: Flap = { top: 15, bottom: -15, down: 0.55, fold: 30, sweep: 10 };
+// A stroke between a skim's and a full one.
+const strokes = (depth: number): Flap => {
+  const mixed = (k: keyof Flap) => SKIM[k] + (FLAP[k] - SKIM[k]) * depth;
+  return { top: mixed('top'), bottom: mixed('bottom'), down: FLAP.down, fold: mixed('fold'), sweep: mixed('sweep') };
+};
 // How far a landing crow pitches up, braking.
 const UPRIGHT = 26;
 const GLIDE: WingPose = { lift: 4, sweep: 5, fold: 10 };
@@ -133,8 +138,10 @@ export type CrowPose = 'stand' | 'walk' | 'sidle' | 'peck' | 'alert' | 'takeoff'
 export const GROUND_POSES: readonly CrowPose[] = ['stand', 'walk', 'sidle', 'peck', 'alert'];
 // What the drawing reads of a crow: its pose, how far it has walked, its
 // wingbeats so far (`beat`), and how far through a peck, a flare or a
-// settle it is (`t`, 0 to 1).
-export type RigCrow = { pose: CrowPose; walked: number; seed: number; beat: number; t: number };
+// settle it is (`t`, 0 to 1). `depth` sets its strokes from a skim's (0)
+// to full (1), flapping, taking off and landing alike; `climb` pitches its
+// body with the route's slope (degrees, nose up).
+export type RigCrow = { pose: CrowPose; walked: number; seed: number; beat: number; t: number; depth?: number; climb?: number };
 // gaze: how far its head is turned toward a cursor (degrees, nose down).
 export type CrowLook = { now: number; still: boolean; gaze: number };
 
@@ -192,20 +199,28 @@ function onGround(crow: RigCrow, look: CrowLook): Ground {
 
 // In the air, by its pose: the wings, the body's pitch, the legs and tail.
 function inAir(crow: RigCrow, now: number): FlightPose {
+  // Low in the air (a skim's take-off or landing), it pitches up less too.
+  const depth = crow.depth ?? 1;
+  const upright = UPRIGHT * (0.3 + 0.7 * depth);
   const cruise = (wings: WingPose): FlightPose => ({ wings, pitch: 0, legs: 0, tail: 0, airborne: true });
   switch (crow.pose) {
-    case 'takeoff': return takingOff(crow.beat, FLAP, 75, 2);
+    // The first strokes kept from sweeping below the ledge it leaves; where
+    // the air is low (depth 0) it springs off with its wings only half
+    // raised and skims away.
+    case 'takeoff': return takingOff(crow.beat, { ...strokes(depth), bottom: -15 - 10 * depth }, 20 + 55 * depth, 2);
     case 'skim': return cruise(flapping(crow.beat, SKIM));
     case 'glide': return cruise(gliding(GLIDE, now, 2));
     case 'flare': {
       // A crow's long wings swept as far forward as the kit's flare would
       // cover its head; it brakes with them raised and less far forward,
       // as the landing key pose has them.
-      const flare = flaring(crow.t, crow.beat, FLAP, UPRIGHT);
-      return { ...flare, wings: { ...flare.wings, sweep: flare.wings.sweep + 30 * smooth(crow.t / 0.6) } };
+      // Landing low, it brakes without the kit's raised stroke either.
+      const flare = flaring(crow.t, crow.beat, strokes(depth), upright);
+      const braking = smooth(crow.t / 0.6);
+      return { ...flare, wings: { ...flare.wings, lift: flare.wings.lift - 15 * (1 - depth) * braking, sweep: flare.wings.sweep + 30 * braking } };
     }
-    case 'settle': return settling(crow.t, { lift: 60, sweep: -10, fold: 10 }, UPRIGHT / 2);
-    default: return cruise(flapping(crow.beat, FLAP));
+    case 'settle': return settling(crow.t, { lift: 15 + 45 * depth, sweep: -10, fold: 10 }, upright / 2);
+    default: return cruise(flapping(crow.beat, strokes(crow.depth ?? 1)));
   }
 }
 
@@ -231,7 +246,7 @@ function levelled(crow: RigCrow): number {
 function flying(crow: RigCrow, look: CrowLook): RigPose {
   const pose = inAir(crow, look.now);
   const level = levelled(crow);
-  const body = turnAbout(level - pose.pitch, HIPS);
+  const body = turnAbout(level - pose.pitch - (crow.climb ?? 0), HIPS);
   const hips = LEGS.map((s) => turned(body, s.hip));
   const limbs = pose.airborne ? airLegsTo(LEGS, hips, pose.legs, CROW_AIR) : planted(hips);
   const folded = pose.wings.fold > 120;
@@ -292,7 +307,11 @@ export const SIDLE_SPEED = 45;
 export type Footprint = { width: number; height: number; down?: number };
 export const FOOTPRINTS: Record<CrowPose, Footprint> = {
   stand: { width: 40, height: 27.5 }, walk: { width: 42, height: 27.5, down: 0.2 }, sidle: { width: 42.5, height: 27.5, down: 0.2 },
-  peck: { width: 46.5, height: 25, down: 0.3 }, alert: { width: 38, height: 32.5 },
-  takeoff: { width: 51.5, height: 51.5, down: 11 }, flap: { width: 43, height: 43, down: 6 }, skim: { width: 43, height: 27.5 },
-  glide: { width: 43, height: 24.5 }, flare: { width: 45.5, height: 50, down: 3.5 }, settle: { width: 47.5, height: 48.5, down: 3 },
+  peck: { width: 46.5, height: 24, down: 0.3 }, alert: { width: 38, height: 32.5 },
+  takeoff: { width: 51.5, height: 51.5, down: 4.5 }, flap: { width: 52, height: 44, down: 6 }, skim: { width: 48, height: 28.5 },
+  glide: { width: 48, height: 27 }, flare: { width: 45.5, height: 50, down: 3.5 }, settle: { width: 47.5, height: 48.5, down: 3 },
+};
+// Taking off, landing and settling low (depth 0), where only a skim fits.
+export const LOW_FOOTPRINTS: Record<'takeoff' | 'flare' | 'settle', Footprint> = {
+  takeoff: { width: 51, height: 30.5, down: 1 }, flare: { width: 43.5, height: 28.5, down: 1.5 }, settle: { width: 47.5, height: 28, down: 1.5 },
 };
