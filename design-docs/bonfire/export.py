@@ -19,16 +19,13 @@ from pathlib import Path
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from art import crop, export, export_with_fur, feature, ground, keyed, lum, pale, place, poses, rescaled  # noqa: E402
+from art import EyeScale, crop, cut, export, export_with_fur, keyed, lum, pale, poses  # noqa: E402
 import numpy as np  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
 OUT = HERE.parents[1] / 'internal/dashboard/ui/src/lib/theme/bonfire'
 LAB = HERE.parents[1] / 'internal/dashboard/ui/src/lab'
 PARTS = ['hedgehog-body', 'hedgehog-head']
-# Drawing units are the reference's, moved by this, so a frame round it has
-# a margin.
-MARGIN = 1
 # The eye's size in drawing units, and file pixels per drawing unit.
 EYE = 1.82
 RES = 12
@@ -48,14 +45,6 @@ KEY_POSES = {
 # hind ones longer paws.
 LEG = 2.6
 FEET = {'hedgehog-hand': (3.4, (0.34, 0.325)), 'hedgehog-hind': (4.0, (0.29, 0.325))}
-
-
-def eye_px(sheet: str) -> float:
-    return feature(HERE / sheet, EYES[sheet])
-
-
-def on_eye(sheet: str) -> float:
-    return EYE / eye_px(sheet) * RES
 
 
 def belly(body: np.ndarray) -> np.ndarray:
@@ -83,34 +72,22 @@ def main() -> None:
         art = crop(keyed(HERE / f'{name}.png'))
         size = export(art, OUT, name, density * height / art.shape[0])
         sizes[name] = (size[0] / density, size[1] / density)
+    hedgehog = EyeScale(HERE, EYES, EYE, RES)
     units = {}
     _, ball = (crop(h) for h in poses(keyed(HERE / 'hedgehog-sheet.png'), 2))
-    units['hedgehog-ball'] = export(ball, OUT, 'hedgehog-ball', on_eye('hedgehog-sheet.png'))
-    # The reference, for the lab to lay over the rig, and where each part sat
-    # in it: their places in the rig.
-    reference = crop(keyed(HERE / 'hedgehog-standing.png'))
-    per_unit = eye_px('hedgehog-standing.png') / EYE
-    units['hedgehog-reference'] = export(reference, LAB, 'hedgehog-reference', on_eye('hedgehog-standing.png'))
-    print(f'hedgehog-reference: at {MARGIN}, {MARGIN}; ground {ground(reference) / per_unit + MARGIN:.2f}')
-    for name, seed in KEY_POSES.items():
-        path = HERE / f'hedgehog-pose-{name}.png'
-        w, h = export(crop(keyed(path)), LAB, f'hedgehog-pose-{name}', EYE / feature(path, seed) * RES)
-        print(f'hedgehog-pose-{name}: drawing units {w / RES:.2f}x{h / RES:.2f}')
-    parts = dict(zip(PARTS, (crop(p) for p in poses(keyed(HERE / 'hedgehog-parts-3.png'), len(PARTS)))))
-    k = eye_px('hedgehog-standing.png') / eye_px('hedgehog-parts-3.png')
-    for name, art in parts.items():
-        units[name] = export(art, OUT, name, on_eye('hedgehog-parts-3.png'))
-        y, x = place(rescaled(art, k), reference, mask=pale)
-        print(f'{name}: at {x / per_unit + MARGIN:.2f}, {y / per_unit + MARGIN:.2f}')
+    units['hedgehog-ball'] = export(ball, OUT, 'hedgehog-ball', hedgehog.on_eye('hedgehog-sheet.png'))
+    units['hedgehog-reference'] = hedgehog.reference('hedgehog-standing.png', LAB, 'hedgehog-reference')
+    hedgehog.key_poses('hedgehog-pose-', KEY_POSES, LAB)
+    parts = cut(keyed(HERE / 'hedgehog-parts-3.png'), PARTS)
+    units.update(hedgehog.parts(parts, 'hedgehog-parts-3.png', OUT, mask=pale))
     # Each leg is one bone piece, hip to heel (too short to show a knee),
     # standing on its foot; each also as fur alone, its outline taken out.
     bone, *feet = (crop(p) for p in poses(keyed(HERE / 'hedgehog-limbs.png'), 3))
     cream = belly(parts['hedgehog-body'])
     bone, feet = flat(bone, cream), [flat(f, cream) for f in feet]
     units['hedgehog-leg'] = units['hedgehog-leg-fur'] = export_with_fur(bone, OUT, 'hedgehog-leg', LEG * RES / bone.shape[0])
-    for (name, (length, (hx, hy))), foot in zip(FEET.items(), feet):
-        w, h = export_with_fur(foot, OUT, name, length * RES / foot.shape[1])
-        print(f'{name}: {w / RES:.2f}x{h / RES:.2f}, heel {w * hx / RES:.2f}, {h * hy / RES:.2f}')
+    for (name, (length, heel)), foot in zip(FEET.items(), feet):
+        hedgehog.foot(name, foot, OUT, length, heel)
     for name, (w, h) in sizes.items():
         print(f'{name}: display {w:g}x{h:g}')
     for name, (w, h) in units.items():
