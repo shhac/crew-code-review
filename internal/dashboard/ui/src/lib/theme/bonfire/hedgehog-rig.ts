@@ -1,8 +1,8 @@
 import type { Point } from '../pointer';
 import { gaitPhase, legsTo, restingFeet, stepping, type Gait, type Step } from '../rig/gait';
+import { gazeFrom } from '../rig/gaze';
 import { blinking, breath, snuffle } from '../rig/life';
 import { legsAround, lidLayers, stillPicture, turnAbout, turned, type ArtLeg, type Foot, type Frame, type Fur, type Layer, type LimbArt, type RigPose, type Turn } from '../rig/rig';
-import { clamp } from '../spidergait';
 import { moving, type Hog } from './hedgehog';
 import ballArt from './hedgehog-ball.webp';
 import bodyArt from './hedgehog-body.webp';
@@ -84,18 +84,10 @@ const STRETCH = 1.2;
 // motion is reduced.
 export type HogLook = { now: number; gaze: number; still: boolean };
 
-const degrees = (rad: number) => (rad * 180) / Math.PI;
-
 // How far the head would turn toward the cursor, standing at `at` on the
-// page: in the drawing's own frame (facing right, so a cursor behind is
-// looked at over the shoulder only a little).
-export function gazeAt(hog: Pick<Hog, 'dir'>, at: Point, cursor: Point | null): number {
-  if (!cursor) return 0;
-  const eye = { x: at.x + (EYE.x - ANCHOR.x) * SCALE * hog.dir, y: at.y - (ANCHOR.y - EYE.y) * SCALE };
-  const dx = (cursor.x - eye.x) * hog.dir, dy = cursor.y - eye.y;
-  if (Math.hypot(dx, dy) > LOOK_REACH) return 0;
-  return clamp(degrees(Math.atan2(dy, Math.max(dx, 12))), -LOOK, LOOK);
-}
+// page (see gazeFrom).
+const gaze = gazeFrom({ eye: EYE, anchor: ANCHOR, scale: SCALE, look: LOOK, reach: LOOK_REACH });
+export const gazeAt = (hog: Pick<Hog, 'dir'>, at: Point, cursor: Point | null) => gaze(hog.dir, at, cursor);
 
 // On the move: a slight rise and fall with each stride, a slow rock of the
 // body every four strides, and the head nodding a little behind it. Its

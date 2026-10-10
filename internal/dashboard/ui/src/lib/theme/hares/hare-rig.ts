@@ -1,9 +1,9 @@
 import type { Point } from '../pointer';
 import { beatsFor, flightAt, flightLift, gaitPhase, legsTo, onSoles, restingFeet, stepping, type Gait, type Landings, type Step } from '../rig/gait';
+import { gazeFrom } from '../rig/gaze';
 import { blinking, breath } from '../rig/life';
 import { legsAround, lidLayers, turnAbout, turned, type ArtLeg, type Foot, type Frame, type Fur, type Layer, type LimbArt, type RigPose, type Turn } from '../rig/rig';
 import { hash } from '../seed';
-import { clamp } from '../spidergait';
 import bodyArt from './hare-body.webp';
 import earsArt from './hare-ears.webp';
 import foreToesFurArt from './hare-fore-toes-fur.webp';
@@ -105,17 +105,9 @@ export type RigHare = { pose: HarePose; walked: number; seed: number; leapt?: nu
 // reduced.
 export type HareLook = { now: number; gaze: number; still: boolean };
 
-const degrees = (rad: number) => (rad * 180) / Math.PI;
-
 // How far the head would turn toward the cursor, standing at `at` on the
-// page facing dir: in the drawing's own frame.
-export function gazeAt(dir: 1 | -1, at: Point, cursor: Point | null): number {
-  if (!cursor) return 0;
-  const eye = { x: at.x + (EYE.x - ANCHOR.x) * SCALE * dir, y: at.y - (ANCHOR.y - EYE.y) * SCALE };
-  const dx = (cursor.x - eye.x) * dir, dy = cursor.y - eye.y;
-  if (Math.hypot(dx, dy) > LOOK_REACH) return 0;
-  return clamp(degrees(Math.atan2(dy, Math.max(dx, 12))), -LOOK, LOOK);
-}
+// page facing dir (see gazeFrom).
+export const gazeAt = gazeFrom({ eye: EYE, anchor: ANCHOR, scale: SCALE, look: LOOK, reach: LOOK_REACH });
 
 // How the hare stands: its body's turn, its head's (positive turns the nose
 // down), its ears' (negative lays them back), which legs (on their soles or

@@ -1,5 +1,6 @@
 import type { Point } from '../pointer';
 import { beatsFor, flightLift, gaitPhase, legsTo, stepping, type Gait, type Step } from '../rig/gait';
+import { gazeFrom } from '../rig/gaze';
 import { blinking, snuffle } from '../rig/life';
 import { legsAround, lidLayers, turnAbout, turned, type ArtLeg, type Foot, type Frame, type Fur, type Layer, type LimbArt, type RigPose, type Turn } from '../rig/rig';
 import { clamp } from '../spidergait';
@@ -112,16 +113,9 @@ export type RabbitLook = { now: number; gaze: number; still: boolean };
 const LOOK = 10;
 const LOOK_REACH = 160;
 
-// How far the head would turn toward the cursor (degrees, nose down
-// positive), standing at `at` on the page facing dir: in the drawing's own
-// frame, so a cursor behind is looked at over the shoulder only a little.
-export function gazeAt(dir: 1 | -1, at: Point, cursor: Point | null): number {
-  if (!cursor) return 0;
-  const eye = { x: at.x + (EYE.x - ANCHOR.x) * SCALE * dir, y: at.y - (ANCHOR.y - EYE.y) * SCALE };
-  const dx = (cursor.x - eye.x) * dir, dy = cursor.y - eye.y;
-  if (Math.hypot(dx, dy) > LOOK_REACH) return 0;
-  return clamp((Math.atan2(dy, Math.max(dx, 12)) * 180) / Math.PI, -LOOK, LOOK);
-}
+// How far the head would turn toward the cursor, standing at `at` on the
+// page facing dir (see gazeFrom).
+export const gazeAt = gazeFrom({ eye: EYE, anchor: ANCHOR, scale: SCALE, look: LOOK, reach: LOOK_REACH });
 
 // How the rabbit stands: its body's turn, its head's (positive nose down),
 // its ears' (positive back), its tail's (positive up), where its feet go and
