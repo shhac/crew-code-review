@@ -15,7 +15,8 @@
   import { BEATS as HAWK_BEATS, hawkRig } from './hawk-rig';
   import { chalkLines, LINE, linesPath, specksOf, wornOf, wornPath, type Lines } from './lines';
   import { rigPigeon, viewOf } from './pigeon';
-  import { pigeonRig } from './pigeon-rig';
+  import { easeGazes } from '../rig/gaze';
+  import { gazeAt, pigeonRig } from './pigeon-rig';
   import { ballOf } from './rally';
   import { createPlay, reconcilePlay, restingPlay, stepPlay, summerOf, type Play, type Summer } from './summer';
 
@@ -31,6 +32,10 @@
   // The cursor's last stroke, and how fast it moved along it (px/s).
   let stroke: Segment | null = null;
   let speed = 0;
+  // How far each pigeon's head is turned toward the cursor, or a ball
+  // bouncing near it, eased so it turns smoothly rather than snapping.
+  let gazes: ReadonlyMap<number, number> = new Map();
+  const LOOKING = new Set(['stand', 'alert']);
 
   const troupe = placeTroupe<Play, Summer>({
     create: (s, time, rand) => createPlay(s, time, rand, CUE),
@@ -41,7 +46,7 @@
   $: page = summer?.page ?? null;
   $: pigeons = play && page ? play.flock.pigeons.flatMap((p) => {
     const view = viewOf(p, page!, now);
-    return view ? [{ view, pose: pigeonRig(rigPigeon(view, now), { now, still: reduced }) }] : [];
+    return view ? [{ view, pose: pigeonRig({ ...rigPigeon(view, now), gaze: gazes.get(p.id) ?? 0 }, { now, still: reduced }) }] : [];
   }) : [];
   $: hawk = play && page ? hawkView(play.flock.hawk, page, now) : null;
   $: hawkPose = hawk ? hawkRig({ pose: 'glide', seed: 2, beat: (HAWK_BEATS * now) / 1000, gaze: 0 }, { now, still: reduced }) : null;
@@ -71,6 +76,9 @@
       const cursor: Point | null = step.cursor;
       const moved = stroke && stroke.at > from ? stroke : null;
       play = stepPlay(play, summer, lines, time, from, Math.random, { cursor, stroke: moved, speed: moved ? speed : 0 });
+      const seen = ballOf(play.rally, summer.page, time);
+      const views = play.flock.pigeons.flatMap((p) => viewOf(p, summer!.page, time) ?? []);
+      gazes = easeGazes(views, (v) => v.pigeon.id, (v) => (LOOKING.has(v.pose) ? gazeAt(v.dir, v, seen ?? cursor) : 0), gazes, step.dt);
     },
     stroke(segment) {
       speed = (Math.hypot(segment.to.x - segment.from.x, segment.to.y - segment.from.y) * 1000) / Math.max(1, segment.at - (stroke?.at ?? -Infinity));

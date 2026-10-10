@@ -2,6 +2,7 @@ import { mix, smooth } from '../math';
 import type { Point } from '../pointer';
 import { AIR_LEGS, airLegsTo, birdLegsTo, birdWalk, BIRD_JOINTS, headBob, stepRise, type AirLegs, type BirdLeg } from '../rig/bird';
 import { restingFeet, stepping, type Limb } from '../rig/gait';
+import { gazeFrom } from '../rig/gaze';
 import { blinking, breath } from '../rig/life';
 import { legsAround, lidLayers, turnAbout, turned, type Frame, type Fur, type Layer, type LimbArt, type RigPose, type Turn } from '../rig/rig';
 import { birdWing, flaring, flapping, settling, takingOff, wingPoint, type Flap, type FlightPose, type WingArt, type WingPose } from '../rig/wings';
@@ -130,7 +131,9 @@ export type PigeonPose = 'stand' | 'walk' | 'peck' | 'alert' | 'takeoff' | 'fly'
 // What the drawing reads of a pigeon: its pose, how far it has walked, its
 // wingbeats so far (`beat`), how far through a peck, a landing or a settle
 // it is (`t`, 0 to 1).
-export type RigPigeon = { pose: PigeonPose; walked: number; seed: number; beat: number; t: number };
+// `gaze` turns its head (degrees, nose down positive) toward what it is
+// looking at, standing or alert; eased by the layer.
+export type RigPigeon = { pose: PigeonPose; walked: number; seed: number; beat: number; t: number; gaze?: number };
 export type PigeonLook = { now: number; still: boolean };
 
 const image = (name: string, src: string, box: { x: number; y: number; width: number; height: number }, hidden = false): Layer =>
@@ -175,12 +178,16 @@ const planted = (hips: readonly Point[]) => birdLegsTo(LEGS, hips, restingFeet(L
 // On the ledge: standing, walking with the head bob, pecking or alert.
 function onGround(pigeon: RigPigeon, look: PigeonLook): Ground {
   const breathe = look.still ? 0 : 0.1 * breath(pigeon.seed, look.now, 3200);
+  // Looking up it tips its bill only a little, so it stays inside the
+  // room it has under whatever is above it.
+  const gaze = look.still ? 0 : Math.max(-LOOK_UP, pigeon.gaze ?? 0);
   if (look.still || pigeon.pose === 'stand' || pigeon.pose === 'settle') {
-    return { body: turnAbout(0, MIDDLE, 0, -breathe), head: turnAbout(0, NECK), limbs: planted, tail: 0 };
+    return { body: turnAbout(0, MIDDLE, 0, -breathe), head: turnAbout(gaze, NECK), limbs: planted, tail: 0 };
   }
   if (pigeon.pose === 'alert') {
-    // Standing tall and sleek, the neck stretched up.
-    return { body: turnAbout(-4, HIPS), head: turnAbout(-4, NECK, 0.3, -1.5), limbs: planted, tail: 0 };
+    // Standing tall and sleek, the neck stretched up as far as the ledge's
+    // room allows, so it looks only down.
+    return { body: turnAbout(-4, HIPS), head: turnAbout(Math.max(0, gaze) - 4, NECK, 0.3, -1.5), limbs: planted, tail: 0 };
   }
   if (pigeon.pose === 'peck') {
     const p = pecking(pigeon.t);
@@ -273,6 +280,12 @@ export function pigeonRig(pigeon: RigPigeon, look: PigeonLook): RigPose {
   };
 }
 
+// How far its head turns toward something close by: a cursor, or a ball
+// bouncing near it.
+export const LOOK = 20;
+const LOOK_UP = 4;
+export const gazeAt = gazeFrom({ eye: EYE, anchor: ANCHOR, scale: SCALE, look: LOOK, reach: 150 });
+
 // The lab's speeds: the pigeon's walk, and its brisk shy.
 export const WALK_SPEED = 18;
 export const SHY_SPEED = 35;
@@ -281,6 +294,6 @@ export const SHY_SPEED = 35;
 // measures them.
 export type Footprint = { width: number; height: number; down?: number };
 export const FOOTPRINTS: Record<PigeonPose, Footprint> = {
-  stand: { width: 30, height: 24 }, walk: { width: 30, height: 24 }, peck: { width: 42.5, height: 24 }, alert: { width: 30.5, height: 27 },
+  stand: { width: 30.5, height: 25 }, walk: { width: 30, height: 24 }, peck: { width: 42.5, height: 24 }, alert: { width: 30.5, height: 27 },
   takeoff: { width: 34, height: 39.5, down: 1 }, fly: { width: 31, height: 30.5, down: 1 }, land: { width: 45.5, height: 36.5, down: 1.2 }, settle: { width: 31, height: 27 },
 };

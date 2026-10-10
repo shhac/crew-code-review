@@ -5,7 +5,7 @@ import type { Layer, RigPose } from '../rig/rig';
 import { escape, flying, lengthOfTrack, reachAt, routeIn, trackOf } from './flight';
 import { board, overview, side, testSky } from './fixtures';
 import { ENVELOPES, flyIn, fresh, rigPigeon, standing, takeOff, viewOf } from './pigeon';
-import { FOOTPRINTS, pigeonRig, SCALE, WALK, type PigeonPose, type RigPigeon } from './pigeon-rig';
+import { FOOTPRINTS, LOOK, pigeonRig, SCALE, WALK, type PigeonPose, type RigPigeon } from './pigeon-rig';
 
 const pigeon = (pose: PigeonPose, over: Partial<RigPigeon> = {}): RigPigeon => ({ pose, walked: 0, seed: 1, beat: 0, t: 0, ...over });
 const POSES: PigeonPose[] = ['stand', 'walk', 'peck', 'alert', 'takeoff', 'fly', 'land', 'settle'];
@@ -35,6 +35,18 @@ describe('pigeon rig', () => {
       expect(most(rigs, below)).toBeLessThanOrEqual(down + 1e-9);
     });
   }
+
+  it('stays inside its footprint with its head turned as far as it turns, either way', () => {
+    for (const pose of ['stand', 'alert'] as const) {
+      for (const gaze of [-LOOK, LOOK]) {
+        const rigs = Array.from({ length: 60 }, (_, i) => pigeonRig(pigeon(pose, { gaze }), { now: i * 61, still: false }));
+        const { width, height } = FOOTPRINTS[pose];
+        expect(most(rigs, (r) => Math.max(pageReach(r).left, pageReach(r).right)), `${pose} ${gaze}`).toBeLessThanOrEqual(width / 2);
+        expect(most(rigs, (r) => pageReach(r).top), `${pose} ${gaze}`).toBeLessThanOrEqual(height);
+        expect(most(rigs, below), `${pose} ${gaze}`).toBeLessThanOrEqual(1e-9);
+      }
+    }
+  });
 
   it('does everything it does on a ledge in the 27px every ledge animal has, the alert stretched tallest', () => {
     for (const pose of ['stand', 'walk', 'peck', 'alert', 'settle'] as const) expect(FOOTPRINTS[pose].height).toBeLessThanOrEqual(27);
