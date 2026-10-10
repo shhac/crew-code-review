@@ -8,9 +8,9 @@
 
 {#each layers as layer}
   {#if layer.kind === 'image' && layer.far}
-    <image class="far" href={layer.src} x={layer.x} y={layer.y} width={layer.width} height={layer.height} />
+    <image class="far" href={layer.src} x={layer.x} y={layer.y} width={layer.width} height={layer.height} visibility={layer.hidden ? 'hidden' : undefined} />
   {:else if layer.kind === 'image'}
-    <image href={layer.src} x={layer.x} y={layer.y} width={layer.width} height={layer.height} />
+    <image href={layer.src} x={layer.x} y={layer.y} width={layer.width} height={layer.height} visibility={layer.hidden ? 'hidden' : undefined} />
   {:else if layer.kind === 'legs'}
     <g data-legs={layer.fur ? 'fur' : 'outlined'} class:far={layer.far}>
       {#each layer.legs as leg}
@@ -25,7 +25,7 @@
   {:else if layer.kind === 'stroke'}
     <path data-stroke={layer.name} d="M{layer.points.map((p) => `${p.x} ${p.y}`).join('L')}{layer.fill ? 'Z' : ''}" style:fill={layer.fill ?? 'none'} stroke={layer.colour} stroke-width={layer.width} stroke-linejoin="round" />
   {:else}
-    <g transform={transformOf(layer.turn, layer.scaleY)} opacity={layer.opacity}><Layers layers={layer.layers} /></g>
+    <g transform={transformOf(layer.turn, (layer.scaleY ?? 1) * (layer.foreshorten ?? 1))} opacity={layer.opacity}><Layers layers={layer.layers} /></g>
   {/if}
 {/each}
 

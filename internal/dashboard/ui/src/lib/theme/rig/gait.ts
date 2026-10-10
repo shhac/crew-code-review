@@ -49,8 +49,9 @@ export type QuadLeg = Omit<LegSpec, 'beat'> & {
 // A leg posed: hip (or shoulder); knee (the stifle on a hind leg, the elbow
 // on a foreleg); ankle (the hock, or the wrist; the foot itself where there
 // is no bone up from the toes); foot; and how far the paw is turned from
-// flat (degrees, toes down), as the bone above it folds.
-export type Limb = Leg & { ankle: Point; paw: number };
+// flat (degrees, toes down), as the bone above it folds; and, for a foot
+// with a curled drawing (a bird's), whether its toes are drawn together now.
+export type Limb = Leg & { ankle: Point; paw: number; curled?: boolean };
 // stance: the share of each cycle a foot is down. A walk keeps three feet
 // down (0.75, four beats); a trot moves diagonal pairs together (about 0.5).
 // beats: when in the cycle each leg steps, 0 to 1, in the rig's order of

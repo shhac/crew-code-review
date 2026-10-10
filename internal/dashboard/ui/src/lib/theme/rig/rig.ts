@@ -34,6 +34,16 @@ export type LimbArt = {
   // A sole walker's leg is drawn over its foot, its rounded end the heel,
   // hiding the foot's back; otherwise the foot is drawn over the leg's end.
   overFoot?: boolean;
+  // A bird's leg: its thigh (the femur) runs from the hip to the knee inside
+  // the body and is never drawn, so its pieces start at the knee: the
+  // drumstick (the tibiotarsus) with `thigh`'s piece, as thick as the
+  // haunch and feathered where it leaves the belly, then the bare tarsus
+  // (the tarsometatarsus) with the bone piece, then the toes.
+  inBody?: boolean;
+  // The foot drawn in place of `foot` while the limb is curled (a bird's
+  // toes drawn together as it swings). Both are always drawn, the one not in
+  // use unseen, so a step never swaps a picture.
+  curled?: Foot;
 };
 // A leg as an animal is put together: where it is and how it steps
 // (gait.ts), the art it is drawn with, and how thick its pieces are.
@@ -45,16 +55,22 @@ export type DrawnLeg = { limb: Limb; art: LimbArt; width: number; haunch: number
 
 export type Layer =
   // `far`: on the far side, seen past the body, a shade darker.
-  | { kind: 'image'; name: string; src: string; x: number; y: number; width: number; height: number; far?: boolean }
   // Each bone drawn with a piece of its leg's art, then its foot; the far
   // side shaded; `fur` for the pass of fur alone.
   | { kind: 'legs'; name: string; legs: readonly DrawnLeg[]; far: boolean; fur: boolean }
   | { kind: 'lid'; at: Point; r: number; fur: Fur }
+  // `hidden`: drawn but unseen, so showing it again never reloads it (a
+  // wing's upper side and its underside, turned in turn).
+  | { kind: 'image'; name: string; src: string; x: number; y: number; width: number; height: number; far?: boolean; hidden?: boolean }
   // A line drawn in code through points (a bow's stave, its string), or
   // with `fill` a closed shape (an arrow's heart).
   | { kind: 'stroke'; name: string; points: readonly Point[]; width: number; colour: string; fill?: string }
   // `opacity`: drawn see-through as one, as a wing's blur is.
-  | { kind: 'group'; turn: Turn; scaleY?: number; opacity?: number; layers: readonly Layer[] };
+  // `foreshorten`: also scaled across by this about the pivot, as a part
+  // turning out of the page's plane is seen at a slant (a wing beating about
+  // the body's long axis); negative flips it over. Unlike a breath's
+  // `scaleY`, the drawing's bounds count it.
+  | { kind: 'group'; turn: Turn; scaleY?: number; opacity?: number; foreshorten?: number; layers: readonly Layer[] };
 
 // Guides: where its joints are, for the lab and the debug overlay to mark.
 export type Guide = { name: string; at: Point };
@@ -119,6 +135,7 @@ export function piecesOf(leg: DrawnLeg): Piece[] {
   const { limb: { hip, knee, ankle, foot }, art, width } = leg;
   const plain = { src: art.bone, fur: art.boneFur };
   if (!art.knee) return [{ from: hip, to: foot, width, ...plain }];
+  if (art.inBody) return [{ from: knee, to: ankle, width: leg.haunch, ...(art.thigh ?? plain) }, { from: ankle, to: foot, width, ...plain }];
   const upper = { from: hip, to: knee, width: leg.haunch, ...(art.thigh ?? plain) };
   const toes = ankle.x === foot.x && ankle.y === foot.y ? [] : [{ from: ankle, to: foot, width, ...plain }];
   // A hind shank tapers to a narrow hock.
@@ -126,9 +143,9 @@ export function piecesOf(leg: DrawnLeg): Piece[] {
   return [upper, shank, ...toes];
 }
 
-// A foot's box, and its turn about the heel as the bone above it folds.
-export function footBox(leg: DrawnLeg) {
-  const { foot } = leg.art;
+// A foot's box, and its turn about the heel as the bone above it folds: its
+// own foot, or another drawn in its place (a curled one).
+export function footBox(leg: DrawnLeg, foot: Foot = leg.art.foot) {
   const { x, y } = leg.limb.foot;
   return { x: x - foot.heel.x, y: y - foot.heel.y, width: foot.width, height: foot.height, transform: `rotate(${leg.limb.paw} ${x} ${y})` };
 }
@@ -137,13 +154,26 @@ export function footBox(leg: DrawnLeg) {
 // piece of art stretched along each bone (in the fur pass the first runs
 // flush from the hip, see bone), then the foot over the leg's end; or, for
 // a sole walker, the foot first, under the leg's rounded end, its heel.
-export type LegImage = { href: string; stretch: boolean; x: number; y: number; width: number; height: number; transform: string };
+export type LegImage = { href: string; stretch: boolean; x: number; y: number; width: number; height: number; transform: string; opacity?: number };
 export function legImages(leg: DrawnLeg, fur: boolean): LegImage[] {
   const pieces = piecesOf(leg).map((p, i) => ({ href: fur ? p.fur : p.src, stretch: true, ...bone(p.from, p.to, p.width, fur && i === 0) }));
-  const drawn = leg.art.foot;
-  const foot = { href: fur ? drawn.fur : drawn.src, stretch: false, ...footBox(leg) };
-  return leg.art.overFoot ? [foot, ...pieces] : [...pieces, foot];
+  const feet = footImages(leg, fur);
+  return leg.art.overFoot ? [...feet, ...pieces] : [...pieces, ...feet];
 }
+
+// The foot as drawn; or, with a curled one too, both, only the one in use
+// seen.
+function footImages(leg: DrawnLeg, fur: boolean): LegImage[] {
+  const image = (foot: Foot) => ({ href: fur ? foot.fur : foot.src, stretch: false, ...footBox(leg, foot) });
+  const { curled } = leg.art;
+  if (!curled) return [image(leg.art.foot)];
+  const shut = !!leg.limb.curled;
+  return [{ ...image(leg.art.foot), opacity: shut ? 0 : 1 }, { ...image(curled), opacity: shut ? 1 : 0 }];
+}
+
+// The foot a leg is standing or stepping on now: its curled one while it is
+// curled.
+export const footInUse = (leg: DrawnLeg): Foot => (leg.limb.curled && leg.art.curled) || leg.art.foot;
 
 // An eyelid over the eye at `at`, while the eye is shut.
 export const lidLayers = (shut: boolean, at: Point, r: number, fur: Fur): Layer[] => (shut ? [{ kind: 'lid', at, r, fur }] : []);

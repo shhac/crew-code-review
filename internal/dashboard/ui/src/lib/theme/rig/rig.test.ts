@@ -29,6 +29,17 @@ describe('rigBounds', () => {
     const b = rigBounds(pose);
     expect([b.left, b.right, b.top, b.bottom].map((n) => Math.round(n * 1000) / 1000)).toEqual([-2, 0, 0, 4]);
   });
+
+  it('counts a foreshortened group, flipped or not, and leaves out a picture drawn unseen', () => {
+    const box = { kind: 'image', name: 'wing', src: '', x: 0, y: -10, width: 2, height: 10 } as const;
+    const flipped = (foreshorten: number): RigPose => ({
+      width: 20, height: 20, anchor: { x: 10, y: 20 }, scale: 1,
+      layers: [{ kind: 'group', turn: turnAbout(0, { x: 0, y: 0 }, 5, 5), foreshorten, layers: [box, { ...box, x: 50, hidden: true }] }],
+    });
+    const b = rigBounds(flipped(-0.5));
+    expect([b.left, b.right, b.top, b.bottom]).toEqual([5, 7, 5, 10]);
+    expect(rigBounds(flipped(0.5)).top).toBe(0);
+  });
 });
 
 describe('legImages', () => {
@@ -41,6 +52,17 @@ describe('legImages', () => {
     expect(hrefs(art, false)).toEqual(['bone.webp', 'foot.webp']);
     expect(hrefs({ ...art, overFoot: true }, false)).toEqual(['foot.webp', 'bone.webp']);
     expect(hrefs({ ...art, overFoot: true }, true)).toEqual(['foot-fur.webp', 'bone-fur.webp']);
+  });
+
+  it('draws a bird\'s leg from the knee, its thigh in the body, with both feet and only the one in use seen', () => {
+    const bird: LimbArt = { ...art, knee: true, inBody: true, thigh: { src: 'drumstick.webp', fur: 'drumstick-fur.webp' }, curled: { ...foot, src: 'curled.webp', fur: 'curled-fur.webp' } };
+    const limb = { hip: { x: 0, y: 0 }, knee: { x: 1, y: 1 }, ankle: { x: 0, y: 2 }, foot: { x: 0.5, y: 4 }, paw: 0 };
+    const drawn = (curled: boolean) => legImages({ ...leg, art: bird, limb: { ...limb, curled } }, false);
+    expect(drawn(false).map((i) => i.href)).toEqual(['drumstick.webp', 'bone.webp', 'foot.webp', 'curled.webp']);
+    expect(drawn(false).map((i) => i.opacity)).toEqual([undefined, undefined, 1, 0]);
+    expect(drawn(true).map((i) => i.opacity)).toEqual([undefined, undefined, 0, 1]);
+    expect(drawn(true)[0].transform).toContain('translate(1 1)');
+    expect(hrefs({ ...art, knee: true }, false)).not.toContain('curled.webp');
   });
 
   it('stretches the bones but not the foot, the fur pass running its first piece flush from the hip', () => {
