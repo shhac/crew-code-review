@@ -1,5 +1,6 @@
+import { clamp, rad, smooth } from '../math';
 import type { Point } from '../pointer';
-import { clamp, cycleLength, footOf, kneeToward, rotate, stepAt, type Leg, type LegSpec, type Step } from '../spidergait';
+import { cycleLength, footOf, kneeToward, rotate, stepAt, type Leg, type LegSpec, type Step } from '../spidergait';
 
 export type { Step };
 
@@ -90,10 +91,6 @@ export function flexion(step?: Step): number {
   return -0.2 * Math.sin((Math.PI * (step.t - 0.75)) / 0.25);
 }
 
-const smooth = (t: number) => {
-  const c = clamp(t, 0, 1);
-  return c * c * (3 - 2 * c);
-};
 // How far a sole walker's foot is rolled up onto its toes (0 flat, 1 its
 // full peel): flat through most of its time down, the heel peeling up as it
 // pushes off, then flattening again low through the swing so it lands flat.
@@ -105,7 +102,7 @@ export function roll(step?: Step): number {
 // Where the bone up from the toes starts, folded `fold` degrees back from
 // standing: rotating it that way swings the paw back behind the joint.
 function ankleOf(toes: Toes, foot: Point, fold: number): Point {
-  const angle = ((toes.lean - fold) * Math.PI) / 180;
+  const angle = rad(toes.lean - fold);
   return { x: foot.x - toes.length * Math.sin(angle), y: foot.y - toes.length * Math.cos(angle) };
 }
 

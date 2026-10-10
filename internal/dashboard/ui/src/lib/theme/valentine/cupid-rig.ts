@@ -1,3 +1,4 @@
+import { clamp, degrees, mixPoint, rad, smooth } from '../math';
 import type { Point } from '../pointer';
 import { blinking } from '../rig/life';
 import { lidLayers, limbLayers, turnAbout, turned, type DrawnLeg, type Fur, type Layer, type LimbArt, type RigPose, type Turn } from '../rig/rig';
@@ -97,15 +98,8 @@ export type RigCupid = {
 };
 export type CupidLook = { now: number; still: boolean };
 
-const rad = (deg: number) => (deg * Math.PI) / 180;
-const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
-const smooth = (t: number) => {
-  const c = clamp(t, 0, 1);
-  return c * c * (3 - 2 * c);
-};
 const along = (from: Point, deg: number, length: number): Point => ({ x: from.x + Math.cos(rad(deg)) * length, y: from.y + Math.sin(rad(deg)) * length });
-const mix = (a: Point, b: Point, t: number): Point => ({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t });
-const angleOf = (from: Point, to: Point) => (Math.atan2(to.y - from.y, to.x - from.x) * 180) / Math.PI;
+const angleOf = (from: Point, to: Point) => degrees(Math.atan2(to.y - from.y, to.x - from.x));
 
 // The joint between two bones from a to b, on the given side of the line
 // from a to b (1 its right, as the page turns, -1 its left); straight when b
@@ -147,8 +141,8 @@ function bow(grip: Point, aim: number, bend: number, nock: Point | null): { stav
   const curl = (s: 1 | -1) => along(along(at(s), aim, 0.55), aim + 90, s * 0.25);
   const line = [curl(-1), ...stave, curl(1)];
   const top = at(-1), bottom = at(1);
-  const string = [top, nock ?? mix(top, bottom, 0.5), bottom];
-  const tail = nock ?? mix(top, bottom, 0.5);
+  const string = [top, nock ?? mixPoint(top, bottom, 0.5), bottom];
+  const tail = nock ?? mixPoint(top, bottom, 0.5);
   const shaft = [tail, along(tail, aim, ARROW)];
   const head = heart(along(tail, aim, ARROW + 0.5), aim, 0.85);
   const fletch = heart(along(tail, aim, 0.6), aim, 0.7);
@@ -225,10 +219,10 @@ function hold(c: RigCupid, now: number): Hold {
       // the jaw.
       const t = c.pose === 'aim' ? 1 : smooth(c.progress);
       const rest = holdingBow(FAR_SHOULDER).wrist;
-      const raised = (shoulder: Point) => ({ wrist: mix({ x: shoulder.x + (rest.x - FAR_SHOULDER.x), y: shoulder.y + (rest.y - FAR_SHOULDER.y) }, along(shoulder, c.aim, 4.6), t), side: 1 as const });
+      const raised = (shoulder: Point) => ({ wrist: mixPoint({ x: shoulder.x + (rest.x - FAR_SHOULDER.x), y: shoulder.y + (rest.y - FAR_SHOULDER.y) }, along(shoulder, c.aim, 4.6), t), side: 1 as const });
       return {
         body: turnAbout(lean * (1 - t), ANCHOR), stroke: hover, head: clamp(c.aim * 0.3, -10, 15) * t,
-        near: () => ({ wrist: mix(hanging(NEAR_SHOULDER).wrist, JAW, t), side: -1 }), nearHangs: false, far: raised,
+        near: () => ({ wrist: mixPoint(hanging(NEAR_SHOULDER).wrist, JAW, t), side: -1 }), nearHangs: false, far: raised,
         aim: c.aim * t, bend: BRACED + (DRAWN - BRACED) * t, drawing: true, arrow: true, legs: { swing: 12 + kick, bend: 40 },
       };
     }
@@ -237,11 +231,11 @@ function hold(c: RigCupid, now: number): Hold {
       // then both come down.
       const flung = smooth(c.progress / 0.25);
       const down = smooth((c.progress - 0.6) / 0.4);
-      const back = mix(JAW, FOLLOW, flung);
+      const back = mixPoint(JAW, FOLLOW, flung);
       return {
         body: turnAbout(lean * down, ANCHOR), stroke: hover, head: clamp(c.aim * 0.3, -10, 15) * (1 - down),
-        near: () => ({ wrist: mix(back, hanging(NEAR_SHOULDER).wrist, down), side: -1 }), nearHangs: false,
-        far: (s) => ({ wrist: mix(along(s, c.aim, 4.6), holdingBow(s).wrist, down), side: 1 }),
+        near: () => ({ wrist: mixPoint(back, hanging(NEAR_SHOULDER).wrist, down), side: -1 }), nearHangs: false,
+        far: (s) => ({ wrist: mixPoint(along(s, c.aim, 4.6), holdingBow(s).wrist, down), side: 1 }),
         aim: c.aim * (1 - down), bend: BRACED, drawing: false, arrow: false, legs: { swing: 12 + kick * 1.5, bend: 40 },
       };
     }

@@ -1,3 +1,4 @@
+import { degrees } from '../math';
 import type { Point } from '../pointer';
 import { rotate } from '../spidergait';
 import type { Limb, QuadLeg } from './gait';
@@ -81,7 +82,7 @@ export const transformOf = (turn: Turn, scaleY = 1) => {
 // just inside it, which must not spread up over the body.
 export function bone(from: Point, to: Point, thick: number, flush = false) {
   const length = Math.hypot(to.x - from.x, to.y - from.y);
-  const angle = (Math.atan2(to.y - from.y, to.x - from.x) * 180) / Math.PI;
+  const angle = degrees(Math.atan2(to.y - from.y, to.x - from.x));
   const start = flush ? 0 : thick / 2;
   return { x: -start, y: -thick / 2, width: length + start + thick / 2, height: thick, transform: `translate(${from.x} ${from.y}) rotate(${angle})` };
 }

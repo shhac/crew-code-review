@@ -1,9 +1,9 @@
+import { clamp, smooth } from '../math';
 import type { Point } from '../pointer';
 import { beatsFor, flightLift, gaitPhase, legsTo, stepping, type Gait, type Step } from '../rig/gait';
 import { gazeFrom } from '../rig/gaze';
 import { blinking, snuffle } from '../rig/life';
 import { legsAround, lidLayers, turnAbout, turned, type ArtLeg, type Foot, type Frame, type Fur, type Layer, type LimbArt, type RigPose, type Turn } from '../rig/rig';
-import { clamp } from '../spidergait';
 import bodyArt from './rabbit-body.webp';
 import earsArt from './rabbit-ears.webp';
 import footFurArt from './rabbit-foot-fur.webp';
@@ -237,8 +237,7 @@ function eased(rabbit: RigRabbit, look: RabbitLook): Stance {
   const next = stance(rabbit, look);
   if (look.still || !rabbit.was || rabbit.was === rabbit.pose || rabbit.since >= EASE) return next;
   const before = stance({ ...rabbit, pose: rabbit.was }, look);
-  const k = clamp(rabbit.since / EASE, 0, 1);
-  const f = k * k * (3 - 2 * k);
+  const f = smooth(rabbit.since / EASE);
   const mix = (a: number, b: number) => a + (b - a) * f;
   const turn = { angle: mix(before.body.angle, next.body.angle), pivot: next.body.pivot, dx: mix(before.body.dx, next.body.dx), dy: mix(before.body.dy, next.body.dy) };
   const feet = (hips: readonly Point[]) => {
