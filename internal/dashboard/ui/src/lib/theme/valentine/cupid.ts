@@ -2,8 +2,9 @@ import { around, fits, inAir, linesOf, sweeps, type Air } from '../air';
 import { anchor, fromLedge, placed, progress, toLedge, type Anchored } from '../anchored';
 import { cubic, lengthOf, samples, shift, type Curve } from '../curves';
 import type { PageMap } from '../floors';
-import { distance, type Point } from '../pointer';
 import { apart, clamp, degrees, smooth } from '../math';
+import { distance, type Point } from '../pointer';
+import { GAZE_EASE } from '../rig/gaze';
 import { easeTo } from '../rig/life';
 import { between, type Rand } from '../seed';
 import type { CupidPose } from './cupid-rig';
@@ -73,7 +74,6 @@ export const AIM = 450;
 export const LOOSE = 450;
 const CALM = 1200;
 const GAZE_REACH = 160;
-const GAZE_EASE = 220;
 
 // A flight's curve on the page now, or null with its ledge gone.
 export const flightCurve = (page: PageMap, f: Flight): Curve | null => fromLedge(page, f.floor, f.curve);
