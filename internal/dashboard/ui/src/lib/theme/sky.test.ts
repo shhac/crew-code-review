@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { measureRailSky } from './sky';
+import { measureRailAir, measureRailSky } from './sky';
 
 const rect = (top: number, bottom: number) => ({ getBoundingClientRect: () => ({ left: 10, top, bottom }) });
 const shelf = (top: number, navBottom: number, shown = true) => ({
@@ -20,5 +20,22 @@ describe('measureRailSky', () => {
     expect(measureRailSky(shelf(600, 400, false))).toBeNull();
     expect(measureRailSky({ ...shelf(600, 400), previousElementSibling: null })).toBeNull();
     expect(measureRailSky(null)).toBeNull();
+  });
+});
+
+describe('measureRailAir', () => {
+  it('stretches the sky down through the shelf to its bottom edge', () => {
+    expect(measureRailAir(shelf(600, 400))).toEqual({ left: 10, top: 416, width: 220, height: 284 });
+  });
+
+  it('is the shelf alone when the sky has no height, and capped as the sky is', () => {
+    expect(measureRailAir(shelf(400, 395))).toEqual({ left: 10, top: 400, width: 220, height: 100 });
+    expect(measureRailAir(shelf(900, 100))).toMatchObject({ top: 660, height: 340 });
+  });
+
+  it('is absent whenever the sky is', () => {
+    expect(measureRailAir(shelf(600, 400, false))).toBeNull();
+    expect(measureRailAir({ ...shelf(600, 400), previousElementSibling: null })).toBeNull();
+    expect(measureRailAir(null)).toBeNull();
   });
 });

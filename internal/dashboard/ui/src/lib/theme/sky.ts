@@ -25,6 +25,17 @@ export function measureRailSky(shelf: Shelf | null): Sky | null {
   return { left: box.left, top: box.top - height, width: shelf.clientWidth, height };
 }
 
+// The rail's air, for things that fly in the rail: the sky stretched down
+// through the shelf's own box to its bottom edge, the line its art stands on.
+// The shelf's art is ours, so it may be flown over and landed on; nothing
+// else in the rail is air (the nav above, the identity chip below). None
+// when there is no sky.
+export function measureRailAir(shelf: Shelf | null): Sky | null {
+  const sky = measureRailSky(shelf);
+  if (!sky || !shelf) return null;
+  return { ...sky, height: shelf.getBoundingClientRect().bottom - sky.top };
+}
+
 // Calls changed whenever the sky may have moved. In a full-height rail, the
 // brand settling or the nav gaining a link moves the sky's top edge without
 // resizing the rail, so everything in the rail is watched.
