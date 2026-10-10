@@ -180,13 +180,16 @@ export function heart(p: Point, aim: number, size: number): Point[] {
 
 // How it holds itself for each pose: the body's turn, the wings' stroke, the
 // arms' ends, the legs' swing, how far the bow is bent and where its string
-// is, and whether an arrow is nocked.
+// is, and whether an arrow is nocked. The far arm's end is set from its
+// shoulder on the page, the near arm's in the body's own frame (armsOf).
+type Arm = (shoulder: Point) => { wrist: Point; side: 1 | -1 };
 type Hold = {
   body: Turn;
   stroke: Stroke;
   head: number;
-  near: (shoulder: Point) => { wrist: Point; side: 1 | -1 };
-  far: (shoulder: Point) => { wrist: Point; side: 1 | -1 };
+  near: Arm;
+  nearHangs: boolean;
+  far: Arm;
   aim: number;
   bend: number;
   drawing: boolean;
@@ -212,7 +215,7 @@ function hold(c: RigCupid, now: number): Hold {
       const pitch = clamp(c.speed / 150, 0, 1) * 32;
       return {
         body: turnAbout(pitch, ANCHOR), stroke: wingStroke(c.beat, 18 - pitch, 95), head: -pitch * 0.4,
-        near: (s) => ({ wrist: { x: s.x - 3.6, y: s.y + 3 }, side: -1 }), far: holdingBow, aim: pitch, bend: BRACED, drawing: false, arrow: false,
+        near: (s) => ({ wrist: { x: s.x - 3.6, y: s.y + 3 }, side: -1 }), nearHangs: true, far: holdingBow, aim: pitch, bend: BRACED, drawing: false, arrow: false,
         legs: { swing: clamp(15 - pitch * 2 - clamp(c.accel / 40, -20, 20), -60, 35), bend: 30 },
       };
     }
@@ -225,7 +228,7 @@ function hold(c: RigCupid, now: number): Hold {
       const raised = (shoulder: Point) => ({ wrist: mix({ x: shoulder.x + (rest.x - FAR_SHOULDER.x), y: shoulder.y + (rest.y - FAR_SHOULDER.y) }, along(shoulder, c.aim, 4.6), t), side: 1 as const });
       return {
         body: turnAbout(lean * (1 - t), ANCHOR), stroke: hover, head: clamp(c.aim * 0.3, -10, 15) * t,
-        near: () => ({ wrist: mix(hanging(NEAR_SHOULDER).wrist, JAW, t), side: -1 }), far: raised,
+        near: () => ({ wrist: mix(hanging(NEAR_SHOULDER).wrist, JAW, t), side: -1 }), nearHangs: false, far: raised,
         aim: c.aim * t, bend: BRACED + (DRAWN - BRACED) * t, drawing: true, arrow: true, legs: { swing: 12 + kick, bend: 40 },
       };
     }
@@ -237,7 +240,7 @@ function hold(c: RigCupid, now: number): Hold {
       const back = mix(JAW, FOLLOW, flung);
       return {
         body: turnAbout(lean * down, ANCHOR), stroke: hover, head: clamp(c.aim * 0.3, -10, 15) * (1 - down),
-        near: () => ({ wrist: mix(back, hanging(NEAR_SHOULDER).wrist, down), side: -1 }),
+        near: () => ({ wrist: mix(back, hanging(NEAR_SHOULDER).wrist, down), side: -1 }), nearHangs: false,
         far: (s) => ({ wrist: mix(along(s, c.aim, 4.6), holdingBow(s).wrist, down), side: 1 }),
         aim: c.aim * (1 - down), bend: BRACED, drawing: false, arrow: false, legs: { swing: 12 + kick * 1.5, bend: 40 },
       };
@@ -247,15 +250,43 @@ function hold(c: RigCupid, now: number): Hold {
       // wings flared and fluttering.
       return {
         body: turnAbout(-18, ANCHOR), stroke: wingStroke(c.beat, 20, 60), head: -10,
-        near: reachOut(-150, 4.2), far: reachOut(-40, 4.4), aim: -60, bend: BRACED, drawing: false, arrow: false,
+        near: reachOut(-150, 4.2), nearHangs: true, far: reachOut(-40, 4.4), aim: -60, bend: BRACED, drawing: false, arrow: false,
         legs: { swing: 55, bend: 100 },
       };
     default:
       return {
         body: turnAbout(lean, ANCHOR), stroke: hover, head: c.gaze,
-        near: hanging, far: holdingBow, aim: 0, bend: BRACED, drawing: false, arrow: false, legs: { swing: 15 + kick, bend: 45 + kick },
+        near: hanging, nearHangs: true, far: holdingBow, aim: 0, bend: BRACED, drawing: false, arrow: false, legs: { swing: 15 + kick, bend: 45 + kick },
       };
   }
+}
+
+// The arms from the shoulders the body carries, each fist turned along its
+// forearm. A near arm hanging loose is only carried along by its shoulder;
+// drawing or loosing, its hand is at the jaw, so it turns with the body.
+function armsOf(h: Hold, body: Turn) {
+  const nearShoulder = turned(body, NEAR_SHOULDER), farShoulder = turned(body, FAR_SHOULDER);
+  const nearEnd = h.near(NEAR_SHOULDER);
+  const nearWrist = h.nearHangs
+    ? { x: nearShoulder.x + (nearEnd.wrist.x - NEAR_SHOULDER.x), y: nearShoulder.y + (nearEnd.wrist.y - NEAR_SHOULDER.y) } : turned(body, nearEnd.wrist);
+  const farEnd = h.far(farShoulder);
+  const nearArm = limb(nearShoulder, nearWrist, ARM.upper, ARM.fore, nearEnd.side, 0);
+  const farArm = limb(farShoulder, farEnd.wrist, ARM.upper, ARM.fore, farEnd.side, 0);
+  const fistTurn = (l: DrawnLeg['limb']) => ({ ...l, paw: angleOf(l.knee, l.foot) });
+  return { near: fistTurn(nearArm), far: fistTurn(farArm), nearArm, farArm };
+}
+
+// The legs from the hips the body carries, swung as the hold says and a
+// little with the body's turn, the far one a little behind.
+function legsOf(h: Hold, body: Turn) {
+  const legOf = (hip: Point, offset: number): DrawnLeg['limb'] => {
+    const swing = h.legs.swing + offset + 0.3 * h.body.angle;
+    const knee = along(hip, 90 - swing, LEG.thigh);
+    const shin = swing - h.legs.bend;
+    const foot = along(knee, 90 - shin, LEG.shin);
+    return { hip, knee, ankle: foot, foot, paw: 60 - shin };
+  };
+  return { nearLeg: legOf(turned(body, NEAR_HIP), 0), farLeg: legOf(turned(body, FAR_HIP), -16) };
 }
 
 // Held still under reduced motion: hovering upright, wings spread, legs
@@ -270,28 +301,10 @@ export function cupidRig(cupid: RigCupid, look: CupidLook): RigPose {
   const bob = look.still ? 0 : Math.sin((2 * Math.PI * now) / 1600 + c.seed) + 0.25 * Math.sin(2 * Math.PI * c.beat);
   const body: Turn = { ...h.body, dy: h.body.dy + bob };
   const at = (p: Point) => turned(body, p);
-  const nearShoulder = at(NEAR_SHOULDER), farShoulder = at(FAR_SHOULDER);
-  const nearHip = at(NEAR_HIP), farHip = at(FAR_HIP);
-  // The arms: the near one's ends follow the body unless it is drawing,
-  // when its hand is at the jaw, which turns with the head's body too.
-  const nearEnd = h.near(NEAR_SHOULDER);
-  const nearWrist = c.pose === 'hover' || c.pose === 'flight' || c.pose === 'dodge'
-    ? { x: nearShoulder.x + (nearEnd.wrist.x - NEAR_SHOULDER.x), y: nearShoulder.y + (nearEnd.wrist.y - NEAR_SHOULDER.y) } : at(nearEnd.wrist);
-  const farEnd = h.far(farShoulder);
-  const nearArm = limb(nearShoulder, nearWrist, ARM.upper, ARM.fore, nearEnd.side, 0);
-  const farArm = limb(farShoulder, farEnd.wrist, ARM.upper, ARM.fore, farEnd.side, 0);
-  const fistTurn = (l: DrawnLeg['limb']) => ({ ...l, paw: angleOf(l.knee, l.foot) });
-  const near = fistTurn(nearArm), far = fistTurn(farArm);
+  const { near, far, nearArm, farArm } = armsOf(h, body);
   const grip = along(far.foot, far.paw, 1.1);
   const nock = h.drawing ? along(near.foot, near.paw, 1) : null;
-  const legOf = (hip: Point, offset: number): DrawnLeg['limb'] => {
-    const swing = h.legs.swing + offset + 0.3 * h.body.angle;
-    const knee = along(hip, 90 - swing, LEG.thigh);
-    const shin = swing - h.legs.bend;
-    const foot = along(knee, 90 - shin, LEG.shin);
-    return { hip, knee, ankle: foot, foot, paw: 60 - shin };
-  };
-  const nearLeg = legOf(nearHip, 0), farLeg = legOf(farHip, -16);
+  const { nearLeg, farLeg } = legsOf(h, body);
   const nod = turnAbout(h.head, NECK);
   const drawnBow = bow(grip, h.aim, h.bend, nock);
   return {
