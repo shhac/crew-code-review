@@ -1,6 +1,10 @@
 # Summer tennis (2026-10-10)
 
-**Status**: pre-production draft (decisions settled, not built).
+**Status**: being built. Done: the birds' parts cut and exported, the
+shelf, the court lines (see "As built" under each). Waiting on the bird kit
+(legs, gait with head bob, flight poses, the envelope check) and the
+surfaces kit (courts, exits, the `?theme-cue=` cue) for the rigs, the
+flights and the rally.
 
 **Pins**: written against `ea7e9d5` (the hedgehog rebuilt from one drawing and
 the robin kept mounted). Code-internal, except the research sources below.
@@ -18,7 +22,8 @@ paragraph.
   cream, a glass jug of fruit cup with strawberries, orange, cucumber and
   mint, and an old wooden racquet with a ball, on a strip of mown lawn drawn
   in code (two greens, in stripes). Hidden on cramped rails like the other
-  shelves.
+  shelves. As built: the kit is 140x55 on a 168x64 stage, standing in a
+  168x12 lawn of seven mown stripes with a chalked baseline along its front.
 - **Court lines** (`lines.ts`): a chalk-white line along the ledges, with a
   centre mark and the corners of a court, where the page leaves them clear.
 - **Pigeons** (`pigeon.ts`, drawn by `pigeon-rig.ts`): two, or three where
@@ -368,6 +373,18 @@ at 0.7 opacity (`#f4f4ec`), with:
 At most five marks per run. The lines are still under reduced motion (they
 never move anyway). The ball's bounce puffs a little chalk (four or five
 specks fading over 0.4s) when it lands within 3px of a mark.
+
+**As built** (`wimbledon/lines.ts`): two changes from the plan, after
+looking at the page. The runs are kept 12px in from a ledge's ends, not 6:
+cards have 12px rounded corners, and a line starting 6px in hung in the air
+above the corner's curve. The scuffs were first drawn as worn earth
+(brownish strokes on the line); on the dark page they read as specks of
+dirt, so a scuff is now a stretch where the chalk is worn thin, the
+baseline broken and that stretch drawn at a quarter of its opacity. Caps:
+at most 40 baselines and 40 worn stretches a page, shared out a ledge at a
+time (`decor.ts`'s `shareOut`); scuffs keep 2px clear of the marks. The
+puff is in the same module (`puffAt`, `specksOf`, `markNear`), ready for
+the rally.
 
 ### Accent
 
