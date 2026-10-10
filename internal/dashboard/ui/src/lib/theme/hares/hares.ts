@@ -1,5 +1,5 @@
 import { inView, type PageMap } from '../floors';
-import { inTurn, placeInTurn } from '../group';
+import { fillTo, inTurn, keepInTurn, placeIds, placeInTurn, troupeSize } from '../group';
 import { bodyOf, clampTo, runAt, runsOf } from '../ledges';
 import { clamp } from '../math';
 import type { Cursor, Point } from '../pointer';
@@ -48,9 +48,9 @@ export function createHares(scene: PageMap, now: number, rand: Rand): Hares {
     { ...sittingAt(fresh(0), f, spot.floor, spot.mid + CHASE_GAP / 2, scene, now, rand, -1), mode: 'sit' as const, until: Infinity },
     { ...sittingAt(fresh(1), f, spot.floor, spot.mid - CHASE_GAP / 2, scene, now, rand, 1), mode: 'sit' as const, until: Infinity },
   ] : [];
-  const rest = placeInTurn<number, Hare>(pair.length ? [2] : [0, 1, 2], (id, placed) => placeHare(scene, now, rand, [...pair, ...placed], fresh(id)));
+  const rest = placeIds<Hare>(pair.length ? [2] : [0, 1, 2], (others, id) => placeHare(scene, now, rand, [...pair, ...others], fresh(id)));
   const hares = [...pair, ...rest];
-  const target = hares.length === 3 ? 3 : 2;
+  const target = troupeSize(hares);
   return { target, hares: hares.slice(0, target), runs: [], bout: null, nextBout: now + (pair.length ? between(rand, 1500, 3000) : between(rand, 8000, 15000)) };
 }
 
@@ -72,7 +72,7 @@ export function stepHares(group: Hares, scene: PageMap, now: number, dt: number,
   const alarmed = alarm(ran, scene, now, rand, cursor);
   const onTrail = (h: Hare) => !!runOf(alarmed, h.id);
   const trails = alarmed.runs.flatMap((r) => claimsOf(r.trail));
-  const stepped = inTurn(alarmed.hares, (h, others) => (onTrail(h) ? h : stepHare(h, scene, now, dt, rand, others, trails)), (_, __, other) => other);
+  const stepped = inTurn(alarmed.hares, (h, others) => (onTrail(h) ? h : stepHare(h, scene, now, dt, rand, others, trails)));
   const bolted = bolt({ ...alarmed, hares: stepped }, scene, now, rand, cursor);
   const bouted = advanceBout(bolted, scene, now, rand);
   const quiet = !bouted.bout && !bouted.runs.length && bouted.hares.every(calm);
@@ -89,38 +89,67 @@ export function stepHares(group: Hares, scene: PageMap, now: number, dt: number,
 // room left is a stand-off. In id order, so the same hare keeps a contested
 // spot; never more than the target.
 export function reconcileHares(group: Hares, scene: PageMap, now: number, rand: Rand): Hares {
-  const runs = group.runs.filter((r) => trailHolds(r, scene));
-  const dropped = group.runs.filter((r) => !runs.includes(r));
-  const candidates = (h: Hare): Hare[] => {
-    const run = dropped.find((r) => r.members.some((m) => m.id === h.id));
-    if (!run) return [h];
-    const place = placeOn(run.trail, sAt(run, memberOf(run, h.id)));
-    if (place.kind === 'run') return [{ ...h, floor: place.floor, x: place.x, target: place.x }];
-    if (place.kind === 'leap') return [place.segment.to, place.segment.from].map((s) => ({ ...h, floor: s.floor, x: s.x, target: s.x }));
-    return [];
-  };
-  const kept = placeInTurn<Hare, Hare>(group.hares, (h, placed) => {
-    if (runs.some((r) => r.members.some((m) => m.id === h.id))) return h;
-    const fits = candidates(h).map((c) => clamped(c, scene)).find((c) => c && holds(c, scene, placed, partnerOf(group, h)));
-    if (!fits) return null;
-    const wasRun = dropped.some((r) => r.members.some((m) => m.id === h.id));
-    return wasRun ? sitUp(fits, scene, now, rand) : fits;
-  });
-  const missing = Array.from({ length: group.target }, (_, id) => id).filter((id) => !kept.some((h) => h.id === id));
-  const added = placeInTurn<number, Hare>(missing, (id, placed) => placeHare(scene, now, rand, [...kept, ...placed], group.hares.find((h) => h.id === id) ?? fresh(id)));
-  const hares = [...kept, ...added].sort((a, b) => a.id - b.id);
+  const runs = splitRuns(group.runs, scene);
+  const kept = keepInTurn(group.hares, (h, settled) => reseat(h, settled, group, runs, scene, now, rand));
+  const added = fillTo(group.target, kept, (others, id) => placeHare(scene, now, rand, others, group.hares.find((h) => h.id === id) ?? fresh(id)));
+  const boxing = fixBoxing([...kept, ...added].sort((a, b) => a.id - b.id), scene, now);
+  const bout = keepBout(group.bout, runs.dropped.length > 0 || added.length > 0, boxing, scene, now, rand);
+  return { ...group, ...bout, runs: runs.holding };
+}
+
+// The runs whose rest still holds, and those dropped.
+type Split = { holding: Run[]; dropped: Run[] };
+function splitRuns(runs: readonly Run[], scene: PageMap): Split {
+  const holding = runs.filter((r) => trailHolds(r, scene));
+  return { holding, dropped: runs.filter((r) => !holding.includes(r)) };
+}
+
+const onRun = (runs: readonly Run[], h: Hare) => runs.some((r) => r.members.some((m) => m.id === h.id));
+
+// Where a hare can be put down: where it is, or, its trail dropped, where it
+// is on that (in the air, its landing spot or else its take-off; away,
+// nowhere).
+function putDown(h: Hare, dropped: readonly Run[]): Hare[] {
+  const run = dropped.find((r) => r.members.some((m) => m.id === h.id));
+  if (!run) return [h];
+  const place = placeOn(run.trail, sAt(run, memberOf(run, h.id)));
+  if (place.kind === 'run') return [{ ...h, floor: place.floor, x: place.x, target: place.x }];
+  if (place.kind === 'leap') return [place.segment.to, place.segment.from].map((s) => ({ ...h, floor: s.floor, x: s.x, target: s.x }));
+  return [];
+}
+
+// A hare kept where it can be, seeing those settled before it: on with a
+// trail that holds; else put down on the first spot that still holds it,
+// pulled inside the run there, sitting up if its trail was dropped; else
+// null, to be placed afresh.
+function reseat(h: Hare, settled: Hare[], group: Hares, runs: Split, scene: PageMap, now: number, rand: Rand): Hare | null {
+  if (onRun(runs.holding, h)) return h;
+  const fits = putDown(h, runs.dropped).map((c) => clamped(c, scene)).find((c) => c && holds(c, scene, settled, partnerOf(group, h)));
+  if (!fits) return null;
+  return onRun(runs.dropped, h) ? sitUp(fits, scene, now, rand) : fits;
+}
+
+// A box with no tall room left (or only one hare of it left) is a
+// stand-off; stoodDown says whether one was.
+function fixBoxing(hares: Hare[], scene: PageMap, now: number): { hares: Hare[]; stoodDown: boolean } {
   const boxing = hares.filter((h) => h.mode === 'box');
   const boxOk = boxing.length === 2 && boxing[0].floor === boxing[1].floor && boxRoom(scene, boxing[0].floor, boxing[0].x, boxing[1].x);
-  const fixed = boxing.length && !boxOk ? hares.map((h) => (h.mode === 'box' ? { ...h, mode: 'standoff' as const, until: now + 1500 } : h)) : hares;
-  const boutKept = group.bout && !dropped.length && added.length === 0 ? group.bout : null;
-  const settled = boutKept ? fixed : fixed.map((h) => (LEFT_WAITING.includes(h.mode) ? sitUp(h, scene, now, rand) : h));
-  return { ...group, hares: settled, runs, bout: boutKept && boxing.length && !boxOk ? null : boutKept };
+  if (!boxing.length || boxOk) return { hares, stoodDown: false };
+  return { hares: hares.map((h) => (h.mode === 'box' ? { ...h, mode: 'standoff', until: now + 1500 } : h)), stoodDown: true };
 }
 
 // With its bout dropped, a hare coming up to box or done boxing has nothing
 // left to go on to, so it sits up. A pair still boxing has kept its room
 // (any without it is already a stand-off) and is left to box.
 const LEFT_WAITING: readonly Mode[] = COURTING.filter((m) => m !== 'box');
+
+// The bout goes on only while nothing it relies on changed (no trail
+// dropped, no hare placed afresh); it ends with a box stood down.
+function keepBout(bout: Bout | null, changed: boolean, boxing: { hares: Hare[]; stoodDown: boolean }, scene: PageMap, now: number, rand: Rand): Pick<Hares, 'hares' | 'bout'> {
+  const kept = changed ? null : bout;
+  if (!kept) return { hares: boxing.hares.map((h) => (LEFT_WAITING.includes(h.mode) ? sitUp(h, scene, now, rand) : h)), bout: null };
+  return { hares: boxing.hares, bout: boxing.stoodDown ? null : kept };
+}
 
 const partnerOf = (group: Hares, h: Hare) => (group.bout ? (h.id === group.bout.jill ? group.bout.jack : group.bout.jill) : null);
 
