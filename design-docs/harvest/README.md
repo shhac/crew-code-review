@@ -456,8 +456,9 @@ easy to change in `styles/themes.css`.
 
 With `?theme-debug=1` the harvest layer draws, over the shared ledge and sky
 overlay: each feeding spot (a tick, hollow when it has no escape route),
-each crow's current route as a dashed line with its envelope box at eight
-points along it, and the two exit edges.
+each crow's current route as a dashed line with the boxes it was swept by
+(each piece's hull grown by its envelope, split where it was not clear), and
+the two exit edges.
 
 ## Research
 
