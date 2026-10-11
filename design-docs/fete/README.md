@@ -351,8 +351,9 @@ whole world is the rail, and this is their contract.
 The pure model is `fete/wasp.ts` (with `fete/air.ts` for the air in the
 stage's coordinates and the exit lane, and `fete/footprints.ts`); its tests
 run the pair for minutes of simulated time in a tall air and a 1024x768
-one with a cursor sweeping past, and check at every frame that the two
-boxes never meet and that each stays in the air or the lane. Changes from
+one with a cursor sweeping past, and through the air shrinking under them
+and growing back, and check at every frame that the two boxes never meet
+and that each stays in the air or the lane. Changes from
 the plan above, each because building showed it:
 
 - **The upper orbit is higher.** With the plan's numbers (centre 38px above
@@ -397,6 +398,11 @@ the plan above, each because building showed it:
   has no room, to just above its spot and down to land.
 - **Resting** shows the feeding pose with its slow shuffles; reduced
   motion shows the standing one.
+- **Feeding ends only with room to take off.** Taking off rises above the
+  spot and backing away swings out round it, so a wasp that landed when the
+  air shrank under its orbit feeds on, looking again every second, until
+  its spot's whole zone fits the air. Before this, wasp 0 fed on the cake
+  in a short air and then took off out of it, toward the nav.
 - **Wasp 1 "1 to 3s behind"** is read as its first inspection coming 1 to
   3s after wasp 0's would, so the two do not act in step; both are circling
   from the first frame.
@@ -444,7 +450,7 @@ blur, a hidden tab and a reduced-motion change.
 | circle | hover, facing the cake | 2 to 5 laps (1.6 to 2.4s a lap), or chased | inspect (one time in two), else circle on |
 | inspect | hover | 3 to 5 side-to-side zigzags in front of its spot, 1.5 to 2.5s | land, if its spot is free and no cursor is within 50px of it; else circle |
 | land | land | 0.5s, dropping onto its spot | feed |
-| feed | feed, with a few steps | 4 to 8s | take off |
+| feed | feed, with a few steps | 4 to 8s, and room round its spot to take off and back away (else it feeds on, looking every second) | take off |
 | take off | land | 0.35s, rising off the spot | depart |
 | depart | hover, facing its spot | two arcs backing away from the spot, each wider than the last, about 1.5s | circle, joining its orbit where the arcs end |
 | flee | cruise, facing where it flies | it crosses the window's left edge | away |

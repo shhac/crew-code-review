@@ -178,10 +178,15 @@ describe('how the wasps behave', () => {
     expect(after[0].mode).toBe('dodge');
   });
 
-  it('lands when the air shrinks under its orbit, and takes off again once there is room', () => {
+  it('lands when the air shrinks under its orbit, and takes off again once there is room, never meeting or leaving the air', () => {
     const air = (now: number) => (now < 3000 ? TALL : now < 12000 ? SHORT : TALL);
     const modes: Mode[][] = [[], []];
-    run(placeWasps({ air: TALL, places, now: 0, rand: () => 0.9 }), air, 0, 20000, () => 0.9, () => null, (w) => w.forEach((x, i) => { if (modes[i].at(-1) !== x.mode) modes[i].push(x.mode); }));
+    const problems: string[] = [];
+    run(placeWasps({ air: TALL, places, now: 0, rand: () => 0.9 }), air, 0, 20000, () => 0.9, () => null, (w, now, a) => {
+      problems.push(...outsideAir(w, now, a), ...touching(w, now));
+      w.forEach((x, i) => { if (modes[i].at(-1) !== x.mode) modes[i].push(x.mode); });
+    });
+    expect(problems.slice(0, 5)).toEqual([]);
     for (const m of modes) {
       const down = m.findIndex((x) => x === 'land' || x === 'rest');
       expect(down).toBeGreaterThan(0);

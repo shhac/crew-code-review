@@ -493,7 +493,9 @@ function advance(w: Wasp, world: World, others: readonly Wasp[]): Wasp {
     case 'land': return { ...w, mode: 'feed', flight: null, since: now, until: now + between(rand, ...FEED) };
     case 'feed': {
       if (now < w.until) return w;
-      return takeOff(w, here, now);
+      // Taking off and backing away need its spot's whole zone; in an air
+      // too short for that it feeds on, as a resting wasp waits for room.
+      return within(zoneOf(w.id, places), world.air.air) ? takeOff(w, here, now) : { ...w, until: now + RECHECK };
     }
     case 'rest': {
       if (now < w.until) return w;
