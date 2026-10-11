@@ -135,22 +135,46 @@ export function roomToTakeOff(scene: PageMap, floor: number, x: number): boolean
   return ([1, -1] as const).some((dir) => takeOffFits(runs, x, dir, () => columnClear(f, scene, x, dir)));
 }
 
+// Work done once for each key, told apart by its JSON.
+function memo<K, V>(work: (key: K) => V): (key: K) => V {
+  const known = new Map<string, { value: V }>();
+  return (key) => {
+    const id = JSON.stringify(key);
+    const hit = known.get(id);
+    if (hit) return hit.value;
+    const value = work(key);
+    known.set(id, { value });
+    return value;
+  };
+}
+
+// Every spot in view a gull could stand at, 24px apart along each ledge's
+// clear runs, clear of the others.
+type StandSpot = { floor: number; x: number; at: Point };
+function standSpots(page: PageMap, runs: (floor: number) => readonly Run[], taken: readonly Claim[]): StandSpot[] {
+  return [...page.floors].flatMap(([floor, f]) => {
+    if (!inView(f, page)) return [];
+    return runs(floor).flatMap((r) => {
+      const lo = r.lo + GULL.half, hi = r.hi - GULL.half;
+      const count = Math.max(0, Math.floor((hi - lo) / 24) + 1);
+      return Array.from({ length: count }, (_, i) => ({ floor, x: lo + i * 24, at: pageAt(f, lo + i * 24) })).filter((s) => clearOf(taken, floor, s.x, s.x, GULL.spacing));
+    });
+  });
+}
+
+// The flare onto a landing on ledge f: its last 30px, braking to touch
+// down RUN_OUT short of where the landing ends.
+function flareLeg(f: Ledge, l: Landing): Leg {
+  const touch = pageAt(f, l.x - l.dir * RUN_OUT);
+  const from = { x: touch.x - l.dir * FLARE_RUN, y: touch.y - FLARE_DROP };
+  return leg('flare', 'flare', { from, c1: { x: from.x + l.dir * 12, y: from.y + 2 }, c2: { x: touch.x - l.dir * 6, y: touch.y - 6 }, to: touch });
+}
+
 // What a plan asks of the page again and again, worked out once: each
 // ledge's clear runs and its page with its own card dipped into, whether a
 // spot has its column of air to take off or land, and each flare.
 function planner(air: Pick<Air, 'page' | 'room'>, taken: readonly Claim[], cursor: Point | null) {
   const page = air.page;
-  const memo = <K, V>(work: (key: K) => V) => {
-    const known = new Map<string, { value: V }>();
-    return (key: K): V => {
-      const id = JSON.stringify(key);
-      const hit = known.get(id);
-      if (hit) return hit.value;
-      const value = work(key);
-      known.set(id, { value });
-      return value;
-    };
-  };
   const runs = memo((floor: number) => runsOf(page.floors.get(floor)!, page, GULL));
   const dipped = memo((floor: number) => touching(air, page.floors.get(floor)!));
   const column = memo(([floor, x, dir]: [number, number, 1 | -1]) => columnClear(page.floors.get(floor)!, page, x, dir));
@@ -160,16 +184,7 @@ function planner(air: Pick<Air, 'page' | 'room'>, taken: readonly Claim[], curso
     const f = page.floors.get(floor)!;
     return column([floor, x, sign(-dir)]) && (!cursor || apart(pageAt(f, x), cursor) >= CURSOR_ROOM);
   };
-  // Every spot in view a gull could stand at, 24px apart, clear of the
-  // others.
-  const spots = [...page.floors].flatMap(([floor, f]) => {
-    if (!inView(f, page)) return [];
-    return runs(floor).flatMap((r) => {
-      const lo = r.lo + GULL.half, hi = r.hi - GULL.half;
-      const count = Math.max(0, Math.floor((hi - lo) / 24) + 1);
-      return Array.from({ length: count }, (_, i) => ({ floor, x: lo + i * 24, at: pageAt(f, lo + i * 24) })).filter((s) => clearOf(taken, floor, s.x, s.x, GULL.spacing));
-    });
-  });
+  const spots = standSpots(page, runs, taken);
   // Up to four landings for a flight coming from `from`: those in `first`
   // it can land at, then the nearest.
   // Each spot is landed on flying the way that faces from `from` if its
@@ -190,10 +205,7 @@ function planner(air: Pick<Air, 'page' | 'room'>, taken: readonly Claim[], curso
   };
   // The flare onto a landing, if clear.
   const flareOnto = memo((l: Landing): Leg | null => {
-    const f = page.floors.get(l.floor)!;
-    const touch = pageAt(f, l.x - l.dir * RUN_OUT);
-    const from = { x: touch.x - l.dir * FLARE_RUN, y: touch.y - FLARE_DROP };
-    const flare = leg('flare', 'flare', { from, c1: { x: from.x + l.dir * 12, y: from.y + 2 }, c2: { x: touch.x - l.dir * 6, y: touch.y - 6 }, to: touch });
+    const flare = flareLeg(page.floors.get(l.floor)!, l);
     return legClear(dipped(l.floor), flare) ? flare : null;
   });
   return { dipped, takeOffAt, landings, flareOnto };
