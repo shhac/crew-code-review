@@ -2,7 +2,7 @@ import type { Box, Obstacle, PageMap } from '../floors';
 import { clearance, inView, type Ledge, type Run } from '../floors';
 import type { Claim } from '../ledges';
 import { clamp01, degrees } from '../math';
-import { distance, type Point, type Segment } from '../pointer';
+import { segmentsApart, type Point, type Segment } from '../pointer';
 import { between, type Rand } from '../seed';
 import { meets, union } from '../air';
 import { parabola, samples } from '../curves';
@@ -339,14 +339,6 @@ export type Touch = { cursor: Point | null; stroke: Segment | null };
 export function meetsBall(middle: Point, before: Point, touch: Touch): boolean {
   if (touch.cursor && Math.hypot(touch.cursor.x - middle.x, touch.cursor.y - middle.y) < VOLLEY_REACH) return true;
   return !!touch.stroke && segmentsApart(touch.stroke.from, touch.stroke.to, before, middle) < VOLLEY_REACH;
-}
-
-// How near two strokes come to each other.
-export function segmentsApart(a: Point, b: Point, c: Point, d: Point): number {
-  const cross = (p: Point, q: Point, r: Point) => (q.x - p.x) * (r.y - p.y) - (q.y - p.y) * (r.x - p.x);
-  const d1 = cross(c, d, a), d2 = cross(c, d, b), d3 = cross(a, b, c), d4 = cross(a, b, d);
-  if (((d1 > 0 && d2 < 0) || (d1 < 0 && d2 > 0)) && ((d3 > 0 && d4 < 0) || (d3 < 0 && d4 > 0))) return 0;
-  return Math.min(distance(a, c, d), distance(b, c, d), distance(c, a, b), distance(d, a, b));
 }
 
 // Where the ball's middle is on the page at now (court-local + origin).

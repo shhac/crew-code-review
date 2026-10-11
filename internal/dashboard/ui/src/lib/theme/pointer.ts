@@ -9,6 +9,13 @@ export function distance(p: Point, a: Point, b: Point): number {
   const t = Math.max(0, Math.min(1, ((p.x - a.x) * dx + (p.y - a.y) * dy) / (dx * dx + dy * dy || 1)));
   return Math.hypot(p.x - a.x - t * dx, p.y - a.y - t * dy);
 }
+// How near the stroke from a to b comes to the one from c to d: none apart
+// where each straddles the other's line.
+export function segmentsApart(a: Point, b: Point, c: Point, d: Point): number {
+  const cross = (p: Point, q: Point, r: Point) => (q.x - p.x) * (r.y - p.y) - (q.y - p.y) * (r.x - p.x);
+  if (cross(c, d, a) * cross(c, d, b) < 0 && cross(a, b, c) * cross(a, b, d) < 0) return 0;
+  return Math.min(distance(a, c, d), distance(b, c, d), distance(c, a, b), distance(d, a, b));
+}
 type Input = { pointerId: number; pointerType: string; buttons: number; pressure: number; clientX: number; clientY: number };
 // The themes' cursor is a mouse or pen hovering: never a finger, a press or a
 // drag, which would leave a cursor resting where the finger lifted.

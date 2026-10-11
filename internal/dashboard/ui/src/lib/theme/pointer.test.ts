@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { observePointer, pointerTracker } from './pointer';
+import { observePointer, pointerTracker, segmentsApart } from './pointer';
 afterEach(() => vi.unstubAllGlobals());
 const event = (x: number, extra = {}) => ({ clientX: x, clientY: 100, pointerId: 1, pointerType: 'mouse', buttons: 0, pressure: 0, ...extra });
 describe('passive pointer segments', () => {
@@ -36,4 +36,11 @@ it('listens passively, resets on exits/gestures and removes all listeners', () =
   listeners.get('pointerout')!({ relatedTarget: {} }); expect(reset).toHaveBeenCalledTimes(4);
   listeners.get('pointerout')!({ relatedTarget: null }); expect(reset).toHaveBeenCalledTimes(5);
   stop(); expect(listeners.size).toBe(0);
+});
+describe('how near two strokes come', () => {
+  it('is none where they cross, else the nearest end to the other', () => {
+    expect(segmentsApart({ x: 0, y: 0 }, { x: 10, y: 10 }, { x: 0, y: 10 }, { x: 10, y: 0 })).toBe(0);
+    expect(segmentsApart({ x: 0, y: 0 }, { x: 10, y: 0 }, { x: 0, y: 5 }, { x: 10, y: 5 })).toBe(5);
+    expect(segmentsApart({ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 4, y: 4 }, { x: 4, y: 9 })).toBe(5);
+  });
 });

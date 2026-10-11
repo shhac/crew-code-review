@@ -3,7 +3,7 @@ import type { Ledge, Obstacle, PageMap } from '../floors';
 import { meets } from '../air';
 import { seeded } from '../test-scene';
 import {
-  AGAIN, BALL, ballOf, claimsOf, createRally, FIRST, MAX_APEX, MIN_APEX, NET_CLEAR, pointOf, remeasured, riseFor, segAt, segmentsApart, segPoints, serve,
+  AGAIN, BALL, ballOf, claimsOf, createRally, FIRST, MAX_APEX, MIN_APEX, NET_CLEAR, pointOf, remeasured, riseFor, segAt, segPoints, serve,
   SHOTS, SPOT_FAR, SPOT_NEAR, stepRally, tableOf, type CourtPair, type Play, type Rally, type Touch,
 } from './rally';
 
@@ -189,11 +189,5 @@ describe('the rally', { timeout: 30_000 }, () => {
     const gone = pageWith([], [[1, rule], [2, card(290, 994)]]);
     expect(remeasured(r, gone, 10, rand).play).toBeNull();
     expect(ballOf(r, gone, 10)).toBeNull();
-  });
-
-  it('measures how near two strokes come', () => {
-    expect(segmentsApart({ x: 0, y: 0 }, { x: 10, y: 10 }, { x: 0, y: 10 }, { x: 10, y: 0 })).toBe(0);
-    expect(segmentsApart({ x: 0, y: 0 }, { x: 10, y: 0 }, { x: 0, y: 5 }, { x: 10, y: 5 })).toBe(5);
-    expect(segmentsApart({ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 4, y: 4 }, { x: 4, y: 9 })).toBe(5);
   });
 });
