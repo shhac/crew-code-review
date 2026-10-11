@@ -5,7 +5,7 @@ import { inTurn } from '../group';
 import { apart, clamp, mixPoint, smooth } from '../math';
 import type { Point } from '../pointer';
 import { between, hash, type Rand } from '../seed';
-import { inWaspAir, type WaspAir } from './air';
+import { inWaspAir, within, type WaspAir } from './air';
 import { FOOTPRINTS, STAND, type WaspPose } from './footprints';
 
 // Two common wasps at the fête's cake, in the shelf stage's coordinates (so
@@ -134,7 +134,6 @@ const aboveOf = (id: number, places: Places): Point => {
 
 // Whether its orbit's whole band is in the air.
 export const orbitFits = (id: number, w: Pick<World, 'air' | 'places'>) => within(bandOf(orbitOf(id, w.places)), w.air.air);
-const within = (box: Box, room: Box) => box.left >= room.left && box.right <= room.right && box.top >= room.top && box.bottom <= room.bottom;
 
 function orbitPoint(o: Orbit, theta: number, now: number, seed: number): Point {
   return {
