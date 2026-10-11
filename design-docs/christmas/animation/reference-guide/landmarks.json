@@ -183,7 +183,7 @@
   },
   "rasterizer": "Version: ImageMagick 7.1.2-32 Q16-HDRI aarch64 68f8d115a:20260926 https://imagemagick.org",
   "reference": {
-    "file": "internal/dashboard/ui/src/lib/theme/christmas/robin-perch.webp",
+    "file": "design-docs/christmas/aligned/robin-perch.webp",
     "sha256": "e9d871e3f720fe55bf70fc40991e8dcc82a67514889038785d67e53e9a79237a"
   },
   "registration_note": "The virtual anchor is a layout contract, not the centroid or lowest painted toe. Preserve its reference-relative offset for every pose.",

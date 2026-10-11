@@ -11,7 +11,7 @@ import hashlib
 import os
 
 ROOT = Path(__file__).resolve().parent
-REFERENCE = ROOT.parents[2] / "internal/dashboard/ui/src/lib/theme/christmas/robin-perch.webp"
+REFERENCE = ROOT.parent / "aligned/robin-perch.webp"
 WIDTH, HEIGHT, COUNT = 128, 112, 8
 DURATIONS = [1600, 450, 450, 650, 60, 80, 90, 1420]
 

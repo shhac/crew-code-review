@@ -14,7 +14,7 @@ import subprocess
 import tempfile
 
 ROOT = Path(__file__).resolve().parent
-REFERENCE = ROOT.parents[2] / "internal/dashboard/ui/src/lib/theme/christmas/robin-perch.webp"
+REFERENCE = ROOT.parent / "aligned/robin-perch.webp"
 IDENTITY_HASH = "e9d871e3f720fe55bf70fc40991e8dcc82a67514889038785d67e53e9a79237a"
 WIDTH, HEIGHT = 128, 112
 # Half-open search regions, measured in the unchanged native cell. These bound

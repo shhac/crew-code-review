@@ -11,6 +11,11 @@ artwork = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(artwork)
 
 
+# The robin pictures stopped shipping when the layered robin replaced them
+# (bbcdc34); their aligned copies are still checked, but only holly ships.
+SHIPPED = {"holly"}
+
+
 class ArtworkTests(unittest.TestCase):
     def test_actual_lossless_exports(self):
         for name in artwork.NAMES:
@@ -18,21 +23,22 @@ class ArtworkTests(unittest.TestCase):
                 webp = artwork.decode(ROOT / "aligned" / f"{name}.webp")
                 png = artwork.decode(ROOT / "aligned" / f"{name}.png")
                 self.assertEqual(webp, png)
-                runtime = ROOT.parents[1] / "internal/dashboard/ui/src/lib/theme/christmas" / f"{name}.webp"
-                actual = artwork.decode(runtime)
-                self.assertEqual(artwork.validate(name, *actual), [])
-                self.assertEqual(actual[:2], (96, 64) if name == "holly" else (128, 112))
-                self.assertEqual(runtime.read_bytes(), (ROOT / "aligned" / f"{name}.webp").read_bytes())
                 self.assertEqual(webp[:2], (96, 64) if name == "holly" else (128, 112))
                 self.assertIn(0, webp[2])
                 self.assertTrue(any(0 < v < 255 for v in webp[2]))
                 self.assertEqual(artwork.validate(name, *webp), [])
-                for path in (runtime, ROOT / "aligned" / f"{name}.png"):
-                    rgba = subprocess.check_output(["magick", str(path), "-depth", "8", "rgba:-"])
-                    if path == runtime:
-                        runtime_rgba = rgba
-                    else:
-                        self.assertEqual(runtime_rgba, rgba)
+                if name in SHIPPED:
+                    self.assert_shipped(name)
+
+    def assert_shipped(self, name):
+        runtime = ROOT.parents[1] / "internal/dashboard/ui/src/lib/theme/christmas" / f"{name}.webp"
+        actual = artwork.decode(runtime)
+        self.assertEqual(artwork.validate(name, *actual), [])
+        self.assertEqual(actual[:2], (96, 64) if name == "holly" else (128, 112))
+        self.assertEqual(runtime.read_bytes(), (ROOT / "aligned" / f"{name}.webp").read_bytes())
+        runtime_rgba = subprocess.check_output(["magick", str(runtime), "-depth", "8", "rgba:-"])
+        png_rgba = subprocess.check_output(["magick", str(ROOT / "aligned" / f"{name}.png"), "-depth", "8", "rgba:-"])
+        self.assertEqual(runtime_rgba, png_rgba)
 
     def test_faint_pixel_below_feet_is_rejected(self):
         a = bytearray(128 * 112)

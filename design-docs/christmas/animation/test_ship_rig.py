@@ -60,6 +60,9 @@ class ShippedRigTests(unittest.TestCase):
                 if raw[i + 3]:
                     self.assertEqual(raw[i:i + 3], coalesced[i:i + 3])
 
+    # The atlas runtime stopped shipping when the layered robin replaced it
+    # (bbcdc34), so there is no committed inventory left to check.
+    @unittest.skipUnless(ship.RUNTIME.exists(), "the robin atlas no longer ships")
     def test_committed_inventory_has_exact_neutral_cells_gutters_and_source_identity(self):
         manifest = json.loads((ship.RUNTIME / "manifest.json").read_bytes())
         self.assertEqual(set(manifest["frames"]), set(ship.IDS))

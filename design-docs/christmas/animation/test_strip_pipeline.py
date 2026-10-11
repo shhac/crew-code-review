@@ -627,7 +627,10 @@ class LandmarkGeometryTests(unittest.TestCase):
             self.assertEqual(f[(y*cw+x)*4:(y*cw+x)*4+4],bytes([20,20,20,255]))
         pipeline.validate_frames(frames,[50]*4,[cw,ch])
 
+# Publication is checked against the shipped atlas, which stopped shipping
+# when the layered robin replaced it (bbcdc34).
 @unittest.skipUnless(shutil.which('magick') and shutil.which('cwebp'), 'ImageMagick/cwebp required')
+@unittest.skipUnless((Path(__file__).parents[3] / 'internal/dashboard/ui/src/lib/theme/christmas/robin-atlas').exists(), 'the robin atlas no longer ships')
 class VariableFlyingPublicationTests(unittest.TestCase):
     def test_variable_publication_preserves_idle_and_rejects_stale_geometry_and_writers(self):
         root = Path(__file__).parent
