@@ -1,8 +1,9 @@
-import type { Box, PageMap, Run } from '../floors';
+import type { Box, PageMap } from '../floors';
 import { apart, clamp, facingFrom, mixPoint, smooth } from '../math';
 import type { Cursor, Point } from '../pointer';
 import { between, type Rand } from '../seed';
 import { clear, type BeeAir } from './beeair';
+import { KNOCK_BACK, type WallSide } from './bonks';
 import { approaches, fitsAt, frameAt, hoverSpot, lastBell, onPage, perchSpot, SHELF_KEY, spotIn, visitable, type Flower, type Spot } from './flowers';
 import { boxAt, CONTACT, FOOTPRINTS, type Pose } from './footprints';
 import { along, flyReach, holdRoute, originOf, placeRoute, plan, routeOf, type Frame, type Route } from './route';
@@ -108,7 +109,6 @@ export const MOVING = 120;
 // is room for: 30px, or less where the air beside the wall is narrower.
 const LEADS = [30, 24, 18, 12] as const;
 const BOUNCE = 180;
-const BACK = 8;
 const AWAY = [3000, 8000] as const;
 const STUCK = 2000;
 const FADE = 300;
@@ -153,11 +153,6 @@ export type Context = {
 };
 
 export type Cue = 'bonk' | 'shelf' | null;
-
-// A card side a bee may fly into: its card, x, the side its air is on, and
-// the stretches (px down from the card's top) where a bonk and its bounce
-// fit in front of it.
-export type WallSide = { floor: number; x: number; side: -1 | 1; top: number; runs: readonly Run[] };
 
 // What a mode looks like, for its footprint.
 export function poseOf(b: Bee, now: number, page?: PageMap): Pose {
@@ -470,7 +465,7 @@ function bonkFrom(b: Bee, ctx: Context, here: Point, now: number): Bee | null {
 function bounce(b: Bee, now: number): Bee {
   const contact = b.bonk?.contact ?? b.at;
   const dir = b.bonk?.dir ?? b.dir;
-  return { ...timed({ ...b, at: contact, dir }, 'bounce', now, BOUNCE, { ...contact, x: contact.x - dir * BACK }), flight: null };
+  return { ...timed({ ...b, at: contact, dir }, 'bounce', now, BOUNCE, { ...contact, x: contact.x - dir * KNOCK_BACK }), flight: null };
 }
 
 // Flying on along its route; at its end, arrived.
