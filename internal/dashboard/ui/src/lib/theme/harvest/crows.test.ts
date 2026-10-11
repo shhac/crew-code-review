@@ -97,6 +97,26 @@ describe('the crows', () => {
     }
   });
 
+  it('with no way off, wait and try again, then after 2s walk 20px toward the middle of their run', () => {
+    const f = field();
+    const g = createCrows(f, 0, seeded(3));
+    const { frames } = run(g, { ...f, clear: SHUT }, 0, 4000, seeded(4), (now) => (now >= 1000 ? alarmAt(1000) : null));
+    // Nudged: its stuck time starts again where it walks.
+    const nudged = (i: number) => (i ? frames[i].group.crows.filter((c) => Number.isFinite(frames[i - 1].group.crows[c.id].stuck) && c.stuck > frames[i - 1].group.crows[c.id].stuck) : []);
+    const at = frames.findIndex((_, i) => nudged(i).length > 0);
+    const first = frames[at];
+    const crow = nudged(at)[0];
+    const before = frames[at - 1].group.crows[crow.id];
+    expect(frames.slice(0, at).every(({ group }) => group.crows.every((c) => c.mode !== 'takeoff' && c.mode !== 'depart'))).toBe(true);
+    expect(crow.mode).toBe('walk');
+    expect(first.now - before.stuck).toBeGreaterThanOrEqual(2000);
+    const ledge = PAGE.floors.get(crow.floor)!;
+    const middle = (ledge.right - ledge.left) / 2;
+    expect(Math.abs(crow.target - before.x)).toBeCloseTo(20);
+    expect(Math.abs(crow.target - middle)).toBeLessThan(Math.abs(before.x - middle));
+    expect(crow.leave).toBe(first.now + 1200);
+  });
+
   it('stay away 15 to 25s after the last flap, longer if the scarecrow flaps on', () => {
     const f = field();
     const g = createCrows(f, 0, seeded(3));

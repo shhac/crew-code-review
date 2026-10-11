@@ -168,12 +168,18 @@ function launch(g: Crows, field: Field, now: number, rand: Rand): Crows {
     if (out && apartInAir(group, field, c, out, now)) return update(group, { ...takeOff(c, out, now), stuck: -Infinity });
     const stuck = Number.isFinite(c.stuck) ? c.stuck : now;
     if (now - stuck < STUCK) return update(group, { ...c, stuck, leave: now + RETRY });
-    const f = field.page.floors.get(c.floor);
-    const run = f && runAt(f, field.page, WALKER, c.x);
-    const body = run && bodyOf(run, WALKER.half);
-    const target = body ? clampTo(body, c.x + (c.x - body.lo < body.hi - c.x ? NUDGE : -NUDGE)) : c.x;
-    return update(group, { ...c, mode: 'walk', since: now, until: Infinity, target, dir: target < c.x ? -1 : 1, stuck: now, leave: now + 1000 + RETRY });
+    return update(group, nudged(c, field, now));
   }, g);
+}
+
+// A crow stuck too long walks NUDGE along its run, toward its middle, and
+// tries again from there once it has.
+function nudged(c: Crow, field: Field, now: number): Crow {
+  const f = field.page.floors.get(c.floor);
+  const run = f && runAt(f, field.page, WALKER, c.x);
+  const body = run && bodyOf(run, WALKER.half);
+  const target = body ? clampTo(body, c.x + (c.x - body.lo < body.hi - c.x ? NUDGE : -NUDGE)) : c.x;
+  return { ...c, mode: 'walk', since: now, until: Infinity, target, dir: target < c.x ? -1 : 1, stuck: now, leave: now + 1000 + RETRY };
 }
 
 // Now and then one leaves on its own, never while another is in the air.
