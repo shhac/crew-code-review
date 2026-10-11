@@ -4,7 +4,8 @@ import { apart } from '../math';
 import type { Cursor, Point } from '../pointer';
 import type { Rand } from '../seed';
 import type { End } from './hunt';
-import { createRabbit, fresh, reconcileRabbit, restingRabbit, rouse, stepRabbit, type CanLay, type Rabbit } from './rabbit';
+import { createRabbit, fresh, reconcileRabbit, restingRabbit, rouse, stepRabbit } from './rabbit';
+import type { CanLay, Rabbit } from './rabbit-basics';
 
 // The rabbits on the page together: how many to keep, and the rules that
 // keep them apart, on top of each one's own in rabbit.ts.

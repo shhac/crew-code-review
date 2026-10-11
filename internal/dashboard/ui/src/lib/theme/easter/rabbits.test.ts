@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import type { Ledge } from '../floors';
 import { clearOfContent, dashboardPage, fixed, scene, seeded, steps } from '../test-scene';
-import { busy, POSES, rabbitView, SPACING, type Rabbit } from './rabbit';
+import { busy, rabbitView } from './rabbit';
+import { POSES, SPACING, type Rabbit } from './rabbit-basics';
 import { createRabbits, reconcileRabbits, restingRabbits, stepRabbits, takeEggs, type Rabbits } from './rabbits';
 
 const ledge = (y: number, left = 100, right = 700): Ledge => ({ left, right, y, base: y + 200, room: 40, headroom: Infinity, kind: 'card' });

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { RigPose } from '../rig/rig';
 import { firstShut, guideAt, imagesOf, legsOf, lidsOf, pageReach, rigBounds, solesOf } from '../rig/test-rig';
-import { POSES } from './rabbit';
+import { POSES } from './rabbit-basics';
 import { HOP_LENGTH, rabbitRig, REST, SCALE, type Pose, type RabbitLook, type RigRabbit } from './rabbit-rig';
 
 const rabbit = (pose: Pose, walked = 0, since = 0, bolting = false): RigRabbit => ({ pose, walked, since, seed: 1, bolting });

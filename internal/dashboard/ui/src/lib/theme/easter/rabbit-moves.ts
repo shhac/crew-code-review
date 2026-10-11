@@ -6,7 +6,7 @@ import { between, maxBy, pick, type Rand } from '../seed';
 import type { End } from './hunt';
 import {
   alertAt, become, body, clear, HALF, hopToward, POSES, RABBIT, RESTLESS, settle, spareFor, SPACING, type CanLay, type Rabbit,
-} from './rabbit';
+} from './rabbit-basics';
 import { HOP_LENGTH } from './rabbit-rig';
 
 // Where a rabbit goes when it gets restless, bolts, or has left an egg:

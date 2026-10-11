@@ -10,7 +10,8 @@
   import type { Cursor } from '../pointer';
   import { easeGazes } from '../rig/gaze';
   import Rig from '../rig/Rig.svelte';
-  import { rabbitView, poseOf, type Rabbit } from './rabbit';
+  import { rabbitView, poseOf } from './rabbit';
+  import type { Rabbit } from './rabbit-basics';
   import { gazeAt, rabbitRig } from './rabbit-rig';
   import { createRabbits, reconcileRabbits, restingRabbits, stepRabbits, takeEggs, type Rabbits } from './rabbits';
   import egg0 from './egg-0.webp';

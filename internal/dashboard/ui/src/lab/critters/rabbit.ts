@@ -1,4 +1,5 @@
-import { BOLT, POSES, SPEED } from '../../lib/theme/easter/rabbit';
+import { BOLT, SPEED } from '../../lib/theme/easter/rabbit';
+import { POSES } from '../../lib/theme/easter/rabbit-basics';
 import { rabbitRig, REFERENCE, type Pose, type RigRabbit } from '../../lib/theme/easter/rabbit-rig';
 import type { Drawing } from '../drawings';
 import rabbitAlert from '../rabbit-pose-alert.webp';
