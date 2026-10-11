@@ -358,8 +358,10 @@ while building:
 ### The gulls' behaviour model
 
 Pure, with tests: `gull-poses.ts` (the footprints, read from the rig's,
-which its test measures), `swoop.ts` (the pass point, the route and its
-clearance), `gull.ts` (one gull) and `gulls.ts` (the group). Settled while
+which its test measures), `flight.ts` (a route's legs in time: their
+speeds and durations, and where a flight is at a moment), `swoop.ts` (the
+pass point, the route and its clearance), `gull.ts` (one gull) and
+`gulls.ts` (the group). Settled while
 building:
 
 - **One point for every pose.** A gull is placed by its rig's anchor, the

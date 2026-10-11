@@ -7,7 +7,8 @@ import type { Point } from '../pointer';
 import { INPUT, lower, OPEN, page, rule, SUBTITLE, TITLE } from './gull-fixtures';
 import { AIR } from './gull-poses';
 import { airspace } from './gulls';
-import { aimOff, flightOf, flightTime, inFlight, passPoints, planSwoop, replan, stillClear, type Leg, type Plan } from './swoop';
+import { flightOf, flightTime, inFlight, type Leg } from './flight';
+import { aimOff, passPoints, planSwoop, replan, stillClear, type Plan } from './swoop';
 
 const view = (p: PageMap = page()) => airspace(p).view;
 const ask = (p: PageMap, cursor: Point, gull = { floor: 4, x: 560 }) => ({ air: view(p), gull, home: gull, cursor, taken: [], also: [] });

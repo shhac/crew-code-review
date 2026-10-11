@@ -1,10 +1,14 @@
 import { around, fitsAir, GAP, sweeps, sweptPath, type Air, type Envelope } from '../air';
-import { fromLedge, toLedge } from '../anchored';
-import { cubic, lengthOf, type Curve } from '../curves';
+import { fromLedge } from '../anchored';
+import type { Curve } from '../curves';
 import { inView, type Box, type Ledge, type Obstacle, type PageMap } from '../floors';
 import { clearOf, pageAt, roomOver, runsOf, spare, staysPut, type Claim } from '../ledges';
-import { apart, clamp01, degrees, sign } from '../math';
+import { apart, degrees, sign } from '../math';
 import type { Point } from '../pointer';
+import {
+  add, along, inFlight, leg, routeLength, RUN_OUT, scale, sub, unit,
+  type Flight, type Landing, type Leg,
+} from './flight';
 import { AIR, GULL, type AirPose } from './gull-poses';
 
 // The swoop at a cursor left still: where the gull pulls up beside it (the
@@ -13,26 +17,8 @@ import { AIR, GULL, type AirPose } from './gull-poses';
 // swoops, and who, is gulls.ts's. design-docs/seaside/README.md has the
 // airspace contract.
 
-export type FlightMode = 'run' | 'climb' | 'dive' | 'pullup' | 'cruise' | 'flare';
-// One stretch of a flight: its curve (of the body's middle), the pose drawn
-// along it, how long it takes, and its speed at each end (px/s).
-export type Leg = { mode: FlightMode; pose: AirPose; curve: Curve; duration: number; v0: number; v1: number };
-// Where a flight comes down: the ledge, where its run-out ends, and the way
-// it faces landing.
-export type Landing = { floor: number; x: number; dir: 1 | -1 };
-// A flight held relative to its landing ledge, so a scroll carries it with
-// the page; with the ledge it took off from.
-export type Flight = { floor: number; from: number; legs: Leg[]; start: number; land: Landing };
-
-const SPEED: Record<FlightMode, readonly [number, number]> = {
-  run: [40, 40], climb: [200, 200], dive: [200, 360], pullup: [240, 240], cruise: [240, 240], flare: [240, 60],
-};
-// Two running steps of 9px take 0.45s; the pull-up's two quick flaps 0.35s.
-const RUN = 450;
+// Two running steps of 9px.
 const RUN_LENGTH = 18;
-const PULL_UP = 350;
-// Two run-out steps of 6px after touching down.
-export const RUN_OUT = 12;
 // The flare is the last 30px before touchdown. It begins high enough that
 // the flapping pose just before it keeps clear of the card it lands on.
 const FLARE = 30;
@@ -69,59 +55,14 @@ const MAX_LENGTH = 900;
 // Other gulls are kept this far clear of a route.
 const BERTH = 12;
 
-const add = (p: Point, q: Point): Point => ({ x: p.x + q.x, y: p.y + q.y });
-const sub = (p: Point, q: Point): Point => ({ x: p.x - q.x, y: p.y - q.y });
-const scale = (p: Point, k: number): Point => ({ x: p.x * k, y: p.y * k });
-const unit = (p: Point): Point => scale(p, 1 / (Math.hypot(p.x, p.y) || 1));
 const straight = (from: Point, to: Point): Curve => ({ from, c1: add(from, scale(sub(to, from), 1 / 3)), c2: add(from, scale(sub(to, from), 2 / 3)), to });
 const contains = (b: Box, p: Point) => p.x >= b.left && p.x <= b.right && p.y >= b.top && p.y <= b.bottom;
-const curveLength = (c: Curve) => lengthOf((t) => cubic(c, t));
 // The rest of a cubic curve from t on (de Casteljau).
 function after(c: Curve, t: number): Curve {
   const mixP = (p: Point, q: Point) => add(p, scale(sub(q, p), t));
   const ab = mixP(c.from, c.c1), bc = mixP(c.c1, c.c2), cd = mixP(c.c2, c.to);
   const abc = mixP(ab, bc), bcd = mixP(bc, cd);
   return { from: mixP(abc, bcd), c1: bcd, c2: cd, to: c.to };
-}
-
-function leg(mode: FlightMode, pose: AirPose, curve: Curve): Leg {
-  const [v0, v1] = SPEED[mode];
-  const length = curveLength(curve);
-  if (mode === 'run') return { mode, pose, curve, duration: RUN, v0: (length / RUN) * 1000, v1: (length / RUN) * 1000 };
-  if (mode === 'pullup') return { mode, pose, curve, duration: PULL_UP, v0: (length / PULL_UP) * 1000, v1: (length / PULL_UP) * 1000 };
-  return { mode, pose, curve, duration: (length / ((v0 + v1) / 2)) * 1000, v0, v1 };
-}
-
-// How far along its curve a leg is, u of the way through its time, speeding
-// up or slowing down evenly from v0 to v1.
-export const along = (l: Pick<Leg, 'v0' | 'v1'>, u: number) => {
-  const t = clamp01(u);
-  return (l.v0 * t + ((l.v1 - l.v0) * t * t) / 2) / ((l.v0 + l.v1) / 2);
-};
-
-export const flightTime = (f: Pick<Flight, 'legs'>) => f.legs.reduce((sum, l) => sum + l.duration, 0);
-export const routeLength = (legs: readonly Leg[]) => legs.reduce((sum, l) => sum + curveLength(l.curve), 0);
-
-// Where a flight is at now: its leg, how far through it, the body's middle
-// on the page and the way it is heading; null with its ledge gone or the
-// flight over.
-export type InFlight = { leg: Leg; index: number; u: number; at: Point; heading: Point };
-export function inFlight(page: PageMap, f: Flight, now: number): InFlight | null {
-  const found = f.legs.reduce<{ index: number; begin: number } | null>((hit, l, i) => {
-    if (hit) return hit;
-    const begin = f.start + f.legs.slice(0, i).reduce((s, x) => s + x.duration, 0);
-    return now < begin + l.duration ? { index: i, begin } : null;
-  }, null);
-  if (!found) return null;
-  const l = f.legs[found.index];
-  const curve = fromLedge(page, f.floor, l.curve);
-  if (!curve) return null;
-  const u = (now - found.begin) / l.duration;
-  const t = along(l, u);
-  const at = cubic(curve, t);
-  const ahead = cubic(curve, Math.min(1, t + 0.02));
-  const behind = cubic(curve, Math.max(0, t - 0.02));
-  return { leg: l, index: found.index, u, at, heading: unit(sub(ahead, behind)) };
 }
 
 // A gull running along a card's top, lifting off it or landing on it dips
@@ -385,27 +326,6 @@ export function replan(air: Pick<Air, 'page' | 'room'>, here: Point, heading: Po
     if (legs) return { legs, land, length: routeLength(legs) };
   }
   return null;
-}
-
-// A flight's legs on the page now, or null with its ledge gone: what the
-// debug overlay draws, with the boxes they are found clear by.
-export function routeOf(page: PageMap, f: Flight): Leg[] | null {
-  const legs = f.legs.map((l) => {
-    const curve = fromLedge(page, f.floor, l.curve);
-    return curve && { ...l, curve };
-  });
-  return legs.every((l) => l) ? legs.flatMap((l) => l ?? []) : null;
-}
-
-// A plan as a flight starting now, held by its landing ledge; from is the
-// ledge it leaves (the landing's, for a flight re-planned in the air).
-export function flightOf(page: PageMap, plan: Pick<Plan, 'legs' | 'land'>, from: number, now: number): Flight | null {
-  const legs = plan.legs.map((l) => {
-    const curve = toLedge(page, plan.land.floor, l.curve);
-    return curve && { ...l, curve };
-  });
-  if (legs.some((l) => !l)) return null;
-  return { floor: plan.land.floor, from, legs: legs.flatMap((l) => l ?? []), start: now, land: plan.land };
 }
 
 // Whether the rest of a flight, from now on, is still clear on this page,

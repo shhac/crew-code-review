@@ -10,7 +10,8 @@ import type { Cursor, Point } from '../pointer';
 import { between, pick, type Rand } from '../seed';
 import type { GullPose } from './gull-rig';
 import { GULL, MIDDLE } from './gull-poses';
-import { flightOf, inFlight, replan, roomToTakeOff, RUN_OUT, stillClear, type Flight, type FlightMode } from './swoop';
+import { flightOf, inFlight, RUN_OUT, type Flight, type FlightMode } from './flight';
+import { replan, roomToTakeOff, stillClear } from './swoop';
 
 // One herring gull: standing and strutting along the ledges, eyeing the
 // cursor and following it while it moves, a swoop flown along its planned

@@ -15,7 +15,8 @@
   import { middleOf, gullView, type Gull, type GullView } from './gull';
   import { gazeAt, gullRig } from './gull-rig';
   import { airspace, createGulls, CUED, PACE, reconcileGulls, restingGulls, stepGulls, type Gulls } from './gulls';
-  import { routeOf, swept } from './swoop';
+  import { routeOf } from './flight';
+  import { swept } from './swoop';
 
   let floors: ReadonlyMap<number, Ledge> = new Map();
   let scene: PageMap = { floors, obstacles: [], width: 0, height: 0 };

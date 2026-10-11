@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { cursorAt, lower, OPEN, page } from './gull-fixtures';
 import { CALL, createGull, fresh, gullView, reconcileGull, restingGull, standingAt, stepGull, STRUT, takeOff, type Gull } from './gull';
 import { airspace } from './gulls';
-import { flightOf, flightTime, planSwoop } from './swoop';
+import { flightOf, flightTime } from './flight';
+import { planSwoop } from './swoop';
 
 const p = page();
 // A gull standing on the lower card at x, its next wander far off.

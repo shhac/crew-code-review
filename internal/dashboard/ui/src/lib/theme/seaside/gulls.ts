@@ -9,7 +9,8 @@ import {
   type Airspace, type Gull,
 } from './gull';
 import { AIR, reachOf } from './gull-poses';
-import { berths, flightOf, planSwoop, type Plan } from './swoop';
+import { flightOf } from './flight';
+import { berths, planSwoop, type Plan } from './swoop';
 
 // The gulls on the page together: how many to keep, and the group's rules
 // on top of each one's own in gull.ts: only one in the air at a time; a
