@@ -260,13 +260,34 @@ export type SwoopAsk = {
 // Pass points are tried nearest the cursor first.
 export function planSwoop(ask: SwoopAsk): Plan | null {
   const { air, gull, cursor, taken, also } = ask;
-  const page = air.page;
-  const f = page.floors.get(gull.floor);
+  const f = air.page.floors.get(gull.floor);
   if (!f) return null;
   const plan = planner(air, taken, cursor, also);
-  const home = ask.home && staysPut(ask.home, page, GULL, taken) ? [ask.home] : [];
-  // The dives at a pass point, each with its pull-up, that are clear.
-  const headsAt = (p: Point) => ([1, -1] as const).flatMap((s) => DIVES.flatMap(({ back, up }) => {
+  const home = ask.home && staysPut(ask.home, air.page, GULL, taken) ? [ask.home] : [];
+  // Nearest the cursor first, through the first PASSES with a clear dive
+  // into them, of the first PASS_LOOK: each pass point's dives are only
+  // worked out once the nearer ones have no route.
+  const passes = passPoints(air, cursor, also).slice(0, PASS_LOOK);
+  const through = (i: number, left: number): Plan | null => {
+    if (i >= passes.length || left <= 0) return null;
+    const dives = divesAt(plan, passes[i], cursor);
+    for (const dive of dives) {
+      const route = swoopVia(plan, f, gull, dive, home);
+      if (route) return route;
+    }
+    return through(i + 1, dives.length ? left - 1 : left);
+  };
+  return through(0, PASSES);
+}
+
+// A dive at a pass point p: from its start a, the dive itself and the
+// pull-up past p, flown the way s says.
+type Dive = { s: 1 | -1; a: Point; dive: Leg; pull: Leg };
+
+// The dives at a pass point, each with its pull-up, that are clear.
+function divesAt(plan: Planner, p: Point, cursor: Point): Dive[] {
+  const { air, also } = plan;
+  return ([1, -1] as const).flatMap((s) => DIVES.flatMap(({ back, up }) => {
     const a = { x: p.x - s * back, y: p.y - up };
     if (aimOff(a, p, cursor) > AIMED) return [];
     const dive = leg('dive', 'stoop', straight(a, p));
@@ -277,27 +298,29 @@ export function planSwoop(ask: SwoopAsk): Plan | null {
     }).find((l) => legClear(air, l, also));
     return pull ? [{ s, a, dive, pull }] : [];
   }));
-  // Nearest the cursor first, the first PASSES with a clear dive into them,
-  // of the first PASS_LOOK.
-  const passes = passPoints(air, cursor, also).slice(0, PASS_LOOK);
-  const tried = { passes: 0 };
-  for (const p of passes) {
-    if (tried.passes >= PASSES) break;
-    const heads = headsAt(p);
-    if (heads.length) tried.passes++;
-    for (const { s, a, dive, pull } of heads) {
-      const off = takeOff(plan, f, gull, a, unit(sub(dive.curve.to, a)));
-      if (!off) continue;
-      const head = [...off.legs, dive, pull];
-      const sofar = routeLength(head) + Math.abs(off.x - gull.x);
-      for (const land of plan.landings(pull.curve.to, home)) {
-        const flare = plan.flareOnto(land);
-        // A cruise is never shorter than the straight way to its flare.
-        if (!flare || sofar + apart(pull.curve.to, flare.curve.from) + FLARE > MAX_LENGTH) continue;
-        const tail = comeDown(plan, pull.curve.to, { x: s, y: -0.3 }, land);
-        if (tail && sofar + routeLength(tail) <= MAX_LENGTH) return { floor: gull.floor, from: off.x, legs: [...head, ...tail], land, length: routeLength([...head, ...tail]) };
-      }
-    }
+}
+
+// The whole swoop through one dive, if there is one: the take-off into it,
+// and on from the pull-up to a landing.
+function swoopVia(plan: Planner, f: Ledge, gull: { floor: number; x: number }, { s, a, dive, pull }: Dive, home: readonly { floor: number; x: number }[]): Plan | null {
+  const off = takeOff(plan, f, gull, a, unit(sub(dive.curve.to, a)));
+  if (!off) return null;
+  const head = [...off.legs, dive, pull];
+  const sofar = routeLength(head) + Math.abs(off.x - gull.x);
+  const tail = landingFor(plan, pull.curve.to, { x: s, y: -0.3 }, home, sofar);
+  return tail && { floor: gull.floor, from: off.x, legs: [...head, ...tail.legs], land: tail.land, length: routeLength([...head, ...tail.legs]) };
+}
+
+// The flight down from `from` heading `out` to the first landing (those in
+// `first`, then the nearest) that is clear and keeps a route already
+// `sofar` long to MAX_LENGTH.
+function landingFor(plan: Planner, from: Point, out: Point, first: readonly { floor: number; x: number }[], sofar: number): { legs: Leg[]; land: Landing } | null {
+  for (const land of plan.landings(from, first)) {
+    const flare = plan.flareOnto(land);
+    // A cruise is never shorter than the straight way to its flare.
+    if (!flare || sofar + apart(from, flare.curve.from) + FLARE > MAX_LENGTH) continue;
+    const legs = comeDown(plan, from, out, land);
+    if (legs && sofar + routeLength(legs) <= MAX_LENGTH) return { legs, land };
   }
   return null;
 }
