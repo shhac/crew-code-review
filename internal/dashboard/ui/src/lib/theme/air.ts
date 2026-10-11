@@ -133,15 +133,19 @@ export function fits(air: Pick<Air, 'page' | 'room' | 'exits'>, whole: Box, also
 }
 
 // Whether something taking up these boxes, one after another along a path,
-// stays in air: each neighbouring pair is tested as one box covering both,
-// so nothing between two samples is missed. Only obstacles near the path
-// are looked at; `ignore` leaves some out (the card an arrow lands in).
+// is clear all the way by `clear` (a month's own rule): each neighbouring
+// pair is tested as one box covering both, so nothing between two samples
+// is missed. A single box is tested alone; none is clear.
+export const sweptBoxes = (boxes: readonly Box[], clear: (box: Box) => boolean): boolean =>
+  boxes.length === 1 ? clear(boxes[0]) : boxes.slice(1).every((b, i) => clear(union(boxes[i], b)));
+
+// sweptBoxes in this air (fits). Only obstacles near the path are looked
+// at; `ignore` leaves some out (the card an arrow lands in).
 export function sweeps(air: Pick<Air, 'page' | 'room' | 'exits'>, boxes: readonly Box[], also: readonly Box[] = [], ignore: (o: Obstacle) => boolean = () => false): boolean {
   if (!boxes.length) return true;
   const all = boxes.reduce(union);
   const near = air.page.obstacles.filter((o) => !ignore(o) && meets(all, grow(o, GAP + 1)));
-  if (boxes.length === 1) return fits(air, boxes[0], also, near);
-  return boxes.slice(1).every((b, i) => fits(air, union(boxes[i], b), also, near));
+  return sweptBoxes(boxes, (b) => fits(air, b, also, near));
 }
 
 // A flier's path, swept with the box of whatever pose it flies each piece
@@ -186,15 +190,15 @@ const halves = (c: Cubic): [Cubic, Cubic] => {
 // every point of the curve is covered, its exact extremes included, and
 // nothing is checked only at its ends. Null when some part of it, split as
 // far as DEPTH, is still not clear.
-function sweptBoxes(curve: Cubic, envelope: Envelope, clear: (box: Box) => boolean, depth: number): Box[] | null {
+function hullBoxes(curve: Cubic, envelope: Envelope, clear: (box: Box) => boolean, depth: number): Box[] | null {
   const box = hullOf(curve, envelope);
   if (!finite(box)) return null;
   if (clear(box)) return [box];
   if (depth === DEPTH) return null;
   const [a, b] = halves(curve);
-  const first = sweptBoxes(a, envelope, clear, depth + 1);
+  const first = hullBoxes(a, envelope, clear, depth + 1);
   if (!first) return null;
-  const second = sweptBoxes(b, envelope, clear, depth + 1);
+  const second = hullBoxes(b, envelope, clear, depth + 1);
   return second && [...first, ...second];
 }
 
@@ -203,7 +207,7 @@ function sweptBoxes(curve: Cubic, envelope: Envelope, clear: (box: Box) => boole
 // whether a box is all in air: a month's own rule (its exits, the rail's
 // sky, the card edges it may reach into), or fitsAir's.
 export function sweptPath(segments: readonly Segment[], clear: (box: Box) => boolean): { clear: boolean; boxes: Box[] } {
-  const found = segments.map((s) => sweptBoxes(s.curve, s.envelope, clear, 0));
+  const found = segments.map((s) => hullBoxes(s.curve, s.envelope, clear, 0));
   return { clear: found.every((b) => b !== null), boxes: found.flatMap((b) => b ?? []) };
 }
 

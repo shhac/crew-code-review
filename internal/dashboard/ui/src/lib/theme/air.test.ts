@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { airOf, around, exitsOf, fits, fitsAir, inAir, inSight, laneOf, meets, pastExit, rowsOf, sweeps, sweptPath } from './air';
+import { airOf, around, exitsOf, fits, fitsAir, inAir, inSight, laneOf, meets, pastExit, rowsOf, sweeps, sweptBoxes, sweptPath } from './air';
 import type { Box, Reach } from './floors';
 import { airFor, board, MAIN, page, side } from './valentine/fixtures';
 import { SPOT } from './valentine/footprints';
@@ -35,6 +35,17 @@ describe('the air', () => {
     expect(fits(air, box({ x: 480, y: 300 }))).toBe(true);
     expect(fits(air, box({ x: 520, y: 300 }))).toBe(true);
     expect(sweeps(air, [box({ x: 480, y: 300 }), box({ x: 520, y: 300 })])).toBe(false);
+  });
+
+  it('sweeps boxes by any rule, each neighbouring pair as one box', () => {
+    const seen: Box[] = [];
+    const rule = (b: Box) => (seen.push(b), b.right - b.left < 30);
+    const at = (x: number): Box => ({ left: x, right: x + 10, top: 0, bottom: 10 });
+    expect(sweptBoxes([at(0), at(10), at(20)], rule)).toBe(true);
+    expect(seen).toEqual([{ left: 0, right: 20, top: 0, bottom: 10 }, { left: 10, right: 30, top: 0, bottom: 10 }]);
+    expect(sweptBoxes([at(0), at(25)], rule)).toBe(false);
+    expect(sweptBoxes([at(0)], () => true)).toBe(true);
+    expect(sweptBoxes([], () => false)).toBe(true);
   });
 
   it('counts a point on the edge of the view as in view', () => {
