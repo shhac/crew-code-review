@@ -3,7 +3,8 @@ import { apart } from '../math';
 import { firstShut, flatLayers, guideAt, legsOf, lidsOf, pageReach, rigBounds, solesOf } from '../rig/test-rig';
 import type { Layer, RigPose } from '../rig/rig';
 import { escape, flying, lengthOfTrack, reachAt, routeIn, trackOf } from './flight';
-import { board, overview, side, testSky } from './fixtures';
+import { board, overview, side } from './fixtures';
+import { skyOf } from './airspace';
 import { ENVELOPES, flyIn, fresh, rigPigeon, standing, takeOff, viewOf } from './pigeon';
 import { FOOTPRINTS, LOOK, pigeonRig, SCALE, WALK, type PigeonPose, type RigPigeon } from './pigeon-rig';
 
@@ -149,7 +150,7 @@ describe('pigeon rig', () => {
 // the ledge.
 describe('pigeon rig in flight', () => {
   const PAGE = overview();
-  const SKY = testSky(PAGE);
+  const SKY = skyOf(PAGE);
   const inside = (pose: RigPose, env: { half: number; up: number; down: number }, what: string) => {
     const r = pageReach(pose);
     expect(r.left, what).toBeLessThanOrEqual(env.half + 1e-6);

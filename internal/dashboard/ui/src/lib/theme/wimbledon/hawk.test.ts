@@ -6,12 +6,12 @@ import { flying, lengthOfTrack, reachAt } from './flight';
 import {
   AGAIN, createHawk, FIRST, GAP, GLIDE, SIGHTED, SPEED, hawkAt, hawkRemeasured, hawkView, laneFor, OFF_APART, planSweep, RETRY, RETURN, RETURN_APART, simulate, stepHawk, type Plan,
 } from './hawk';
-import { clipOf } from './airspace';
-import { board, EXITS, MAIN, overview, side, testSky } from './fixtures';
+import { clipOf, skyOf } from './airspace';
+import { board, EXITS, MAIN, overview, side } from './fixtures';
 import { ENVELOPES, fresh, POSES, standing, type Pigeon } from './pigeon';
 
 const PAGE = overview();
-const SKY = testSky(PAGE);
+const SKY = skyOf(PAGE);
 const at = (id: number, floor: number, x: number): Pigeon => standing(fresh(id), floor, x, 1, 0, () => 0.5);
 // Two on the board and one on the card beside it, the first row.
 const FLOCK = [at(0, 2, 200), at(1, 2, 480), at(2, 3, 150)];
@@ -43,9 +43,9 @@ describe("the hawk's sweep", { timeout: 30_000 }, () => {
     const row = rowsOf(PAGE).find((r) => r.id === 2)!;
     expect(laneFor(row, SKY)).toMatchObject({ y: board.y - 4 });
     const chart: Obstacle = { left: 1100, right: 1200, top: 150, bottom: 172 };
-    expect(laneFor(row, testSky(overview([chart])))).toBeNull();
+    expect(laneFor(row, skyOf(overview([chart])))).toBeNull();
     // With no rail column (a phone) there is no way in for it at all.
-    expect(laneFor(row, testSky(PAGE, ['right', 'top']))).toBeNull();
+    expect(laneFor(row, skyOf(PAGE, ['right', 'top']))).toBeNull();
   });
 
   it('plans a sweep whose every frame keeps every bird in air and 6px from every other', () => {
@@ -78,7 +78,7 @@ describe("the hawk's sweep", { timeout: 30_000 }, () => {
       expect(drawn.left >= drawn.right || drawn.left >= MAIN.left, `${d.id} from ${d.box.left}`).toBe(true);
     }
     // On a phone the rail is stacked above main: no exit, nothing to cut.
-    expect(clipOf(testSky(PAGE, ['right', 'top']))).toBeNull();
+    expect(clipOf(skyOf(PAGE, ['right', 'top']))).toBeNull();
   });
 
   it('comes in from the side farther from the nearest pigeon, and they fly away ahead of it, the farthest first', () => {
@@ -99,10 +99,10 @@ describe("the hawk's sweep", { timeout: 30_000 }, () => {
     // way out to the right, though the hawk's lane under it is open.
     const label: Obstacle = { left: 1200, right: 1386, top: 120, bottom: 150 };
     const page = overview([label]);
-    const plan = planSweep(FLOCK, page, testSky(page), 0, seeded(3))!;
+    const plan = planSweep(FLOCK, page, skyOf(page), 0, seeded(3))!;
     expect(plan.dir).toBe(-1);
     // With no rail column there is no way out to the left either.
-    expect(planSweep(FLOCK, page, testSky(page, ['right', 'top']), 0, seeded(3))).toBeNull();
+    expect(planSweep(FLOCK, page, skyOf(page, ['right', 'top']), 0, seeded(3))).toBeNull();
   });
 
   it('leaves pigeons on rows with no way out looking up until it has passed', () => {
@@ -174,6 +174,6 @@ describe("the hawk's sweep", { timeout: 30_000 }, () => {
     expect(simulate(h.plan, FLOCK, PAGE, SKY, 500)).toBe(true);
     expect(hawkRemeasured(h, FLOCK, PAGE, SKY, 500, rand)).toBe(h);
     const closed = overview([{ left: 600, right: 700, top: 140, bottom: 178 }]);
-    expect(hawkRemeasured(h, FLOCK, closed, testSky(closed), 500, rand).plan).toBeNull();
+    expect(hawkRemeasured(h, FLOCK, closed, skyOf(closed), 500, rand).plan).toBeNull();
   });
 });

@@ -1,13 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { fixed, seeded } from '../test-scene';
 import { escape, routeIn } from './flight';
-import { board, overview, side, testSky } from './fixtures';
+import { board, overview, side } from './fixtures';
+import { skyOf } from './airspace';
 import {
   ENVELOPES, flightEnds, flyIn, fresh, HALF, kept, NEAR, PECK, PIGEON, POSES, SHY_SPEED, STAND, standing, stepPigeon, takeOff, viewOf, WALK_RUN, WALK_SPEED, type Pigeon,
 } from './pigeon';
 
 const PAGE = overview();
-const SKY = testSky(PAGE);
+const SKY = skyOf(PAGE);
 const on = (x: number, floor = 2): Pigeon => standing(fresh(0), floor, x, 1, 0, fixed(0));
 
 // Steps a pigeon every frame for ms, returning every state it passed.

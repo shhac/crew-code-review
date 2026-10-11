@@ -3,13 +3,14 @@ import { around, meets } from '../air';
 import type { Box } from '../floors';
 import { fixed, seeded } from '../test-scene';
 import { escape, flying, lengthOfTrack, reachAt, routeClear } from './flight';
-import { board, overview, side, testSky } from './fixtures';
+import { board, overview, side } from './fixtures';
+import { skyOf } from './airspace';
 import { GAP, hawkView } from './hawk';
 import { ENVELOPES, fresh, grounded, POSES, standing, takeOff, viewOf, type Pigeon } from './pigeon';
 import { APART, courtFree, createFlock, FLUSH_BACK, FLUSH_EVERY, LOOK, reconcileFlock, restingFlock, RETRY, stepFlock, type Flock } from './pigeons';
 
 const PAGE = overview();
-const SKY = testSky(PAGE);
+const SKY = skyOf(PAGE);
 const at = (id: number, floor: number, x: number): Pigeon => standing(fresh(id), floor, x, 1, 0, fixed(0.5));
 const flockOf = (pigeons: Pigeon[]): Flock => ({ target: pigeons.length, pigeons, lastFlush: -Infinity, hawk: { next: Infinity, plan: null } });
 const pageX = (p: Pigeon) => PAGE.floors.get(p.floor)!.left + p.x;
@@ -45,12 +46,12 @@ describe('the flock', { timeout: 30_000 }, () => {
   it('places two where only two spots have a way out, and none where nothing does', () => {
     // Two short cards under the band, each with room for one.
     const page = overview([], [[2, { ...board, right: board.left + 100 }], [3, { ...side, right: side.left + 100 }]]);
-    const two = createFlock(page, testSky(page), 0, seeded(2));
+    const two = createFlock(page, skyOf(page), 0, seeded(2));
     expect(two.target).toBe(2);
     expect(two.pigeons).toHaveLength(2);
     // Text low over the whole row closes the band: no pigeon at all.
     const closed = overview([{ left: 236, right: 1440, top: 130, bottom: 150 }]);
-    expect(createFlock(closed, testSky(closed), 0, seeded(2)).pigeons).toEqual([]);
+    expect(createFlock(closed, skyOf(closed), 0, seeded(2)).pigeons).toEqual([]);
   });
 
   it('lets a fast pass close by flush one, away from the cursor, back in 6 to 12s; the others near it look up', () => {
@@ -111,7 +112,7 @@ describe('the flock', { timeout: 30_000 }, () => {
     expect(Math.abs(back.x - 300)).toBeLessThanOrEqual(24);
     // With the band closed there is no way back in yet.
     const closed = overview([{ left: 236, right: 1440, top: 130, bottom: 150 }]);
-    const waiting = stepFlock(flock, closed, testSky(closed), 9000, 16, seeded(5), null).pigeons[0];
+    const waiting = stepFlock(flock, closed, skyOf(closed), 9000, 16, seeded(5), null).pigeons[0];
     expect(waiting).toMatchObject({ mode: 'away', back: 9000 + RETRY });
   });
 
@@ -155,9 +156,9 @@ describe('the flock', { timeout: 30_000 }, () => {
     const flock = flockOf([up, at(1, 3, 250)]);
     expect(reconcileFlock(flock, PAGE, SKY, 500, seeded(6)).pigeons[0].mode).toBe('fly');
     const closed = overview([{ left: 1320, right: 1380, top: 150, bottom: 176 }]);
-    const after = reconcileFlock(flock, closed, testSky(closed), 500, seeded(6));
+    const after = reconcileFlock(flock, closed, skyOf(closed), 500, seeded(6));
     expect(after.pigeons[0]).toMatchObject({ mode: 'away', flight: null, back: 500 + RETRY });
-    expect(routeClear(route, board, ENVELOPES, testSky(closed).clear)).toBe(false);
+    expect(routeClear(route, board, ENVELOPES, skyOf(closed).clear)).toBe(false);
     expect(after.pigeons[1]).toMatchObject({ floor: 3, x: 250 });
   });
 

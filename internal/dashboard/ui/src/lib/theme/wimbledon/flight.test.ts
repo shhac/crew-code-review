@@ -3,10 +3,11 @@ import { around } from '../air';
 import {
   along, durationOf, escape, reachAt, escapeFrom, flying, LAND, LAND_RUN, LIFT_RUN, lengthOfTrack, routeClear, routeIn, SPEED, TAKEOFF, trackOf, type Route,
 } from './flight';
-import { board, EXITS, overview, PIGEON_ENVELOPES as ENV, lower, side, testSky } from './fixtures';
+import { board, EXITS, overview, PIGEON_ENVELOPES as ENV, lower, side } from './fixtures';
+import { skyOf } from './airspace';
 
 const PAGE = overview();
-const SKY = testSky(PAGE);
+const SKY = skyOf(PAGE);
 const onPage = (r: Route) => trackOf(r).map((q) => ({ x: board.left + q.at.x, y: board.y + q.at.y, s: q.s }));
 
 describe('pigeon flights', { timeout: 30_000 }, () => {
@@ -34,7 +35,7 @@ describe('pigeon flights', { timeout: 30_000 }, () => {
     expect(escapeFrom(2, board, 300, 700, ENV, SKY)!.way).toBe('left');
     expect(escapeFrom(2, board, 300, 400, ENV, SKY)!.way).toBe('right');
     // With no rail column there is no way out to the left, so it goes right.
-    const phone = testSky(PAGE, ['right', 'top']);
+    const phone = skyOf(PAGE, ['right', 'top']);
     expect(escape(2, board, 300, 'left', ENV, phone)).toBeNull();
     expect(escapeFrom(2, board, 300, 700, ENV, phone)!.way).toBe('right');
   });
@@ -42,7 +43,7 @@ describe('pigeon flights', { timeout: 30_000 }, () => {
   it('has no way out from a deeper row, nor through a band too low for its wings', () => {
     expect(escapeFrom(4, lower, 300, null, ENV, SKY)).toBeNull();
     // Text reaching 32px above the cards closes the band over them.
-    const low = testSky(overview([{ left: 290, right: 1386, top: 130, bottom: 150 }]));
+    const low = skyOf(overview([{ left: 290, right: 1386, top: 130, bottom: 150 }]));
     expect(escapeFrom(2, board, 300, null, ENV, low)).toBeNull();
   });
 
@@ -50,7 +51,7 @@ describe('pigeon flights', { timeout: 30_000 }, () => {
     // A tall card on the right closes the band that way; the heading has
     // no text over the board's left half.
     const page = overview([{ left: 1000, right: 1440, top: 140, bottom: 175 }]);
-    const sky = testSky({ ...page, obstacles: page.obstacles.filter((o) => o !== page.obstacles[0] && o !== page.obstacles[1]) });
+    const sky = skyOf({ ...page, obstacles: page.obstacles.filter((o) => o !== page.obstacles[0] && o !== page.obstacles[1]) });
     const r = escape(2, board, 100, 'right', ENV, sky)!;
     expect(r.way).toBe('top');
     const end = onPage(r).at(-1)!;
