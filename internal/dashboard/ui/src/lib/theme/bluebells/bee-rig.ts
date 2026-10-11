@@ -240,9 +240,10 @@ export function beeRig(bee: RigBee, look: BeeLook): RigPose {
 // How far each pose's drawing reaches from her anchor (page px), at every
 // moment of its motion: wing ghosts and fan, bob, hanging legs, antennae
 // leaning and flicking (bee-rig.test.ts samples each whole cycle). Behind
-// is toward her tail; mirrored when she faces left.
-export type Reach = { behind: number; ahead: number; up: number; down: number };
-export const REACH: Record<BeePose, Reach> = {
+// is toward her tail; mirrored when she faces left, so unlike the kit's
+// reaches it faces a way.
+export type FacingReach = { behind: number; ahead: number; up: number; down: number };
+export const REACH: Record<BeePose, FacingReach> = {
   perch: { behind: 12, ahead: 10.5, up: 7, down: 7 },
   crawl: { behind: 12.25, ahead: 10.25, up: 7.5, down: 7 },
   scurry: { behind: 12.25, ahead: 10.25, up: 7.5, down: 7 },
