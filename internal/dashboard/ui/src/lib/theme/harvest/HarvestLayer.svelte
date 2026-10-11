@@ -18,7 +18,7 @@
   import { createCrows, feedingSpots, pointOf, reconcileCrows, restingCrows, stepCrows, type Crows, type Field } from './crows';
   import { fieldOf } from './field';
   import { leave, pointAlong, type Flight } from './flight';
-  import { crowView, depthFor, type Memory } from './view';
+  import { crowView, remembered, type Memory } from './view';
 
   const debug = new URLSearchParams(location.search).get('theme-debug') === '1';
   // `?theme-cue=scatter` (tests only): the crows are scattered once they
@@ -28,8 +28,6 @@
   const CUE = cueOf(['scatter'] as const);
   const CUE_AFTER = 1200;
   const CUE_EARLY = 8000;
-  // How fast a crow's strokes deepen or shallow: over 0.25s (the note).
-  const DEPTH_EASE = 250;
 
   let floors: ReadonlyMap<number, Ledge> = new Map();
   let page: PageMap = { floors, obstacles: [], width: 0, height: 0 };
@@ -67,19 +65,6 @@
   // where they stand.
   const troupe = placeTroupe<Crows, Field>({ create: createCrows, reconcile: reconcileCrows, resting: restingCrows });
 
-  // How far each has walked (its stride follows it) and how deep its strokes
-  // are, eased toward what its route asks for.
-  function remember(before: readonly Crow[], after: readonly Crow[], dt: number, time: number) {
-    memory = new Map(after.map((c) => {
-      const was = memory.get(c.id) ?? { walked: 0, depth: 1 };
-      const prior = before.find((b) => b.id === c.id);
-      const stepped = prior && grounded(prior) && grounded(c) && prior.floor === c.floor ? Math.abs(c.x - prior.x) : 0;
-      const target = depthFor(c, time) ?? was.depth;
-      const depth = was.depth + Math.sign(target - was.depth) * Math.min(Math.abs(target - was.depth), dt / DEPTH_EASE);
-      return [c.id, { walked: was.walked + stepped, depth }];
-    }));
-  }
-
   // Each head turns toward a cursor near enough, eased; flying, it looks
   // ahead.
   function look(crows: readonly Crow[], cursor: { x: number; y: number } | null, dt: number) {
@@ -113,7 +98,7 @@
       group = stepped.group;
       chaff = stepped.bites.reduce<ReadonlyMap<number, Chaff>>((c, b) => peck(c, b.floor, b.x, time), chaff);
       chaff = regrow(chaff, floors, group.crows.flatMap((c) => pointOf(c, page, time) ?? []), time);
-      remember(before, group.crows, step.dt, time);
+      memory = remembered(memory, before, group.crows, step.dt, time);
       look(group.crows, step.cursor, step.dt);
     },
     stroke() {},

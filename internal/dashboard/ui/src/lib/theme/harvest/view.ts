@@ -2,14 +2,14 @@ import type { PageMap } from '../floors';
 import { pageAt, roomOver } from '../ledges';
 import type { Point } from '../pointer';
 import { hash } from '../seed';
-import { PECK, SETTLE, WALKER, type Crow } from './crow';
+import { grounded, PECK, SETTLE, WALKER, type Crow } from './crow';
 import { FOOTPRINTS, type CrowPose, type RigCrow } from './crow-rig';
 import { flightAt, type Piece } from './flight';
 
 // What a crow looks like now: where it is drawn on the page, which way it
-// faces, and what its rig is to draw, from its mode and its flight. Pure,
-// so the layer only adds what it remembers between frames (how far each
-// has walked, how deep its strokes are).
+// faces, and what its rig is to draw, from its mode and its flight, and
+// what is remembered between frames (how far each has walked, how deep its
+// strokes are). Pure, so the layer only keeps the memory.
 
 // Each crow beats its wings at its own rate, 3.6 to 4 a second (the note,
 // after Pennycuick's hooded crow at 3.84).
@@ -20,6 +20,8 @@ const TAKEOFF_BEATS = 2;
 // Landing, it flares for this long before its feet touch (two braking
 // strokes at its wingbeat, and the swing up).
 const FLARE = 600;
+// How fast a crow's strokes deepen or shallow: over 0.25s (the note).
+const DEPTH_EASE = 250;
 
 export type CrowView = { at: Point; dir: 1 | -1; rig: RigCrow; flying: boolean };
 // What the layer remembers of a crow: how far it has walked (its stride
@@ -31,7 +33,21 @@ export type Memory = { walked: number; depth: number };
 const deep = (kind: Piece) => (kind === 'skim' || kind === 'lift' ? 0 : 1);
 // What the layer eases a crow's strokes toward; null on the ledge, where it
 // keeps the depth it landed with (its wings settle as they flew).
-export const depthFor = (c: Crow, now: number): number | null => (c.flight ? deep(flightAt(c.flight, now).kind) : null);
+const depthFor = (c: Crow, now: number): number | null => (c.flight ? deep(flightAt(c.flight, now).kind) : null);
+
+// What the layer remembers after a frame: how far each has walked (its
+// stride follows it) and how deep its strokes are, eased toward what its
+// route asks for.
+export function remembered(memory: ReadonlyMap<number, Memory>, before: readonly Crow[], after: readonly Crow[], dt: number, now: number): ReadonlyMap<number, Memory> {
+  return new Map(after.map((c) => {
+    const was = memory.get(c.id) ?? { walked: 0, depth: 1 };
+    const prior = before.find((b) => b.id === c.id);
+    const stepped = prior && grounded(prior) && grounded(c) && prior.floor === c.floor ? Math.abs(c.x - prior.x) : 0;
+    const target = depthFor(c, now) ?? was.depth;
+    const depth = was.depth + Math.sign(target - was.depth) * Math.min(Math.abs(target - was.depth), dt / DEPTH_EASE);
+    return [c.id, { walked: was.walked + stepped, depth }];
+  }));
+}
 
 export function crowView(c: Crow, page: PageMap, now: number, memory: Memory): CrowView | null {
   if (c.mode === 'away') return null;

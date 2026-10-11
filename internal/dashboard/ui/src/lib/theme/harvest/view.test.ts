@@ -4,7 +4,7 @@ import { away, comeIn, standing, takeOff, type Crow } from './crow';
 import { crowAir, ENVELOPES, fieldOf, inCrowAir } from './field';
 import { card, OPEN, PAGE } from './fixtures';
 import { arrive, departures, fly, leave } from './flight';
-import { crowView } from './view';
+import { crowView, remembered } from './view';
 import { reconcileChaff } from './chaff';
 
 const memory = { walked: 0, depth: 1 };
@@ -40,6 +40,20 @@ describe('a crow as drawn', () => {
     const out = { ...full, mode: 'depart' as const };
     expect(at(out, 1500)?.rig.pose).toBe('flap');
     expect(at(out, 1500)?.flying).toBe(true);
+  });
+
+  it('remembers how far each has walked on its ledge, and eases its strokes toward its route over 0.25s', () => {
+    const c = standing(0, 1, 300, 1, 0, () => 0);
+    const walked = remembered(new Map(), [c], [{ ...c, mode: 'walk', x: 304 }], 16, 0);
+    expect(walked.get(0)).toEqual({ walked: 4, depth: 1 });
+    // A step onto another ledge is not walked.
+    expect(remembered(walked, [c], [{ ...c, floor: 2, x: 310 }], 16, 0).get(0)?.walked).toBe(4);
+    const [, skim] = departures(feet, 1440);
+    const low = { ...takeOff(c, fly(skim, 'depart', 0, 200), 0), mode: 'depart' as const };
+    expect(remembered(walked, [c], [low], 125, 50).get(0)?.depth).toBeCloseTo(0.5);
+    expect(remembered(walked, [c], [low], 500, 50).get(0)?.depth).toBe(0);
+    // On the ledge it keeps the depth it landed with.
+    expect(remembered(new Map([[0, { walked: 0, depth: 0.3 }]]), [c], [c], 16, 0).get(0)?.depth).toBe(0.3);
   });
 
   it('flares on the last stretch of an arrival', () => {
