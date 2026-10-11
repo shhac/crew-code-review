@@ -1,121 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { meets } from '../air';
-import type { Box } from '../floors';
-import type { Rand } from '../seed';
-import { inWaspAir, waspAir, windowEdge, type WaspAir } from './air';
-import { SPACE } from './flight';
-import { STAND } from './footprints';
-import { APART, bandOf, orbitFits, orbitOf } from './orbit';
-import { CAKE, JAR, type Places } from './table';
-import { boxOf, claimsOf, spotOf, waspView, where, zoneOf, type Mode, type Pointer, type Wasp, type World } from './wasp';
-import { placeWasps, reconcileWasps, stepWasps } from './wasps';
+import { seeded } from '../test-scene';
+import { windowEdge, type WaspAir } from './air';
+import { TALL, places, run } from './fixtures';
+import { CAKE } from './table';
+import { boxOf, claimsOf, where, type Mode, type Pointer } from './wasp';
+import { placeWasps } from './wasps';
 
-const places: Places = { cake: CAKE, jar: JAR };
-// The stage sits 34px in from the window's left edge (the rail's padding and
-// the stage centred on the shelf), its top 700px down. The rail's air is the
-// shelf's box (200px wide) with the sky above it, up to 240px tall.
-const STAGE = { left: 34, top: 700 };
-const railAir = (above: number) => ({ left: 18, top: STAGE.top - above, width: 200, height: above + 72 });
-// Tall: the whole sky. Medium: 54px above the cake's top, as on a 1024x768
-// window, room for the low orbit only. Short: neither.
-const TALL = waspAir(railAir(262), STAGE)!;
-const MEDIUM = waspAir(railAir(54 - CAKE.y), STAGE)!;
-const SHORT = waspAir(railAir(20 - CAKE.y), STAGE)!;
-
-function seeded(seed: number): Rand {
-  const state = { n: seed };
-  return () => { state.n = (state.n * 1664525 + 1013904223) % 4294967296; return state.n / 4294967296; };
-}
-const worldOf = (air: WaspAir, now: number, rand: Rand, cursor: Pointer | null = null): World => ({ air, places, now, rand, cursor });
-
-// Runs the pair from `from` to `to`, calling look on each frame.
-function run(start: Wasp[], air: (now: number) => WaspAir, from: number, to: number, rand: Rand, cursor: (now: number) => Pointer | null = () => null, look: (w: Wasp[], now: number, air: WaspAir) => void = () => {}): Wasp[] {
-  const frames = Math.round((to - from) / 16);
-  return Array.from({ length: frames }, (_, i) => from + (i + 1) * 16).reduce((wasps, now) => {
-    const a = air(now);
-    const before = air(now - 16);
-    const settled = a === before ? wasps : reconcileWasps(wasps, worldOf(a, now, rand));
-    const next = stepWasps(settled, worldOf(a, now, rand, cursor(now)), 16);
-    look(next, now, a);
-    return next;
-  }, start);
-}
-
-const outsideAir = (wasps: Wasp[], now: number, air: WaspAir) => wasps.flatMap((w) => {
-  const b = boxOf(w, places, now);
-  return b && !inWaspAir(b, air) ? [`${w.id} ${w.mode} at ${now}`] : [];
-});
-const touching = (wasps: Wasp[], now: number) => {
-  const [a, b] = wasps.map((w) => boxOf(w, places, now));
-  return a && b && meets(a, b) ? [`${wasps[0].mode}/${wasps[1].mode} at ${now}`] : [];
-};
-
-// A cursor sweeping past the cake now and then, fast, and resting
-// elsewhere in between.
-function restless(seed: number) {
-  const rand = seeded(seed);
-  const passes = Array.from({ length: 40 }, (_, i) => ({ at: 4000 + i * 7000 + rand() * 3000, y: -60 + rand() * 90, dir: rand() < 0.5 ? 1 : -1 }));
-  return (now: number): Pointer | null => {
-    const pass = passes.find((p) => now >= p.at && now < p.at + 600);
-    if (!pass) return { x: 150, y: 200, at: now - 2000, speed: 0 };
-    const t = (now - pass.at) / 600;
-    return { x: pass.dir > 0 ? -20 + 200 * t : 180 - 200 * t, y: pass.y, at: now, speed: 333 };
-  };
-}
-
-describe('the wasps\' air', () => {
-  it('is the rail\'s air in the stage\'s coordinates, with a lane out past the window\'s left edge over its top half', () => {
-    expect(TALL.air).toEqual({ left: -16, right: 184, top: -262, bottom: 72 });
-    expect(TALL.lane).toEqual({ left: -58, right: -16, top: -262, bottom: -95 });
-    expect(windowEdge(TALL)).toBe(-34);
-    expect(waspAir(null, STAGE)).toBeNull();
-    expect(waspAir({ left: 18, top: 0, width: 0, height: 0 }, STAGE)).toBeNull();
-  });
-
-  it('keeps the two bands a footprint and 6px apart, and wasp 1\'s spot clear of wasp 0\'s band', () => {
-    const low = bandOf(orbitOf(0, places)), high = bandOf(orbitOf(1, places));
-    expect(low.top - high.bottom).toBeCloseTo(APART);
-    const grown = (b: Box, by: number) => ({ left: b.left - by, right: b.right + by, top: b.top - by, bottom: b.bottom + by });
-    expect(meets(grown(zoneOf(1, places), SPACE), low)).toBe(false);
-    const zone0 = zoneOf(0, places);
-    expect(zone0.left).toBeGreaterThanOrEqual(low.left);
-    expect(zone0.right).toBeLessThanOrEqual(low.right);
-    expect(zone0.top).toBeGreaterThanOrEqual(low.top);
-    expect(zone0.bottom).toBeLessThanOrEqual(low.bottom);
-  });
-
-  it('needs about 32px above the cake for the low orbit and 80 for the high one', () => {
-    expect(CAKE.y - bandOf(orbitOf(0, places)).top).toBeCloseTo(31.5, 0);
-    expect(CAKE.y - bandOf(orbitOf(1, places)).top).toBeCloseTo(80, 0);
-    expect([0, 1].map((id) => orbitFits(id, { air: TALL, places }))).toEqual([true, true]);
-    expect([0, 1].map((id) => orbitFits(id, { air: MEDIUM, places }))).toEqual([true, false]);
-    expect([0, 1].map((id) => orbitFits(id, { air: SHORT, places }))).toEqual([false, false]);
-  });
-});
-
-describe('placing the wasps', () => {
-  it('sets both circling where their orbits fit, else resting on their spots', () => {
-    const modes = (air: WaspAir) => placeWasps({ air, places, now: 0, rand: seeded(1) }).map((w) => w.mode);
-    expect(modes(TALL)).toEqual(['circle', 'circle']);
-    expect(modes(MEDIUM)).toEqual(['circle', 'rest']);
-    expect(modes(SHORT)).toEqual(['rest', 'rest']);
-    const tall = placeWasps({ air: TALL, places, now: 0, rand: seeded(1) });
-    tall.forEach((w) => expect(inWaspAir(boxOf(w, places, 0)!, TALL)).toBe(true));
-  });
-
-  it('under reduced motion stands each on its spot: wasp 0 on the cake, wasp 1 on the jar', () => {
-    const still = placeWasps({ air: TALL, places, now: 0, rand: seeded(1) }, true);
-    expect(still.map((w) => w.mode)).toEqual(['rest', 'rest']);
-    still.forEach((w) => {
-      const view = waspView(w, places, 5000, true)!;
-      expect(view.pose).toBe('standing');
-      expect(view.x).toBeCloseTo(spotOf(w.id, places).x);
-      expect(view.y + STAND).toBeCloseTo(spotOf(w.id, places).y);
-    });
-  });
-});
-
-describe('how the wasps behave', () => {
+describe('how a wasp behaves', () => {
   it('circle, inspect, land, feed, take off, back away and circle again', () => {
     const seen: Mode[] = [];
     const start = placeWasps({ air: TALL, places, now: 0, rand: () => 0.1 });
@@ -177,39 +69,6 @@ describe('how the wasps behave', () => {
     const after = run(start, () => air, 0, 32, seeded(3), (now) => ({ x: at.x + 15, y: at.y, at: now, speed: 400 }));
     expect(after[0].mode).toBe('dodge');
   });
-
-  it('lands when the air shrinks under its orbit, and takes off again once there is room, never meeting or leaving the air', () => {
-    const air = (now: number) => (now < 3000 ? TALL : now < 12000 ? SHORT : TALL);
-    const modes: Mode[][] = [[], []];
-    const problems: string[] = [];
-    run(placeWasps({ air: TALL, places, now: 0, rand: () => 0.9 }), air, 0, 20000, () => 0.9, () => null, (w, now, a) => {
-      problems.push(...outsideAir(w, now, a), ...touching(w, now));
-      w.forEach((x, i) => { if (modes[i].at(-1) !== x.mode) modes[i].push(x.mode); });
-    });
-    expect(problems.slice(0, 5)).toEqual([]);
-    for (const m of modes) {
-      const down = m.findIndex((x) => x === 'land' || x === 'rest');
-      expect(down).toBeGreaterThan(0);
-      expect(m.lastIndexOf('takeoff')).toBeGreaterThan(down);
-      expect(m.lastIndexOf('circle')).toBeGreaterThan(m.lastIndexOf('takeoff'));
-    }
-  });
-
-  for (const [name, air] of [['tall', TALL], ['medium', MEDIUM]] as const) {
-    it(`over long ${name} runs with a restless cursor never meet, and never leave the air or the lane`, () => {
-      const problems: string[] = [];
-      const seen = new Set<Mode>();
-      for (const seed of [1, 2, 3]) {
-        run(placeWasps({ air, places, now: 0, rand: seeded(seed) }), () => air, 0, 120000, seeded(seed + 10), restless(seed), (w, now, a) => {
-          problems.push(...outsideAir(w, now, a), ...touching(w, now));
-          w.forEach((x) => seen.add(x.mode));
-        });
-      }
-      expect(problems.slice(0, 5)).toEqual([]);
-      const modes: Mode[] = name === 'tall' ? ['circle', 'inspect', 'land', 'feed', 'takeoff', 'depart', 'flee', 'away', 'return'] : ['circle', 'inspect', 'feed', 'rest', 'flee', 'away', 'return'];
-      expect([...seen].filter((m) => modes.includes(m)).sort()).toEqual([...modes].sort());
-    }, 60_000);
-  }
 
   it('keep clear of what the other has claimed, wherever it is going', () => {
     const wasps = placeWasps({ air: TALL, places, now: 0, rand: seeded(5) });
