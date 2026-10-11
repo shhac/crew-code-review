@@ -13,10 +13,15 @@ import type { Point } from './pointer';
 // room: all of main's box, in view or not, which is what a flier already
 // somewhere must stay inside (a scroll carries it out of view and back);
 // view: the part of it in the window, where new spots, routes' ends and
-// shots are chosen; spots: the points in view where a hover fits. exits:
-// the lines past which a flier is out of sight, where the air asked for them
-// (absent, a flier never leaves; see Exit).
-export type Air = { page: PageMap; room: Box; view: Box; spots: readonly Point[]; exits?: Exits };
+// shots are chosen; exits: the lines past which a flier is out of sight,
+// where the air asked for them (absent, a flier never leaves; see Exit).
+export type Airspace = { page: PageMap; room: Box; view: Box; exits?: Exits };
+// An airspace with its spots: the points in view where a hover fits, for
+// fliers that hover (the cupids).
+export type Air = Airspace & { spots: readonly Point[] };
+// What a box is checked against: a month may hand over only its page and
+// its room.
+type Bounded = Pick<Airspace, 'page' | 'room' | 'exits'>;
 
 // Where a flier may leave the page, or come in: past the window's right
 // edge; past its top, within main's width, wherever main reaches the top
@@ -53,7 +58,7 @@ export function exitsOf(page: PageMap, wanted: readonly Exit[] = EXITS): Exits {
 
 // main's box, all of it and the part in view, with the room opened past
 // any exits asked for.
-export function boundsOf(page: PageMap, wanted: readonly Exit[] = []): Pick<Air, 'room' | 'view' | 'exits'> {
+export function boundsOf(page: PageMap, wanted: readonly Exit[] = []): Pick<Airspace, 'room' | 'view' | 'exits'> {
   const main = page.main;
   const room = main ? { left: main.left + EDGE, right: main.right - EDGE, top: main.top + EDGE, bottom: main.bottom - EDGE } : NOWHERE;
   const view = main ? {
@@ -71,13 +76,16 @@ export function boundsOf(page: PageMap, wanted: readonly Exit[] = []): Pick<Air,
   return { room: open, view, exits };
 }
 
-// The air on this page: main's box, and every point in view where a
-// footprint of `reach` fits. With exits, a flier may also be past them,
-// where it is out of sight; the spots are in view all the same.
+// The airspace on this page: main's box, opened past the exits asked for,
+// where a flier is out of sight.
+export const airspaceOf = (page: PageMap, { exits = [] }: { exits?: readonly Exit[] } = {}): Airspace => ({ page, ...boundsOf(page, exits) });
+
+// The air on this page, with every point in view where a footprint of
+// `reach` fits; the spots are in view whatever the exits.
 export function airOf(page: PageMap, reach: Reach, { exits = [] }: { exits?: readonly Exit[] } = {}): Air {
-  const bounds = boundsOf(page, exits);
-  const { view } = bounds;
-  return { page, ...bounds, spots: gridIn(view).filter((p) => fits({ page, room: view }, around(p, reach), linesOf(page))) };
+  const space = airspaceOf(page, { exits });
+  const { view } = space;
+  return { ...space, spots: gridIn(view).filter((p) => fits({ page, room: view }, around(p, reach), linesOf(page))) };
 }
 
 // The ledges' own lines (card tops, heading rules), as thin boxes: a flier
@@ -113,7 +121,7 @@ export function inSight(exits: Exits | undefined, box: Box): Box | null {
 // Where a footprint is wholly past an exit, at `along` (a y for the right
 // edge and the rail, an x for the top): where a flier leaving is gone, and
 // where one arriving starts. None where the air has no such exit.
-export function pastExit(air: Pick<Air, 'exits'>, exit: Exit, reach: Reach, along: number): Point | null {
+export function pastExit(air: Pick<Airspace, 'exits'>, exit: Exit, reach: Reach, along: number): Point | null {
   const line = air.exits?.[exit];
   if (line === undefined) return null;
   if (exit === 'right') return { x: line + reach.half, y: along };
@@ -124,7 +132,7 @@ export function pastExit(air: Pick<Air, 'exits'>, exit: Exit, reach: Reach, alon
 // Whether a box is wholly in air: inside the room, and clear of every
 // obstacle (widened by GAP) and of anything else given. Past an exit only
 // the part still in sight counts, and a box wholly past one is in air.
-export function fits(air: Pick<Air, 'page' | 'room' | 'exits'>, whole: Box, also: readonly Box[] = [], obstacles: readonly Obstacle[] = air.page.obstacles): boolean {
+export function fits(air: Bounded, whole: Box, also: readonly Box[] = [], obstacles: readonly Obstacle[] = air.page.obstacles): boolean {
   const { room } = air;
   if (!finite(whole)) return false;
   const box = inSight(air.exits, whole);
@@ -142,7 +150,7 @@ export const sweptBoxes = (boxes: readonly Box[], clear: (box: Box) => boolean):
 
 // sweptBoxes in this air (fits). Only obstacles near the path are looked
 // at; `ignore` leaves some out (the card an arrow lands in).
-export function sweeps(air: Pick<Air, 'page' | 'room' | 'exits'>, boxes: readonly Box[], also: readonly Box[] = [], ignore: (o: Obstacle) => boolean = () => false): boolean {
+export function sweeps(air: Bounded, boxes: readonly Box[], also: readonly Box[] = [], ignore: (o: Obstacle) => boolean = () => false): boolean {
   if (!boxes.length) return true;
   const all = boxes.reduce(union);
   const near = air.page.obstacles.filter((o) => !ignore(o) && meets(all, grow(o, GAP + 1)));
@@ -216,7 +224,7 @@ export function sweptPath(pieces: readonly (Piece | Segment)[], clear: (box: Box
 
 // A box all in this air (fits), clear of anything else given: the plain
 // rule for sweptPath.
-export const fitsAir = (air: Pick<Air, 'page' | 'room' | 'exits'>, also: readonly Box[] = []) => (box: Box) => fits(air, box, also);
+export const fitsAir = (air: Bounded, also: readonly Box[] = []) => (box: Box) => fits(air, box, also);
 
 // A row: the ledges level within 2px of each other, side by side
 // (measureFloors already merges any that overlap), named by its leftmost
@@ -247,7 +255,7 @@ export function rowsOf(page: PageMap): Row[] {
 // height, so it holds while the row's first ledge does.
 export type Lane = { id: string; row: number; above: number; y: number; from: number; to: number };
 
-export function laneOf(air: Air, row: Row, above: number, reach: Reach): Lane | null {
+export function laneOf(air: Airspace, row: Row, above: number, reach: Reach): Lane | null {
   const y = row.y - above;
   const { rail, right } = air.exits ?? {};
   const from = rail === undefined ? air.room.left + reach.half : rail - reach.half;

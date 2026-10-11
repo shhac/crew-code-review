@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { airOf, around, exitsOf, fits, fitsAir, inAir, inSight, laneOf, meets, pastExit, rowsOf, sweeps, sweptBoxes, sweptPath } from './air';
+import { airOf, airspaceOf, around, exitsOf, fits, fitsAir, inAir, inSight, laneOf, meets, pastExit, rowsOf, sweeps, sweptBoxes, sweptPath } from './air';
 import type { Box, Reach } from './floors';
 import { airFor, board, MAIN, page, side } from './valentine/fixtures';
 import { SPOT } from './valentine/footprints';
@@ -19,6 +19,14 @@ describe('the air', () => {
 
   it('is nowhere without main', () => {
     expect(airOf(page(), SPOT).spots).toEqual([]);
+  });
+
+  it('is an airspace with spots, and the airspace alone needs no footprint', () => {
+    const desktop = { ...page(), main: MAIN };
+    const { spots, ...space } = airOf(desktop, SPOT, { exits: ['right'] });
+    expect(spots.length).toBeGreaterThan(0);
+    expect(airspaceOf(desktop, { exits: ['right'] })).toEqual(space);
+    expect(airspaceOf(desktop).exits).toBeUndefined();
   });
 
   it('keeps a gap round every obstacle', () => {
