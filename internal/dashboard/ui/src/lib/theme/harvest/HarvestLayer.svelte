@@ -16,8 +16,8 @@
   import { grounded, type Crow } from './crow';
   import { crowGaze, crowRig } from './crow-rig';
   import { createCrows, feedingSpots, pointOf, reconcileCrows, restingCrows, stepCrows, type Crows, type Field } from './crows';
-  import { fieldOf } from './field';
-  import { leave, pointAlong, type Flight } from './flight';
+  import { crowAir, fieldOf, inCrowAir, sweep } from './field';
+  import { leave } from './flight';
   import { crowView, remembered, type Memory } from './view';
 
   const debug = new URLSearchParams(location.search).get('theme-debug') === '1';
@@ -58,8 +58,10 @@
     return !!f && !!ledge && !!leave(pageAt(ledge, s.x), f.page.width, f.clear, 0, 200);
   };
 
-  // Eight points along a route, for the debug overlay's envelope boxes.
-  const eightOf = (f: Flight) => Array.from({ length: 8 }, (_, i) => pointAlong(f.curves, i / 7).p);
+  // The boxes each flying crow's route was found clear by, each piece swept
+  // with its own envelope.
+  $: inAir = debug ? inCrowAir(crowAir(page)) : null;
+  $: swept = inAir ? shown.flatMap(({ c }) => (c.flight ? sweep(c.flight, c.flight.leg, inAir).boxes : [])) : [];
 
   // Leaving reduced motion brings a fresh family; entering it keeps these
   // where they stand.
@@ -137,11 +139,10 @@
           {#each c.flight.curves as curve}
             <path class="route" d="M{curve.from.x} {curve.from.y}C{curve.c1.x} {curve.c1.y} {curve.c2.x} {curve.c2.y} {curve.to.x} {curve.to.y}" data-route />
           {/each}
-          {#each eightOf(c.flight) as p}
-            {@const b = field?.envelope(p)}
-            {#if b}<rect class="envelope" x={b.left} y={b.top} width={b.right - b.left} height={b.bottom - b.top} />{/if}
-          {/each}
         {/if}
+      {/each}
+      {#each swept as b}
+        <rect class="envelope" x={b.left} y={b.top} width={b.right - b.left} height={b.bottom - b.top} />
       {/each}
     {/if}
   </svg>
