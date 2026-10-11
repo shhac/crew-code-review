@@ -113,21 +113,21 @@ export function leaveEgg(hunt: Hunt, page: PageMap, floor: number, end: End, now
 // hidden here.
 export const tally = (hunt: Hunt) => ({ found: hunt.found, total: hunt.found + hiddenCount(hunt.eggs) });
 
-// Where the counter sits: in the rail's head, right-aligned in the brand's
-// box, in the empty space after the brand's words, GAP clear of every line
-// it sits beside. Centred on the brand where that fits; else centred on a
-// line, which only has itself to clear. How wide the words set is up to the
-// font: Linux's DejaVu Sans sets the tagline half a pixel too wide for the
-// centre, while the title leaves room to spare. Null where nowhere fits, so
-// it never covers them.
-export const TALLY = { width: 34, height: 16 };
+// Where the counter, `width` wide as its count sets, sits: in the rail's
+// head, right-aligned in the brand's box, in the empty space after the
+// brand's words, GAP clear of every line it sits beside. Centred on the brand
+// where that fits; else centred on a line, which only has itself to clear.
+// How wide the words and the count set is up to the font: Linux's DejaVu Sans
+// sets the tagline half a pixel too wide for the centre, while the title
+// leaves room to spare. Null where nowhere fits, so it never covers them.
+export const TALLY_HEIGHT = 16;
 const GAP = 8;
 type Box = { left: number; right: number; top: number; bottom: number };
-export function tallySpot(brand: Box, lines: readonly Box[]): Point | null {
-  const x = brand.right - TALLY.width;
-  const middle = (b: Box) => (b.top + b.bottom) / 2 - TALLY.height / 2;
-  const clear = (y: number) => y >= brand.top && y + TALLY.height <= brand.bottom
-    && lines.every((l) => l.bottom <= y || l.top >= y + TALLY.height || l.right + GAP <= x);
+export function tallySpot(brand: Box, lines: readonly Box[], width: number): Point | null {
+  const x = brand.right - width;
+  const middle = (b: Box) => (b.top + b.bottom) / 2 - TALLY_HEIGHT / 2;
+  const clear = (y: number) => y >= brand.top && y + TALLY_HEIGHT <= brand.bottom
+    && lines.every((l) => l.bottom <= y || l.top >= y + TALLY_HEIGHT || l.right + GAP <= x);
   const y = [brand, ...lines].map(middle).find(clear);
   return y === undefined ? null : { x, y };
 }

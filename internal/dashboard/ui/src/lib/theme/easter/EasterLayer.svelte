@@ -7,7 +7,7 @@
   import { samePage, type Ledge, type PageMap } from '../floors';
   import Geometry from '../Geometry.svelte';
   import { ledgeScene, placeTroupe } from '../layout';
-  import type { Cursor, Point } from '../pointer';
+  import type { Cursor } from '../pointer';
   import { easeGazes } from '../rig/gaze';
   import Rig from '../rig/Rig.svelte';
   import { rabbitView, poseOf, type Rabbit } from './rabbit';
@@ -20,7 +20,7 @@
   import egg4 from './egg-4.webp';
   import egg5 from './egg-5.webp';
   import { eggView } from './eggs';
-  import { canLeave, EGG, findEggs, hideEggs, leaveEgg, NO_HUNT, tally, tallySpot, TALLY, type Hunt } from './hunt';
+  import { canLeave, EGG, findEggs, hideEggs, leaveEgg, NO_HUNT, tally, tallySpot, TALLY_HEIGHT, type Hunt } from './hunt';
 
   const DESIGNS = [egg0, egg1, egg2, egg3, egg4, egg5];
 
@@ -29,7 +29,9 @@
   let hunt: Hunt = NO_HUNT;
   let group: Rabbits | null = null;
   let gazes: ReadonlyMap<number, number> = new Map();
-  let spot: Point | null = null;
+  let brand: Brand | null = null;
+  // The counter as its count sets, which grows from "0/5" to "10/12".
+  let counter: DOMRectReadOnly | undefined;
   let now = 0;
   let reduced = false;
 
@@ -38,6 +40,7 @@
     return f ? [{ egg, view: eggView(egg, f, now, reduced) }] : [];
   });
   $: score = tally(hunt);
+  $: spot = brand && counter ? tallySpot(brand.box, brand.lines, counter.width) : null;
   $: shown = (group?.rabbits ?? []).flatMap((rabbit) => {
     const view = rabbitView(rabbit, scene);
     if (!view) return [];
@@ -68,13 +71,14 @@
 
   // The brand's box and each line of its words as set (a line's own box is
   // as wide as the widest), for the counter to sit beside them.
-  function measureBrand(): Point | null {
-    const brand = document.querySelector('.rail .brand');
-    const words = brand?.querySelector('span');
-    if (!brand || !words) return null;
-    const box = brand.getBoundingClientRect();
+  type Brand = { box: DOMRect; lines: DOMRect[] };
+  function measureBrand(): Brand | null {
+    const el = document.querySelector('.rail .brand');
+    const words = el?.querySelector('span');
+    if (!el || !words) return null;
+    const box = el.getBoundingClientRect();
     const set = (line: Element) => { const range = document.createRange(); range.selectNodeContents(line); return range.getBoundingClientRect(); };
-    return box.width > 0 ? tallySpot(box, Array.from(words.children, set)) : null;
+    return box.width > 0 ? { box, lines: Array.from(words.children, set) } : null;
   }
 
   onMount(() => ledgeScene({
@@ -84,7 +88,7 @@
       floors = page.floors;
       hunt = hideEggs(hunt, page);
       group = troupe.place(group, page, samePage(page, previous), time, reduced);
-      spot = measureBrand();
+      brand = measureBrand();
     },
     frame(time, moving) {
       now = time;
@@ -123,8 +127,8 @@
   {#each shown as { rabbit, view, pose } (rabbit.id)}
     <Rig {pose} x={view.x} y={view.y} dir={view.dir} opacity={view.opacity} data-rabbit={rabbit.mode} data-pose={view.pose} data-id={rabbit.id} />
   {/each}
-  {#if spot && score.total > 0}
-    <div class="tally" data-tally="{score.found}/{score.total}" style="left: {spot.x}px; top: {spot.y}px; width: {TALLY.width}px; height: {TALLY.height}px">
+  {#if score.total > 0}
+    <div class="tally" class:unplaced={!spot} data-tally="{score.found}/{score.total}" bind:contentRect={counter} style="left: {spot?.x ?? 0}px; top: {spot?.y ?? 0}px; height: {TALLY_HEIGHT}px">
       {#key score.found}
         <img class:bump={!reduced && score.found > 0} src={egg0} alt="" width="9" height="12" />
       {/key}
@@ -137,10 +141,12 @@
   .eggs { position: absolute; inset: 0; overflow: visible; }
   .glint { fill: #fffbe6; }
   .tally {
-    position: absolute; display: flex; align-items: center; justify-content: flex-end; gap: 4px;
+    position: absolute; display: flex; align-items: center; gap: 4px; width: max-content; white-space: nowrap;
     color: #f0f0f0; font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1;
   }
   .tally img { display: block; }
+  /* Set but not shown until it has a spot: its width is what finds one. */
+  .unplaced { visibility: hidden; }
   .bump { animation: bump .45s ease-out; transform-origin: 50% 100%; }
   @keyframes bump { 30% { transform: translateY(-3px) rotate(-10deg); } 60% { transform: translateY(0) rotate(6deg); } }
 </style>

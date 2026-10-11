@@ -84,18 +84,26 @@ describe('the counter', () => {
   const tagline = (right: number) => ({ left: 94, right, top: 62, bottom: 76 });
 
   it('sits right-aligned in the brand, centred on it, after its words', () => {
-    expect(tallySpot(brand, [title(156), tagline(162)])).toEqual({ x: 183, y: 48 });
+    expect(tallySpot(brand, [title(156), tagline(162)], 34)).toEqual({ x: 183, y: 48 });
   });
 
   // The lines as Linux's DejaVu Sans sets them: the tagline leaves 41.5px
   // beside it where the counter needs 42, and the counter used to vanish.
   it('moves up beside the title where the tagline sets too wide for the centre', () => {
-    expect(tallySpot(brand, [title(164.6), tagline(175.5)])).toEqual({ x: 183, y: 38.5 });
+    expect(tallySpot(brand, [title(164.6), tagline(175.5)], 34)).toEqual({ x: 183, y: 38.5 });
   });
 
   it('is left out where it fits beside no line, and never leaves the brand', () => {
-    expect(tallySpot(brand, [title(180), tagline(180)])).toBeNull();
-    expect(tallySpot({ ...brand, top: 39 }, [title(164.6), tagline(175.5)])).toBeNull();
+    expect(tallySpot(brand, [title(180), tagline(180)], 34)).toBeNull();
+    expect(tallySpot({ ...brand, top: 39 }, [title(164.6), tagline(175.5)], 34)).toBeNull();
+  });
+
+  // Once a bug: the counter's box was 34px whatever it said, so "10/12"
+  // spilled out of its left side over the brand's words.
+  it('clears the words by however wide the count sets', () => {
+    expect(tallySpot(brand, [title(156), tagline(162)], 45)).toEqual({ x: 172, y: 48 });
+    expect(tallySpot(brand, [title(156), tagline(162)], 50)).toEqual({ x: 167, y: 38.5 });
+    expect(tallySpot(brand, [title(156), tagline(162)], 60)).toBeNull();
   });
 });
 
