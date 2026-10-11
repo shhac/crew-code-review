@@ -4,7 +4,7 @@ import { apart } from '../math';
 import type { Cursor } from '../pointer';
 import { maxBy, type Rand } from '../seed';
 import { clear, type BeeAir } from './beeair';
-import { awayBee, beeView, boxOf, perchOn, placedBee, stepBee, where, type Bee, type Context, type Cue, type Flowers, type WallSide } from './bee';
+import { AT_FLOWER, awayBee, beeView, boxOf, ON_BELL, perchOn, placedBee, stepBee, where, type Bee, type Context, type Cue, type Flowers, type WallSide } from './bee';
 import { fitsAt, frameAt, hoverSpot, onPage, perchSpot, roomAt, visitable, type Flower } from './flowers';
 import { grow } from './footprints';
 import { flyReach, originOf, placeRoute, routeFrom, samplesOf, stillClear } from './route';
@@ -162,8 +162,7 @@ function keep(b: Bee, m: Meadow, now: number, rand: Rand, others: readonly Box[]
   const box = boxOf(b, page, now);
   if (!box || !clear(m.air, box, { also: others })) return null;
   const flower = b.flower ? m.flowers.get(b.flower) : undefined;
-  const onFlower = b.mode === 'perch' || b.mode === 'shiver' || b.mode === 'crawl' || b.mode === 'land' || b.mode === 'approach';
-  if (onFlower) return flower ? b : hoverFree(b, m, now);
+  if (AT_FLOWER.has(b.mode)) return flower ? b : hoverFree(b, m, now);
   const f = b.flight;
   const origin = f && originOf(page, f.frame);
   if (!f || !origin) return b;
@@ -199,7 +198,7 @@ export function restingBees(m: Meadow, previous: Bees | null): Bees {
     const taken = new Set(before.flatMap((o) => (o.flower ? [o.flower] : [])));
     const own = b.flower ? m.flowers.get(b.flower) : undefined;
     const keepOwn = own && !taken.has(own.key) && visitable(m.air, own, others);
-    const bell = keepOwn && (b.mode === 'perch' || b.mode === 'shiver' || b.mode === 'crawl') && fitsAt(m.air, perchSpot(own, b.bell), 'perch', b.dir, true, others) ? b.bell : 0;
+    const bell = keepOwn && ON_BELL.has(b.mode) && fitsAt(m.air, perchSpot(own, b.bell), 'perch', b.dir, true, others) ? b.bell : 0;
     const f = keepOwn ? own : maxBy([...m.flowers.values()].filter((x) => !taken.has(x.key) && visitable(m.air, x, others)), (x) => roomAt(m.air, x));
     if (!f) return null;
     return perchOn({ id: b.id, seed: b.seed }, f, bell, 0, Infinity, keepOwn ? b.dir : facingMiddle(m, f));

@@ -1,5 +1,5 @@
 import type { Box, PageMap, Run } from '../floors';
-import { apart, clamp, mixPoint, smooth } from '../math';
+import { apart, clamp, facingFrom, mixPoint, smooth } from '../math';
 import type { Cursor, Point } from '../pointer';
 import { between, type Rand } from '../seed';
 import { clear, type BeeAir } from './beeair';
@@ -17,9 +17,16 @@ import { along, flyReach, holdRoute, originOf, placeRoute, plan, routeOf, type F
 // airspace contract.
 
 export type Mode = 'perch' | 'crawl' | 'shiver' | 'takeoff' | 'hover' | 'fly' | 'approach' | 'land' | 'dodge' | 'bonk' | 'bounce' | 'leave' | 'away';
+// On its bell, wings folded; and on or coming down onto its flower.
+export const ON_BELL: ReadonlySet<Mode> = new Set(['perch', 'shiver', 'crawl']);
+export const AT_FLOWER: ReadonlySet<Mode> = new Set([...ON_BELL, 'land', 'approach']);
+// Flown along a route (a leave with no way out fades instead).
+const FLYING: ReadonlySet<Mode> = new Set(['fly', 'dodge', 'leave']);
 
 // Why it is flying.
 export type Purpose = 'visit' | 'dodge' | 'bonk' | 'leave' | 'enter';
+// What each flight is drawn as.
+const MODE_OF: Record<Purpose, Mode> = { visit: 'fly', dodge: 'dodge', bonk: 'fly', leave: 'leave', enter: 'fly' };
 export type Flight = {
   frame: Frame;
   // Held by the frame.
@@ -113,6 +120,17 @@ const AHEAD = 1.5;
 const TRIES = 5;
 
 const towards = (v: number, target: number, rate: number, dt: number) => (v < target ? Math.min(target, v + rate * dt) : Math.max(target, v - rate * dt));
+
+// How each flight is flown: the speed it sets off at and cruises at, the
+// speed it arrives at, and how hard it speeds up and slows down. A dodge
+// darts and stops short; a bonk is flown at the wall at its cruise.
+type Profile = { start: number; top: number; end: number; rate: number; brake: number };
+const FLOWN: Profile = { start: 0, top: CRUISE, end: ARRIVE, rate: ACCEL, brake: BRAKE };
+const PROFILE: Record<Purpose, Profile> = {
+  visit: FLOWN, enter: FLOWN, leave: FLOWN,
+  dodge: { start: 40, top: DODGE_SPEED, end: 40, rate: DODGE_ACCEL, brake: DODGE_ACCEL },
+  bonk: { ...FLOWN, end: CRUISE },
+};
 
 // A bee's flowers by key.
 export type Flowers = ReadonlyMap<string, Flower>;
@@ -239,6 +257,12 @@ export function awayBee(base: Pick<Bee, 'id' | 'seed'> & Partial<Bee>, now: numb
 }
 
 const moving = (cursor: Cursor | null, now: number) => !!cursor && now - cursor.at < MOVING;
+// The cursor, if it is moving within reach and the bee may dodge, calm
+// again since its last.
+function startled(b: Bee, ctx: Context, here: Point | null, now: number, reach: number): Cursor | null {
+  const cursor = ctx.cursor;
+  return here && cursor && moving(cursor, now) && ctx.mayDodge && now >= b.calm && apart(here, cursor) < reach ? cursor : null;
+}
 const still = (cursor: Cursor | null, now: number) => !!cursor && now - cursor.at >= MOVING;
 // A cursor at rest, kept clear of by a route.
 const restingCursor = (cursor: Cursor | null, now: number): Box[] => (still(cursor, now) && cursor
@@ -248,18 +272,24 @@ const restingCursor = (cursor: Cursor | null, now: number): Box[] => (still(curs
 const timed = (b: Bee, mode: Mode, now: number, ms: number, to: Spot | null = null): Bee => ({ ...b, mode, since: now, until: now + ms, to });
 const hoverHere = (b: Bee, at: Spot, now: number, ms: number): Bee => ({ ...b, mode: 'hover', since: now, until: now + ms, at, to: null, flight: null });
 
+// In the air, a moving cursor close by: a dart out of its way.
+function dodgeFrom(b: Bee, ctx: Context, here: Point | null, now: number): Bee | null {
+  const cursor = startled(b, ctx, here, now, DODGE_REACH);
+  return cursor ? dodge(b, ctx, now, cursor) : null;
+}
+
 // Off on a flight held by a frame.
-function flyOff(b: Bee, air: BeeAir, route: Route, frame: Frame, purpose: Purpose, now: number, mode: Mode = purpose === 'dodge' ? 'dodge' : purpose === 'leave' ? 'leave' : 'fly'): Bee | null {
+function flyOff(b: Bee, air: BeeAir, route: Route, frame: Frame, purpose: Purpose, now: number): Bee | null {
   const o = originOf(air.page, frame);
   if (!o) return null;
   const end = route.curves.at(-1)?.to, first = route.curves[0]?.from;
-  const dir = end && first && Math.abs(end.x - first.x) > 1 ? (end.x > first.x ? 1 : -1) : b.dir;
-  return { ...b, mode, since: now, until: Infinity, to: null, dir, flight: { frame, route: holdRoute(route, o), s: 0, v: purpose === 'dodge' ? 40 : 0, purpose, start: now } };
+  const dir = end && first ? facingFrom(end.x - first.x, 1, b.dir) : b.dir;
+  return { ...b, mode: MODE_OF[purpose], since: now, until: Infinity, to: null, dir, flight: { frame, route: holdRoute(route, o), s: 0, v: PROFILE[purpose].start, purpose, start: now } };
 }
 
 // One step of a bee's own. dt in ms.
 export function stepBee(b: Bee, ctx: Context, now: number, dt: number, rand: Rand): Bee {
-  if (b.flight && (b.mode === 'fly' || b.mode === 'dodge' || b.mode === 'leave')) return flyOn(b, ctx, now, dt, rand);
+  if (b.flight && FLYING.has(b.mode)) return flyOn(b, ctx, now, dt, rand);
   const flower = b.flower ? ctx.flowers.get(b.flower) : undefined;
   switch (b.mode) {
     case 'perch': return perched(b, flower, ctx, now, rand);
@@ -284,11 +314,8 @@ const nowhere = (b: Bee): Flower => ({ key: b.flower ?? '', frame: b.at.frame, b
 // enough, else warms up and goes. A moving cursor close by: straight off,
 // to dodge.
 function perched(b: Bee, flower: Flower | undefined, ctx: Context, now: number, rand: Rand): Bee {
-  const here = where(b, ctx.air.page, now);
-  const cursor = ctx.cursor;
-  if (here && cursor && moving(cursor, now) && ctx.mayDodge && now >= b.calm && apart(here, cursor) < STARTLE) {
-    return takeOff({ ...b, startled: { x: cursor.x, y: cursor.y } }, flower, ctx, now, rand);
-  }
+  const scare = startled(b, ctx, where(b, ctx.air.page, now), now, STARTLE);
+  if (scare) return takeOff({ ...b, startled: { x: scare.x, y: scare.y } }, flower, ctx, now, rand);
   // Cued to bonk, it does not wait out its time on the flower.
   const restless = ctx.cue === 'bonk' && now - b.since >= CUED_REST;
   if (restless) return timed(b, 'shiver', now, SHIVER);
@@ -298,7 +325,7 @@ function perched(b: Bee, flower: Flower | undefined, ctx: Context, now: number, 
   const from = flower.bells[b.bell];
   const gap = up && from ? apart(up, from) : Infinity;
   if (up && gap <= MAX_CRAWL && fitsAt(ctx.air, perchSpot(flower, next), 'crawl', b.dir, false, ctx.others)) {
-    const dir = Math.abs(up.x - from.x) > 0.5 ? (up.x > from.x ? 1 : -1) : b.dir;
+    const dir = facingFrom(up.x - from.x, 0.5, b.dir);
     return { ...timed(b, 'crawl', now, (gap / CRAWL_SPEED) * 1000, perchSpot(flower, next)), bell: next, visited: b.visited + 1, dir };
   }
   return timed(b, 'shiver', now, SHIVER);
@@ -316,7 +343,7 @@ function takeOff(b: Bee, flower: Flower | undefined, ctx: Context, now: number, 
   });
   if (!spot) return { ...b, mode: 'perch', since: now, until: now + between(rand, 500, 1000) };
   const p = onPage(page, spot);
-  const dir = p && from && Math.abs(p.x - from.x) > 1 ? (p.x > from.x ? 1 : -1) : b.dir;
+  const dir = p && from ? facingFrom(p.x - from.x, 1, b.dir) : b.dir;
   return { ...timed(b, 'takeoff', now, TAKEOFF, spot), dir };
 }
 
@@ -334,9 +361,10 @@ function hovering(b: Bee, ctx: Context, now: number, rand: Rand): Bee {
   const here = where(b, ctx.air.page, now);
   if (!here) return b;
   if (b.startled) return dodge({ ...b, startled: null }, ctx, now, b.startled);
-  const cursor = ctx.cursor;
-  if (cursor && moving(cursor, now) && ctx.mayDodge && now >= b.calm && apart(here, cursor) < DODGE_REACH) return dodge(b, ctx, now, cursor);
+  const dodged = dodgeFrom(b, ctx, here, now);
+  if (dodged) return dodged;
   if (now < b.until) return b;
+  const cursor = ctx.cursor;
   const stuckSince = Number.isFinite(b.stuck) ? b.stuck : now;
   const chance = ctx.cue === 'bonk' ? 1 : 1 / 8;
   const bonked = ctx.mayBonk && rand() < chance && !(cursor && apart(here, cursor) < 120) ? bonkFrom(b, ctx, here, now) : null;
@@ -445,45 +473,51 @@ function bounce(b: Bee, now: number): Bee {
   return { ...timed({ ...b, at: contact, dir }, 'bounce', now, BOUNCE, { ...contact, x: contact.x - dir * BACK }), flight: null };
 }
 
-// Flying on along its route: speeding up to its cruise, slowing to arrive.
-// At the end: a visit brakes in to land, a dodge hovers, a bonk's lead
-// turns into the last straight dash at the wall, a leave goes away.
+// Flying on along its route; at its end, arrived.
 function flyOn(b: Bee, ctx: Context, now: number, dt: number, rand: Rand): Bee {
   const f = b.flight;
   if (!f) return b;
-  const cursor = ctx.cursor;
-  const here = where(b, ctx.air.page, now);
-  if (here && cursor && b.mode !== 'dodge' && moving(cursor, now) && ctx.mayDodge && now >= b.calm && apart(here, cursor) < DODGE_REACH) return dodge(b, ctx, now, cursor);
-  const fast = f.purpose === 'dodge';
-  const [top, end, rate] = fast ? [DODGE_SPEED, 40, DODGE_ACCEL] : f.purpose === 'bonk' ? [CRUISE, CRUISE, ACCEL] : [CRUISE, ARRIVE, ACCEL];
-  const left = f.route.length - f.s;
-  const target = Math.min(top, Math.sqrt(end * end + 2 * (fast ? DODGE_ACCEL : BRAKE) * Math.max(0, left)));
+  const dodged = b.mode === 'dodge' ? null : dodgeFrom(b, ctx, where(b, ctx.air.page, now), now);
+  if (dodged) return dodged;
+  const next = speedOn(f, dt);
+  const flown = { ...b, flight: next, dir: facingOn(b, f, next.s) };
+  return next.s < f.route.length ? flown : arrived(flown, next, ctx, now, rand);
+}
+
+// A step along a flight: speeding up to its cruise, and slowing in time to
+// arrive at its end speed.
+function speedOn(f: Flight, dt: number): Flight {
+  const { top, end, rate, brake } = PROFILE[f.purpose];
+  const target = Math.min(top, Math.sqrt(end * end + 2 * brake * Math.max(0, f.route.length - f.s)));
   const v = towards(f.v, target, rate, dt / 1000);
-  const s = Math.min(f.route.length, f.s + (v * dt) / 1000);
-  const flown = { ...b, flight: { ...f, s, v }, dir: facingOn(b, f, s) };
-  if (s < f.route.length) return flown;
+  return { ...f, s: Math.min(f.route.length, f.s + (v * dt) / 1000), v };
+}
+
+// At a flight's end: a visit brakes in to land, a dodge hovers, a bonk's
+// lead turns into the last straight dash at the wall, a leave goes away.
+function arrived(b: Bee, f: Flight, ctx: Context, now: number, rand: Rand): Bee {
   const page = ctx.air.page;
-  const there = where(flown, page, now);
+  const there = where(b, page, now);
   const spot = there && spotIn(f.frame, there, page);
   if (!spot) return awayBee(b, now, rand);
   const flower = b.flower ? ctx.flowers.get(b.flower) : undefined;
   switch (f.purpose) {
     case 'visit': case 'enter': {
-      if (!flower) return hoverHere(flown, spot, now, between(rand, ...HOVER));
+      if (!flower) return hoverHere(b, spot, now, between(rand, ...HOVER));
       const over = hoverSpot(flower, 0);
       const overPage = onPage(page, over);
-      const dir = overPage && there && Math.abs(overPage.x - there.x) > 1 ? (overPage.x > there.x ? 1 : -1) : flown.dir;
-      return { ...timed({ ...flown, at: spot, flight: null, dir }, 'approach', now, BRAKING + between(rand, ...SETTLE), over), bell: 0, visited: 1 };
+      const dir = overPage && there ? facingFrom(overPage.x - there.x, 1, b.dir) : b.dir;
+      return { ...timed({ ...b, at: spot, flight: null, dir }, 'approach', now, BRAKING + between(rand, ...SETTLE), over), bell: 0, visited: 1 };
     }
     case 'bonk': {
       const contact = b.bonk && onPage(page, b.bonk.contact);
-      if (!b.bonk || !contact || !there) return hoverHere(flown, spot, now, between(rand, ...HOVER));
+      if (!b.bonk || !contact || !there) return hoverHere(b, spot, now, between(rand, ...HOVER));
       const held = spotIn(b.bonk.contact.frame, there, page);
-      if (!held) return hoverHere(flown, spot, now, between(rand, ...HOVER));
-      return timed({ ...flown, at: held, dir: b.bonk.dir, flight: null }, 'bonk', now, (apart(there, contact) / CRUISE) * 1000, b.bonk.contact);
+      if (!held) return hoverHere(b, spot, now, between(rand, ...HOVER));
+      return timed({ ...b, at: held, dir: b.bonk.dir, flight: null }, 'bonk', now, (apart(there, contact) / CRUISE) * 1000, b.bonk.contact);
     }
     case 'leave': return awayBee(b, now, rand);
-    default: return hoverHere({ ...flown, calm: Math.max(b.calm, now) }, spot, now, AFTER_DODGE);
+    default: return hoverHere({ ...b, calm: Math.max(b.calm, now) }, spot, now, AFTER_DODGE);
   }
 }
 
@@ -491,7 +525,7 @@ function flyOn(b: Bee, ctx: Context, now: number, dt: number, rand: Rand): Bee {
 // it faced while that is nearly straight up or down.
 function facingOn(b: Bee, f: Flight, s: number): 1 | -1 {
   const { dx } = along(f.route, Math.min(f.route.length, s + 2));
-  return Math.abs(dx) > 0.05 ? (dx > 0 ? 1 : -1) : b.dir;
+  return facingFrom(dx, 0.05, b.dir);
 }
 
 // Nowhere to go: out of the window through the top or the bottom, along
@@ -527,7 +561,7 @@ function comeBack(b: Bee, ctx: Context, now: number, rand: Rand): Bee {
   for (const from of starts) {
     const over = onPage(page, hoverSpot(f, 0));
     const route = plan(ctx.air, from, to, { also, into: over ? { x: (over.x - to.x) * 2, y: 0 } : undefined });
-    const off = route && flyOff({ ...b, flower: f.key, bell: 0, visited: 0, fade: null }, ctx.air, route, f.frame, 'enter', now, 'fly');
+    const off = route && flyOff({ ...b, flower: f.key, bell: 0, visited: 0, fade: null }, ctx.air, route, f.frame, 'enter', now);
     if (off) return off;
   }
   return { ...hoverHere({ ...b, flower: f.key, bell: 0, visited: 0 }, side, now, between(rand, ...HOVER)), fade: { from: 0, to: 1, at: now } };
@@ -562,7 +596,7 @@ export function beeView(b: Bee, page: PageMap, now: number): BeeView | null {
   const f = b.flight;
   const since = now - b.since;
   const speed = f ? f.v : b.mode === 'bonk' ? CRUISE : 0;
-  const on = (b.mode === 'perch' || b.mode === 'shiver' || b.mode === 'crawl') && b.flower ? { flower: b.flower, bell: b.bell } : null;
+  const on = ON_BELL.has(b.mode) && b.flower ? { flower: b.flower, bell: b.bell } : null;
   const wings = on ? 0 : b.mode === 'takeoff' ? clamp(since / TAKEOFF, 0, 1) : b.mode === 'bounce' && since < DIM ? 0.5 : 1;
   const tremble = b.mode === 'shiver' ? TREMBLE * Math.sin((2 * Math.PI * TREMBLE_HZ * since) / 1000) : 0;
   return {
