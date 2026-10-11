@@ -1,5 +1,6 @@
 import { finite, grow, holds, meets, union, type Box } from './box';
-import type { Ledge, Obstacle, PageMap, Reach } from './floors';
+import { halves, type Curve } from './curves';
+import type { Footprint, Ledge, Obstacle, PageMap, Reach } from './floors';
 import type { Point } from './pointer';
 
 // The page's open air, for things that fly: the box of `main` (never the
@@ -149,65 +150,67 @@ export function sweeps(air: Pick<Air, 'page' | 'room' | 'exits'>, boxes: readonl
 }
 
 // A flier's path, swept with the box of whatever pose it flies each piece
-// in: July's pigeons and hawk, August's gull and September's crows each
-// plan their own routes, and each route is checked here. A piece is a
-// cubic curve (the robin's FlightCurve has this shape) and an envelope: how
-// far the pose's drawing reaches from the point on the curve, every way,
-// at every moment of its motion (a whole wingbeat, a bank), as its rig test
-// measures it, mirrored to the way it faces along that piece.
+// in: July's pigeons and hawk, August's gull, September's crows, May's bees
+// and the robin each plan their own routes, and each route is checked here.
+// A piece is a curve and the pose's reach: how far its drawing reaches from
+// the point on the curve, every way, at every moment of its motion (a whole
+// wingbeat, a bank), as its rig test measures it. A reach is as wide either
+// side, so it holds whichever way the flier faces.
+export type Piece = { curve: Curve; reach: Reach };
+
+// The older form of a piece, its curve's controls named control1 and
+// control2 and its reach given each way, kept until August's and
+// September's routes are pieces.
 export type Cubic = { from: Point; control1: Point; control2: Point; to: Point };
 export type Envelope = { left: number; right: number; up: number; down: number };
 export type Segment = { curve: Cubic; envelope: Envelope };
 
-// The same envelope facing the other way.
-export const mirrored = (e: Envelope): Envelope => ({ ...e, left: e.right, right: e.left });
+// A footprint as an envelope, facing either way.
+export const envelopeOf = (box: Footprint): Envelope => ({ left: box.width / 2, right: box.width / 2, up: box.height, down: box.down ?? 0 });
 
-// A footprint (rig.ts's page box: its width centred on the point, its
-// height above it and `down` below) as an envelope, facing either way.
-export const envelopeOf = (box: { width: number; height: number; down?: number }): Envelope =>
-  ({ left: box.width / 2, right: box.width / 2, up: box.height, down: box.down ?? 0 });
-
-// Subdivided this many times at most before a piece counts as blocked: as
-// deep as the robin's clearFlight goes.
+// How far a piece is split before it counts as blocked: `depth` halvings
+// (as deep as the robin's clearFlight goes, unless asked), or sooner where
+// a piece is shorter than `least` px, measured as the bees measure it (end
+// to end, and out to its first control).
+export type Sweep = { depth?: number; least?: number };
 const DEPTH = 12;
+const spanOf = (c: Curve) => Math.hypot(c.to.x - c.from.x, c.to.y - c.from.y) + Math.hypot(c.c1.x - c.from.x, c.c1.y - c.from.y);
 
-const hullOf = (c: Cubic, e: Envelope): Box => {
-  const points = [c.from, c.control1, c.control2, c.to];
+const hullOf = (c: Curve, e: Envelope): Box => {
+  const points = [c.from, c.c1, c.c2, c.to];
   const xs = points.map((p) => p.x), ys = points.map((p) => p.y);
   return { left: Math.min(...xs) - e.left, right: Math.max(...xs) + e.right, top: Math.min(...ys) - e.up, bottom: Math.max(...ys) + e.down };
 };
 
-const halves = (c: Cubic): [Cubic, Cubic] => {
-  const mid = (a: Point, b: Point): Point => ({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 });
-  const a = mid(c.from, c.control1), b = mid(c.control1, c.control2), d = mid(c.control2, c.to);
-  const e = mid(a, b), f = mid(b, d), middle = mid(e, f);
-  return [{ from: c.from, control1: a, control2: e, to: middle }, { from: middle, control1: f, control2: d, to: c.to }];
-};
-
 // The boxes a piece is checked as: its control hull, which a cubic never
-// leaves, grown by its envelope; where that box is not clear, the two
-// halves' (by de Casteljau, as clearFlight splits them), and so on, so
-// every point of the curve is covered, its exact extremes included, and
-// nothing is checked only at its ends. Null when some part of it, split as
-// far as DEPTH, is still not clear.
-function hullBoxes(curve: Cubic, envelope: Envelope, clear: (box: Box) => boolean, depth: number): Box[] | null {
-  const box = hullOf(curve, envelope);
+// leaves, grown by its reach; where that box is not clear, the two halves'
+// (by de Casteljau), and so on, so every point of the curve is covered, its
+// exact extremes included, and nothing is checked only at its ends. Null
+// when some part of it, split as far as it may be, is still not clear.
+function hullBoxes(curve: Curve, extent: Envelope, clear: (box: Box) => boolean, sweep: Required<Sweep>, depth: number): Box[] | null {
+  const box = hullOf(curve, extent);
   if (!finite(box)) return null;
   if (clear(box)) return [box];
-  if (depth === DEPTH) return null;
+  if (depth === sweep.depth || spanOf(curve) < sweep.least) return null;
   const [a, b] = halves(curve);
-  const first = hullBoxes(a, envelope, clear, depth + 1);
+  const first = hullBoxes(a, extent, clear, sweep, depth + 1);
   if (!first) return null;
-  const second = hullBoxes(b, envelope, clear, depth + 1);
+  const second = hullBoxes(b, extent, clear, sweep, depth + 1);
   return second && [...first, ...second];
 }
 
-// Whether a path is clear, each piece swept with its own envelope, and the
+const extentOf = (p: Piece | Segment): { curve: Curve; extent: Envelope } => {
+  if ('reach' in p) return { curve: p.curve, extent: { left: p.reach.half, right: p.reach.half, up: p.reach.up, down: p.reach.down } };
+  const { from, control1: c1, control2: c2, to } = p.curve;
+  return { curve: { from, c1, c2, to }, extent: p.envelope };
+};
+
+// Whether a path is clear, each piece swept with its own reach, and the
 // boxes it was found clear by (for the debug overlay to draw). `clear` says
 // whether a box is all in air: a month's own rule (its exits, the rail's
 // sky, the card edges it may reach into), or fitsAir's.
-export function sweptPath(segments: readonly Segment[], clear: (box: Box) => boolean): { clear: boolean; boxes: Box[] } {
-  const found = segments.map((s) => hullBoxes(s.curve, s.envelope, clear, 0));
+export function sweptPath(pieces: readonly (Piece | Segment)[], clear: (box: Box) => boolean, { depth = DEPTH, least = 0 }: Sweep = {}): { clear: boolean; boxes: Box[] } {
+  const found = pieces.map(extentOf).map((p) => hullBoxes(p.curve, p.extent, clear, { depth, least }, 0));
   return { clear: found.every((b) => b !== null), boxes: found.flatMap((b) => b ?? []) };
 }
 

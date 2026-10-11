@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { envelopeOf, fitsAir, meets, mirrored, sweeps, sweptPath, type Cubic, type Envelope, type Segment } from './air';
-import { clearFlight, curvePoint } from './christmas/flight-route';
-import type { Box, Obstacle, PageMap } from './floors';
+import { envelopeOf, fitsAir, meets, sweeps, sweptPath, type Piece } from './air';
+import { clearFlight, curvePoint, type FlightCurve } from './christmas/flight-route';
+import type { Curve } from './curves';
+import type { Box, Obstacle, PageMap, Reach } from './floors';
 import { hash } from './seed';
 import { airFor, page } from './valentine/fixtures';
 
@@ -20,12 +21,13 @@ function randomScene(r: () => number): PageMap {
   });
   return { floors: new Map(), obstacles, width: 1200, height: 800 };
 }
-const randomRoute = (r: () => number): Cubic[] =>
+const randomRoute = (r: () => number): FlightCurve[] =>
   Array.from({ length: 1 + Math.floor(r() * 3) }, () => ({ from: pointIn(r, 1200, 800), control1: pointIn(r, 1200, 800), control2: pointIn(r, 1200, 800), to: pointIn(r, 1200, 800) }));
 
 // The robin's fixed box (christmas/flight-route.ts's curveBounds): 35px
 // either side, 59px above, nothing below.
-const ROBIN: Envelope = { left: 35, right: 35, up: 59, down: 0 };
+const ROBIN: Reach = { half: 35, up: 59, down: 0 };
+const curveOf = (c: FlightCurve): Curve => ({ from: c.from, c1: c.control1, c2: c.control2, to: c.to });
 const inScene = (scene: PageMap) => (box: Box) =>
   box.left >= 0 && box.right <= scene.width && box.top >= 0 && box.bottom <= scene.height && !scene.obstacles.some((o) => meets(box, o));
 
@@ -38,7 +40,7 @@ describe('sweptPath', () => {
       // Short routes, so that some are clear.
       const near = route.map((c) => ({ ...c, control1: { x: (c.from.x * 3 + c.to.x) / 4, y: c.control1.y / 4 + c.from.y * 0.75 }, control2: c.to, to: { x: c.from.x + (c.to.x - c.from.x) / 6, y: c.from.y + (c.to.y - c.from.y) / 6 } }));
       const robin = clearFlight(near, scene);
-      expect(sweptPath(near.map((curve) => ({ curve, envelope: ROBIN })), inScene(scene)).clear, `route ${i}`).toBe(robin);
+      expect(sweptPath(near.map((c) => ({ curve: curveOf(c), reach: ROBIN })), inScene(scene)).clear, `route ${i}`).toBe(robin);
       return robin;
     });
     // Both answers come up, so the agreement means something.
@@ -46,52 +48,71 @@ describe('sweptPath', () => {
     expect(answers.filter((a) => !a).length).toBeGreaterThan(50);
   });
 
-  const level: Cubic = { from: { x: 300, y: 600 }, control1: { x: 400, y: 600 }, control2: { x: 500, y: 600 }, to: { x: 600, y: 600 } };
+  const level: Curve = { from: { x: 300, y: 600 }, c1: { x: 400, y: 600 }, c2: { x: 500, y: 600 }, to: { x: 600, y: 600 } };
   const air = airFor(page([{ left: 440, right: 460, top: 520, bottom: 560 }], []));
 
   it('checks each piece with its own pose\'s box', () => {
-    const glide: Envelope = { left: 23, right: 23, up: 20, down: 0 };
-    const flap: Envelope = { left: 22, right: 22, up: 46, down: 10 };
-    expect(sweptPath([{ curve: level, envelope: glide }], fitsAir(air)).clear).toBe(true);
+    const glide: Reach = { half: 23, up: 20, down: 0 };
+    const flap: Reach = { half: 22, up: 46, down: 10 };
+    expect(sweptPath([{ curve: level, reach: glide }], fitsAir(air)).clear).toBe(true);
     // Flapping, its wings reach up into the obstacle above the line.
-    expect(sweptPath([{ curve: level, envelope: flap }], fitsAir(air)).clear).toBe(false);
-    const halves: Segment[] = [
-      { curve: { from: level.from, control1: { x: 330, y: 600 }, control2: { x: 360, y: 600 }, to: { x: 390, y: 600 } }, envelope: flap },
-      { curve: { from: { x: 390, y: 600 }, control1: { x: 450, y: 600 }, control2: { x: 520, y: 600 }, to: level.to }, envelope: glide },
+    expect(sweptPath([{ curve: level, reach: flap }], fitsAir(air)).clear).toBe(false);
+    const halves: Piece[] = [
+      { curve: { from: level.from, c1: { x: 330, y: 600 }, c2: { x: 360, y: 600 }, to: { x: 390, y: 600 } }, reach: flap },
+      { curve: { from: { x: 390, y: 600 }, c1: { x: 450, y: 600 }, c2: { x: 520, y: 600 }, to: level.to }, reach: glide },
     ];
     expect(sweptPath(halves, fitsAir(air)).clear).toBe(true);
   });
 
   it('misses nothing between a piece\'s ends', () => {
     const thin = airFor(page([{ left: 449, right: 451, top: 590, bottom: 610 }], []));
-    const dot: Envelope = { left: 1, right: 1, up: 1, down: 1 };
-    const [start, end] = [{ curve: { ...level, to: level.from, control1: level.from, control2: level.from }, envelope: dot }, { curve: { ...level, from: level.to, control1: level.to, control2: level.to }, envelope: dot }];
+    const dot: Reach = { half: 1, up: 1, down: 1 };
+    const [start, end] = [{ curve: { ...level, to: level.from, c1: level.from, c2: level.from }, reach: dot }, { curve: { ...level, from: level.to, c1: level.to, c2: level.to }, reach: dot }];
     expect(sweptPath([start, end], fitsAir(thin)).clear).toBe(true);
-    expect(sweptPath([{ curve: level, envelope: dot }], fitsAir(thin)).clear).toBe(false);
+    expect(sweptPath([{ curve: level, reach: dot }], fitsAir(thin)).clear).toBe(false);
   });
 
-  it('gives the boxes it was found clear by, which hold the whole curve and its envelope', () => {
-    const arc: Cubic = { from: { x: 300, y: 600 }, control1: { x: 350, y: 300 }, control2: { x: 650, y: 300 }, to: { x: 700, y: 600 } };
-    const envelope: Envelope = { left: 20, right: 24, up: 30, down: 6 };
-    const { clear, boxes } = sweptPath([{ curve: arc, envelope }], fitsAir(airFor(page([{ left: 480, right: 520, top: 200, bottom: 300 }], []))));
+  it('gives the boxes it was found clear by, which hold the whole curve and its reach', () => {
+    const arc: FlightCurve = { from: { x: 300, y: 600 }, control1: { x: 350, y: 300 }, control2: { x: 650, y: 300 }, to: { x: 700, y: 600 } };
+    const reach: Reach = { half: 24, up: 30, down: 6 };
+    const { clear, boxes } = sweptPath([{ curve: curveOf(arc), reach }], fitsAir(airFor(page([{ left: 480, right: 520, top: 200, bottom: 300 }], []))));
     expect(clear).toBe(true);
     expect(boxes.length).toBeGreaterThan(1);
     for (let i = 0; i <= 100; i++) {
       const p = curvePoint(arc, i / 100);
-      const reach = { left: p.x - envelope.left, right: p.x + envelope.right, top: p.y - envelope.up, bottom: p.y + envelope.down };
-      expect(boxes.some((b) => b.left <= reach.left + 1e-9 && b.right >= reach.right - 1e-9 && b.top <= reach.top + 1e-9 && b.bottom >= reach.bottom - 1e-9), `at ${i}`).toBe(true);
+      const drawn = { left: p.x - reach.half, right: p.x + reach.half, top: p.y - reach.up, bottom: p.y + reach.down };
+      expect(boxes.some((b) => b.left <= drawn.left + 1e-9 && b.right >= drawn.right - 1e-9 && b.top <= drawn.top + 1e-9 && b.bottom >= drawn.bottom - 1e-9), `at ${i}`).toBe(true);
     }
   });
 
-  it('turns an envelope about, and makes one of a footprint', () => {
-    expect(mirrored({ left: 10, right: 30, up: 5, down: 2 })).toEqual({ left: 30, right: 10, up: 5, down: 2 });
+  it('splits no further than asked: to a depth, or down to pieces `least` px long', () => {
+    const thin = airFor(page([{ left: 449, right: 451, top: 590, bottom: 610 }], []));
+    const seen = (sweep: { depth?: number; least?: number }) => {
+      const tried: Box[] = [];
+      sweptPath([{ curve: level, reach: { half: 1, up: 1, down: 1 } }], (b) => (tried.push(b), fitsAir(thin)(b)), sweep);
+      return tried.length;
+    };
+    // Blocked at its middle: the whole, its blocked first half, then at
+    // each depth below a clear half and the blocked one beside it.
+    expect(seen({ depth: 3 })).toBe(2 * 3);
+    expect(seen({})).toBe(seen({ depth: 12 }));
+    expect(seen({})).toBeGreaterThan(seen({ depth: 3 }));
+    // 300px long and 100 out to its first control, halved three times is
+    // 37.5 and 12.5: 50, short of 60.
+    expect(seen({ least: 60 })).toBe(2 * 3);
+  });
+
+  it('still takes the older segments, until every month\'s route is pieces', () => {
+    const glide = { left: 23, right: 23, up: 20, down: 0 };
+    const old = { from: level.from, control1: level.c1, control2: level.c2, to: level.to };
+    expect(sweptPath([{ curve: old, envelope: glide }], fitsAir(air))).toEqual(sweptPath([{ curve: level, reach: { half: 23, up: 20, down: 0 } }], fitsAir(air)));
     expect(envelopeOf({ width: 44, height: 46, down: 6 })).toEqual({ left: 22, right: 22, up: 46, down: 6 });
     expect(envelopeOf({ width: 36, height: 26 }).down).toBe(0);
   });
 
   it('refuses a piece that is not a number anywhere', () => {
-    const broken: Cubic = { ...level, control1: { x: NaN, y: 600 } };
-    expect(sweptPath([{ curve: broken, envelope: ROBIN }], () => true).clear).toBe(false);
+    const broken: Curve = { ...level, c1: { x: NaN, y: 600 } };
+    expect(sweptPath([{ curve: broken, reach: ROBIN }], () => true).clear).toBe(false);
   });
 });
 
