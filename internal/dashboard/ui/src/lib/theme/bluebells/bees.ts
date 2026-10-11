@@ -1,5 +1,5 @@
 import type { Box, PageMap } from '../floors';
-import { inTurn, placeInTurn } from '../group';
+import { keepInTurn, placeInTurn, troupeSize } from '../group';
 import { apart } from '../math';
 import type { Cursor } from '../pointer';
 import { maxBy, type Rand } from '../seed';
@@ -60,7 +60,7 @@ function bestFlower(m: Meadow, taken: readonly Flower[], spacing: number, also: 
 // Placed one after another on the flowers with the most room, apart.
 export function createBees(m: Meadow, now: number, rand: Rand): Bees {
   const three = placeInTurn<number, Flower>([0, 1, 2], (_, taken) => bestFlower(m, taken, ROOMY));
-  const target = three.length === 3 ? 3 : 2;
+  const target = troupeSize(three);
   const flowers = target === 3 ? three : placeInTurn<number, Flower>([0, 1], (_, taken) => bestFlower(m, taken, ROOMY));
   const bees = Array.from({ length: target }, (_, id) => {
     const f = flowers[id];
@@ -97,40 +97,56 @@ function holdStill(b: Bee, dt: number): Bee {
   return { ...b, since: b.since + dt, until: b.until + dt, flight: f && { ...f, v: 0, start: f.start + dt } };
 }
 
-// One step for all of them, each in turn seeing the others as they now are.
+// One step for all of them, each in turn seeing the others as they now are,
+// so a later bee sees an earlier one's bonk, and its hold, this same step.
 export function stepBees(group: Bees, m: Meadow, now: number, dt: number, rand: Rand, cursor: Cursor | null): Bees {
-  const page = m.air.page;
-  const heldAt = new Map(group.held);
-  const bonked = { at: group.lastBonk };
-  const bees = inTurn(group.bees, (b, others) => {
-    // The others' ways are worked out only if this bee looks at them.
-    const memo: { boxes?: Box[] } = {};
-    const ctx: Context = {
-      air: m.air, flowers: m.flowers, cursor, bonks: m.bonks,
-      claimed: new Set(others.flatMap((o) => (o.flower ? [o.flower] : []))),
-      get others() { memo.boxes = memo.boxes ?? shields(others, page, now, true); return memo.boxes; },
-      // A cued bonk comes at once, once.
-      mayBonk: (m.cue === 'bonk' && bonked.at === -Infinity && b.id === 0) || (now - bonked.at >= BONK_EVERY && !others.some((o) => o.bonk)),
-      cue: b.id === 0 && !(m.cue === 'bonk' && bonked.at > -Infinity) ? m.cue : null,
-      mayDodge: !others.some((o) => o.mode === 'dodge'),
-    };
-    const next = stepBee(b, ctx, now, dt, rand);
-    if (next.bonk && !b.bonk) bonked.at = now;
-    const near = shields(others, page, now, false).map((s) => grow(s, -SPACE));
-    const nextBox = boxOf(next, page, now);
-    const before = gapTo(boxOf(b, page, now - dt), near), after = gapTo(nextBox, near);
-    if (after >= SPACE || after >= before || !nextBox) {
-      heldAt.delete(b.id);
-      return next;
-    }
-    const since = heldAt.get(b.id) ?? now;
-    heldAt.set(b.id, since);
-    // The later of two in the way of each other is the one to give way.
-    const yields = others.some((o) => o.id < b.id && gapTo(boxOf(o, page, now), [nextBox]) < SPACE);
-    if (now - since >= HOLD && yields && b.flight) return replan(b, m.air, now);
-    return holdStill(b, dt);
-  });
-  return { ...group, bees, lastBonk: bonked.at, held: heldAt };
+  return group.bees.reduce<Bees>((g, b, i) => {
+    const others = g.bees.filter((_, j) => j !== i);
+    const next = stepBee(b, contextFor(b, others, m, g.lastBonk, now, cursor), now, dt, rand);
+    const held = giveWay(b, next, others, m.air, now, dt, g.held.get(b.id));
+    const bees = g.bees.map((o, j) => (j === i ? held?.bee ?? next : o));
+    return { ...g, bees, lastBonk: next.bonk && !b.bonk ? now : g.lastBonk, held: heldAs(g.held, b.id, held?.since) };
+  }, group);
+}
+
+// What a bee may know and do this step: the others' flowers and boxes, and
+// what the group allows it.
+function contextFor(b: Bee, others: readonly Bee[], m: Meadow, lastBonk: number, now: number, cursor: Cursor | null): Context {
+  // The others' ways are worked out only if this bee looks at them.
+  const memo: { boxes?: Box[] } = {};
+  return {
+    air: m.air, flowers: m.flowers, cursor, bonks: m.bonks,
+    claimed: new Set(others.flatMap((o) => (o.flower ? [o.flower] : []))),
+    get others() { memo.boxes = memo.boxes ?? shields(others, m.air.page, now, true); return memo.boxes; },
+    // A cued bonk comes at once, once.
+    mayBonk: (m.cue === 'bonk' && lastBonk === -Infinity && b.id === 0) || (now - lastBonk >= BONK_EVERY && !others.some((o) => o.bonk)),
+    cue: b.id === 0 && !(m.cue === 'bonk' && lastBonk > -Infinity) ? m.cue : null,
+    mayDodge: !others.some((o) => o.mode === 'dodge'),
+  };
+}
+
+// A step that would bring it within SPACE of another, and closer than it
+// was, is not taken: it is held, and since when. Held HOLD ms on a flight
+// with an earlier bee in its way (the later of two gives way), it stops to
+// choose again. null: the step stands.
+function giveWay(b: Bee, next: Bee, others: readonly Bee[], air: BeeAir, now: number, dt: number, heldSince: number | undefined): { bee: Bee; since: number } | null {
+  const page = air.page;
+  const near = shields(others, page, now, false).map((s) => grow(s, -SPACE));
+  const nextBox = boxOf(next, page, now);
+  const before = gapTo(boxOf(b, page, now - dt), near), after = gapTo(nextBox, near);
+  if (after >= SPACE || after >= before || !nextBox) return null;
+  const since = heldSince ?? now;
+  const yields = others.some((o) => o.id < b.id && gapTo(boxOf(o, page, now), [nextBox]) < SPACE);
+  if (now - since >= HOLD && yields && b.flight) return { bee: replan(b, air, now), since };
+  return { bee: holdStill(b, dt), since };
+}
+
+// Who is held since when, after one bee's step.
+function heldAs(held: ReadonlyMap<number, number>, id: number, since: number | undefined): ReadonlyMap<number, number> {
+  const next = new Map(held);
+  if (since === undefined) next.delete(id);
+  else next.set(id, since);
+  return next;
 }
 
 // Held too long on a flight: it stops and hovers where it is, to choose
@@ -148,9 +164,8 @@ function replan(b: Bee, air: BeeAir, now: number): Bee {
 // while it is still there in air. None to go to: it is away until there is.
 export function reconcileBees(group: Bees, m: Meadow, now: number, rand: Rand): Bees {
   const page = m.air.page;
-  const settled = placeInTurn<Bee, Bee>(group.bees, (b, before) => {
-    const later = group.bees.filter((o) => o.id > b.id);
-    const others = shields([...before, ...later], page, now, false);
+  const settled = keepInTurn(group.bees, (b, _, all) => {
+    const others = shields(all, page, now, false);
     return keep(b, m, now, rand, others) ?? onNearest(b, m, now, rand, others) ?? awayBee(b, now, rand);
   });
   return { ...group, bees: settled, held: new Map() };
