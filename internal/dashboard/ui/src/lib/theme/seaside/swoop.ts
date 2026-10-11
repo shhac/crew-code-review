@@ -1,7 +1,7 @@
 import { around, fitsAir, GAP, sweeps, sweptPath, type Air, type Envelope } from '../air';
 import { fromLedge } from '../anchored';
 import type { Curve } from '../curves';
-import { inView, type Box, type Ledge, type Obstacle, type PageMap } from '../floors';
+import { inView, type Box, type Ledge, type Obstacle, type PageMap, type Run } from '../floors';
 import { clearOf, pageAt, roomOver, runsOf, spare, staysPut, type Claim } from '../ledges';
 import { apart, degrees, sign } from '../math';
 import type { Point } from '../pointer';
@@ -112,17 +112,27 @@ export const aimOff = (a: Point, p: Point, cursor: Point) => {
   return degrees(Math.acos(Math.max(-1, Math.min(1, d.x * c.x + d.y * c.y))));
 };
 
+// The column's height clear over its length of ledge from x, the way dir
+// says.
+function columnClear(f: Ledge, page: PageMap, x: number, dir: 1 | -1): boolean {
+  const end = x + dir * COLUMN.length;
+  return roomOver(f, page, GULL, Math.min(x, end), Math.max(x, end)) >= COLUMN.height;
+}
+
+// Taking off from x running dir: the run's 18px on a clear run, and the
+// column ahead (only looked at for a run that fits).
+function takeOffFits(runs: readonly Run[], x: number, dir: 1 | -1, column: () => boolean): boolean {
+  const lo = Math.min(x, x + dir * RUN_LENGTH), hi = Math.max(x, x + dir * RUN_LENGTH);
+  return runs.some((r) => r.lo <= lo && hi <= r.hi) && column();
+}
+
 // Whether a gull standing at x on a ledge could take off from there, one
-// way or the other: the run's 18px on a clear run, and the column ahead.
+// way or the other.
 export function roomToTakeOff(scene: PageMap, floor: number, x: number): boolean {
   const f = scene.floors.get(floor);
   if (!f) return false;
   const runs = runsOf(f, scene, GULL);
-  return ([1, -1] as const).some((dir) => {
-    const lo = Math.min(x, x + dir * RUN_LENGTH), hi = Math.max(x, x + dir * RUN_LENGTH);
-    const end = x + dir * COLUMN.length;
-    return runs.some((r) => r.lo <= lo && hi <= r.hi) && roomOver(f, scene, GULL, Math.min(x, end), Math.max(x, end)) >= COLUMN.height;
-  });
+  return ([1, -1] as const).some((dir) => takeOffFits(runs, x, dir, () => columnClear(f, scene, x, dir)));
 }
 
 // What a plan asks of the page again and again, worked out once: each
@@ -143,18 +153,8 @@ function planner(air: Pick<Air, 'page' | 'room'>, taken: readonly Claim[], curso
   };
   const runs = memo((floor: number) => runsOf(page.floors.get(floor)!, page, GULL));
   const dipped = memo((floor: number) => touching(air, page.floors.get(floor)!));
-  // 40px clear over the 56px of ledge from x, the way dir says.
-  const column = memo(([floor, x, dir]: [number, number, 1 | -1]) => {
-    const f = page.floors.get(floor)!;
-    const end = x + dir * COLUMN.length;
-    return roomOver(f, page, GULL, Math.min(x, end), Math.max(x, end)) >= COLUMN.height;
-  });
-  // Taking off from x running dir: the run's 18px on a clear run, and the
-  // column ahead.
-  const takeOffAt = (floor: number, x: number, dir: 1 | -1) => {
-    const lo = Math.min(x, x + dir * RUN_LENGTH), hi = Math.max(x, x + dir * RUN_LENGTH);
-    return runs(floor).some((r) => r.lo <= lo && hi <= r.hi) && column([floor, x, dir]);
-  };
+  const column = memo(([floor, x, dir]: [number, number, 1 | -1]) => columnClear(page.floors.get(floor)!, page, x, dir));
+  const takeOffAt = (floor: number, x: number, dir: 1 | -1) => takeOffFits(runs(floor), x, dir, () => column([floor, x, dir]));
   // Landing at x flying dir: the column behind it, and 80px from the cursor.
   const landAt = (floor: number, x: number, dir: 1 | -1) => {
     const f = page.floors.get(floor)!;
