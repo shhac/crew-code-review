@@ -3,10 +3,10 @@ import type { PageMap } from '../floors';
 import type { Cursor } from '../pointer';
 import type { Alarm } from './alarm';
 import { peck, type Chaff } from './chaff';
-import { grounded, standing, type Crow } from './crow';
+import { away, comeIn, grounded, standing, type Crow } from './crow';
 import { AWAY, createCrows, feedingSpots, LOOK_AGAIN, pointOf, reconcileCrows, RESTLESS_AWAY, restingCrows, RETURN_GAP, SPOT_APART, SPOT_GRAIN, STAGGER, stepCrows, type Crows, type Field } from './crows';
 import { card, field, OPEN, PAGE, seeded, SHUT } from './fixtures';
-import { leave } from './flight';
+import { arrive, flightAt, leave } from './flight';
 
 const SCARECROW = { x: 80, y: 780 };
 const alarmAt = (at: number, until = at + 1500): Alarm => ({ at, until, ...SCARECROW });
@@ -208,6 +208,24 @@ describe('the crows', () => {
     expect(rerouted.mode).toBe('depart');
     expect(rerouted.flight).not.toBe(leaving.flight);
     expect(reconcileCrows(g, { ...f, clear: SHUT }, 300, seeded(1)).crows[0].mode).toBe('away');
+  });
+
+  it('keep coming in by a clear route through a layout change, else come down from where they are, or turn back', () => {
+    const f = field();
+    const route = arrive({ x: 600, y: 200 }, 1440, OPEN, 0, 200)!;
+    const coming = comeIn(away(0, 0), route, 1, 300, 0);
+    const g: Crows = { crows: [coming], size: 2, alarm: null, restless: Infinity, landed: -Infinity };
+    const now = route.duration / 2;
+    expect(reconcileCrows(g, f, now, seeded(1)).crows[0].flight).toBe(route);
+    // Only a new way down from the air is clear: in level, then the hop.
+    const landing: Field = { ...f, clear: (r, leg) => leg === 'arrive' && r.kinds.join() === 'climb,lift' };
+    const down = reconcileCrows(g, landing, now, seeded(1)).crows[0];
+    expect(down).toMatchObject({ mode: 'arrive', since: now, floor: 1, x: 300 });
+    expect(down.flight?.curves[0].from).toEqual(flightAt(route, now).at);
+    // Its ledge gone, it turns back off the page, or with no way is taken away.
+    const gone = { ...PAGE, floors: new Map([...PAGE.floors].filter(([id]) => id !== 1)) };
+    expect(reconcileCrows(g, field(gone), now, seeded(1)).crows[0].mode).toBe('depart');
+    expect(reconcileCrows(g, field(gone, SHUT), now, seeded(1)).crows[0].mode).toBe('away');
   });
 
   it('stand still under reduced motion, keeping their places, never stepped', () => {
