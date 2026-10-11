@@ -418,6 +418,13 @@ building:
 - **Apart across ledges.** Gulls keep 100px apart not only on one ledge but
   on ledges within 40px above or below each other: a gull on a card's top
   22px under the heading's rule stood in the feathers of one on the rule.
+- **Linux fonts.** On CI's DejaVu Sans the queue page's subtitle runs 46px
+  further right, leaving only about 120px of the heading's rule clear to
+  take off from and land on, and no route fitted. Three additions made one:
+  a shallower pull-up (30px up over 90px) where the top of `main` is near; a
+  landing may come round to land the other way when its column is on the
+  far side; and two cruises that drop into the flare from above rather than
+  arriving level, for a landing in a narrow gap beside text.
 - **The cooldown waits.** A cursor resting within 30s of the last swoop is
   not called at; the swoop comes when the 30s are up if the cursor is still
   resting there. Calling at once would spend the resting place on the lesser

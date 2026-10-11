@@ -52,9 +52,10 @@ const PASS_LOOK = 80;
 // The dive heads within this many degrees of the cursor.
 const AIMED = 35;
 // The dive starts back along the approach and above the pass point; the
-// pull-up rises to here past it.
+// pull-up rises to one of these past it, the first that is clear (a
+// shallower one where the top of main is near).
 const DIVES = [{ back: 100, up: 65 }, { back: 70, up: 45 }, { back: 135, up: 88 }, { back: 40, up: 80 }];
-const PULL = { on: 80, up: 40 };
+const PULLS = [{ on: 80, up: 40 }, { on: 90, up: 30 }];
 // A walk to a take-off spot is at most this long, tried in these steps.
 export const MAX_WALK = 60;
 const WALK_STEP = 15;
@@ -230,14 +231,19 @@ function planner(air: Pick<Air, 'page' | 'room'>, taken: readonly Claim[], curso
   });
   // Up to four landings for a flight coming from `from`: those in `first`
   // it can land at, then the nearest.
+  // Each spot is landed on flying the way that faces from `from` if its
+  // column is that side, else coming round to land the other way.
   const landings = (from: Point, first: readonly { floor: number; x: number }[] = []): Landing[] => {
     const facing = (floor: number, x: number) => sign(pageAt(page.floors.get(floor)!, x).x - from.x);
-    const found: Landing[] = first.map((h) => ({ ...h, dir: facing(h.floor, h.x) })).filter((h) => landAt(h.floor, h.x, h.dir));
+    const way = (s: { floor: number; x: number }): Landing[] => {
+      const dir = facing(s.floor, s.x);
+      return ([dir, sign(-dir)] as const).filter((d) => landAt(s.floor, s.x, d)).slice(0, 1).map((d) => ({ floor: s.floor, x: s.x, dir: d }));
+    };
+    const found: Landing[] = first.flatMap(way);
     const near = [...spots].sort((a, b) => apart(a.at, from) - apart(b.at, from));
     for (const s of near) {
       if (found.length >= LANDINGS) break;
-      const dir = facing(s.floor, s.x);
-      if (!found.some((h) => h.floor === s.floor && h.x === s.x) && landAt(s.floor, s.x, dir)) found.push({ floor: s.floor, x: s.x, dir });
+      if (!found.some((h) => h.floor === s.floor && h.x === s.x)) found.push(...way(s));
     }
     return found.slice(0, LANDINGS);
   };
@@ -261,12 +267,17 @@ function comeDown(air: Pick<Air, 'page' | 'room'>, plan: Planner, from: Point, o
   const to = flare.curve.from;
   const span = Math.max(40, apart(from, to));
   const k = 0.35 * span;
-  const cruise = [0, 0.3, 0.6, -0.2].map((bow) => leg('cruise', 'flap', {
-    from,
+  // Arcs coming in level to the flare, then two dropping into it from
+  // above, for a landing in a narrow gap (beside a heading's text, say).
+  const level = [0, 0.3, 0.6, -0.2].map((bow) => ({
     c1: add(from, add(scale(unit(out), k), { x: 0, y: -bow * span })),
     c2: { x: to.x - l.dir * k, y: to.y - bow * span },
-    to,
-  })).find((c) => legClear(air, c, also));
+  }));
+  const drop = [0, 0.3].map((bow) => ({
+    c1: add(from, add(scale(unit(out), k), { x: 0, y: -bow * span })),
+    c2: { x: to.x - l.dir * 8, y: to.y - k },
+  }));
+  const cruise = [...level, ...drop].map((c) => leg('cruise', 'flap', { from, ...c, to })).find((c) => legClear(air, c, also));
   return cruise ? [cruise, flare] : null;
 }
 
@@ -304,9 +315,12 @@ export function planSwoop(ask: SwoopAsk): Plan | null {
     const a = { x: p.x - s * back, y: p.y - up };
     if (aimOff(a, p, cursor) > AIMED) return [];
     const dive = leg('dive', 'stoop', straight(a, p));
-    const b = { x: p.x + s * PULL.on, y: p.y - PULL.up };
-    const pull = leg('pullup', 'flap', { from: p, c1: add(p, scale(unit(sub(p, a)), 25)), c2: { x: b.x - s * 25, y: b.y + 6 }, to: b });
-    return legClear(air, dive, also) && legClear(air, pull, also) ? [{ s, a, dive, pull }] : [];
+    if (!legClear(air, dive, also)) return [];
+    const pull = PULLS.map(({ on, up }) => {
+      const b = { x: p.x + s * on, y: p.y - up };
+      return leg('pullup', 'flap', { from: p, c1: add(p, scale(unit(sub(p, a)), 25)), c2: { x: b.x - s * 25, y: b.y + 6 }, to: b });
+    }).find((l) => legClear(air, l, also));
+    return pull ? [{ s, a, dive, pull }] : [];
   }));
   // Nearest the cursor first, the first PASSES with a clear dive into them,
   // of the first PASS_LOOK.
