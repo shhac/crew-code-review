@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { envelopeOf, fitsAir, meets, sweeps, sweptPath, type Piece } from './air';
+import { envelopeOf, fitsAir, sweeps, sweptPath, type Piece } from './air';
 import { clearFlight, curvePoint, type FlightCurve } from './christmas/flight-route';
 import type { Curve } from './curves';
 import type { Box, Obstacle, PageMap, Reach } from './floors';
@@ -28,26 +28,8 @@ const randomRoute = (r: () => number): FlightCurve[] =>
 // either side, 59px above, nothing below.
 const ROBIN: Reach = { half: 35, up: 59, down: 0 };
 const curveOf = (c: FlightCurve): Curve => ({ from: c.from, c1: c.control1, c2: c.control2, to: c.to });
-const inScene = (scene: PageMap) => (box: Box) =>
-  box.left >= 0 && box.right <= scene.width && box.top >= 0 && box.bottom <= scene.height && !scene.obstacles.some((o) => meets(box, o));
 
 describe('sweptPath', () => {
-  it('is the robin\'s clearFlight, given the robin\'s box: the same answer on every route', () => {
-    const answers = Array.from({ length: 600 }, (_, i) => {
-      const r = stream(i + 1);
-      const scene = randomScene(r);
-      const route = randomRoute(r);
-      // Short routes, so that some are clear.
-      const near = route.map((c) => ({ ...c, control1: { x: (c.from.x * 3 + c.to.x) / 4, y: c.control1.y / 4 + c.from.y * 0.75 }, control2: c.to, to: { x: c.from.x + (c.to.x - c.from.x) / 6, y: c.from.y + (c.to.y - c.from.y) / 6 } }));
-      const robin = clearFlight(near, scene);
-      expect(sweptPath(near.map((c) => ({ curve: curveOf(c), reach: ROBIN })), inScene(scene)).clear, `route ${i}`).toBe(robin);
-      return robin;
-    });
-    // Both answers come up, so the agreement means something.
-    expect(answers.filter(Boolean).length).toBeGreaterThan(50);
-    expect(answers.filter((a) => !a).length).toBeGreaterThan(50);
-  });
-
   const level: Curve = { from: { x: 300, y: 600 }, c1: { x: 400, y: 600 }, c2: { x: 500, y: 600 }, to: { x: 600, y: 600 } };
   const air = airFor(page([{ left: 440, right: 460, top: 520, bottom: 560 }], []));
 
@@ -116,10 +98,10 @@ describe('sweptPath', () => {
   });
 });
 
-// The robin and the cupids keep their own checks, unchanged by the kit:
-// each one's answers on a fixed set of routes are pinned here as they were
-// when the kit was added.
-describe('the checks the kit leaves alone', () => {
+// The robin's clearFlight (now the kit's sweep with the robin's box) and
+// the cupids' sweeps answer a fixed set of routes as they did when the kit
+// was added: pinned here.
+describe('the checks that predate the kit', () => {
   const bits = (answers: readonly boolean[]) => answers.map((a) => (a ? '1' : '0')).join('');
 
   it('the robin\'s clearFlight answers as it always has', () => {

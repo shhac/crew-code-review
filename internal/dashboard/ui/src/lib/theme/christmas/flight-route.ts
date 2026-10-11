@@ -1,6 +1,7 @@
+import { sweptPath } from '../air';
 import { finite, meets } from '../box';
-import { parabola } from '../curves';
-import type { Obstacle } from '../floors';
+import { parabola, type Curve } from '../curves';
+import type { Obstacle, Reach } from '../floors';
 import { clamp, clamp01, degrees, mixPoint, smooth } from '../math';
 import type { Point } from '../pointer';
 import type { Scene } from './robin';
@@ -9,9 +10,9 @@ type Arc = { from: Point; to: Point; rise: number };
 export type FlightCurve = { from: Point; control1: Point; control2: Point; to: Point };
 export const arcPoint = (leg: Arc, t: number): Point => parabola(leg.from, leg.to, leg.rise, t);
 const length = (leg: Arc) => Math.hypot(leg.to.x - leg.from.x, leg.to.y - leg.from.y) + leg.rise;
-const lerp = (a: Point, b: Point, t = .5): Point => mixPoint(a, b, t);
-// By de Casteljau, the construction clearFlight splits a curve's hull with,
-// rather than curves.ts's cubic, which rounds differently.
+const lerp = (a: Point, b: Point, t: number): Point => mixPoint(a, b, t);
+// By de Casteljau, the construction the kit's sweep splits a curve's hull
+// with, rather than curves.ts's cubic, which rounds differently.
 export function curvePoint(curve: FlightCurve, t: number): Point {
   if (t <= 0) return curve.from;
   if (t >= 1) return curve.to;
@@ -89,27 +90,23 @@ export function clearArc(leg: Arc, scene: Scene, side: number, height: number): 
   return true;
 }
 
+// The robin's box about the point it flies along: 35px either side, 59px
+// above, nothing below.
+const ROBIN: Reach = { half: 35, up: 59, down: 0 };
+const curveOf = (c: FlightCurve): Curve => ({ from: c.from, c1: c.control1, c2: c.control2, to: c.to });
 export function curveBounds(curve: FlightCurve): Obstacle {
   const points = [curve.from, curve.control1, curve.control2, curve.to];
-  return { left: Math.min(...points.map(p => p.x)) - 35, right: Math.max(...points.map(p => p.x)) + 35,
-    top: Math.min(...points.map(p => p.y)) - 59, bottom: Math.max(...points.map(p => p.y)) };
+  return { left: Math.min(...points.map(p => p.x)) - ROBIN.half, right: Math.max(...points.map(p => p.x)) + ROBIN.half,
+    top: Math.min(...points.map(p => p.y)) - ROBIN.up, bottom: Math.max(...points.map(p => p.y)) };
 }
+// A Bezier curve stays inside its control hull, so the kit's sweep checks
+// that hull and splits it where it is not clear, rather than checking only
+// sampled pixels.
 export function clearFlight(route: readonly FlightCurve[], scene: Scene): boolean {
   if (!scene.obstacles.every(finite)) return false;
-  const clear = (curve: FlightCurve, depth = 0): boolean => {
-    const box = curveBounds(curve);
-    if (!finite(box)) return false;
-    if (box.left >= 0 && box.right <= scene.width && box.top >= 0 && box.bottom <= scene.height
-      && !scene.obstacles.some(o => meets(box, o))) return true;
-    if (depth === 12) return false;
-    // A Bézier curve stays inside its control hull. Subdivide that hull for
-    // continuous clearance checks, rather than checking only sampled pixels.
-    const a = lerp(curve.from, curve.control1), b = lerp(curve.control1, curve.control2), c = lerp(curve.control2, curve.to);
-    const d = lerp(a, b), e = lerp(b, c), middle = lerp(d, e);
-    return clear({ from: curve.from, control1: a, control2: d, to: middle }, depth + 1)
-      && clear({ from: middle, control1: e, control2: c, to: curve.to }, depth + 1);
-  };
-  return route.every(curve => clear(curve));
+  const inScene = (box: Obstacle) => box.left >= 0 && box.right <= scene.width && box.top >= 0 && box.bottom <= scene.height
+    && !scene.obstacles.some(o => meets(box, o));
+  return sweptPath(route.map(c => ({ curve: curveOf(c), reach: ROBIN })), inScene).clear;
 }
 
 export function flightRoute(from: Point, to: Point, scene: Scene): FlightCurve[] | null {
