@@ -3,7 +3,7 @@ import { seeded } from '../test-scene';
 import { inWaspAir, type WaspAir } from './air';
 import { MEDIUM, SHORT, TALL, outsideAir, places, run, touching } from './fixtures';
 import { STAND } from './footprints';
-import { boxOf, spotOf, waspView, type Mode, type Pointer } from './wasp';
+import { boxOf, spotOf, waspView, where, type Mode, type Pointer } from './wasp';
 import { placeWasps } from './wasps';
 
 // A cursor sweeping past the cake now and then, fast, and resting
@@ -56,6 +56,25 @@ describe('the pair together', () => {
       expect(down).toBeGreaterThan(0);
       expect(m.lastIndexOf('takeoff')).toBeGreaterThan(down);
       expect(m.lastIndexOf('circle')).toBeGreaterThan(m.lastIndexOf('takeoff'));
+    }
+  });
+
+  it('sends a wasp shrunk out of its flight back to its orbit or down to its spot, never leaving the new air', () => {
+    for (const small of [MEDIUM, SHORT]) {
+      for (const shrinkAt of [200, 400, 600]) {
+        const start = placeWasps({ air: TALL, places, now: 0, rand: seeded(3) });
+        const at = where(start[0], places, 16)!;
+        const cursor = (now: number): Pointer | null => (now < 100 ? { x: at.x + 20, y: at.y + 5, at: now, speed: 400 } : null);
+        const problems: string[] = [];
+        const after: Mode[] = [];
+        run(start, (now) => (now < shrinkAt ? TALL : small), 0, 4000, seeded(3), cursor, (w, now, a) => {
+          problems.push(...outsideAir(w, now, a), ...touching(w, now));
+          if (now === 16 || (now >= shrinkAt && now < shrinkAt + 16)) after.push(w[0].mode);
+        });
+        expect(after[0]).toBe('flee');
+        expect(['circle', 'land', 'rest']).toContain(after[1]);
+        expect(problems.slice(0, 5)).toEqual([]);
+      }
     }
   });
 
