@@ -130,6 +130,16 @@ ledges, eye the cursor and follow it, swoop at one left still for five
 seconds (through clear air only, never over text, controls or charts), then
 land and give the long call. Reduced motion keeps a still scene.
 
+September now has the harvest (`dashboard.theme` `harvest`, on by default
+under `auto` from 1 to 30 September). The rail shows a scarecrow beside a
+wheat sheaf, marrows and apples; the page gets straw and wheat grain along
+its ledges, and two or three carrion crows that walk with a bobbing head and
+peck the grain, grow wary of a cursor coming near and sidle away. A cursor
+passing close to the scarecrow makes it flap its arms, and every crow flies
+off the page by the top or the right edge (never over text, controls, charts
+or the rail), coming back one at a time a while later. Reduced motion keeps a
+still scene.
+
 Seasonal scenes now measure the page through one shared snapshot, and each
 creature decides how much headroom it needs instead of inheriting the
 spider's. Halloween and Christmas render exactly as before. The

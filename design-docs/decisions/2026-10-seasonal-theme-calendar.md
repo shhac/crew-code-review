@@ -2,15 +2,16 @@
 
 **Date**: 2026-10-08
 **Pins**: written against `b903337`. Code-internal; nothing external to pin.
-**Status**: being built month by month; a month's heading below says
-"(built)" once it is switched on. When first written, October (Halloween) and
+**Status**: built: every month has its set, switched on in its season; each
+month's heading below says "(built)" since it was switched on. When first written, October (Halloween) and
 December (Christmas) were built and the other ten months and the geometry
 consolidation were not started. Revised the same day after a read-only
 review by Codex (`gpt-5.6-terra`), which corrected two claims about the code
 and tightened the refactor's contract. Since built: February (Valentine's,
 2026-10-10), March (Mad March hares, 2026-10-10), April (Easter egg hunt,
 2026-10-10), May (bluebell wood, 2026-10-10), June (Village fête,
-2026-10-10), July (summer tennis, 2026-10-11), August (Seaside, 2026-10-11).
+2026-10-10), July (summer tennis, 2026-10-11), August (Seaside, 2026-10-11),
+September (Harvest, 2026-10-11), the last.
 
 ## The problem
 
@@ -114,7 +115,7 @@ all twelve. Easter can fall in late March; an April-long egg hunt still works.
   at a time through clear air, the squawk the long call's posture; sources,
   the airspace contract and method are in `design-docs/seaside/`.
 
-### September: Harvest
+### September: Harvest (built)
 
 - **Shelf**: a scarecrow, marrows, apples, a wheat sheaf.
 - **Ledges**: scattered straw and grain.

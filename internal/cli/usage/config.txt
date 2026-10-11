@@ -61,11 +61,11 @@ KEYS:
   dashboard.usage_poll_interval        engine usage refresh cadence (default 10m)
   dashboard.theme                      auto | none | halloween | bonfire | christmas |
                                        aurora | valentine | hares | easter | bluebells |
-                                       fete | wimbledon | seaside (auto: the set in
-                                       season: aurora Jan, valentine Feb, hares Mar,
-                                       easter Apr, bluebells May, fete Jun, wimbledon
-                                       Jul, seaside Aug, halloween Oct, bonfire Nov,
-                                       christmas Dec; none in other months)
+                                       fete | wimbledon | seaside | harvest (auto: the
+                                       set in season: aurora Jan, valentine Feb, hares
+                                       Mar, easter Apr, bluebells May, fete Jun,
+                                       wimbledon Jul, seaside Aug, harvest Sep,
+                                       halloween Oct, bonfire Nov, christmas Dec)
   store.path                           DuckDB file location
 
 EXAMPLES:

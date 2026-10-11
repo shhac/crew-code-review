@@ -23,26 +23,28 @@ const (
 	ThemeFete      = "fete"
 	ThemeSeaside   = "seaside"
 	ThemeWimbledon = "wimbledon"
+	ThemeHarvest   = "harvest"
 )
 
 // Themes are the valid values of dashboard.theme.
-var Themes = []string{ThemeAuto, ThemeNone, ThemeHalloween, ThemeBonfire, ThemeChristmas, ThemeAurora, ThemeValentine, ThemeHares, ThemeEaster, ThemeBluebells, ThemeFete, ThemeWimbledon, ThemeSeaside}
+var Themes = []string{ThemeAuto, ThemeNone, ThemeHalloween, ThemeBonfire, ThemeChristmas, ThemeAurora, ThemeValentine, ThemeHares, ThemeEaster, ThemeBluebells, ThemeFete, ThemeWimbledon, ThemeSeaside, ThemeHarvest}
 
 // seasonalThemes is what auto picks, by month. A set lives here once it
 // should switch itself on for its season; one that should only ever be
 // chosen by hand belongs in Themes alone.
 var seasonalThemes = map[time.Month]string{
-	time.January:  ThemeAurora,
-	time.February: ThemeValentine,
-	time.March:    ThemeHares,
-	time.April:    ThemeEaster,
-	time.May:      ThemeBluebells,
-	time.June:     ThemeFete,
-	time.July:     ThemeWimbledon,
-	time.August:   ThemeSeaside,
-	time.October:  ThemeHalloween,
-	time.November: ThemeBonfire,
-	time.December: ThemeChristmas,
+	time.January:   ThemeAurora,
+	time.February:  ThemeValentine,
+	time.March:     ThemeHares,
+	time.April:     ThemeEaster,
+	time.May:       ThemeBluebells,
+	time.June:      ThemeFete,
+	time.July:      ThemeWimbledon,
+	time.August:    ThemeSeaside,
+	time.September: ThemeHarvest,
+	time.October:   ThemeHalloween,
+	time.November:  ThemeBonfire,
+	time.December:  ThemeChristmas,
 }
 
 // ValidTheme reports whether s names a dashboard theme.

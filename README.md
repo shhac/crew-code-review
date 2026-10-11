@@ -510,8 +510,8 @@ deliberately.
 - **Logs**: a live tail of the daemon's own log.
 
 **Seasonal themes.** `dashboard.theme` adds decorations to the dashboard: `auto` (the
-default) switches a set on in its season: the northern lights in January, Valentine's in February, Mad March hares in March, an Easter egg hunt in April, a bluebell wood in May, a village fete in June, summer tennis in July, the seaside in August, Halloween in October, Bonfire Night in November and Christmas throughout December. `none` turns
-decorations off, and naming a set (`aurora`, `valentine`, `hares`, `easter`, `bluebells`, `fete`, `wimbledon`, `seaside`, `halloween`, `bonfire` or `christmas`) forces it on. They are purely cosmetic and
+default) switches a set on in its season: the northern lights in January, Valentine's in February, Mad March hares in March, an Easter egg hunt in April, a bluebell wood in May, a village fete in June, summer tennis in July, the seaside in August, a harvest in September, Halloween in October, Bonfire Night in November and Christmas throughout December. `none` turns
+decorations off, and naming a set (`aurora`, `valentine`, `hares`, `easter`, `bluebells`, `fete`, `wimbledon`, `seaside`, `harvest`, `halloween`, `bonfire` or `christmas`) forces it on. They are purely cosmetic and
 never block a click. Reduced-motion users get the decorations without the
 animation. To preview a set whatever the date, add `?theme=halloween` to the
 URL.
@@ -630,6 +630,18 @@ charts), pulls up beside it, lands and gives the long call with its bill
 wide open, while the others watch. Reduced motion shows the gulls standing
 still. Preview with `?theme=seaside`; design notes:
 [Seaside](design-docs/seaside/README.md).
+
+September is the harvest: a scarecrow beside a wheat sheaf, marrows and
+apples on the rail, and straw with scattered wheat grain along the page's
+ledges. Two or three carrion crows walk the ledges, bobbing their heads, and
+peck at the grain, which comes back once they leave it alone; they grow wary
+of a cursor coming near and sidle away from one, but never fly from it. Pass
+the cursor close to the scarecrow and it flaps its arms: every crow takes off
+and flies off the page by the top or the right edge (never over text,
+controls, charts or the rail), drifting back one at a time after a while. On
+a phone, with no scarecrow, they come and go on their own. Reduced motion
+shows the crows standing still and the scarecrow with its arms out. Preview
+with `?theme=harvest`; design notes: [Harvest](design-docs/harvest/README.md).
 
 
 Queue add/reorder/promote are also available as JSON endpoints
