@@ -12,7 +12,7 @@
   import { candleSpots, type CandleSpot } from '../candles';
   import { measurePage, type Ledge } from '../floors';
   import { advance, away, BOTTOM_WEB, pose, WEB, type Choice, type Frame, type Pose, type World } from '../spiderwalk';
-  import { movingPointer, stepped, strandPath, strands, type Strand } from '../strands';
+  import { movingPointer, pointerMoved, stepped, strandPath, strands, type Strand } from '../strands';
   import squatStub from './candle-stub-0.webp';
   import tallStub from './candle-stub-1.webp';
   import meltedStub from './candle-stub-2.webp';
@@ -57,7 +57,7 @@
   // Listened to on the window, passively, since this layer never takes
   // pointer events itself.
   const pointer = { x: 0, y: 0, at: -Infinity };
-  const moved = (e: PointerEvent) => Object.assign(pointer, { x: e.clientX, y: e.clientY, at: performance.now() });
+  const moved = (e: PointerEvent) => Object.assign(pointer, pointerMoved(e, performance.now()));
 
   function measure() {
     floors = measurePage({ obstacles: false }).floors;

@@ -1,6 +1,7 @@
 // What the Halloween layer draws besides the spiders themselves, and how it
 // counts their steps: pure functions of the walker's world, kept out of the
 // component so they can be tested.
+import { hovering } from './pointer';
 import { clamp } from './spidergait';
 import { LINE_FADE, LINE_LIFE, USED_LINE_FADE, tiePoint, type Floors, type Line, type Pose } from './spiderwalk';
 
@@ -72,4 +73,10 @@ export type Pointer = { x: number; y: number; at: number };
 
 export function movingPointer(pointer: Pointer, now: number): { x: number; y: number } | undefined {
   return now - pointer.at < STILL_AFTER ? { x: pointer.x, y: pointer.y } : undefined;
+}
+
+// The pointer after it moves: only a hovering mouse or pen is one; anything
+// else (a finger, a press, a drag) leaves none behind.
+export function pointerMoved(e: Parameters<typeof hovering>[0], now: number): Pointer {
+  return { x: e.clientX, y: e.clientY, at: hovering(e) ? now : -Infinity };
 }

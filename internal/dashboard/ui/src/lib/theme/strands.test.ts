@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { lineOpacity, movingPointer, stepped, strandPath, strands } from './strands';
+import { lineOpacity, movingPointer, pointerMoved, stepped, strandPath, strands } from './strands';
 import { LINE_FADE, LINE_LIFE, USED_LINE_FADE, type Floor, type Line, type Pose } from './spiderwalk';
 
 const floor = (y: number, left = 100): Floor => ({ left, right: left + 500, y, base: y + 100 });
@@ -88,5 +88,16 @@ describe('movingPointer', () => {
     expect(movingPointer(p, 1100)).toEqual({ x: 10, y: 20 });
     expect(movingPointer(p, 1400)).toBeUndefined();
     expect(movingPointer({ x: 0, y: 0, at: -Infinity }, 0)).toBeUndefined();
+  });
+
+  // Once a bug: every pointermove was the spiders' pointer, so a finger
+  // dragging the page startled them.
+  it('moves with a hovering mouse or pen, never a finger, a press or a drag', () => {
+    const move = (extra = {}) => ({ pointerType: 'mouse', pointerId: 1, buttons: 0, pressure: 0, clientX: 10, clientY: 20, ...extra });
+    expect(movingPointer(pointerMoved(move(), 1000), 1100)).toEqual({ x: 10, y: 20 });
+    expect(movingPointer(pointerMoved(move({ pointerType: 'pen' }), 1000), 1100)).toEqual({ x: 10, y: 20 });
+    for (const extra of [{ pointerType: 'touch' }, { buttons: 1 }, { pointerType: 'pen', pressure: 0.4 }]) {
+      expect(movingPointer(pointerMoved(move(extra), 1000), 1100), JSON.stringify(extra)).toBeUndefined();
+    }
   });
 });
