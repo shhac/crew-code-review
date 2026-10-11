@@ -1,3 +1,4 @@
+import { finite, holds, meets, type Box } from './box';
 import type { Floor } from './scene';
 
 // Only actual cards have walls. A layout section (notably the KPI grid) must
@@ -6,16 +7,18 @@ const CARD_TOPS = 'main .surface, main .queue-board, main .context section, main
 // Page headings sit on a rule; the spider walks along the rule, not the text.
 const HEADING_RULES = 'main .hero, main .page-head';
 
+// box.ts has the algebra; Box and meets are still exported from here for
+// the callers that have not moved to it yet.
+export { meets, type Box };
 // A block is a card's own box, empty at its edges; everything else (text,
 // controls, charts) is content, never to be covered.
-export type Box = { left: number; right: number; top: number; bottom: number };
 export type Obstacle = Box & { block?: boolean };
 // How far a drawing reaches from its anchor: either way across (it is
 // mirrored to face both ways), up and down.
 export type Reach = { half: number; up: number; down: number };
 // A walker's footprint stands on its anchor, so nothing of it hangs below.
 export const reachOf = (size: { width: number; height: number }): Reach => ({ half: size.width / 2, up: size.height, down: 0 });
-const visibleBox = (r: Bounds) => r.width > 0 && r.height > 0 && [r.left, r.right, r.top, r.bottom].every(Number.isFinite);
+const visibleBox = (r: Bounds) => r.width > 0 && r.height > 0 && finite(r);
 // Range rectangles follow rendered text (including wrapped lines), independent
 // of the element's tag. Container bounds would also block their empty space.
 export function measureRenderedText(doc: Document = document): Obstacle[] {
@@ -78,8 +81,6 @@ function idOf(el: Measurable): number {
 }
 
 const spans = (a: { left: number; right: number }, b: { left: number; right: number }) => a.left < b.right && b.left < a.right;
-// Whether two boxes overlap; touching edges do not.
-export const meets = (a: Box, b: Box) => spans(a, b) && a.top < b.bottom && b.top < a.bottom;
 const overlaps = (a: Floor, b: Floor) => Math.abs(a.y - b.y) < SAME_EDGE && spans(a, b);
 const headroom = (f: Floor, all: Floor[]) => Math.min(Infinity, ...all.filter((g) => g.y < f.y && spans(f, g)).map((g) => f.y - g.y));
 
@@ -207,8 +208,6 @@ const besideWall = (w: Wall, width: number, top: number, bottom: number): Box =>
   const far = w.x + w.side * width;
   return { left: Math.min(w.x, far), right: Math.max(w.x, far), top, bottom };
 };
-
-const holds = (outer: Box, inner: Box) => outer.left <= inner.left && outer.right >= inner.right && outer.top <= inner.top && outer.bottom >= inner.bottom;
 
 // Every card's two sides, from the page map alone, so they describe the same
 // layout as its ledges and obstacles (which must have been measured: they are

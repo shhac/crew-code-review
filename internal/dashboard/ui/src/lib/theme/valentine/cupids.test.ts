@@ -1,15 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { around } from '../air';
+import { meets, type Box } from '../box';
 import { quadratic, samples } from '../curves';
-import type { Box } from '../floors';
 import type { Cursor } from '../pointer';
 import { clearOfContent, seeded } from '../test-scene';
 import { cupidView, footprintOf, where } from './cupid';
 import { arrowArc, arrowAt, createCupids, dash, reconcileCupids, restingCupids, stepCupids, type Cupids } from './cupids';
 import { airFor, page, still } from './fixtures';
 import { FOOTPRINTS } from './footprints';
-
-const meets = (a: Box, b: Box) => a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
 
 // One frame of a run: the group as it is at time t.
 type Frame = { t: number; g: Cupids };

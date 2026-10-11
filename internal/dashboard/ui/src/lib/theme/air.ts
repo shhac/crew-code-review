@@ -1,4 +1,5 @@
-import { meets, type Box, type Ledge, type Obstacle, type PageMap, type Reach } from './floors';
+import { finite, grow, holds, meets, union, type Box } from './box';
+import type { Ledge, Obstacle, PageMap, Reach } from './floors';
 import type { Point } from './pointer';
 
 // The page's open air, for things that fly: the box of `main` (never the
@@ -90,8 +91,9 @@ function gridIn(room: Box): Point[] {
 }
 
 export const around = (p: Point, r: Reach): Box => ({ left: p.x - r.half, right: p.x + r.half, top: p.y - r.up, bottom: p.y + r.down });
-export const union = (a: Box, b: Box): Box => ({ left: Math.min(a.left, b.left), right: Math.max(a.right, b.right), top: Math.min(a.top, b.top), bottom: Math.max(a.bottom, b.bottom) });
-export { meets } from './floors';
+// box.ts has the algebra; these are still exported from here for the
+// callers that have not moved to it yet.
+export { meets, union };
 
 // Whether a point is inside a box, edges included: a flier in view.
 export const inAir = (view: Box, p: Point) => p.x >= view.left && p.x <= view.right && p.y >= view.top && p.y <= view.bottom;
@@ -123,12 +125,11 @@ export function pastExit(air: Pick<Air, 'exits'>, exit: Exit, reach: Reach, alon
 // the part still in sight counts, and a box wholly past one is in air.
 export function fits(air: Pick<Air, 'page' | 'room' | 'exits'>, whole: Box, also: readonly Box[] = [], obstacles: readonly Obstacle[] = air.page.obstacles): boolean {
   const { room } = air;
-  if (![whole.left, whole.right, whole.top, whole.bottom].every(Number.isFinite)) return false;
+  if (!finite(whole)) return false;
   const box = inSight(air.exits, whole);
   if (!box) return true;
-  if (!(box.left >= room.left && box.right <= room.right && box.top >= room.top && box.bottom <= room.bottom)) return false;
-  const near = (o: Box) => meets(box, { left: o.left - GAP, right: o.right + GAP, top: o.top - GAP, bottom: o.bottom + GAP });
-  return !obstacles.some(near) && !also.some((o) => meets(box, o));
+  if (!holds(room, box)) return false;
+  return !obstacles.some((o) => meets(box, grow(o, GAP))) && !also.some((o) => meets(box, o));
 }
 
 // Whether something taking up these boxes, one after another along a path,
@@ -138,7 +139,7 @@ export function fits(air: Pick<Air, 'page' | 'room' | 'exits'>, whole: Box, also
 export function sweeps(air: Pick<Air, 'page' | 'room' | 'exits'>, boxes: readonly Box[], also: readonly Box[] = [], ignore: (o: Obstacle) => boolean = () => false): boolean {
   if (!boxes.length) return true;
   const all = boxes.reduce(union);
-  const near = air.page.obstacles.filter((o) => !ignore(o) && meets(all, { left: o.left - GAP - 1, right: o.right + GAP + 1, top: o.top - GAP - 1, bottom: o.bottom + GAP + 1 }));
+  const near = air.page.obstacles.filter((o) => !ignore(o) && meets(all, grow(o, GAP + 1)));
   if (boxes.length === 1) return fits(air, boxes[0], also, near);
   return boxes.slice(1).every((b, i) => fits(air, union(boxes[i], b), also, near));
 }
@@ -187,7 +188,7 @@ const halves = (c: Cubic): [Cubic, Cubic] => {
 // far as DEPTH, is still not clear.
 function sweptBoxes(curve: Cubic, envelope: Envelope, clear: (box: Box) => boolean, depth: number): Box[] | null {
   const box = hullOf(curve, envelope);
-  if (![box.left, box.right, box.top, box.bottom].every(Number.isFinite)) return null;
+  if (!finite(box)) return null;
   if (clear(box)) return [box];
   if (depth === DEPTH) return null;
   const [a, b] = halves(curve);

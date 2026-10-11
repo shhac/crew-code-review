@@ -1,5 +1,6 @@
 // Fixtures shared by the creature models' tests.
-import type { Box, Ledge, Obstacle, PageMap } from './floors';
+import { meets, type Box } from './box';
+import type { Ledge, Obstacle, PageMap } from './floors';
 
 // A 1000x800 window holding these ledges and obstacles.
 export const scene = (floors: [number, Ledge][], obstacles: PageMap['obstacles'] = []): PageMap => ({ floors: new Map(floors), obstacles, width: 1000, height: 800 });
@@ -19,8 +20,6 @@ export function dashboardPage(extra: readonly Obstacle[] = [], cards: readonly L
   const floors = new Map<number, Ledge>([[1, HEADING], ...cards.map((c, i) => [i + 2, c] as const)]);
   return { floors, obstacles: [TITLE, ...cards.map(block), ...extra], width: 1440, height: 900 };
 }
-
-const meets = (a: Box, b: Box) => a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
 
 // Whether none of these boxes, taken up by something drawn, meets the
 // page's content: its text, controls and charts. A card's own box is not

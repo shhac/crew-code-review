@@ -1,7 +1,8 @@
 import { around, inAir, sweeps, type Air } from '../air';
 import { fromLedge, progress, toLedge } from '../anchored';
 import { arcFrom, heading, lengthOf, quadratic, samples, type Arc } from '../curves';
-import { inView, type Box, type Ledge, type Obstacle, type PageMap } from '../floors';
+import { grow, type Box } from '../box';
+import { inView, type Ledge, type Obstacle, type PageMap } from '../floors';
 import { inTurn, placeIds, regroup, troupeSize } from '../group';
 import { apart, degrees } from '../math';
 import type { Cursor, Point } from '../pointer';
@@ -123,7 +124,7 @@ const shieldOf = (air: Air, others: readonly Cupid[], now: number): Box[] => oth
   const p = where(o, air.page, now);
   if (!p) return [];
   const b = around(p, FOOTPRINTS.hover);
-  return [{ left: b.left - 20, right: b.right + 20, top: b.top - 20, bottom: b.bottom + 20 }];
+  return [grow(b, 20)];
 });
 
 // Where an arrow leaves a cupid's bow, facing dir.

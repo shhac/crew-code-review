@@ -1,4 +1,4 @@
-import { meets } from '../air';
+import { finite, meets } from '../box';
 import { parabola } from '../curves';
 import type { Obstacle } from '../floors';
 import { clamp, clamp01, degrees, mixPoint, smooth } from '../math';
@@ -75,7 +75,7 @@ export function routeTilt(route: readonly FlightCurve[], progress: number): numb
 // which treated all space below a climbing bird as occupied.
 export function clearArc(leg: Arc, scene: Scene, side: number, height: number): boolean {
   if (![leg.from.x, leg.from.y, leg.to.x, leg.to.y, leg.rise, scene.width, scene.height].every(Number.isFinite)
-    || scene.obstacles.some(o => ![o.left, o.right, o.top, o.bottom].every(Number.isFinite))) return false;
+    || !scene.obstacles.every(finite)) return false;
   const vertex = leg.rise ? (4 * leg.rise - leg.to.y + leg.from.y) / (8 * leg.rise) : -1;
   const steps = Math.max(1, Math.ceil(length(leg) / 8));
   for (let i = 0; i < steps; i++) {
@@ -95,10 +95,10 @@ export function curveBounds(curve: FlightCurve): Obstacle {
     top: Math.min(...points.map(p => p.y)) - 59, bottom: Math.max(...points.map(p => p.y)) };
 }
 export function clearFlight(route: readonly FlightCurve[], scene: Scene): boolean {
-  if (scene.obstacles.some(o => ![o.left, o.right, o.top, o.bottom].every(Number.isFinite))) return false;
+  if (!scene.obstacles.every(finite)) return false;
   const clear = (curve: FlightCurve, depth = 0): boolean => {
     const box = curveBounds(curve);
-    if (!Object.values(box).every(Number.isFinite)) return false;
+    if (!finite(box)) return false;
     if (box.left >= 0 && box.right <= scene.width && box.top >= 0 && box.bottom <= scene.height
       && !scene.obstacles.some(o => meets(box, o))) return true;
     if (depth === 12) return false;

@@ -1,6 +1,7 @@
 // Pages, air and cursors shared by the cupids' tests: a dashboard-like
 // page with a heading, its rule and a row of cards under it.
-import type { Box, Ledge, Obstacle, PageMap } from '../floors';
+import type { Box } from '../box';
+import type { Ledge, Obstacle, PageMap } from '../floors';
 import type { Cursor } from '../pointer';
 import { airOf, type Air } from '../air';
 import { SPOT } from './footprints';
