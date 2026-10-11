@@ -24,6 +24,7 @@ export function waspAir(rail: Sky | null, stage: { left: number; top: number }):
 }
 
 export const within = (box: Box, room: Box) => box.left >= room.left && box.right <= room.right && box.top >= room.top && box.bottom <= room.bottom;
+export const grown = (b: Box, by: number): Box => ({ left: b.left - by, right: b.right + by, top: b.top - by, bottom: b.bottom + by });
 
 // Whether a box is wholly in the air, or in the strip the lane and the air's
 // top half make together.

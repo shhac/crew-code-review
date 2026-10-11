@@ -17,8 +17,9 @@
   import { waspAir, type WaspAir } from './air';
   import table from './fete-table.webp';
   import { ART, CAKE, CLOTH, JAR, STAGE } from './table';
-  import { inspectNow, placeWasps, reconcileWasps, stepWasps, waspView, type Pointer, type Wasp, type WaspView } from './wasp';
+  import { waspView, type Pointer, type Wasp, type WaspView } from './wasp';
   import { ANCHOR, CRUISE, EYE, SCALE, waspRig } from './wasp-rig';
+  import { inspectNow, placeWasps, reconcileWasps, stepWasps } from './wasps';
 
   // The cloth's scalloped hem, one scallop every 7px.
   const HEM = `M0 ${CLOTH}H${STAGE.width}V${STAGE.height - 3}`

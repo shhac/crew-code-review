@@ -348,13 +348,15 @@ whole world is the rail, and this is their contract.
 
 ### The wasps' air, as built
 
-The pure model is `fete/wasp.ts` (with `fete/air.ts` for the air in the
-stage's coordinates and the exit lane, and `fete/footprints.ts`); its tests
-run the pair for minutes of simulated time in a tall air and a 1024x768
-one with a cursor sweeping past, and through the air shrinking under them
-and growing back, and check at every frame that the two boxes never meet
-and that each stays in the air or the lane. Changes from
-the plan above, each because building showed it:
+The pure model is `fete/wasp.ts`, one wasp's modes, with `fete/wasps.ts`
+for the pair (placed, stepped and reconciled in turn), `fete/orbit.ts` for
+the orbits and their bands, `fete/flight.ts` for the routes and whether one
+is clear, `fete/air.ts` for the air in the stage's coordinates and the exit
+lane, and `fete/footprints.ts`; its tests run the pair for minutes of
+simulated time in a tall air and a 1024x768 one with a cursor sweeping
+past, and through the air shrinking under them and growing back, and check
+at every frame that the two boxes never meet and that each stays in the air
+or the lane. Changes from the plan above, each because building showed it:
 
 - **The upper orbit is higher.** With the plan's numbers (centre 38px above
   the cake) the two bands' boxes overlapped by 10px, so "a footprint plus

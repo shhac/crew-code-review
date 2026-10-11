@@ -3,12 +3,12 @@ import { meets } from '../air';
 import type { Box } from '../floors';
 import type { Rand } from '../seed';
 import { inWaspAir, waspAir, windowEdge, type WaspAir } from './air';
+import { SPACE } from './flight';
 import { STAND } from './footprints';
-import { CAKE, JAR } from './table';
-import {
-  APART, SPACE, bandOf, boxOf, claimsOf, orbitFits, orbitOf, placeWasps, reconcileWasps, spotOf, stepWasps, waspView, where, zoneOf,
-  type Mode, type Places, type Pointer, type Wasp, type World,
-} from './wasp';
+import { APART, bandOf, orbitFits, orbitOf } from './orbit';
+import { CAKE, JAR, type Places } from './table';
+import { boxOf, claimsOf, spotOf, waspView, where, zoneOf, type Mode, type Pointer, type Wasp, type World } from './wasp';
+import { placeWasps, reconcileWasps, stepWasps } from './wasps';
 
 const places: Places = { cake: CAKE, jar: JAR };
 // The stage sits 34px in from the window's left edge (the rail's padding and

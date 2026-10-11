@@ -1,12 +1,13 @@
 import { around, meets, union } from '../air';
-import { cubic, lengthOf, samples, type Curve } from '../curves';
-import type { Box, Reach } from '../floors';
-import { inTurn } from '../group';
+import type { Box } from '../floors';
 import { apart, clamp, mixPoint, smooth } from '../math';
 import type { Point } from '../pointer';
 import { between, hash, type Rand } from '../seed';
-import { inWaspAir, within, type WaspAir } from './air';
+import { grown, within, type WaspAir } from './air';
+import { SPACE, along, clearRoute, firstClear, flightOf, flightProgress, flying, rounded, routes, sweptFrom, type Flight, type Route } from './flight';
 import { FOOTPRINTS, STAND, type WaspPose } from './footprints';
+import { BLEND, LAP, LAPS, bandOf, nearestTheta, orbitFits, orbitOf, orbitPoint, thetaAt, trueOrbitPoint } from './orbit';
+import type { Places } from './table';
 
 // Two common wasps at the fête's cake, in the shelf stage's coordinates (so
 // they ride with the stage), never leaving the rail's air or its exit lane.
@@ -19,11 +20,6 @@ import { FOOTPRINTS, STAND, type WaspPose } from './footprints';
 // contract.
 
 export type Mode = 'circle' | 'inspect' | 'land' | 'feed' | 'takeoff' | 'depart' | 'flee' | 'away' | 'return' | 'rest' | 'dodge';
-// A route: a line of straight legs whose corners are rounded off, as cubic
-// curves end to end. A flight along one is eased in and out, or has two
-// brief hovers on the way (coming back).
-export type Route = readonly Curve[];
-export type Flight = { route: Route; start: number; duration: number; hovers: boolean };
 export type Wasp = {
   id: number;
   seed: number;
@@ -43,28 +39,11 @@ export type Wasp = {
   face: number;
 };
 
-// The places on the table the wasps use (fete/table.ts).
-export type Places = { cake: { x: number; y: number; half: number }; jar: { x: number; y: number; half: number } };
 // The cursor, in the stage's coordinates: where it last moved to, when, and
 // how fast it was going (px/s).
 export type Pointer = Point & { at: number; speed: number };
 export type World = { air: WaspAir; places: Places; now: number; rand: Rand; cursor: Pointer | null };
 
-// Each orbit drifts a little off true and bobs, so no two laps match.
-const DRIFT_X = 3;
-const DRIFT_Y = 2;
-const BOB = 1;
-// The low orbit round the cake, and the high one above it; the high one's
-// height is worked out so the two bands' boxes stay APART.
-const LOWER = { lift: 8, across: 12, deep: 9 };
-const UPPER = { across: 4, deep: 7 };
-export const APART = 6;
-// The least room the two keep between their boxes at any moment.
-export const SPACE = 2;
-// Blending onto an orbit, and a lap's time.
-const BLEND = 300;
-const LAP = [1600, 2400] as const;
-const LAPS = [2, 5] as const;
 // Inspecting: sweeps either side of its spot, two a second, this high above
 // where it stands.
 const ZIG = 8;
@@ -89,36 +68,15 @@ const CHASE_REACH = 40;
 const LAND_SHY = 50;
 const BACK_SHY = 60;
 const AWAY = [6000, 12000] as const;
-// Speeds in px/s, and the shortest flights.
+// Speeds in px/s.
 const FLEE_SPEED = 260;
 const RETURN_SPEED = 120;
 const CRUISE_SPEED = 90;
 const DODGE_SPEED = 200;
-const HOVER_STOP = 250;
-const MIN_FLIGHT = 300;
 // A turn about takes this long.
 const TURN = 120;
 // Resting, it looks for room to take off this often.
-const RECHECK = 1000;
-
-export type Orbit = { c: Point; rx: number; ry: number };
-
-// The box a footprint of `reach` can ever take on an orbit, drifting and
-// bobbing.
-export function bandOf(o: Orbit, reach: Reach = FOOTPRINTS.hover): Box {
-  return {
-    left: o.c.x - o.rx - DRIFT_X - reach.half, right: o.c.x + o.rx + DRIFT_X + reach.half,
-    top: o.c.y - o.ry - DRIFT_Y - BOB - reach.up, bottom: o.c.y + o.ry + DRIFT_Y + BOB + reach.down,
-  };
-}
-
-export function orbitOf(id: number, places: Places): Orbit {
-  const { cake } = places;
-  const lower = { c: { x: cake.x, y: cake.y - LOWER.lift }, rx: cake.half + LOWER.across, ry: LOWER.deep };
-  if (id === 0) return lower;
-  const bottom = bandOf(lower).top - APART;
-  return { c: { x: cake.x, y: bottom - FOOTPRINTS.hover.down - BOB - DRIFT_Y - UPPER.deep }, rx: cake.half + UPPER.across, ry: UPPER.deep };
-}
+export const RECHECK = 1000;
 
 // Where it lands and feeds: wasp 0 on the cake's top, wasp 1 on the jar's lid.
 export const spotOf = (id: number, places: Places): Point => (id === 0 ? { x: places.cake.x, y: places.cake.y } : { x: places.jar.x, y: places.jar.y });
@@ -131,20 +89,6 @@ const aboveOf = (id: number, places: Places): Point => {
   const s = standOf(id, places);
   return { x: s.x, y: s.y - RISE };
 };
-
-// Whether its orbit's whole band is in the air.
-export const orbitFits = (id: number, w: Pick<World, 'air' | 'places'>) => within(bandOf(orbitOf(id, w.places)), w.air.air);
-
-function orbitPoint(o: Orbit, theta: number, now: number, seed: number): Point {
-  return {
-    x: o.c.x + o.rx * Math.cos(theta) + DRIFT_X * Math.sin((2 * Math.PI * now) / 3700 + seed),
-    y: o.c.y + o.ry * Math.sin(theta) + DRIFT_Y * Math.sin((2 * Math.PI * now) / 5300 + 2 * seed) + BOB * Math.sin((2 * Math.PI * now) / 900 + 3 * seed),
-  };
-}
-const trueOrbitPoint = (o: Orbit, theta: number): Point => ({ x: o.c.x + o.rx * Math.cos(theta), y: o.c.y + o.ry * Math.sin(theta) });
-const thetaAt = (w: Pick<Wasp, 'angle' | 'spin' | 'lap' | 'since'>, now: number) => w.angle + (w.spin * 2 * Math.PI * Math.max(0, now - w.since)) / w.lap;
-// The angle on an orbit nearest a point.
-const nearestTheta = (o: Orbit, p: Point) => Math.atan2((p.y - o.c.y) / o.ry, (p.x - o.c.x) / o.rx);
 
 // The arcs it backs away from its spot in, s from 0 to 1: out to the right
 // and back across, each wider than the last, eased at each turn.
@@ -176,18 +120,6 @@ function shuffleAt(seed: number, t: number): { dx: number; walked: number } {
   const dx = SHUFFLE * (out ? smooth(into) : 1 - smooth(into)) * (hash(seed + 3) < 0.5 ? 1 : -1);
   return { dx, walked: SHUFFLE * (n + smooth(into)) };
 }
-
-// How far along its flight it is, 0 to 1: eased in and out, or coming back
-// with two brief hovers a third and two thirds of the way.
-function flightProgress(f: Flight, now: number): number {
-  const u = clamp(now - f.start, 0, f.duration);
-  if (!f.hovers) return smooth(u / f.duration);
-  const travel = (f.duration - 2 * HOVER_STOP) / 3;
-  const piece = travel + HOVER_STOP;
-  const k = Math.min(2, Math.floor(u / piece));
-  return (k + smooth(Math.min(1, (u - k * piece) / travel))) / 3;
-}
-const flying = (w: Wasp, now: number) => w.flight !== null && now < w.flight.start + w.flight.duration;
 
 // Where a wasp is now, or null while it is away.
 export function where(w: Wasp, places: Places, now: number): Point | null {
@@ -259,7 +191,7 @@ export function claimsOf(w: Wasp, places: Places, now: number): Box[] {
 
 // Whether it keeps to its orbit's band now (or is coming back to it), rather
 // than to its spot. Wasp 0's spot is inside its band.
-const onOrbit = (w: Wasp, places: Places) =>
+export const onOrbit = (w: Wasp, places: Places) =>
   w.id === 0 || w.mode === 'circle' || w.mode === 'dodge' || (w.mode === 'return' && apart(w.from, aboveOf(w.id, places)) > 1);
 
 // Everything a wasp does at its spot (inspecting, landing, feeding, taking
@@ -275,89 +207,11 @@ export function zoneOf(id: number, places: Places): Box {
   return boxes.reduce(union);
 }
 
-function sweptFrom(f: Flight, reach: Reach, now: number): Box[] {
-  const done = flightProgress(f, now);
-  return samples((u) => along(f.route, done + u * (1 - done)), 3).map((s) => around(s.p, reach));
-}
-
-// Each leg's length, worked out once per route.
-const lengths = new WeakMap<Route, number[]>();
-function legsOf(route: Route): number[] {
-  const known = lengths.get(route);
-  if (known) return known;
-  const measured = route.map((c) => lengthOf((t) => cubic(c, t)));
-  lengths.set(route, measured);
-  return measured;
-}
-export const routeLength = (route: Route) => legsOf(route).reduce((a, b) => a + b, 0);
-
-// The point p of the way along a route, by distance.
-export function along(route: Route, p: number): Point {
-  const legs = legsOf(route);
-  const total = legs.reduce((a, b) => a + b, 0) || 1;
-  const goal = clamp(p, 0, 1) * total;
-  const k = legs.findIndex((_, i) => legs.slice(0, i + 1).reduce((a, b) => a + b, 0) >= goal - 1e-9);
-  const leg = k < 0 ? route.length - 1 : k;
-  const before = legs.slice(0, leg).reduce((a, b) => a + b, 0);
-  return cubic(route[leg], legs[leg] ? clamp((goal - before) / legs[leg], 0, 1) : 1);
-}
-
-// A line through these points with each corner rounded off over CORNER px
-// (or half the shorter leg), so a flight turns smoothly.
-const CORNER = 12;
-export function rounded(points: readonly Point[]): Route {
-  const toward = (a: Point, b: Point, by: number) => {
-    const d = apart(a, b) || 1;
-    return { x: a.x + ((b.x - a.x) * by) / d, y: a.y + ((b.y - a.y) * by) / d };
-  };
-  const corners = points.slice(1, -1).map((v, i) => {
-    const before = points[i], after = points[i + 2];
-    const r = Math.min(CORNER, apart(before, v) / 2, apart(v, after) / 2);
-    return { v, a: toward(v, before, r), b: toward(v, after, r) };
-  });
-  const straight = (a: Point, b: Point): Curve => ({ from: a, c1: mixPoint(a, b, 1 / 3), c2: mixPoint(a, b, 2 / 3), to: b });
-  const starts = [points[0], ...corners.map((c) => c.b)];
-  const stops = [...corners.map((c) => c.a), points[points.length - 1]];
-  return starts.flatMap((s, i): Curve[] => {
-    const leg = straight(s, stops[i]);
-    const c = corners[i];
-    return c ? [leg, { from: c.a, c1: mixPoint(c.a, c.v, 0.55), c2: mixPoint(c.b, c.v, 0.55), to: c.b }] : [leg];
-  });
-}
-
-const grown = (b: Box, by: number): Box => ({ left: b.left - by, right: b.right + by, top: b.top - by, bottom: b.bottom + by });
-
-// Whether a flight along this route is clear: its footprint swept along it
-// stays in the air (and the lane, where allowed), and never comes within
-// SPACE of what the other has claimed.
-export function clearRoute(route: Route, reach: Reach, air: WaspAir, claims: readonly Box[], lane = false): boolean {
-  const boxes = samples((t) => along(route, t), 2).map((s) => around(s.p, reach));
-  const room = (b: Box) => (lane ? inWaspAir(b, air) : within(b, air.air));
-  const pairs = boxes.length === 1 ? boxes : boxes.slice(1).map((b, i) => union(boxes[i], b));
-  return pairs.every((b) => room(b) && !claims.some((c) => meets(b, grown(c, SPACE))));
-}
-
-// The routes tried for a flight from a to b: across then down, down then
-// across, straight, and bowed either way.
-export function routes(a: Point, b: Point): Route[] {
-  const mid = mixPoint(a, b, 0.5);
-  const bow = (k: number) => ({ x: mid.x - (b.y - a.y) * k, y: mid.y + (b.x - a.x) * k });
-  return [[a, { x: b.x, y: a.y }, b], [a, { x: a.x, y: b.y }, b], [a, b], [a, bow(0.3), b], [a, bow(-0.3), b]].map(rounded);
-}
-
-const flightOf = (route: Route, now: number, speed: number, hovers = false): Flight => ({
-  route, start: now, hovers,
-  duration: Math.max(MIN_FLIGHT, (routeLength(route) / speed) * 1000) + (hovers ? 2 * HOVER_STOP : 0),
-});
-
 const othersClaims = (others: readonly Wasp[], places: Places, now: number) => others.flatMap((o) => claimsOf(o, places, now));
-
-// The first clear route from a to b, for a footprint of reach.
-const firstClear = (tried: readonly Route[], reach: Reach, air: WaspAir, claims: readonly Box[], lane = false) => tried.find((r) => clearRoute(r, reach, air, claims, lane)) ?? null;
 
 // Circling, from wherever it is: straight onto its orbit if it is near,
 // else by a clear flight to the nearest point on it.
-function toCircle(w: Wasp, here: Point, world: World, others: readonly Wasp[]): Wasp | null {
+export function toCircle(w: Wasp, here: Point, world: World, others: readonly Wasp[]): Wasp | null {
   const { places, now, rand } = world;
   const o = orbitOf(w.id, places);
   const theta = nearestTheta(o, here);
@@ -373,7 +227,7 @@ function toCircle(w: Wasp, here: Point, world: World, others: readonly Wasp[]): 
 }
 
 // Down to its spot to land, from wherever it is.
-function toLand(w: Wasp, here: Point, world: World, others: readonly Wasp[]): Wasp | null {
+export function toLand(w: Wasp, here: Point, world: World, others: readonly Wasp[]): Wasp | null {
   const stand = standOf(w.id, world.places);
   const route = firstClear(routes(here, stand), FOOTPRINTS.land, world.air, othersClaims(others, world.places, world.now));
   if (!route) return null;
@@ -381,10 +235,10 @@ function toLand(w: Wasp, here: Point, world: World, others: readonly Wasp[]): Wa
   return { ...w, mode: 'land', flight: { ...flight, duration: Math.max(LAND, flight.duration) }, from: stand, since: world.now, until: Infinity };
 }
 
-const resting = (w: Wasp, places: Places, now: number): Wasp => ({ ...w, mode: 'rest', flight: null, since: now, until: now + RECHECK, from: standOf(w.id, places) });
+export const resting = (w: Wasp, places: Places, now: number): Wasp => ({ ...w, mode: 'rest', flight: null, since: now, until: now + RECHECK, from: standOf(w.id, places) });
 
 // Over to inspect its spot, then side to side in front of it.
-function toInspect(w: Wasp, here: Point, world: World, others: readonly Wasp[]): Wasp | null {
+export function toInspect(w: Wasp, here: Point, world: World, others: readonly Wasp[]): Wasp | null {
   const above = aboveOf(w.id, world.places);
   const route = firstClear(routes(here, above), FOOTPRINTS.hover, world.air, othersClaims(others, world.places, world.now));
   if (!route) return null;
@@ -449,7 +303,6 @@ function comeBack(w: Wasp, world: World, others: readonly Wasp[]): Wasp | null {
   const flight = flightOf(route, now, RETURN_SPEED, true);
   return { ...w, mode: 'return', flight, since: now + flight.duration, until: Infinity, from: to, face: 1 };
 }
-
 
 // Where it is facing toward, or null to keep facing as it is.
 function facingOf(w: Wasp, here: Point, places: Places, now: number): number | null {
@@ -549,70 +402,4 @@ export function stepWasp(w: Wasp, others: readonly Wasp[], world: World, dt: num
     return b && meets(box, grown(b, SPACE));
   });
   return blocked ? held({ ...w, face }, dt) : turned;
-}
-
-export function stepWasps(wasps: readonly Wasp[], world: World, dt: number): Wasp[] {
-  return inTurn(wasps, (w, others) => stepWasp(w, others, world, dt));
-}
-
-const fresh = (id: number): Pick<Wasp, 'id' | 'seed' | 'spin' | 'face'> => ({ id, seed: id * 11 + 5, spin: id === 0 ? 1 : -1, face: id === 0 ? 1 : -1 });
-const NOWHERE: Point = { x: 0, y: 0 };
-
-// The two placed afresh: circling where their orbits fit, at seeded points
-// on them (wasp 1's first inspection 1 to 3s behind wasp 0's), else
-// resting on their spots; under reduced motion both standing on their
-// spots, never stepped.
-export function placeWasps(world: Omit<World, 'cursor'>, still = false): Wasp[] {
-  const { places, now, rand } = world;
-  return [0, 1].map((id): Wasp => {
-    const base = { ...fresh(id), flight: null, angle: 0, lap: LAP[0], from: NOWHERE };
-    if (still || !orbitFits(id, world)) return { ...base, ...resting({ ...base, mode: 'rest', since: now, until: now }, places, now), until: still ? Infinity : now + RECHECK };
-    const angle = between(rand, 0, 2 * Math.PI);
-    const lap = between(rand, ...LAP);
-    const behind = id === 0 ? 0 : between(rand, 1000, 3000);
-    // Already circling a moment ago, so it does not ease in from anywhere.
-    const since = now - BLEND;
-    const from = orbitPoint(orbitOf(id, places), angle, since, base.seed);
-    return { ...base, mode: 'circle', since, angle: angle - (base.spin * 2 * Math.PI * BLEND) / lap, lap, from, until: now + behind + Math.round(between(rand, ...LAPS)) * lap };
-  });
-}
-
-// After the air changes: a wasp that no longer fits where it is going is
-// sent from where it is to its orbit, or, if that has no room, down to its
-// spot; failing a clear way, it is set down on its spot. An away wasp keeps
-// its timer.
-export function reconcileWasps(wasps: readonly Wasp[], world: World): Wasp[] {
-  return inTurn(wasps, (w, others) => reconcileWasp(w, others, world));
-}
-
-function reconcileWasp(w: Wasp, others: readonly Wasp[], world: World): Wasp {
-  const { places, now } = world;
-  const here = where(w, places, now);
-  if (!here || w.mode === 'feed' || w.mode === 'rest' || w.mode === 'land') return w;
-  if (stillFits(w, world)) return w;
-  const moved = orbitFits(w.id, world) ? toCircle(w, here, world, others) : toLand(w, here, world, others);
-  return moved ?? resting(w, places, now);
-}
-
-// Whether what it is doing still fits the air: the rest of its flight, and
-// its orbit if it is circling or flying onto it.
-function stillFits(w: Wasp, world: World): boolean {
-  const { air, places, now } = world;
-  if (w.flight && flying(w, now)) {
-    const lane = w.mode === 'flee' || w.mode === 'return';
-    const swept = sweptFrom(w.flight, FOOTPRINTS[poseOf(w)], now);
-    if (!swept.every((b) => (lane ? inWaspAir(b, air) : within(b, air.air)))) return false;
-  }
-  if (w.mode === 'circle' || w.mode === 'dodge' || (w.mode === 'return' && onOrbit(w, places))) return orbitFits(w.id, world);
-  return within(zoneOf(w.id, places), air.air);
-}
-
-// A test's cue (?theme-cue=land): wasp 0, circling, goes in to inspect the
-// cake now, and so lands and feeds, rather than after its random laps.
-export function inspectNow(wasps: readonly Wasp[], world: World): Wasp[] {
-  return inTurn(wasps, (w, others) => {
-    const here = where(w, world.places, world.now);
-    if (w.id !== 0 || w.mode !== 'circle' || !here) return w;
-    return toInspect(w, here, world, others) ?? w;
-  });
 }

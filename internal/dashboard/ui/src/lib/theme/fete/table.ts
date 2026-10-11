@@ -15,3 +15,6 @@ export const CLOTH = 63;
 export const CAKE = { x: 76.1, y: 11.9, half: 23 } as const;
 // The top of the blackcurrant jar's gingham lid, and its half-width.
 export const JAR = { x: 155.2, y: 32.5, half: 6.9 } as const;
+
+// The places on the table the wasps use.
+export type Places = { cake: { x: number; y: number; half: number }; jar: { x: number; y: number; half: number } };
