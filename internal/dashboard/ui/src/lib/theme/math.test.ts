@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { apart, clamp, clamp01, degrees, mix, mixPoint, rad, sign, smooth } from './math';
+import { apart, clamp, clamp01, degrees, facingFrom, mix, mixPoint, rad, sign, smooth } from './math';
 
 describe('shared maths', () => {
   it('clamps into a range, and into 0 to 1', () => {
@@ -13,6 +13,10 @@ describe('shared maths', () => {
   });
   it('takes standing still as forward', () => {
     expect([sign(-2), sign(0), sign(3)]).toEqual([-1, 1, 1]);
+  });
+  it('faces the way of a move, keeping its facing while the move is nearly straight up or down', () => {
+    expect([facingFrom(-3, 1, 1), facingFrom(3, 1, -1)]).toEqual([-1, 1]);
+    expect([facingFrom(0.5, 1, -1), facingFrom(-1, 1, 1), facingFrom(Number.NaN, 1, -1)]).toEqual([-1, 1, -1]);
   });
   it('mixes numbers and points', () => {
     expect(mix(10, 20, 0.25)).toBe(12.5);

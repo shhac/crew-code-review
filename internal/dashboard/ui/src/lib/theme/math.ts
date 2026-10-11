@@ -12,6 +12,9 @@ export const smooth = (t: number) => {
 };
 // Which way a step of d goes; standing still counts as forward.
 export const sign = (d: number): 1 | -1 => (d < 0 ? -1 : 1);
+// Which way a move of dx across faces: that way, or the way it faced while
+// the move is no more than `dead` across (nearly straight up or down).
+export const facingFrom = (dx: number, dead: number, was: 1 | -1): 1 | -1 => (Math.abs(dx) > dead ? sign(dx) : was);
 export const mix = (a: number, b: number, t: number) => a + (b - a) * t;
 export const mixPoint = (a: Point, b: Point, t: number): Point => ({ x: mix(a.x, b.x, t), y: mix(a.y, b.y, t) });
 export const rad = (deg: number) => (deg * Math.PI) / 180;
