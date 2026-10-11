@@ -112,6 +112,14 @@ export function tableOf(court: CourtPair, page: PageMap): Table | null {
   return { origin: { x: a.left, y: a.y }, right: net.hi, dy: b.y - a.y, net, sides, ends };
 }
 
+// A court as measured on this page: its two cards, the page they are on,
+// and its table, which every shot is planned against.
+type Court = { court: CourtPair; page: PageMap; t: Table };
+const courtOn = (court: CourtPair, page: PageMap): Court | null => {
+  const t = tableOf(court, page);
+  return t && { court, page, t };
+};
+
 const ledgesOf = (court: CourtPair, page: PageMap): [Ledge, Ledge] | null => {
   const a = page.floors.get(court.left), b = page.floors.get(court.right);
   return a && b ? [a, b] : null;
@@ -170,14 +178,19 @@ const grown = (o: Obstacle): Box => (o.block
   : { left: o.left - SPARE, right: o.right + SPARE, top: o.top - SPARE, bottom: o.bottom + SPARE });
 
 export const segPoints = (s: Seg): Point[] => samples((f) => pointOf(s, f), 2).map((p) => p.p);
-const segClear = (s: Seg, t: Table, page: PageMap) => clearAlong(segPoints(s), t, page, s.kind === 'squash' ? SQUASH_SHAPE : 1);
+const segClear = (s: Seg, c: Court) => clearAlong(segPoints(s), c.t, c.page, s.kind === 'squash' ? SQUASH_SHAPE : 1);
 const SQUASH_SHAPE = 0.7;
 
-// A shot from `from` to a bounce at x on side s, starting at start, then
-// its bounce and the hop it is struck from; null when it would not be clear.
-function exchange(t: Table, page: PageMap, court: CourtPair, from: Point, s: 0 | 1, x: number, start: number, apex: number, speed: number, fade?: 1): Seg[] | null {
+// A shot asked for: from `from` to a bounce on side s, starting at start,
+// at speed, fading in if fade is 1.
+type Shot = { from: Point; s: 0 | 1; start: number; speed: number; fade?: 1 };
+
+// The shot to a bounce at x, rising to apex, then its bounce and the hop it
+// is struck from; null when it would not be clear.
+function exchange(c: Court, { from, s, start, speed, fade }: Shot, x: number, apex: number): Seg[] | null {
+  const { t } = c;
   const to = { x, y: groundOf(t, s) };
-  const room = roomOver(court, page, from.x, x);
+  const room = roomOver(c.court, c.page, from.x, x);
   const top = Math.min(apex, room);
   if (top < -from.y || top < NET_CLEAR) return null;
   const rise = speed === SPEED ? riseFor(from, to, top) : VOLLEY_RISE;
@@ -187,7 +200,7 @@ function exchange(t: Table, page: PageMap, court: CourtPair, from: Point, s: 0 |
   const squash: Seg = { kind: 'squash', from: to, to, rise: 0, start: shot.start + shot.ms, ms: SQUASH };
   const hop: Seg = { kind: 'hop', from: to, to: { x: x + on, y: to.y - HOP }, rise: HOP / 2, start: squash.start + SQUASH, ms: HOP_MS };
   const segs = [shot, squash, hop];
-  return segs.every((g) => segClear(g, t, page)) ? segs : null;
+  return segs.every((g) => segClear(g, c)) ? segs : null;
 }
 
 // Whether a shot is NET_CLEAR above the ledges all the way over the net.
@@ -197,10 +210,10 @@ function overNet(s: Seg, t: Table): boolean {
 
 // A shot to a bounce somewhere on side s: spots tried at random, the first
 // clear one played.
-function shotTo(t: Table, page: PageMap, court: CourtPair, from: Point, s: 0 | 1, start: number, rand: Rand, speed = SPEED, fade?: 1): Seg[] | null {
-  const side = t.sides[s];
+function shotTo(c: Court, shot: Shot, rand: Rand): Seg[] | null {
+  const side = c.t.sides[shot.s];
   if (side.hi < side.lo) return null;
-  return Array.from({ length: TRIES }).reduce<Seg[] | null>((found) => found ?? exchange(t, page, court, from, s, between(rand, side.lo, side.hi), start, between(rand, MIN_APEX, MAX_APEX), speed, fade), null);
+  return Array.from({ length: TRIES }).reduce<Seg[] | null>((found) => found ?? exchange(c, shot, between(rand, side.lo, side.hi), between(rand, MIN_APEX, MAX_APEX)), null);
 }
 
 const endOf = (segs: readonly Seg[]) => {
@@ -214,12 +227,13 @@ const rest = (now: number, rand: Rand): Rally => ({ next: now + between(rand, AG
 // A serve on this court, from the far end of a side: null where no first
 // shot is clear.
 export function serve(court: CourtPair, page: PageMap, now: number, rand: Rand): Play | null {
-  const t = tableOf(court, page);
-  if (!t || roomOver(court, page, t.sides[0].lo, t.sides[1].hi) < MIN_APEX) return null;
+  const c = courtOn(court, page);
+  if (!c || roomOver(court, page, c.t.sides[0].lo, c.t.sides[1].hi) < MIN_APEX) return null;
+  const { t } = c;
   const s: 0 | 1 = rand() < 0.5 ? 0 : 1;
   const from = s === 0 ? { x: t.sides[0].lo, y: -HOP } : { x: t.sides[1].hi, y: t.dy - HOP };
   const to: 0 | 1 = s === 0 ? 1 : 0;
-  const segs = shotTo(t, page, court, from, to, now, rand, SPEED, 1);
+  const segs = shotTo(c, { from, s: to, start: now, speed: SPEED, fade: 1 }, rand);
   if (!segs) return null;
   const shots = Math.round(between(rand, SHOTS[0], SHOTS[1]));
   return { court, segs, to, left: shots - 1, ending: rand() < 0.5 ? 'out' : 'net', volleyable: true, over: false };
@@ -236,12 +250,13 @@ export function courtsInView(courts: readonly CourtPair[], page: PageMap): Court
 
 // The last shot: deep, then two lower bounces and a roll, fading; or into
 // the net. Falls back to the other ending, then to none.
-function finish(play: Play, t: Table, page: PageMap, from: Point, start: number, rand: Rand): Seg[] | null {
+function finish(play: Play, c: Court, from: Point, start: number, rand: Rand): Seg[] | null {
   const tries = play.ending === 'out' ? [outShot, netShot] : [netShot, outShot];
-  return tries.reduce<Seg[] | null>((found, f) => found ?? f(play, t, page, from, start, rand), null);
+  return tries.reduce<Seg[] | null>((found, f) => found ?? f(play, c, from, start, rand), null);
 }
 
-function outShot(play: Play, t: Table, page: PageMap, from: Point, start: number, rand: Rand): Seg[] | null {
+function outShot(play: Play, c: Court, from: Point, start: number, rand: Rand): Seg[] | null {
+  const { t } = c;
   const s = play.to;
   // Deep: at the far end of the bounce spots, or short of the card's end
   // by the room the bounces and the roll need, whichever is nearer.
@@ -249,7 +264,7 @@ function outShot(play: Play, t: Table, page: PageMap, from: Point, start: number
   if (s === 0 ? x > t.net.lo - SPOT_NEAR : x < t.net.hi + SPOT_NEAR) return null;
   const ground = groundOf(t, s);
   const to = { x, y: ground };
-  const top = Math.min(between(rand, MIN_APEX, MAX_APEX), roomOver(play.court, page, from.x, x));
+  const top = Math.min(between(rand, MIN_APEX, MAX_APEX), roomOver(c.court, c.page, from.x, x));
   if (top < MIN_APEX) return null;
   const shot: Seg = { kind: 'shot', from, to, rise: riseFor(from, to, top), start, ms: (1000 * Math.abs(x - from.x)) / SPEED };
   if (!overNet(shot, t)) return null;
@@ -262,32 +277,34 @@ function outShot(play: Play, t: Table, page: PageMap, from: Point, start: number
   const at = hops[hops.length - 1].to;
   const roll: Seg = { kind: 'roll', from: at, to: { x: at.x + way * ROLL, y: ground }, rise: 0, start: endOf(hops), ms: FADE_OUT, fade: -1 };
   const segs = [shot, ...hops, roll];
-  return segs.every((g) => segClear(g, t, page)) ? segs : null;
+  return segs.every((g) => segClear(g, c)) ? segs : null;
 }
 
-function netShot(play: Play, t: Table, page: PageMap, from: Point, start: number, rand: Rand): Seg[] | null {
+function netShot(play: Play, c: Court, from: Point, start: number, rand: Rand): Seg[] | null {
+  const { t } = c;
   const mid = (t.net.lo + t.net.hi) / 2;
   if (t.net.hi - t.net.lo < BALL + 2) return null;
   const to = { x: mid, y: Math.max(0, t.dy) };
-  const top = Math.min(between(rand, MIN_APEX, MAX_APEX), roomOver(play.court, page, from.x, mid));
+  const top = Math.min(between(rand, MIN_APEX, MAX_APEX), roomOver(c.court, c.page, from.x, mid));
   if (top < MIN_APEX) return null;
   const shot: Seg = { kind: 'shot', from, to, rise: riseFor(from, to, top), start, ms: (1000 * Math.abs(mid - from.x)) / SPEED };
   const drop: Seg = { kind: 'drop', from: to, to: { x: mid, y: to.y + NET_DROP + BALL }, rise: 0, start: start + shot.ms, ms: 300, fade: -1 };
-  return [shot, drop].every((g) => segClear(g, t, page)) ? [shot, drop] : null;
+  return [shot, drop].every((g) => segClear(g, c)) ? [shot, drop] : null;
 }
 
 // Struck where the cursor met it: a fast flat shot back to the side it came
 // from, or, with none clear, dropping dead where it is.
-function volleyFrom(play: Play, t: Table, page: PageMap, at: Point, now: number, rand: Rand): Play {
+function volleyFrom(play: Play, c: Court, at: Point, now: number, rand: Rand): Play {
   const back: 0 | 1 = play.to === 0 ? 1 : 0;
-  const segs = shotTo(t, page, play.court, at, back, now, rand, SPEED * VOLLEY);
+  const segs = shotTo(c, { from: at, s: back, start: now, speed: SPEED * VOLLEY }, rand);
   if (segs) return { ...play, segs, to: back, volleyable: false, over: false, left: Math.max(1, play.left) };
-  return { ...play, segs: dead(t, page, at, now), over: true, volleyable: false };
+  return { ...play, segs: dead(c, at, now), over: true, volleyable: false };
 }
 
 // Falling straight down from where it is, two small bounces and a roll; or,
 // over the net, down into it.
-function dead(t: Table, page: PageMap, at: Point, now: number): Seg[] {
+function dead(c: Court, at: Point, now: number): Seg[] {
+  const { t } = c;
   const s = sideAt(t, at.x);
   const overGap = at.x > t.net.lo - R && at.x < t.net.hi + R;
   const ground = groundOf(t, s);
@@ -303,7 +320,7 @@ function dead(t: Table, page: PageMap, at: Point, now: number): Seg[] {
   const roll: Seg = { kind: 'roll', from: hop2.to, to: { x: at.x + way * 9, y: ground }, rise: 0, start: endOf([hop2]), ms: FADE_OUT, fade: -1 };
   const segs = [fall, hop1, hop2, roll];
   // A dead ball that would roll into something just fades where it lands.
-  return segs.every((g) => segClear(g, t, page)) ? segs : [fall, { ...roll, from: fall.to, to: fall.to, start: endOf([fall]) }];
+  return segs.every((g) => segClear(g, c)) ? segs : [fall, { ...roll, from: fall.to, to: fall.to, start: endOf([fall]) }];
 }
 
 // The ball's bottom point at now, and the segment it is on.
@@ -340,29 +357,43 @@ const middleOf = (t: Table, bottom: Point): Point => ({ x: t.origin.x + bottom.x
 // meets a shot, and rest once the ball is gone. `free` says whether a court
 // may start a rally now (no pigeon in its air, no bird flying).
 export function stepRally(r: Rally, page: PageMap, courts: readonly CourtPair[], free: (court: CourtPair) => boolean, now: number, last: number, rand: Rand, touch: Touch): Rally {
-  if (!r.play) {
-    if (now < r.next) return r;
-    const play = courtsInView(courts, page).filter(free).reduce<Play | null>((found, c) => found ?? serve(c, page, now, rand), null);
-    return play ? { next: Infinity, play } : { next: now + 5000, play: null };
-  }
-  const play = r.play;
-  const t = tableOf(play.court, page);
-  if (!t) return rest(now, rand);
+  if (!r.play) return serveWhenDue(r, page, courts, free, now, rand);
+  const c = courtOn(r.play.court, page);
+  if (!c) return rest(now, rand);
+  const struck = volleyed(r.play, c, now, last, rand, touch);
+  return struck ? { ...r, play: struck } : nextOrFinish(r, r.play, c, now, rand);
+}
+
+// With no ball in play: a serve on the first free court in view that has
+// one once its time comes, or another look 5s later.
+function serveWhenDue(r: Rally, page: PageMap, courts: readonly CourtPair[], free: (court: CourtPair) => boolean, now: number, rand: Rand): Rally {
+  if (now < r.next) return r;
+  const play = courtsInView(courts, page).filter(free).reduce<Play | null>((found, c) => found ?? serve(c, page, now, rand), null);
+  return play ? { next: Infinity, play } : { next: now + 5000, play: null };
+}
+
+// The ball struck back, where the cursor meets a shot that may still be
+// volleyed since the last frame; null where it does not.
+function volleyed(play: Play, c: Court, now: number, last: number, rand: Rand, touch: Touch): Play | null {
   const { seg } = segAt(play, now);
-  if (play.volleyable && seg.kind === 'shot' && now >= seg.start) {
-    const here = pointOf(seg, (now - seg.start) / seg.ms);
-    const before = pointOf(seg, (last - seg.start) / seg.ms);
-    if (meetsBall(middleOf(t, here), middleOf(t, before), touch)) return { ...r, play: volleyFrom(play, t, page, here, now, rand) };
-  }
+  if (!play.volleyable || seg.kind !== 'shot' || now < seg.start) return null;
+  const here = pointOf(seg, (now - seg.start) / seg.ms);
+  const before = pointOf(seg, (last - seg.start) / seg.ms);
+  return meetsBall(middleOf(c.t, here), middleOf(c.t, before), touch) ? volleyFrom(play, c, here, now, rand) : null;
+}
+
+// Once an exchange is over: the next shot while there are shots left, else
+// the ending, else (none clear, or the ending played) rest.
+function nextOrFinish(r: Rally, play: Play, c: Court, now: number, rand: Rand): Rally {
   const end = endOf(play.segs);
   if (now < end) return r;
   if (play.over) return rest(now, rand);
   const from = play.segs[play.segs.length - 1].to;
   const next: 0 | 1 = play.to === 0 ? 1 : 0;
-  const segs = play.left > 1 ? shotTo(t, page, play.court, from, next, end, rand) : null;
+  const segs = play.left > 1 ? shotTo(c, { from, s: next, start: end, speed: SPEED }, rand) : null;
   if (segs) return { ...r, play: { ...play, segs, to: next, left: play.left - 1, volleyable: true } };
-  const last2 = finish({ ...play, to: next }, t, page, from, end, rand);
-  return last2 ? { ...r, play: { ...play, segs: last2, to: next, left: 0, over: true, volleyable: true } } : rest(now, rand);
+  const ending = finish({ ...play, to: next }, c, from, end, rand);
+  return ending ? { ...r, play: { ...play, segs: ending, to: next, left: 0, over: true, volleyable: true } } : rest(now, rand);
 }
 
 // What the ball looks like at now, on the page; null with none in play.
@@ -398,7 +429,7 @@ export function courtClaims(court: CourtPair, page: PageMap): Claim[] {
 // content, even for a frame).
 export function remeasured(r: Rally, page: PageMap, now: number, rand: Rand): Rally {
   if (!r.play) return r;
-  const t = tableOf(r.play.court, page);
+  const c = courtOn(r.play.court, page);
   const ahead = r.play.segs.filter((g) => g.start + g.ms > now);
-  return t && ahead.every((g) => segClear(g, t, page)) ? r : rest(now, rand);
+  return c && ahead.every((g) => segClear(g, c)) ? r : rest(now, rand);
 }
