@@ -16,8 +16,12 @@ export type Obstacle = Box & { block?: boolean };
 // How far a drawing reaches from its anchor: either way across (it is
 // mirrored to face both ways), up and down.
 export type Reach = { half: number; up: number; down: number };
-// A walker's footprint stands on its anchor, so nothing of it hangs below.
-export const reachOf = (size: { width: number; height: number }): Reach => ({ half: size.width / 2, up: size.height, down: 0 });
+// The box a pose's drawing stays inside through its whole motion, as each
+// rig's test measures it: its width centred on the anchor, its height above
+// it and `down` below (a walker stands on its anchor, so none; a flier's
+// wings beat below the line it flies along).
+export type Footprint = { width: number; height: number; down?: number };
+export const reachOf = (f: Footprint): Reach => ({ half: f.width / 2, up: f.height, down: f.down ?? 0 });
 const visibleBox = (r: Bounds) => r.width > 0 && r.height > 0 && finite(r);
 // Range rectangles follow rendered text (including wrapped lines), independent
 // of the element's tag. Container bounds would also block their empty space.

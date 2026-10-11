@@ -136,6 +136,10 @@ describe('reachOf', () => {
   it('stands a walker on its anchor, half its width either way and its height up', () => {
     expect(reachOf({ width: 30, height: 24 })).toEqual({ half: 15, up: 24, down: 0 });
   });
+
+  it('hangs a flier\'s footprint below its anchor by its down', () => {
+    expect(reachOf({ width: 44, height: 46, down: 6 })).toEqual({ half: 22, up: 46, down: 6 });
+  });
 });
 
 describe('walls', () => {
