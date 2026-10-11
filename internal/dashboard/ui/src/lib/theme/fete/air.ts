@@ -1,4 +1,5 @@
 import type { Box } from '../floors';
+import type { Sky } from '../sky';
 
 // The wasps' air, in the shelf stage's own coordinates so they ride with
 // it: the rail's air (the rail sky stretched down through the shelf's box,
@@ -8,16 +9,15 @@ import type { Box } from '../floors';
 // a chased wasp leaves by. design-docs/fete/README.md has the contract.
 
 export type WaspAir = { air: Box; lane: Box };
-// The rail's air as measured, in viewport coordinates.
-export type RailAir = { left: number; top: number; width: number; height: number };
 
 // How far past the window's edge the lane runs, so a wasp is wholly out of
 // sight before it is gone.
 export const OFF_SCREEN = 24;
 
-// The air in the stage's coordinates, given where the stage's top left is in
-// the viewport; none while the shelf is hidden.
-export function waspAir(rail: RailAir | null, stage: { left: number; top: number }): WaspAir | null {
+// The air in the stage's coordinates, from the rail's air as measured (in
+// viewport coordinates) and where the stage's top left is in the viewport;
+// none while the shelf is hidden.
+export function waspAir(rail: Sky | null, stage: { left: number; top: number }): WaspAir | null {
   if (!rail || rail.width <= 0 || rail.height <= 0) return null;
   const air = { left: rail.left - stage.left, right: rail.left + rail.width - stage.left, top: rail.top - stage.top, bottom: rail.top + rail.height - stage.top };
   return { air, lane: { left: -stage.left - OFF_SCREEN, right: air.left, top: air.top, bottom: air.top + (air.bottom - air.top) / 2 } };
