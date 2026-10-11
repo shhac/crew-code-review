@@ -145,3 +145,11 @@ creature decides how much headroom it needs instead of inheriting the
 spider's. Halloween and Christmas render exactly as before. The
 `?theme-debug=1` overlay labels ledges with their headroom in pixels instead
 of marking spider-cramped tops in orange.
+
+Seasonal fixes: summer tennis's hawk and pigeons now pass behind the rail
+instead of over its links when they fly in or out by its edge; a fête wasp
+keeps feeding until there is room above the cake to take off, rather than
+rising out of a shortened shelf's air; the Easter egg counter is as wide as
+its count, so a double-digit hunt no longer spills toward the brand; a finger
+on a touch screen no longer startles the Halloween spiders; and March's
+hares crouch for a stand-off wherever a sit-up would reach a chart above.
