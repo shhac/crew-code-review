@@ -9,7 +9,7 @@
   import Geometry from '../Geometry.svelte';
   import { cueOf } from '../cue';
   import { ledgeScene, placeTroupe } from '../layout';
-  import type { Point, Segment } from '../pointer';
+  import { strokeSpeed, type Point, type Segment } from '../pointer';
   import Rig from '../rig/Rig.svelte';
   import { clipOf } from './airspace';
   import { hawkView } from './hawk';
@@ -83,7 +83,7 @@
       gazes = easeGazes(views, (v) => v.pigeon.id, (v) => (LOOKING.has(v.pose) ? gazeAt(v.dir, v, seen ?? cursor) : 0), gazes, step.dt);
     },
     stroke(segment) {
-      speed = (Math.hypot(segment.to.x - segment.from.x, segment.to.y - segment.from.y) * 1000) / Math.max(1, segment.at - (stroke?.at ?? -Infinity));
+      speed = strokeSpeed(segment, stroke?.at ?? -Infinity);
       stroke = segment;
     },
   }));

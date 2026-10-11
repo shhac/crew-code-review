@@ -9,6 +9,9 @@ export function distance(p: Point, a: Point, b: Point): number {
   const t = Math.max(0, Math.min(1, ((p.x - a.x) * dx + (p.y - a.y) * dy) / (dx * dx + dy * dy || 1)));
   return Math.hypot(p.x - a.x - t * dx, p.y - a.y - t * dy);
 }
+// How fast a stroke went (px/s), the one before it having ended at `since`:
+// strokes come one per pointermove, so their gaps are the cursor's pace.
+export const strokeSpeed = (s: Segment, since: number) => (Math.hypot(s.to.x - s.from.x, s.to.y - s.from.y) * 1000) / Math.max(1, s.at - since);
 // How near the stroke from a to b comes to the one from c to d: none apart
 // where each straddles the other's line.
 export function segmentsApart(a: Point, b: Point, c: Point, d: Point): number {
