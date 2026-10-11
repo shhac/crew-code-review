@@ -43,11 +43,6 @@ export const GAP = 6;
 // Frames the sweep is simulated at.
 const FRAME = 1000 / 60;
 
-// The rows of ledges (the surfaces kit's rowsOf: level within 2px, side by
-// side, named by the leftmost), and the one a ledge is in.
-export { rowsOf, type Row };
-export const rowOf = (rows: readonly Row[], floor: number) => rows.find((r) => r.ledges.includes(floor));
-
 // A sweep: along the row (its leftmost ledge's local space), from `from`
 // to `to` with its belly line `y` above the ledge, going dir, starting at
 // start; the pigeons' take-offs and routes, those that only look up, and

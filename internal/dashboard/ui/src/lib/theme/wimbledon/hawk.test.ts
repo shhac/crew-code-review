@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { around, meets } from '../air';
+import { around, meets, rowsOf } from '../air';
 import type { Box, Obstacle, PageMap } from '../floors';
 import { seeded } from '../test-scene';
 import { flying, lengthOfTrack, reachAt } from './flight';
 import {
-  AGAIN, createHawk, FIRST, GAP, GLIDE, SIGHTED, SPEED, hawkAt, hawkRemeasured, hawkView, laneFor, OFF_APART, planSweep, RETRY, RETURN, RETURN_APART, rowsOf, simulate, stepHawk, type Plan,
+  AGAIN, createHawk, FIRST, GAP, GLIDE, SIGHTED, SPEED, hawkAt, hawkRemeasured, hawkView, laneFor, OFF_APART, planSweep, RETRY, RETURN, RETURN_APART, simulate, stepHawk, type Plan,
 } from './hawk';
 import { clipOf } from './airspace';
 import { board, EXITS, MAIN, overview, side, testSky } from './fixtures';
