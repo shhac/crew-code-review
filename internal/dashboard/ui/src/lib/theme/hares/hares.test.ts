@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import type { PageMap } from '../floors';
 import type { Cursor } from '../pointer';
 import { CARDS, clearOfContent, dashboardPage as page, HEADING, seeded } from '../test-scene';
-import { BOX_GAP, CHASE_GAP, POSES, REACHES, SPACING, TALL, type Hare } from './hare';
+import { endChase } from './bout';
+import { BOX_GAP, CHASE_GAP, fresh, POSES, REACHES, sittingAt, SPACING, TALL, type Hare } from './hare';
 import { createHares, hareViews, reconcileHares, restingHares, stepHares, type HareView, type Hares } from './hares';
 
 const DT = 16;
@@ -120,6 +121,19 @@ describe('a bout', () => {
     run(createHares(scene, 0, seeded(4)), scene, 0, 40_000, seeded(5), () => null, (g) => g.hares.forEach((h) => modes.add(h.mode)));
     expect(modes.has('box')).toBe(false);
     expect(modes.has('run')).toBe(true);
+  });
+
+  // Once a bug: the stand-off kept each hare's `tall` from where it last
+  // sat, so a jack the chase brought under something low sat up into it.
+  it('stands off crouched where a chase ended under something low', () => {
+    // Text 32px over the rule where they stand: room to sit, none to sit up.
+    const low = page([{ left: 600, right: 700, top: 100, bottom: 128 }]);
+    const jill = sittingAt(fresh(0), HEADING, 1, 360, low, 0, seeded(1));
+    const jack = { ...sittingAt(fresh(1), HEADING, 1, 330, low, 0, seeded(1)), tall: true };
+    const group: Hares = { target: 2, hares: [jill, jack], runs: [], bout: { jill: 0, jack: 1, round: 2 }, nextBout: Infinity };
+    const after = endChase(group, low, 100, seeded(2));
+    expect(after.hares.map((h) => [h.mode, h.tall])).toEqual([['standoff', false], ['standoff', false]]);
+    expect(hareViews(after, low).map((v) => v.pose)).toEqual(['alert', 'alert']);
   });
 });
 

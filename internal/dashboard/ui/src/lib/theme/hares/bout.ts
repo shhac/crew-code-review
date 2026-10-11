@@ -2,7 +2,7 @@ import type { PageMap } from '../floors';
 import { bodyOf, clampTo, roomOver, runAt } from '../ledges';
 import { sign } from '../math';
 import { between, type Rand } from '../seed';
-import { BOX_GAP, BOX_SPAN, CHASE_GAP, CHASE_SPEED, HALF, HARE, SPACING, TALL, type Hare, type Mode } from './hare';
+import { BOX_GAP, BOX_SPAN, CHASE_GAP, CHASE_SPEED, HALF, HARE, SPACING, TALL, tallHere, type Hare, type Mode } from './hare';
 import type { Hares } from './hares';
 import { claimsBut, fileRun, planning, update } from './runs';
 import { plan } from './trail';
@@ -91,13 +91,16 @@ function startChase(group: Hares, scene: PageMap, now: number, rand: Rand, bout:
   const ids = [jill.id, ...followers.map((h) => h.id)];
   const trail = plan({ floor: rear.floor, x: rear.x }, side, scene, planning(claimsBut(group, scene, ids), CHASE, rand));
   const run = fileRun('chase', [jill, ...followers], trail, CHASE_SPEED, CHASE_LAG);
-  if (trail.length - run.at < 20) return standoff(group, now, rand, jill, jack);
+  if (trail.length - run.at < 20) return standoff(group, scene, now, rand, jill, jack);
   return { ...group, runs: [...group.runs, run], bout };
 }
 
-function standoff(group: Hares, now: number, rand: Rand, a: Hare, b: Hare): Hares {
+// Each faces the other down where it now is, sitting up only where there is
+// room over that spot (not where it last sat).
+function standoff(group: Hares, scene: PageMap, now: number, rand: Rand, a: Hare, b: Hare): Hares {
   const until = now + between(rand, 1500, 2500);
-  return { ...update(group, { ...facing(a, b), mode: 'standoff', until }, { ...facing(b, a), mode: 'standoff', until }), bout: null };
+  const facingDown = (h: Hare, other: Hare): Hare => ({ ...facing(h, other), mode: 'standoff', until, tall: tallHere(h, scene) });
+  return { ...update(group, facingDown(a, b), facingDown(b, a)), bout: null };
 }
 
 // Where a chase ended: a second box where there is room, the jack coming
@@ -109,7 +112,7 @@ export function endChase(group: Hares, scene: PageMap, now: number, rand: Rand):
   const { jill, jack } = pair;
   const side = sign(jill.x - jack.x);
   const target = jill.x - side * BOX_GAP;
-  if (bout.round === 2 || jill.floor !== jack.floor || !boxRoom(scene, jill.floor, jill.x, target)) return standoff(group, now, rand, jill, jack);
+  if (bout.round === 2 || jill.floor !== jack.floor || !boxRoom(scene, jill.floor, jill.x, target)) return standoff(group, scene, now, rand, jill, jack);
   return { ...update(group, { ...facing(jill, jack), mode: 'sit', until: Infinity }, { ...jack, mode: 'approach', target, dir: side }), bout: { ...bout, round: 2 } };
 }
 
@@ -121,7 +124,7 @@ export function advanceBout(group: Hares, scene: PageMap, now: number, rand: Ran
   const { jill, jack } = pair;
   if (jack.mode === 'arrived') {
     if (Math.abs(jack.x - jill.x) > BOX_GAP + 1e-6 || !boxRoom(scene, jill.floor, jill.x, jack.x)) {
-      return bout.round === 2 ? standoff(group, now, rand, jill, jack) : startChase(update(group, { ...jack, mode: 'sit', until: Infinity }), scene, now, rand, bout);
+      return bout.round === 2 ? standoff(group, scene, now, rand, jill, jack) : startChase(update(group, { ...jack, mode: 'sit', until: Infinity }), scene, now, rand, bout);
     }
     const until = now + between(rand, 2500, 4000);
     return update(group, { ...facing(jill, jack), mode: 'box', until }, { ...facing(jack, jill), mode: 'box', until });
