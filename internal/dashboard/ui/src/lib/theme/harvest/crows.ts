@@ -238,27 +238,36 @@ export function reconcileCrows(g: Crows, field: Field, now: number, rand: Rand):
 const unplaced = (c: Crow) => c.mode === 'away' && c.from === null && c.wait === 0;
 
 function keep(c: Crow, others: readonly Crow[], field: Field, now: number, rand: Rand): Crow {
-  if (unplaced(c)) {
-    const spot = pickSpot(field, claimsOf(others), now, rand);
-    return spot ? standing(c.id, spot.floor, spot.x, rand() < 0.5 ? 1 : -1, now, rand) : c;
-  }
+  if (unplaced(c)) return keepUnplaced(c, others, field, now, rand);
   if (c.mode === 'away') return c;
-  if (c.mode === 'depart' || c.mode === 'takeoff') {
-    if (c.flight && field.clear(remaining(c.flight, now), 'depart')) return c;
-    const at = pointOf(c, field.page, now);
-    const out = at && leave(at, field.page.width, field.clear, now, speedOf(rand), c.mode !== 'depart');
-    return out ? { ...c, mode: 'depart', since: now, flight: out } : { ...away(c.id, c.back), wait: c.wait, from: c.from };
-  }
-  if (c.mode === 'arrive') {
-    const spot = { floor: c.floor, x: c.x };
-    const p = feetAt(field, spot);
-    const f = field.page.floors.get(c.floor);
-    const still = !!f && !!runAt(f, field.page, WALKER, c.x);
-    if (still && c.flight && field.clear(remaining(c.flight, now), 'arrive')) return c;
-    const at = c.flight && flightAt(c.flight, now).at;
-    const down = still && p && at && landFrom(at, p, field.clear, now, speedOf(rand));
-    return down ? { ...c, since: now, flight: down } : turnBack(c, field, now, rand);
-  }
+  if (c.mode === 'depart' || c.mode === 'takeoff') return keepLeaving(c, field, now, rand);
+  if (c.mode === 'arrive') return keepArriving(c, field, now, rand);
+  return keepStanding(c, others, field, now, rand);
+}
+
+function keepUnplaced(c: Crow, others: readonly Crow[], field: Field, now: number, rand: Rand): Crow {
+  const spot = pickSpot(field, claimsOf(others), now, rand);
+  return spot ? standing(c.id, spot.floor, spot.x, rand() < 0.5 ? 1 : -1, now, rand) : c;
+}
+
+function keepLeaving(c: Crow, field: Field, now: number, rand: Rand): Crow {
+  if (c.flight && field.clear(remaining(c.flight, now), 'depart')) return c;
+  const at = pointOf(c, field.page, now);
+  const out = at && leave(at, field.page.width, field.clear, now, speedOf(rand), c.mode !== 'depart');
+  return out ? { ...c, mode: 'depart', since: now, flight: out } : { ...away(c.id, c.back), wait: c.wait, from: c.from };
+}
+
+function keepArriving(c: Crow, field: Field, now: number, rand: Rand): Crow {
+  const p = feetAt(field, { floor: c.floor, x: c.x });
+  const f = field.page.floors.get(c.floor);
+  const still = !!f && !!runAt(f, field.page, WALKER, c.x);
+  if (still && c.flight && field.clear(remaining(c.flight, now), 'arrive')) return c;
+  const at = c.flight && flightAt(c.flight, now).at;
+  const down = still && p && at && landFrom(at, p, field.clear, now, speedOf(rand));
+  return down ? { ...c, since: now, flight: down } : turnBack(c, field, now, rand);
+}
+
+function keepStanding(c: Crow, others: readonly Crow[], field: Field, now: number, rand: Rand): Crow {
   const f = field.page.floors.get(c.floor);
   const run = f && runAt(f, field.page, WALKER, c.x);
   const body = run && bodyOf(run, WALKER.half);
