@@ -32,3 +32,8 @@ export function skyOf(page: PageMap, wanted: readonly Exit[] = EXITS): Sky {
     air,
   };
 }
+
+// Where the fliers are cut off as drawn: at the rail's edge where it is an
+// exit, so a bird crossing it passes behind the rail rather than over its
+// nav (the rail is never air); nowhere where there is no such exit.
+export const clipOf = (sky: Sky): number | null => sky.exits.left;

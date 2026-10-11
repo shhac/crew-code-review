@@ -6,7 +6,8 @@ import { flying, lengthOfTrack, reachAt } from './flight';
 import {
   AGAIN, createHawk, FIRST, GAP, GLIDE, SIGHTED, SPEED, hawkAt, hawkRemeasured, hawkView, laneFor, OFF_APART, planSweep, RETRY, RETURN, RETURN_APART, rowsOf, simulate, stepHawk, type Plan,
 } from './hawk';
-import { board, EXITS, overview, side, testSky } from './fixtures';
+import { clipOf } from './airspace';
+import { board, EXITS, MAIN, overview, side, testSky } from './fixtures';
 import { ENVELOPES, fresh, POSES, standing, type Pigeon } from './pigeon';
 
 const PAGE = overview();
@@ -59,6 +60,25 @@ describe("the hawk's sweep", { timeout: 30_000 }, () => {
         boxes.forEach((a, i) => boxes.slice(i + 1).forEach((b) => expect(meets(grow(a.box, GAP), b.box), `${a.id} and ${b.id} at ${now}`).toBe(false)));
       }
     }
+  });
+
+  it('draws nothing over the rail: a bird crossing its edge is cut there, behind it', () => {
+    // The rail is a column at 1440, so its edge is an exit the hawk comes
+    // in by going right, and the pigeons leave by going left.
+    const flocks = [[at(0, 3, 200), at(1, 3, 300)], [at(0, 2, 60), at(1, 2, 160)]];
+    const clip = clipOf(SKY);
+    const crossed = flocks.flatMap((flock) => {
+      const plan = planSweep(flock, PAGE, SKY, 0, seeded(2))!;
+      const frames = Array.from({ length: Math.ceil((plan.end + 3000 - plan.start) * 0.06) }, (_, i) => plan.start + i * (1000 / 60));
+      return frames.flatMap((now) => boxesAt(plan, flock, PAGE, now)).filter((d) => d.box.left < MAIN.left);
+    });
+    expect(new Set(crossed.map((d) => d.id))).toEqual(new Set([-1, 0, 1]));
+    for (const d of crossed) {
+      const drawn = { ...d.box, left: Math.max(d.box.left, clip ?? -Infinity) };
+      expect(drawn.left >= drawn.right || drawn.left >= MAIN.left, `${d.id} from ${d.box.left}`).toBe(true);
+    }
+    // On a phone the rail is stacked above main: no exit, nothing to cut.
+    expect(clipOf(testSky(PAGE, ['right', 'top']))).toBeNull();
   });
 
   it('comes in from the side farther from the nearest pigeon, and they fly away ahead of it, the farthest first', () => {

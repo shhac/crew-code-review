@@ -11,6 +11,7 @@
   import { ledgeScene, placeTroupe } from '../layout';
   import type { Point, Segment } from '../pointer';
   import Rig from '../rig/Rig.svelte';
+  import { clipOf } from './airspace';
   import { hawkView } from './hawk';
   import { BEATS as HAWK_BEATS, hawkRig } from './hawk-rig';
   import { chalkLines, LINE, linesPath, specksOf, wornOf, wornPath, type Lines } from './lines';
@@ -48,6 +49,7 @@
     const view = viewOf(p, page!, now);
     return view ? [{ view, pose: pigeonRig({ ...rigPigeon(view, now), gaze: gazes.get(p.id) ?? 0 }, { now, still: reduced }) }] : [];
   }) : [];
+  $: clip = summer ? clipOf(summer.sky) : null;
   $: hawk = play && page ? hawkView(play.flock.hawk, page, now) : null;
   $: hawkPose = hawk ? hawkRig({ pose: 'glide', seed: 2, beat: (HAWK_BEATS * now) / 1000, gaze: 0 }, { now, still: reduced }) : null;
   $: ball = play && page ? ballOf(play.rally, page, now) : null;
@@ -111,16 +113,19 @@
       </g>
     {/if}
   </svg>
-  {#each pigeons as { view, pose } (view.pigeon.id)}
-    <Rig {pose} x={view.x} y={view.y} dir={view.dir} data-pigeon={view.pigeon.mode} data-pose={view.pose} data-id={view.pigeon.id} />
-  {/each}
-  {#if hawk && hawkPose}
-    <Rig pose={hawkPose} x={hawk.x} y={hawk.y} dir={hawk.dir} data-hawk="sweep" />
-  {/if}
+  <div class="fliers" style:clip-path={clip === null ? null : `inset(0px 0px 0px ${clip}px)`}>
+    {#each pigeons as { view, pose } (view.pigeon.id)}
+      <Rig {pose} x={view.x} y={view.y} dir={view.dir} data-pigeon={view.pigeon.mode} data-pose={view.pose} data-id={view.pigeon.id} />
+    {/each}
+    {#if hawk && hawkPose}
+      <Rig pose={hawkPose} x={hawk.x} y={hawk.y} dir={hawk.dir} data-hawk="sweep" />
+    {/if}
+  </div>
 </div>
 
 <style>
   svg { position: absolute; inset: 0; }
+  .fliers { position: absolute; inset: 0; }
   .chalk { fill: none; stroke: #f4f4ec; opacity: .7; }
   .speck { fill: #f4f4ec; }
   .ball { fill: #dde85a; stroke: #3d3d1c; stroke-width: .6; }
