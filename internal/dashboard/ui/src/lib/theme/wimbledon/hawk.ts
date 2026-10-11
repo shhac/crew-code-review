@@ -155,34 +155,51 @@ export function planOn(row: Row, dir: 1 | -1, pigeons: readonly Pigeon[], page: 
   const [from, to] = dir > 0 ? [lo - LEAD, hi] : [hi + LEAD, lo];
   const way = dir > 0 ? 'right' : 'left';
   const onRow = pigeons.filter((p) => row.ledges.includes(p.floor));
-  const routes = onRow.map((p) => ({ p, route: escapeOf(p, page, way, sky) }));
-  if (routes.some((r) => !r.route)) return null;
+  const routes = onRow.flatMap((p) => {
+    const route = escapeOf(p, page, way, sky);
+    return route ? [{ p, route }] : [];
+  });
+  if (routes.length < onRow.length) return null;
   const others = pigeons.filter((p) => !row.ledges.includes(p.floor));
   const end = endOf(from, to, start);
-  const plan = (takeoffs: Takeoff[], alerts: number[]): Plan => {
-    const returns = takeoffs.reduce<{ id: number; at: number }[]>((acc, t) => [...acc, { id: t.id, at: acc.length ? acc[acc.length - 1].at + between(rand, RETURN_APART[0], RETURN_APART[1]) : end + between(rand, RETURN[0], RETURN[1]) }], []);
-    return { row: row.id, y: lane.y - first.y, dir, start, from, to, end, takeoffs, alerts, returns };
-  };
+  const planned = (takeoffs: readonly Takeoff[], alerts: readonly number[]): Plan =>
+    ({ row: row.id, y: lane.y - first.y, dir, start, from, to, end, takeoffs, alerts, returns: returnTimes(takeoffs, end, rand) });
   // Those on its row go in turn, the one farthest from where it comes in
   // first (the one with the clearest way out); where that leaves one near
   // its way in too late, the nearest first instead.
   const entry = first.left + from;
   const farFirst = [...routes].sort((a, b) => Math.abs(pageX(b.p, page) - entry) - Math.abs(pageX(a.p, page) - entry));
-  return [farFirst, [...farFirst].reverse()].reduce<Plan | null>((found, order) => {
-    if (found) return found;
-    const ahead = order.map(({ p, route }, k): Takeoff => ({ id: p.id, at: start + FIRST_OFF + OFF_APART * k, route: route!, track: trackOf(route!) }));
+  const inOrder = (order: typeof routes): Plan | null => {
+    const ahead = order.map(({ p, route }, k): Takeoff => ({ id: p.id, at: start + FIRST_OFF + OFF_APART * k, route, track: trackOf(route) }));
     const follow = start + FIRST_OFF + OFF_APART * ahead.length + between(rand, FOLLOW[0], FOLLOW[1]);
-    // Those on other rows follow where their way out keeps clear of the
-    // sweep; the rest look up until it has passed.
-    const chosen = others.reduce<{ takeoffs: Takeoff[]; alerts: number[] }>((acc, p) => {
-      const route = escapeOf(p, page, way, sky);
-      const tried = route && { id: p.id, at: follow, route, track: trackOf(route) };
-      if (tried && simulate(plan([...ahead, ...acc.takeoffs, tried], acc.alerts), pigeons, page, sky)) return { ...acc, takeoffs: [...acc.takeoffs, tried] };
-      return { ...acc, alerts: [...acc.alerts, p.id] };
-    }, { takeoffs: [], alerts: [] });
-    const whole = plan([...ahead, ...chosen.takeoffs], chosen.alerts);
+    const clears = (going: readonly Takeoff[], alerts: readonly number[]) => simulate(planned([...ahead, ...going], alerts), pigeons, page, sky);
+    const chosen = followers(others, follow, (p) => escapeOf(p, page, way, sky), clears);
+    const whole = planned([...ahead, ...chosen.takeoffs], chosen.alerts);
     return simulate(whole, pigeons, page, sky) ? whole : null;
-  }, null);
+  };
+  return [farFirst, [...farFirst].reverse()].reduce<Plan | null>((found, order) => found ?? inOrder(order), null);
+}
+
+// When each comes back: the first RETURN after the sweep has ended, each
+// of the rest RETURN_APART after the one before.
+function returnTimes(takeoffs: readonly Takeoff[], end: number, rand: Rand): { id: number; at: number }[] {
+  return takeoffs.reduce<{ id: number; at: number }[]>((acc, t) => {
+    const before = acc.at(-1);
+    return [...acc, { id: t.id, at: before ? before.at + between(rand, RETURN_APART[0], RETURN_APART[1]) : end + between(rand, RETURN[0], RETURN[1]) }];
+  }, []);
+}
+
+// Those on other rows, each in turn, follow at `at` where their way out
+// keeps the sweep clear with those already going; the rest look up until it
+// has passed.
+type Followers = { takeoffs: Takeoff[]; alerts: number[] };
+function followers(others: readonly Pigeon[], at: number, wayOut: (p: Pigeon) => Route | null, clears: (going: readonly Takeoff[], alerts: readonly number[]) => boolean): Followers {
+  return others.reduce<Followers>((acc, p) => {
+    const route = wayOut(p);
+    const tried = route && { id: p.id, at, route, track: trackOf(route) };
+    if (tried && clears([...acc.takeoffs, tried], acc.alerts)) return { ...acc, takeoffs: [...acc.takeoffs, tried] };
+    return { ...acc, alerts: [...acc.alerts, p.id] };
+  }, { takeoffs: [], alerts: [] });
 }
 
 const pageX = (p: Pigeon, page: PageMap) => (page.floors.get(p.floor)?.left ?? 0) + p.x;
