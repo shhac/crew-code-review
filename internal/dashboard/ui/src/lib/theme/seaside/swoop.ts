@@ -172,8 +172,9 @@ function flareLeg(f: Ledge, l: Landing): Leg {
 
 // What a plan asks of the page again and again, worked out once: each
 // ledge's clear runs and its page with its own card dipped into, whether a
-// spot has its column of air to take off or land, and each flare.
-function planner(air: Pick<Air, 'page' | 'room'>, taken: readonly Claim[], cursor: Point | null) {
+// spot has its column of air to take off or land, and each flare; with the
+// air a route must keep to and the boxes it keeps clear of.
+function planner(air: Pick<Air, 'page' | 'room'>, taken: readonly Claim[], cursor: Point | null, also: readonly Box[]) {
   const page = air.page;
   const runs = memo((floor: number) => runsOf(page.floors.get(floor)!, page, GULL));
   const dipped = memo((floor: number) => touching(air, page.floors.get(floor)!));
@@ -208,13 +209,14 @@ function planner(air: Pick<Air, 'page' | 'room'>, taken: readonly Claim[], curso
     const flare = flareLeg(page.floors.get(l.floor)!, l);
     return legClear(dipped(l.floor), flare) ? flare : null;
   });
-  return { dipped, takeOffAt, landings, flareOnto };
+  return { air, also, dipped, takeOffAt, landings, flareOnto };
 }
 type Planner = ReturnType<typeof planner>;
 
 // The flight to a landing from `from` heading `out`: a cruise on one of a
 // few arcs, then the flare; each made only if clear.
-function comeDown(air: Pick<Air, 'page' | 'room'>, plan: Planner, from: Point, out: Point, l: Landing, also: readonly Box[]): Leg[] | null {
+function comeDown(plan: Planner, from: Point, out: Point, l: Landing): Leg[] | null {
+  const { air, also } = plan;
   const flare = plan.flareOnto(l);
   if (!flare || (also.length && !legClear(plan.dipped(l.floor), flare, also))) return null;
   const to = flare.curve.from;
@@ -261,7 +263,7 @@ export function planSwoop(ask: SwoopAsk): Plan | null {
   const page = air.page;
   const f = page.floors.get(gull.floor);
   if (!f) return null;
-  const plan = planner(air, taken, cursor);
+  const plan = planner(air, taken, cursor, also);
   const home = ask.home && staysPut(ask.home, page, GULL, taken) ? [ask.home] : [];
   // The dives at a pass point, each with its pull-up, that are clear.
   const headsAt = (p: Point) => ([1, -1] as const).flatMap((s) => DIVES.flatMap(({ back, up }) => {
@@ -284,7 +286,7 @@ export function planSwoop(ask: SwoopAsk): Plan | null {
     const heads = headsAt(p);
     if (heads.length) tried.passes++;
     for (const { s, a, dive, pull } of heads) {
-      const off = takeOff(plan, f, gull, a, unit(sub(dive.curve.to, a)), also);
+      const off = takeOff(plan, f, gull, a, unit(sub(dive.curve.to, a)));
       if (!off) continue;
       const head = [...off.legs, dive, pull];
       const sofar = routeLength(head) + Math.abs(off.x - gull.x);
@@ -292,7 +294,7 @@ export function planSwoop(ask: SwoopAsk): Plan | null {
         const flare = plan.flareOnto(land);
         // A cruise is never shorter than the straight way to its flare.
         if (!flare || sofar + apart(pull.curve.to, flare.curve.from) + FLARE > MAX_LENGTH) continue;
-        const tail = comeDown(air, plan, pull.curve.to, { x: s, y: -0.3 }, land, also);
+        const tail = comeDown(plan, pull.curve.to, { x: s, y: -0.3 }, land);
         if (tail && sofar + routeLength(tail) <= MAX_LENGTH) return { floor: gull.floor, from: off.x, legs: [...head, ...tail], land, length: routeLength([...head, ...tail]) };
       }
     }
@@ -305,7 +307,8 @@ export function planSwoop(ask: SwoopAsk): Plan | null {
 // from it, if clear: a climb rising straight away, or one that flies out
 // level first (over the rest of its card, say) and comes round into the
 // dive. The first three spots with room to take off are tried.
-function takeOff(plan: Planner, f: Ledge, gull: { floor: number; x: number }, a: Point, into: Point, also: readonly Box[]): { x: number; legs: Leg[] } | null {
+function takeOff(plan: Planner, f: Ledge, gull: { floor: number; x: number }, a: Point, into: Point): { x: number; legs: Leg[] } | null {
+  const { also } = plan;
   const offsets = [0, ...Array.from({ length: MAX_WALK / WALK_STEP }, (_, i) => (i + 1) * WALK_STEP).flatMap((d) => [d, -d])];
   const ground = plan.dipped(gull.floor);
   const spots = offsets.map((dx) => gull.x + dx).flatMap((x) => {
@@ -332,9 +335,9 @@ function takeOff(plan: Planner, f: Ledge, gull: { floor: number; x: number }, a:
 // is going, to the nearest landing spot it can reach clear (up to four
 // tried); or null.
 export function replan(air: Pick<Air, 'page' | 'room'>, here: Point, heading: Point, taken: readonly Claim[], also: readonly Box[], cursor: Point | null): Pick<Plan, 'legs' | 'land' | 'length'> | null {
-  const plan = planner(air, taken, cursor);
+  const plan = planner(air, taken, cursor, also);
   for (const land of plan.landings(here)) {
-    const legs = comeDown(air, plan, here, heading, land, also);
+    const legs = comeDown(plan, here, heading, land);
     if (legs) return { legs, land, length: routeLength(legs) };
   }
   return null;
