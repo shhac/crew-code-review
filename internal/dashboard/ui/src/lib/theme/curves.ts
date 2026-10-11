@@ -15,6 +15,35 @@ export function cubic(c: Curve, t: number): Point {
   return { x: mix('x'), y: mix('y') };
 }
 
+// A straight run from a to b as a curve, its controls a third and two
+// thirds of the way along, so it is flown at an even pace. One form of the
+// thirds (d / 3, not d * (1 / 3)) so every month's lines are the same to
+// the last bit.
+export const straight = (a: Point, b: Point): Curve => ({
+  from: a,
+  c1: { x: a.x + (b.x - a.x) / 3, y: a.y + (b.y - a.y) / 3 },
+  c2: { x: a.x + (2 * (b.x - a.x)) / 3, y: a.y + (2 * (b.y - a.y)) / 3 },
+  to: b,
+});
+
+// A curve split at t into the part before and the part after, by de
+// Casteljau: together they trace exactly the same points.
+export function splitAt(c: Curve, t: number): [Curve, Curve] {
+  const ab = mixPoint(c.from, c.c1, t), bc = mixPoint(c.c1, c.c2, t), cd = mixPoint(c.c2, c.to, t);
+  const abc = mixPoint(ab, bc, t), bcd = mixPoint(bc, cd, t);
+  const at = mixPoint(abc, bcd, t);
+  return [{ from: c.from, c1: ab, c2: abc, to: at }, { from: at, c1: bcd, c2: cd, to: c.to }];
+}
+
+// The rest of a curve from t on: what a flight still has to fly.
+export const after = (c: Curve, t: number): Curve => splitAt(c, t)[1];
+
+// A curve's two halves, for checking each where the whole is not clear.
+export const halves = (c: Curve): [Curve, Curve] => splitAt(c, 0.5);
+
+// A chain of curves flown the other way: last first, each from its end.
+export const reversedCurves = (chain: readonly Curve[]): Curve[] => [...chain].reverse().map((c) => ({ from: c.to, c1: c.c2, c2: c.c1, to: c.from }));
+
 // A quadratic arc, for an arrow.
 export type Arc = { from: Point; via: Point; to: Point };
 export function quadratic(a: Arc, t: number): Point {
