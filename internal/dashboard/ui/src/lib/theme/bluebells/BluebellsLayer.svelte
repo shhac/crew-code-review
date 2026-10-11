@@ -13,7 +13,7 @@
   import type { Cursor } from '../pointer';
   import { easeGazes, gazeFrom } from '../rig/gaze';
   import Rig from '../rig/Rig.svelte';
-  import { measureRailAir, measureRailSky } from '../sky';
+  import { measureRailAir, measureRailSky, watchRailSky } from '../sky';
   import { CLUMPS, CUSHIONS } from './art';
   import type { BeeView } from './bee';
   import { ANCHOR, beeRig, EYE, SCALE } from './bee-rig';
@@ -36,9 +36,6 @@
   const LOOKING = new Set(['perch', 'shiver', 'hover', 'approach']);
   // A test's cue: a bonk at the first bee's next choice, or the shelf first.
   const CUE = cueOf(['bonk', 'shelf'] as const);
-  // The rail does not scroll and the page's measuring does not see it, so
-  // its air is looked at again this often, and the bees told if it moved.
-  const RAIL_EVERY = 1000;
 
   let floors: ReadonlyMap<number, Ledge> = new Map();
   let page: PageMap = { floors, obstacles: [], width: 0, height: 0 };
@@ -49,7 +46,11 @@
   let reduced = false;
   let gazes: ReadonlyMap<number, number> = new Map();
   let rail: { room: Box | null; shelf: Box | null } = { room: null, shelf: null };
-  let railAt = -Infinity;
+  // The rail does not scroll and the page's measuring does not see it, so
+  // it is watched on its own; when it may have moved, its air is looked at
+  // again at the next frame, and the bees told if it did.
+  let railStale = false;
+  let stopRail: (() => void) | null = null;
 
   $: shown = group ? beeViews(group, page, now) : [];
   $: dipped = new Set(shown.flatMap(({ view }) => (view.on ? [view.on.flower] : [])));
@@ -60,10 +61,17 @@
   }
 
   const rectBox = (r: DOMRect): Box => ({ left: r.left, right: r.right, top: r.top, bottom: r.bottom });
+  const shelfEl = () => document.querySelector<HTMLElement>('.bluebells-shelf');
+  // The shelf may mount after the layer, or not at all (the lab's scene),
+  // so it is looked for at each frame until found.
+  function watchRail() {
+    const el = stopRail ? null : shelfEl();
+    if (el) stopRail = watchRailSky(el, () => { railStale = true; });
+  }
   // The rail's air the bees may use, and the shelf's flowers in it: none
   // with the shelf hidden or its sky too short.
   function railNow(measured: PageMap): typeof rail {
-    const el = document.querySelector<HTMLElement>('.bluebells-shelf');
+    const el = shelfEl();
     const room = railRoom(measureRailSky(el), measureRailAir(el), measured);
     const art = el?.querySelector('[data-bluebell-shelf]');
     return { room, shelf: room && art ? rectBox(art.getBoundingClientRect()) : null };
@@ -75,36 +83,40 @@
   // ones where they are.
   const troupe = placeTroupe({ create: createBees, reconcile: reconcileBees, resting: restingBees });
 
-  onMount(() => ledgeScene({
-    motion(still) { reduced = still; group = troupe.motion(group, still); },
-    measured(measured, previous, time) {
-      page = measured;
-      floors = measured.floors;
-      wood = growMoss(floors, measured.obstacles);
-      const railed = railNow(measured);
-      const same = samePage(measured, previous) && sameRail(railed, rail);
-      rail = railed;
-      railAt = time;
-      meadow = meadowFor(measured);
-      group = troupe.place(group, meadow, same, time, reduced);
-    },
-    frame(time, step) {
-      now = time;
-      if (time - railAt >= RAIL_EVERY) {
-        railAt = time;
-        const railed = railNow(page);
-        if (!sameRail(railed, rail)) {
-          rail = railed;
-          meadow = meadowFor(page);
-          group = troupe.place(group, meadow, false, time, reduced);
+  onMount(() => {
+    const stopScene = ledgeScene({
+      motion(still) { reduced = still; group = troupe.motion(group, still); },
+      measured(measured, previous, time) {
+        page = measured;
+        floors = measured.floors;
+        wood = growMoss(floors, measured.obstacles);
+        const railed = railNow(measured);
+        const same = samePage(measured, previous) && sameRail(railed, rail);
+        rail = railed;
+        railStale = false;
+        meadow = meadowFor(measured);
+        group = troupe.place(group, meadow, same, time, reduced);
+      },
+      frame(time, step) {
+        now = time;
+        watchRail();
+        if (railStale) {
+          railStale = false;
+          const railed = railNow(page);
+          if (!sameRail(railed, rail)) {
+            rail = railed;
+            meadow = meadowFor(page);
+            group = troupe.place(group, meadow, false, time, reduced);
+          }
         }
-      }
-      if (!step || !meadow || !group) return;
-      group = stepBees(group, meadow, time, step.dt, Math.random, step.cursor);
-      gazes = gazing(beeViews(group, page, time), step.cursor, step.dt);
-    },
-    stroke() {},
-  }));
+        if (!step || !meadow || !group) return;
+        group = stepBees(group, meadow, time, step.dt, Math.random, step.cursor);
+        gazes = gazing(beeViews(group, page, time), step.cursor, step.dt);
+      },
+      stroke() {},
+    });
+    return () => { stopScene(); stopRail?.(); };
+  });
 </script>
 
 <div class="seasonal-overlay" aria-hidden="true" data-bluebells>
