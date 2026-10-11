@@ -1,3 +1,4 @@
+import { union } from '../air';
 import { cubic, shiftPath, type Curve } from '../curves';
 import type { Box, PageMap } from '../floors';
 import type { Point } from '../pointer';
@@ -100,7 +101,10 @@ function splitAt(c: Curve, t: number): Curve {
 type Grid = { left: number; top: number; cols: number; rows: number; open: Uint8Array };
 const grids = new WeakMap<BeeAir, Grid>();
 
-// The open cells over the rooms, near the window.
+// The open cells over the rooms, near the window: open where the grown
+// footprint is inside the rooms, then every cell whose grown footprint would
+// meet an obstacle closed, obstacle by obstacle, which is far quicker than
+// testing each cell against them.
 export function gridOf(air: BeeAir): Grid {
   const held = grids.get(air);
   if (held) return held;
@@ -108,43 +112,45 @@ export function gridOf(air: BeeAir): Grid {
     const top = Math.max(r.top, -EXTEND), bottom = Math.min(r.bottom, air.page.height + EXTEND);
     return top < bottom ? [{ ...r, top, bottom }] : [];
   });
-  const left = Math.min(...near.map((r) => r.left)), right = Math.max(...near.map((r) => r.right));
-  const top = Math.min(...near.map((r) => r.top)), bottom = Math.max(...near.map((r) => r.bottom));
-  const cols = near.length ? Math.max(0, Math.floor((right - left) / CELL)) : 0;
-  const rows = near.length ? Math.max(0, Math.floor((bottom - top) / CELL)) : 0;
-  const open = new Uint8Array(cols * rows);
-  const grid = { left, top, cols, rows, open };
-  // Open where the grown footprint is inside the rooms; then every cell
-  // whose grown footprint would meet an obstacle is closed, obstacle by
-  // obstacle, which is far quicker than testing each cell against them.
+  const bounds = near.length ? near.reduce(union) : { left: 0, right: 0, top: 0, bottom: 0 };
+  const cols = Math.max(0, Math.floor((bounds.right - bounds.left) / CELL));
+  const rows = Math.max(0, Math.floor((bounds.bottom - bounds.top) / CELL));
+  const grid = { left: bounds.left, top: bounds.top, cols, rows, open: new Uint8Array(cols * rows) };
   const reach = flyReach({ x: 0, y: 0 });
-  // Row by row: the stretches across that the rooms cover from the grown
-  // box's top to its bottom, joined where they meet.
   for (const r of Array.from({ length: rows }, (_, i) => i)) {
-    const y = top + (r + 0.5) * CELL;
-    const spans = air.rooms.filter((room) => room.top <= y + reach.top && room.bottom >= y + reach.bottom).sort((a, b) => a.left - b.left);
-    const joined = spans.reduce<{ left: number; right: number }[]>((acc, s) => {
-      const last = acc.at(-1);
-      return last && s.left <= last.right ? [...acc.slice(0, -1), { left: last.left, right: Math.max(last.right, s.right) }] : [...acc, { left: s.left, right: s.right }];
-    }, []);
+    const y = bounds.top + (r + 0.5) * CELL;
+    const spans = joinedSpans(air.rooms, y + reach.top, y + reach.bottom);
     for (const c of Array.from({ length: cols }, (_, i) => i)) {
-      const x = left + (c + 0.5) * CELL;
-      open[r * cols + c] = joined.some((s) => s.left <= x + reach.left && s.right >= x + reach.right) ? 1 : 0;
+      const x = bounds.left + (c + 0.5) * CELL;
+      grid.open[r * cols + c] = spans.some((s) => s.left <= x + reach.left && s.right >= x + reach.right) ? 1 : 0;
     }
   }
-  for (const o of air.page.obstacles) {
-    const k = keepOff(o);
-    const c0 = Math.max(0, Math.floor((k.left - reach.right - left) / CELL - 0.5)), c1 = Math.min(cols - 1, Math.ceil((k.right - reach.left - left) / CELL - 0.5));
-    const r0 = Math.max(0, Math.floor((k.top - reach.bottom - top) / CELL - 0.5)), r1 = Math.min(rows - 1, Math.ceil((k.bottom - reach.top - top) / CELL - 0.5));
-    for (const r of Array.from({ length: Math.max(0, r1 - r0 + 1) }, (_, i) => r0 + i)) {
-      for (const c of Array.from({ length: Math.max(0, c1 - c0 + 1) }, (_, i) => c0 + i)) {
-        const at = centre(grid, r * cols + c);
-        if (at.x + reach.left < k.right && at.x + reach.right > k.left && at.y + reach.top < k.bottom && at.y + reach.bottom > k.top) open[r * cols + c] = 0;
-      }
-    }
-  }
+  for (const o of air.page.obstacles) closeAround(grid, keepOff(o), reach);
   grids.set(air, grid);
   return grid;
+}
+
+// The stretches across that the rooms cover all the way from top to bottom,
+// joined where they meet.
+function joinedSpans(rooms: readonly Box[], top: number, bottom: number): { left: number; right: number }[] {
+  const spans = rooms.filter((room) => room.top <= top && room.bottom >= bottom).sort((a, b) => a.left - b.left);
+  return spans.reduce<{ left: number; right: number }[]>((acc, s) => {
+    const last = acc.at(-1);
+    return last && s.left <= last.right ? [...acc.slice(0, -1), { left: last.left, right: Math.max(last.right, s.right) }] : [...acc, { left: s.left, right: s.right }];
+  }, []);
+}
+
+// Closes every cell whose footprint, grown to `reach`, would meet k: only
+// the cells near k are looked at.
+function closeAround(g: Grid, k: Box, reach: Box): void {
+  const c0 = Math.max(0, Math.floor((k.left - reach.right - g.left) / CELL - 0.5)), c1 = Math.min(g.cols - 1, Math.ceil((k.right - reach.left - g.left) / CELL - 0.5));
+  const r0 = Math.max(0, Math.floor((k.top - reach.bottom - g.top) / CELL - 0.5)), r1 = Math.min(g.rows - 1, Math.ceil((k.bottom - reach.top - g.top) / CELL - 0.5));
+  for (const r of Array.from({ length: Math.max(0, r1 - r0 + 1) }, (_, i) => r0 + i)) {
+    for (const c of Array.from({ length: Math.max(0, c1 - c0 + 1) }, (_, i) => c0 + i)) {
+      const at = centre(g, r * g.cols + c);
+      if (at.x + reach.left < k.right && at.x + reach.right > k.left && at.y + reach.top < k.bottom && at.y + reach.bottom > k.top) g.open[r * g.cols + c] = 0;
+    }
+  }
 }
 
 const centre = (g: Grid, k: number): Point => ({ x: g.left + ((k % g.cols) + 0.5) * CELL, y: g.top + (Math.floor(k / g.cols) + 0.5) * CELL });
