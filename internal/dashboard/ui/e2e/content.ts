@@ -6,10 +6,12 @@ import type { Page } from '@playwright/test';
 export type Drawn = readonly [elements: string, parts: string];
 
 // Where the drawings overlap the page's content: rendered text, controls,
-// charts. Cards' own boxes are not content; an animal may stand into their
-// empty edges. slack is how far a drawing may reach into content and still
-// not count. The content is measured once for every group, since walking
-// every text range on the page is most of the cost.
+// charts, and the rail's links, brand and identity chip (the overlay sits
+// above the rail, so a flier crossing it covers them; the shelf's air
+// between them is open sky). Cards' own boxes are not content; an animal may
+// stand into their empty edges. slack is how far a drawing may reach into
+// content and still not count. The content is measured once for every
+// group, since walking every text range on the page is most of the cost.
 export function coveredContent(page: Page, groups: readonly Drawn[], slack = 0): Promise<string[]> {
   return page.evaluate(([groups, slack]) => {
     const main = document.querySelector('main');
@@ -23,6 +25,7 @@ export function coveredContent(page: Page, groups: readonly Drawn[], slack = 0):
       for (const r of Array.from(range.getClientRects())) content.push({ name: `text "${node.textContent.trim().slice(0, 20)}"`, r });
     }
     main.querySelectorAll('svg, canvas, button, input, textarea, select').forEach((el) => content.push({ name: el.tagName.toLowerCase(), r: el.getBoundingClientRect() }));
+    document.querySelectorAll('.rail nav a, .rail .brand, .rail .viewer-chip').forEach((el) => content.push({ name: `rail ${el.matches('a') ? `link "${el.textContent?.trim()}"` : el.className.split(' ')[0]}`, r: el.getBoundingClientRect() }));
     type Box = { left: number; right: number; top: number; bottom: number; width: number; height: number };
     const overlap = (a: Box, b: Box) => a.left < b.right - slack && b.left < a.right - slack && a.top < b.bottom - slack && b.top < a.bottom - slack && b.width > 0 && b.height > 0;
     // What of a picture shows: its box cut to every rect clip-path on it or
