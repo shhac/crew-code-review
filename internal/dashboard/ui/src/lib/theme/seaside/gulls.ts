@@ -10,7 +10,7 @@ import {
 } from './gull';
 import { AIR, reachOf } from './gull-poses';
 import { flightOf } from './flight';
-import { berths, planSwoop, type Plan } from './swoop';
+import { berths, planSwoop, type Plan, type SwoopAsk } from './swoop';
 
 // The gulls on the page together: how many to keep, and the group's rules
 // on top of each one's own in gull.ts: only one in the air at a time; a
@@ -97,12 +97,16 @@ export function restingGulls(scene: PageMap, previous: Gulls | null): Gulls {
   return { ...g, gulls, answer: null, answering: null };
 }
 
+// What a swoop from where a gull stands asks of the page: the air in
+// view, its own spot to come back to, and the others to keep clear of.
+const askFor = (gull: Gull, others: readonly Gull[], scene: PageMap, now: number, cursor: Point): SwoopAsk =>
+  ({ air: airspace(scene).view, gull, home: { floor: gull.floor, x: gull.x }, cursor, taken: claimsIn(others, scene), also: berthsOf(others, scene, now) });
+
 // The swoop a gull would make at the cursor, or null.
 function planFor(gull: Gull, others: readonly Gull[], scene: PageMap, now: number, cursor: Point): Plan | null {
   const f = scene.floors.get(gull.floor);
   if (!f || !inView(f, scene) || !idle(gull)) return null;
-  const { view } = airspace(scene);
-  return planSwoop({ air: view, gull, home: { floor: gull.floor, x: gull.x }, cursor, taken: claimsIn(others, scene), also: berthsOf(others, scene, now) });
+  return planSwoop(askFor(gull, others, scene, now, cursor));
 }
 
 // Off it goes along a plan, from where it stands.
@@ -147,7 +151,7 @@ function takingOff(g: Gulls, scene: PageMap, now: number, cursor: Cursor | null)
   if (!ready) return g;
   const others = g.gulls.filter((o) => o.id !== ready.id);
   const still = cursor && now - cursor.at >= MOVING;
-  const plan = still ? planSwoop({ air: airspace(scene).view, gull: ready, home: { floor: ready.floor, x: ready.x }, cursor, taken: claimsIn(others, scene), also: berthsOf(others, scene, now) }) : null;
+  const plan = still ? planSwoop(askFor(ready, others, scene, now, cursor)) : null;
   const off = plan && plan.from === ready.x ? launch(ready, plan, scene, now) : null;
   const next = off ?? (still ? call(ready, now) : { ...ready, mode: 'stand' as const, since: now, until: now });
   return { ...g, gulls: g.gulls.map((x) => (x.id === next.id ? next : x)) };
