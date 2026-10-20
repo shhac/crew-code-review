@@ -1,6 +1,6 @@
 import type { Box } from '../floors';
 import { meets } from '../air';
-import { cubic, lengthOf, type Curve } from '../curves';
+import { chainAt, chainFrom, chainHeading, chainOf, reversedCurves, straight, type Curve } from '../curves';
 import { clamp, degrees } from '../math';
 import type { Point } from '../pointer';
 
@@ -44,8 +44,7 @@ export type Flight = Route & { start: number; duration: number; leg: Leg };
 // Whether a route's whole swept envelope stays in air (the kits' check).
 export type Clear = (route: Route, leg: Leg) => boolean;
 
-const along = (curves: readonly Curve[]) => curves.map((c) => lengthOf((t) => cubic(c, t)));
-export const routeLength = (curves: readonly Curve[]) => along(curves).reduce((a, b) => a + b, 0);
+export const routeLength = (curves: readonly Curve[]) => chainOf(curves).length;
 
 // How far along its route a flight is at now, 0 to 1: easing in from the
 // take-off, out to the landing.
@@ -56,54 +55,34 @@ export function progress(f: Flight, now: number): number {
 
 export const done = (f: Flight, now: number) => now >= f.start + f.duration;
 
-// The point a fraction s of the way along a chain, by length.
-export function pointAlong(curves: readonly Curve[], s: number): { p: Point; curve: Curve; t: number; i: number } {
-  const lengths = along(curves);
-  const total = lengths.reduce((a, b) => a + b, 0);
-  const target = clamp(s, 0, 1) * total;
-  const walk = (i: number, before: number): { p: Point; curve: Curve; t: number; i: number } => {
-    const c = curves[i];
-    const last = i === curves.length - 1;
-    if (!last && before + lengths[i] < target) return walk(i + 1, before + lengths[i]);
-    const t = lengths[i] ? clamp((target - before) / lengths[i], 0, 1) : 1;
-    return { p: cubic(c, t), curve: c, t, i };
-  };
-  return walk(0, 0);
+// Where along its route a flight is at now, by length.
+function placeOf(f: Flight, now: number) {
+  const chain = chainOf(f.curves);
+  const s = progress(f, now) * chain.length;
+  return { chain, s, on: chainAt(chain, s) ?? { i: 0, curve: f.curves[0], t: 0, p: f.curves[0].from } };
 }
 
 // Where a flying crow is at now, which way it faces and how far its body
 // pitches (degrees, nose up positive), from the route's slope.
 export function flightAt(f: Flight, now: number): { at: Point; dir: 1 | -1; pitch: number; kind: Piece } {
-  const { p, curve, t, i } = pointAlong(f.curves, progress(f, now));
-  const ahead = cubic(curve, Math.min(1, t + 0.02));
-  const behind = cubic(curve, Math.max(0, t - 0.02));
-  const dx = ahead.x - behind.x, dy = ahead.y - behind.y;
+  const { chain, s, on } = placeOf(f, now);
+  const { x: dx, y: dy } = chainHeading(chain, s, 0.02);
   const dir: 1 | -1 = dx < 0 ? -1 : 1;
-  return { at: p, dir, pitch: clamp(degrees(Math.atan2(-dy, Math.abs(dx) || 1e-6)), -PITCH, PITCH), kind: f.kinds[i] };
+  return { at: on.p, dir, pitch: clamp(degrees(Math.atan2(-dy, Math.abs(dx) || 1e-6)), -PITCH, PITCH), kind: f.kinds[on.i] };
 }
 
 export function fly(route: Route, leg: Leg, start: number, speed: number): Flight {
   return { ...route, start, leg, duration: (routeLength(route.curves) / speed) * 1000 };
 }
 
-// The part of a curve after t, by de Casteljau.
-export function after(c: Curve, t: number): Curve {
-  const m = (a: Point, b: Point) => ({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t });
-  const ab = m(c.from, c.c1), bc = m(c.c1, c.c2), cd = m(c.c2, c.to);
-  const abc = m(ab, bc), bcd = m(bc, cd);
-  return { from: m(abc, bcd), c1: bcd, c2: cd, to: c.to };
-}
-
 // What is left of a flight's route from now: re-checked against new air
 // when the page moves under it.
 export function remaining(f: Flight, now: number): Route {
-  const { curve, t, i } = pointAlong(f.curves, progress(f, now));
-  return { curves: [after(curve, t), ...f.curves.slice(i + 1)], kinds: f.kinds.slice(i) };
+  const { chain, s, on } = placeOf(f, now);
+  return { curves: chainFrom(chain, s), kinds: f.kinds.slice(on.i) };
 }
 
-const backwards = (curves: readonly Curve[]): Curve[] => [...curves].reverse().map((c) => ({ from: c.to, c1: c.c2, c2: c.c1, to: c.from }));
-const reverse = (r: Route): Route => ({ curves: backwards(r.curves), kinds: [...r.kinds].reverse() });
-const line = (a: Point, b: Point): Curve => ({ from: a, c1: { x: a.x + (b.x - a.x) / 3, y: a.y + (b.y - a.y) / 3 }, c2: { x: a.x + (2 * (b.x - a.x)) / 3, y: a.y + (2 * (b.y - a.y)) / 3 }, to: b });
+const reverse = (r: Route): Route => ({ curves: reversedCurves(r.curves), kinds: [...r.kinds].reverse() });
 
 // A climb from p up and to the right, off the top: leaving the ledge
 // steeply, levelling into a slant.
@@ -117,7 +96,7 @@ function climb(p: Point, start: Point = p): Curve {
 // it to x, rising gently: the take-off's hop and the first strokes.
 function skimTo(p: Point, x: number): Curve[] {
   const up = { x: p.x + 24, y: p.y - SKIM };
-  return [{ from: p, c1: { x: p.x + 8, y: p.y - 10 }, c2: { x: up.x - 10, y: up.y }, to: up }, line(up, { x, y: up.y })];
+  return [{ from: p, c1: { x: p.x + 8, y: p.y - 10 }, c2: { x: up.x - 10, y: up.y }, to: up }, straight(up, { x, y: up.y })];
 }
 
 // The ways off the page from a crow's feet at p, in the note's order: a
@@ -139,7 +118,7 @@ export function departures(p: Point, width: number): Route[] {
 // The first clear way off the page from a crow's feet at p, or from the
 // air (a crow turning back, or re-routed after the page moved).
 export function leave(p: Point, width: number, clear: Clear, start: number, speed: number, grounded = true): Flight | null {
-  const aloft: Route[] = [{ curves: [climb(p)], kinds: ['climb'] }, { curves: [line(p, { x: width + BEYOND, y: p.y })], kinds: ['climb'] }];
+  const aloft: Route[] = [{ curves: [climb(p)], kinds: ['climb'] }, { curves: [straight(p, { x: width + BEYOND, y: p.y })], kinds: ['climb'] }];
   const options = grounded ? departures(p, width) : aloft;
   const route = options.find((r) => clear(r, 'depart'));
   return route ? fly(route, 'depart', start, speed) : null;
@@ -159,7 +138,7 @@ export function landFrom(from: Point, p: Point, clear: Clear, start: number, spe
   const up = hop.to;
   const side = from.x < up.x ? -1 : 1;
   const approach = { from, c1: { x: from.x + (up.x - from.x) / 3, y: from.y + (up.y - from.y) / 3 }, c2: { x: up.x + side * 30, y: up.y }, to: up };
-  const route: Route = { curves: [approach, ...backwards([hop])], kinds: ['climb', 'lift'] };
+  const route: Route = { curves: [approach, ...reversedCurves([hop])], kinds: ['climb', 'lift'] };
   return clear(route, 'arrive') ? fly(route, 'arrive', start, speed) : null;
 }
 

@@ -1,5 +1,5 @@
 import { around, meets, union } from '../air';
-import { cubic, lengthOf, samples, type Curve } from '../curves';
+import { chainAt, chainOf, samples, type Curve } from '../curves';
 import type { Box, Reach } from '../floors';
 import { apart, clamp, mixPoint, smooth } from '../math';
 import type { Point } from '../pointer';
@@ -37,26 +37,12 @@ export function sweptFrom(f: Flight, reach: Reach, now: number): Box[] {
   return samples((u) => along(f.route, done + u * (1 - done)), 3).map((s) => around(s.p, reach));
 }
 
-// Each leg's length, worked out once per route.
-const lengths = new WeakMap<Route, number[]>();
-function legsOf(route: Route): number[] {
-  const known = lengths.get(route);
-  if (known) return known;
-  const measured = route.map((c) => lengthOf((t) => cubic(c, t)));
-  lengths.set(route, measured);
-  return measured;
-}
-export const routeLength = (route: Route) => legsOf(route).reduce((a, b) => a + b, 0);
+export const routeLength = (route: Route) => chainOf(route).length;
 
 // The point p of the way along a route, by distance.
 export function along(route: Route, p: number): Point {
-  const legs = legsOf(route);
-  const total = legs.reduce((a, b) => a + b, 0) || 1;
-  const goal = clamp(p, 0, 1) * total;
-  const k = legs.findIndex((_, i) => legs.slice(0, i + 1).reduce((a, b) => a + b, 0) >= goal - 1e-9);
-  const leg = k < 0 ? route.length - 1 : k;
-  const before = legs.slice(0, leg).reduce((a, b) => a + b, 0);
-  return cubic(route[leg], legs[leg] ? clamp((goal - before) / legs[leg], 0, 1) : 1);
+  const chain = chainOf(route);
+  return chainAt(chain, p * chain.length)?.p ?? { x: 0, y: 0 };
 }
 
 // A line through these points with each corner rounded off over CORNER px

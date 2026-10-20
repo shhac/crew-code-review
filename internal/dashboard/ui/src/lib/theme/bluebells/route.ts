@@ -1,5 +1,5 @@
 import { union } from '../air';
-import { cubic, shiftPath, type Curve } from '../curves';
+import { chainAt, chainFrom, chainHeading, chainOf, shiftPath, type Chain, type Curve } from '../curves';
 import type { Box, PageMap } from '../floors';
 import type { Point } from '../pointer';
 import { keepOff, sweptClear, type BeeAir, type Clear } from './beeair';
@@ -33,18 +33,10 @@ export function originOf(page: PageMap, frame: Frame): Point | null {
   return f ? { x: f.left, y: f.y } : null;
 }
 
-// A route: its curves, how long each is and how far along each ends.
-export type Route = { curves: readonly Curve[]; lengths: readonly number[]; ends: readonly number[]; length: number };
-
-const lengthOfCurve = (c: Curve) => {
-  const pts = Array.from({ length: 33 }, (_, i) => cubic(c, i / 32));
-  return pts.slice(1).reduce((s, p, i) => s + Math.hypot(p.x - pts[i].x, p.y - pts[i].y), 0);
-};
-export function routeOf(curves: readonly Curve[]): Route {
-  const lengths = curves.map(lengthOfCurve);
-  const ends = lengths.reduce<number[]>((acc, len) => [...acc, (acc.at(-1) ?? 0) + len], []);
-  return { curves, lengths, ends, length: ends.at(-1) ?? 0 };
-}
+// A route: its curves end to end, each measured on 32 steps (the curves
+// kit's chain).
+export type Route = Chain;
+export const routeOf = (curves: readonly Curve[]): Route => chainOf(curves, 32);
 
 // A route on the page, held by a frame, and back.
 export const holdRoute = (route: Route, at: Point): Route => ({ ...route, curves: route.curves.map((c) => shiftPath(c, { x: -at.x, y: -at.y })) });
@@ -67,36 +59,14 @@ export function samplesOf(route: Route, every = 12): readonly { s: number; p: Po
 
 // Where on a route s px along it is, and which way it is heading there.
 export function along(route: Route, s: number): { p: Point; dx: number; dy: number } {
-  const ends = route.ends;
-  const found = ends.findIndex((end) => s <= end);
-  const i = found < 0 ? route.curves.length - 1 : found;
-  const before = i > 0 ? ends[i - 1] : 0;
-  const len = route.lengths[i] || 1;
-  const t = Math.min(1, Math.max(0, (s - before) / len));
-  const c = route.curves[i];
-  const p = cubic(c, t);
-  const q = cubic(c, Math.min(1, t + 0.01)), o = cubic(c, Math.max(0, t - 0.01));
-  return { p, dx: q.x - o.x, dy: q.y - o.y };
+  const on = chainAt(route, s);
+  if (!on) return { p: { x: 0, y: 0 }, dx: 0, dy: 0 };
+  const { x: dx, y: dy } = chainHeading(route, s, 0.01);
+  return { p: on.p, dx, dy };
 }
 
 // The rest of a route from s on, as curves (the curve it is on split there).
-export function routeFrom(route: Route, s: number): Route {
-  const starts = [0, ...route.ends];
-  const i = Math.max(0, starts.findIndex((_, k) => k < route.lengths.length && s < starts[k + 1]));
-  const c = route.curves[i];
-  if (!c) return routeOf([]);
-  const t = Math.min(1, Math.max(0, (s - starts[i]) / (route.lengths[i] || 1)));
-  const rest = splitAt(c, t);
-  return routeOf([rest, ...route.curves.slice(i + 1)]);
-}
-
-// The part of a curve from t to its end, by de Casteljau.
-function splitAt(c: Curve, t: number): Curve {
-  const mix = (a: Point, b: Point) => ({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t });
-  const a = mix(c.from, c.c1), b = mix(c.c1, c.c2), d = mix(c.c2, c.to);
-  const e = mix(a, b), f = mix(b, d);
-  return { from: mix(e, f), c1: f, c2: d, to: c.to };
-}
+export const routeFrom = (route: Route, s: number): Route => routeOf(chainFrom(route, s));
 
 type Grid = { left: number; top: number; cols: number; rows: number; open: Uint8Array };
 const grids = new WeakMap<BeeAir, Grid>();
