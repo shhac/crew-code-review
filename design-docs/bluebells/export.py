@@ -28,7 +28,7 @@ import numpy as np
 from PIL import Image
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from art import MARGIN, EyeScale, blob, crop, cut, export, keyed, opaque, pale, poses  # noqa: E402
+from art import EyeScale, blob, crop, crop_origin, cut, export, keyed, opaque, pale, poses  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
 OUT = HERE.parents[1] / 'internal/dashboard/ui/src/lib/theme/bluebells'
@@ -86,9 +86,7 @@ def collar(name: str, band_seed: tuple[int, int], seed: tuple[int, int]) -> tupl
     units: where the lab lines a key pose up with the rig."""
     path = HERE / f'{name}.png'
     rows, cols = patch(path, seed)
-    alpha = keyed(path)[..., 3] > 8
-    top = max(0, np.nonzero(alpha.any(axis=1))[0].min() - MARGIN)
-    left = max(0, np.nonzero(alpha.any(axis=0))[0].min() - MARGIN)
+    left, top = crop_origin(keyed(path))
     per_unit = band(path, band_seed) / BAND
     return (cols.mean() - left) / per_unit, (rows.mean() - top) / per_unit
 

@@ -39,6 +39,13 @@ def crop(rgba: np.ndarray) -> np.ndarray:
     return rgba[max(0, ys.min() - MARGIN):ys.max() + MARGIN + 1, max(0, xs.min() - MARGIN):xs.max() + MARGIN + 1]
 
 
+def crop_origin(rgba: np.ndarray) -> tuple[int, int]:
+    """Where crop(rgba) starts in rgba (x, y): where a point of the picture
+    lands in what is exported is measured from here."""
+    ys, xs = np.nonzero(rgba[..., 3] > 8)
+    return max(0, xs.min() - MARGIN), max(0, ys.min() - MARGIN)
+
+
 def poses(rgba: np.ndarray, count: int) -> list[np.ndarray]:
     """Split a sheet of count poses, left to right, at the middles of its
     count - 1 widest runs of empty columns."""

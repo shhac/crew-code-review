@@ -19,7 +19,7 @@ import numpy as np
 from PIL import Image
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from art import MARGIN as ART_MARGIN, EyeScale, crop, cut, export, export_with_fur, feature, opaque, pale  # noqa: E402
+from art import EyeScale, crop, crop_origin, cut, export, export_with_fur, feature, opaque, pale  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
 OUT = HERE.parents[1] / 'internal/dashboard/ui/src/lib/theme/valentine'
@@ -94,10 +94,9 @@ def eye_in(name: str, seed: tuple[int, int]) -> tuple[float, float]:
     ys, xs = np.nonzero(dark[sy - 60:sy + 60, sx - 60:sx + 60])
     near = (ys - 60) ** 2 + (xs - 60) ** 2 < 40 ** 2
     cy, cx = ys[near].mean() + sy - 60, xs[near].mean() + sx - 60
-    alpha = cupid(name)[..., 3] > 8
-    top, left = np.nonzero(alpha.any(axis=1))[0].min() - ART_MARGIN, np.nonzero(alpha.any(axis=0))[0].min() - ART_MARGIN
+    left, top = crop_origin(cupid(name))
     per_unit = feature(HERE / f'{name}.png', seed) / EYE
-    return (cx - max(0, left)) / per_unit, (cy - max(0, top)) / per_unit
+    return (cx - left) / per_unit, (cy - top) / per_unit
 
 
 def main() -> None:

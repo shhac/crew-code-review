@@ -30,7 +30,7 @@ from PIL import Image
 from scipy import ndimage
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from art import MARGIN, EyeScale, crop, cut, export, export_with_fur, keyed, lum, opaque, place, poses, rescaled, rows  # noqa: E402
+from art import EyeScale, crop, crop_origin, cut, export, export_with_fur, keyed, lum, opaque, place, poses, rescaled, rows  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
 OUT = HERE.parents[1] / 'internal/dashboard/ui/src/lib/theme/harvest'
@@ -92,9 +92,7 @@ def eye_at(path: Path, seed: tuple[int, int]) -> tuple[float, float]:
     ys, xs = np.nonzero(brown(rgba))
     near = (xs - seed[0]) ** 2 + (ys - seed[1]) ** 2 < 60 ** 2
     cx, cy = (xs[near].min() + xs[near].max()) / 2, (ys[near].min() + ys[near].max()) / 2
-    seen = rgba[..., 3] > 8
-    top = max(0, np.nonzero(seen.any(axis=1))[0].min() - MARGIN)
-    left = max(0, np.nonzero(seen.any(axis=0))[0].min() - MARGIN)
+    left, top = crop_origin(rgba)
     per_unit = iris(path, seed) / EYE
     return (cx - left) / per_unit, (cy - top) / per_unit
 

@@ -25,7 +25,7 @@ from pathlib import Path
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from art import EyeScale, blob, crop, cut, export, keyed, lum, opaque, rescaled  # noqa: E402
+from art import EyeScale, blob, crop, crop_origin, cut, export, keyed, lum, opaque, rescaled  # noqa: E402
 import numpy as np  # noqa: E402
 from PIL import Image  # noqa: E402
 
@@ -64,13 +64,6 @@ def iris(path: Path, seed: tuple[int, int]) -> float:
     return grey_eye(path, seed)[0]
 
 
-def cropped_at(path: Path) -> tuple[int, int]:
-    """Where crop(keyed(path)) starts in the source (x, y)."""
-    art = keyed(path)
-    ys, xs = np.nonzero(art[..., 3] > 8)
-    return max(0, xs.min() - 6), max(0, ys.min() - 6)
-
-
 class IrisScale(EyeScale):
     def key_poses(self, prefix: str, seeds: dict[str, tuple[int, int]], out: Path, key=keyed) -> None:
         """Each key pose, and the middle of its eye in its own drawing units:
@@ -81,13 +74,13 @@ class IrisScale(EyeScale):
             eye, (ex, ey) = grey_eye(path, seed)
             k = self.eye / eye * self.res
             size = export(crop(key(path)), out, name, k)
-            left, top = cropped_at(path)
+            left, top = crop_origin(keyed(path))
             print(f'{name}: eye {eye:.1f}px; drawing units {self.units(size)}; eye at {(ex - left) * k / self.res:.2f}, {(ey - top) * k / self.res:.2f}')
 
     def reference_eye(self, sheet: str) -> None:
         """The middle of the reference's eye, in the rig's drawing units."""
         _, (ex, ey) = grey_eye(self.here / sheet, self.eyes[sheet])
-        left, top = cropped_at(self.here / sheet)
+        left, top = crop_origin(keyed(self.here / sheet))
         print(f'eye: {(ex - left) / self.per_unit() + self.margin:.2f}, {(ey - top) / self.per_unit() + self.margin:.2f}')
 
     def placed(self, name: str, art: np.ndarray, out: Path, scale: float, k: float, mask=None) -> tuple[int, int]:
@@ -140,8 +133,7 @@ PLACED: dict[str, tuple[float, float]] = {}
 
 def table() -> None:
     art = keyed(HERE / 'fete-table.png')
-    ys, xs = np.nonzero(art[..., 3] > 8)
-    top, left = max(0, ys.min() - 6), max(0, xs.min() - 6)
+    left, top = crop_origin(art)
     art = crop(art)
     k = TABLE[1] * TABLE[0] / art.shape[1]
     w, h = export(art, OUT, 'fete-table', k)
@@ -159,8 +151,7 @@ def wasp() -> None:
     parts = cut(keyed(HERE / 'wasp-parts.png'), PARTS)
     units.update(scale.parts(parts, 'wasp-parts.png', OUT))
     wing = keyed(HERE / 'wasp-wing.png')
-    ys, xs = np.nonzero(wing[..., 3] > 8)
-    top, left = max(0, ys.min() - 6), max(0, xs.min() - 6)
+    left, top = crop_origin(wing)
     wing = crop(wing)
     size = export(wing, OUT, 'wasp-wing', scale.on_eye('wasp-pose-hover.png'))
     hx, hy = (HINGE[0] - left) / wing.shape[1], (HINGE[1] - top) / wing.shape[0]
