@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { Box } from '../floors';
+import type { Box, PageMap } from '../floors';
 import type { Cursor } from '../pointer';
 import { seeded } from '../test-scene';
 import { clear } from './beeair';
@@ -9,6 +9,7 @@ import type { WallSide } from './bonks';
 import { cursorAt, dashboard, meadowOn } from './fixtures';
 import { SHELF_KEY } from './flowers';
 import { CONTACT } from './footprints';
+import { along, originOf, placeRoute } from './route';
 
 const gap = (a: Box, b: Box) => Math.max(b.left - a.right, a.left - b.right, b.top - a.bottom, a.top - b.bottom);
 
@@ -165,6 +166,68 @@ describe('the bees', () => {
       if (box) expect(clear(covered.air, box)).toBe(true);
     }
     expect(moved.bees[0].flower).not.toBe(g.bees[0].flower);
+  });
+
+  describe('caught mid-flight by a layout change', () => {
+    // The first bee well into a flight to a ledge's flower, a way still to
+    // go: the group, the time and where along its way it is.
+    function midFlight(m: Meadow) {
+      const found: { g?: Bees; t?: number } = {};
+      run(createBees(m, 0, seeded(20)), m, 30000, () => null, 0, seeded(21), (g, t) => {
+        const f = g.bees[0].flight;
+        if (found.g || g.bees[0].mode !== 'fly' || !f || f.purpose !== 'visit' || f.frame === 'rail') return;
+        if (f.s > 20 && f.route.length - f.s > 80) Object.assign(found, { g, t });
+      });
+      if (!found.g || found.t === undefined) throw new Error('no flight to a ledge in 30s');
+      return { g: found.g, t: found.t, b: found.g.bees[0] };
+    }
+    // The rest of its way on the page, s px further on.
+    const aheadOf = (b: Bee, page: PageMap, ds: number) => {
+      const f = b.flight!;
+      return along(placeRoute(f.route, originOf(page, f.frame)!), f.s + ds).p;
+    };
+
+    it('fly on along their way while it is still clear, riding with its card', () => {
+      const m = meadowOn();
+      const { g, t, b } = midFlight(m);
+      const scrolled = meadowOn(dashboard(40));
+      const kept = reconcileBees(g, scrolled, t, seeded(22)).bees[0];
+      expect(kept.mode).toBe('fly');
+      expect(kept.flight).toBe(b.flight);
+      expect(kept.flower).toBe(b.flower);
+      const before = where(b, m.air.page, t)!, after = where(kept, scrolled.air.page, t)!;
+      expect(after.x).toBeCloseTo(before.x);
+      expect(after.y).toBeCloseTo(before.y + 40);
+    });
+
+    it('stop and hover where they are, free of the flower, when their way is no longer clear or the flower has gone', () => {
+      const m = meadowOn();
+      const { g, t, b } = midFlight(m);
+      const p = aheadOf(b, m.air.page, 60);
+      // Text across the way ahead, the flowers as they were.
+      const page = dashboard(0, [{ left: p.x - 6, right: p.x + 6, top: p.y - 6, bottom: p.y + 6 }]);
+      const blocked = { ...meadowOn(page), flowers: m.flowers };
+      const gone = { ...m, flowers: new Map([...m.flowers].filter(([k]) => k !== b.flower)) };
+      for (const [why, meadow] of [['blocked', blocked], ['gone', gone]] as const) {
+        const next = reconcileBees(g, meadow, t, seeded(23)).bees[0];
+        expect(next.mode, why).toBe('hover');
+        expect(next.flight, why).toBeNull();
+        expect(next.flower, why).toBeNull();
+        expect(where(next, meadow.air.page, t), why).toEqual(where(b, m.air.page, t));
+        expect(clear(meadow.air, boxOf(next, meadow.air.page, t)!), why).toBe(true);
+      }
+    });
+
+    it('are put on the nearest flower at once when content comes over them', () => {
+      const m = meadowOn();
+      const { g, t, b } = midFlight(m);
+      const p = where(b, m.air.page, t)!;
+      const covered = meadowOn(dashboard(0, [{ left: p.x - 20, right: p.x + 20, top: p.y - 20, bottom: p.y + 20 }]));
+      const next = reconcileBees(g, covered, t, seeded(24)).bees[0];
+      expect(next.mode).toBe('perch');
+      expect(next.flight).toBeNull();
+      expect(clear(covered.air, boxOf(next, covered.air.page, t)!)).toBe(true);
+    });
   });
 
   it('are put on flowers as soon as a page still loading has some', () => {
