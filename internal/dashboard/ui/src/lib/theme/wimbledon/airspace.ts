@@ -7,7 +7,7 @@ import { CARD_REACH, type PageMap } from '../floors';
 // "Airspace contract") lets a bird touch the top of the card it stands on,
 // takes off from or lands on, and reach 6px into the empty bottom edge of a
 // card above, as the ledge animals do: the kit's card reach.
-export const julyKeepOff = cardReach({ top: 0, bottom: CARD_REACH });
+const julyKeepOff = cardReach({ top: 0, bottom: CARD_REACH });
 
 // The air a bird may be in, and the exits it may leave by: the right edge
 // and the top always (where main reaches them), the rail's edge where the
