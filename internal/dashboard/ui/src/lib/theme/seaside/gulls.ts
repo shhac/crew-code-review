@@ -175,7 +175,7 @@ function hearing(g: Gulls, before: readonly Gull[], scene: PageMap, now: number,
 }
 
 // The answer, when it is due, if the neighbour is still free to give it.
-function answered(g: Gulls, scene: PageMap, now: number): Gulls {
+function answered(g: Gulls, now: number): Gulls {
   if (!g.answer || now < g.answer.at) return g;
   const who = g.gulls.find((x) => x.id === g.answer!.id);
   if (!who || !idle(who)) return { ...g, answer: null };
@@ -193,5 +193,5 @@ export function stepGulls(g: Gulls, scene: PageMap, now: number, dt: number, ran
   // The resting place is spent until the cursor moves well away from it.
   const spent = g.spent && cursor && apart(cursor, g.spent) >= REST_MOVE ? null : g.spent;
   const next = restingCursor(takingOff({ ...moved, spent }, scene, now, cursor), scene, now, cursor, pace);
-  return answered(hearing(next, g.gulls, scene, now, rand), scene, now);
+  return answered(hearing(next, g.gulls, scene, now, rand), now);
 }
