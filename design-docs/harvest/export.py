@@ -30,7 +30,7 @@ from PIL import Image
 from scipy import ndimage
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from art import EyeScale, crop, cut, export, export_with_fur, keyed, lum, opaque, place, poses, rescaled, rows  # noqa: E402
+from art import EyeScale, crop, cut, export, export_with_fur, keyed, lum, opaque, place, poses, rescaled, rows, span_up  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
 OUT = HERE.parents[1] / 'internal/dashboard/ui/src/lib/theme/harvest'
@@ -249,7 +249,7 @@ def crow(check: Path | None) -> None:
     # edge up, are turned a quarter left and mirrored. A crow's underwing is
     # as black, a little greyer and flatter in its shading, so the underside
     # is the upper side greyed rather than another drawing.
-    arm, hand = (np.ascontiguousarray(np.fliplr(np.rot90(crop(p)))) for p in poses(crow_keyed(HERE / 'crow-wing.png'), 2))
+    arm, hand = (span_up(crop(p)) for p in poses(crow_keyed(HERE / 'crow-wing.png'), 2))
     k = WING_LENGTH * length * RES / (arm.shape[0] + hand.shape[0])
     for name, art in [('crow-wing-arm', arm), ('crow-wing-hand', hand)]:
         w, h = export(art, OUT, name, k)

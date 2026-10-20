@@ -206,6 +206,13 @@ def export_with_fur(rgba: np.ndarray, out: Path, name: str, scale: float) -> tup
     return size
 
 
+def span_up(piece: np.ndarray) -> np.ndarray:
+    """A wing piece drawn lying down, root left and leading edge on top,
+    stood up as the bird kit draws one: span up the picture, root at the
+    bottom, leading edge on the right."""
+    return np.ascontiguousarray(np.rot90(piece, 1)[:, ::-1])
+
+
 def cut(rgba: np.ndarray, names: list) -> dict:
     """A sheet split into its named pieces, left to right, each cropped."""
     return dict(zip(names, (crop(p) for p in poses(rgba, len(names)))))

@@ -22,7 +22,7 @@ from pathlib import Path
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from art import EyeScale, by_colour, crop, cut, export, feature, keyed  # noqa: E402
+from art import EyeScale, by_colour, crop, cut, export, feature, keyed, span_up  # noqa: E402
 import numpy as np  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
@@ -67,20 +67,13 @@ PIGEON_HAND = 10.0
 HAWK_HAND = 15.3
 
 
-def spanUp(piece: np.ndarray) -> np.ndarray:
-    """A wing piece drawn lying down, root left and leading edge on top,
-    stood up as the bird kit draws one: span up the picture, root at the
-    bottom, leading edge on the right."""
-    return np.ascontiguousarray(np.rot90(piece, 1)[:, ::-1])
-
-
 def wings(sheet: str, prefix: str, hand: float, names: list[str]) -> dict[str, np.ndarray]:
     """The wing pieces of sheet, stood span up, all on the scale that makes
     the hand hand units long. The rig shades the far wing itself."""
     pieces = cut(keyed(HERE / sheet), names)
     scale = hand * RES / pieces['hand'].shape[1]
     for name in WINGS:
-        w, h = export(spanUp(pieces[name]), OUT, f'{prefix}-{name}', scale)
+        w, h = export(span_up(pieces[name]), OUT, f'{prefix}-{name}', scale)
         print(f'{prefix}-{name}: {w / RES:.2f}x{h / RES:.2f}')
     return pieces
 
