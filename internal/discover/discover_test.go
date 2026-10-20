@@ -448,7 +448,7 @@ func TestDiscoverSweep(t *testing.T) {
 		CreatedAt:      fixedNow().Add(-24 * time.Hour),
 		ReviewRequests: openReq(),
 	}
-	sweep := func(t *testing.T, listPRs func(context.Context, string) ([]ghPR, error)) (*fakeStore, []store.Candidate, error) {
+	sweep := func(t *testing.T, listPRs func(context.Context, string) ([]ghPR, string, error)) (*fakeStore, []store.Candidate, error) {
 		t.Helper()
 		fs := &fakeStore{}
 		d := New(staticConfig(config.Config{Repos: []string{"o/broken", "o/healthy"}}), fs, nil)
@@ -460,11 +460,11 @@ func TestDiscoverSweep(t *testing.T) {
 	}
 
 	t.Run("one failing repo is skipped", func(t *testing.T) {
-		fs, found, err := sweep(t, func(_ context.Context, repo string) ([]ghPR, error) {
+		fs, found, err := sweep(t, func(_ context.Context, repo string) ([]ghPR, string, error) {
 			if repo == "o/broken" {
-				return nil, errGH
+				return nil, "", errGH
 			}
-			return []ghPR{newPR}, nil
+			return []ghPR{newPR}, "", nil
 		})
 		if err != nil {
 			t.Fatalf("partial failure must not error, got %v", err)
@@ -478,8 +478,8 @@ func TestDiscoverSweep(t *testing.T) {
 	})
 
 	t.Run("all repos failing errors", func(t *testing.T) {
-		_, _, err := sweep(t, func(context.Context, string) ([]ghPR, error) {
-			return nil, errGH
+		_, _, err := sweep(t, func(context.Context, string) ([]ghPR, string, error) {
+			return nil, "", errGH
 		})
 		if err == nil || !errors.Is(err, errGH) {
 			t.Errorf("total failure must surface the gh error, got %v", err)
@@ -489,8 +489,8 @@ func TestDiscoverSweep(t *testing.T) {
 	t.Run("non-candidates are not enqueued", func(t *testing.T) {
 		draft := newPR
 		draft.IsDraft = true
-		fs, found, err := sweep(t, func(context.Context, string) ([]ghPR, error) {
-			return []ghPR{draft}, nil
+		fs, found, err := sweep(t, func(context.Context, string) ([]ghPR, string, error) {
+			return []ghPR{draft}, "", nil
 		})
 		if err != nil || len(found) != 0 || len(fs.enqueued) != 0 {
 			t.Errorf("draft PRs must classify out, got found=%v enqueued=%v err=%v", found, fs.enqueued, err)
@@ -794,7 +794,7 @@ func TestUnassignedPRDiscoveredOnlyWhenKnobIsOff(t *testing.T) {
 		d := New(staticConfig(cfg), fs, nil)
 		d.now = fixedNow
 		d.lastHumanActivity = func(context.Context, string, int) (time.Time, error) { return time.Time{}, nil }
-		d.listPRs = func(context.Context, string) ([]ghPR, error) { return []ghPR{readyPR()}, nil }
+		d.listPRs = func(context.Context, string) ([]ghPR, string, error) { return []ghPR{readyPR()}, "", nil }
 		d.prSizes = noSizes
 
 		found, err := d.Discover(context.Background())
@@ -841,7 +841,7 @@ func TestDraftWithNoReviewRequestIsNeverQueued(t *testing.T) {
 		d := New(staticConfig(cfg), fs, nil)
 		d.now = fixedNow
 		d.lastHumanActivity = func(context.Context, string, int) (time.Time, error) { return time.Time{}, nil }
-		d.listPRs = func(context.Context, string) ([]ghPR, error) { return []ghPR{draft}, nil }
+		d.listPRs = func(context.Context, string) ([]ghPR, string, error) { return []ghPR{draft}, "", nil }
 
 		found, err := d.Discover(context.Background())
 		if err != nil {

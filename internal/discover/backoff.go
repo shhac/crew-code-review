@@ -58,17 +58,19 @@ func (d *Discoverer) noteFailure(repo string, now time.Time, err error) (fails i
 		fails, wait = h.Failures, backoffFor(h.Failures)
 		h.BackoffUntil = now.Add(wait)
 		h.LastError, h.LastErrorAt = err.Error(), now
+		h.Degraded = ""
 	})
 	return fails, wait
 }
 
-// noteSuccess records a listing that got through, clears any backoff, and
+// noteSuccess records a listing that got through (and whether it got through
+// at full strength), clears any backoff, and
 // returns how many failures it forgave, so the caller can log a recovery
 // exactly once.
-func (d *Discoverer) noteSuccess(repo string, now time.Time, listed int) (forgiven int) {
+func (d *Discoverer) noteSuccess(repo string, now time.Time, listed int, degraded string) (forgiven int) {
 	d.updateHealth(repo, func(h *RepoStatus) {
 		forgiven = h.Failures
-		h.LastSuccess, h.Listed = now, listed
+		h.LastSuccess, h.Listed, h.Degraded = now, listed, degraded
 		h.Failures, h.BackoffUntil = 0, time.Time{}
 	})
 	return forgiven

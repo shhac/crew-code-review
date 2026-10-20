@@ -141,17 +141,18 @@ func ghLogin(login, typename string) string {
 // The ordering is also what makes a cut-short listing still worth having: it
 // drops the LEAST recently active PRs, which are the least likely to be
 // candidates. So when even the smallest page fails partway down, the PRs
-// already listed are returned rather than thrown away.
+// already listed are returned rather than thrown away. degraded says when the
+// listing got through at less than full strength; it is part of the result,
+// so the sweep records the whole outcome in one place.
 //
 // This is the one gh read that does not use runGH's retry. Retrying an
 // exhausted query unchanged is the thing that does not work; the ladder is the
 // retry, and it is a better one.
-func (d *Discoverer) ghListPRs(ctx context.Context, repo string) ([]ghPR, error) {
+func (d *Discoverer) ghListPRs(ctx context.Context, repo string) (prs []ghPR, degraded string, err error) {
 	limit := min(d.cfg().DiscoveryListLimit(), searchResultCap)
 	search := "repo:" + repo + " is:pr is:open sort:updated-desc"
 	page, shrinks := listPageMax, 0
 	cursor := ""
-	var prs []ghPR
 	// Sorting by updated time means a PR touched mid-listing moves up the
 	// order and can turn up on two pages. gh drops the repeat; so do we.
 	seen := map[int]bool{}
@@ -159,21 +160,20 @@ func (d *Discoverer) ghListPRs(ctx context.Context, repo string) ([]ghPR, error)
 		resp, err := searchPRs(ctx, search, min(page, limit-len(prs)), cursor)
 		if err != nil {
 			if !transient(err.Error()) {
-				return nil, err
+				return nil, "", err
 			}
 			if page > listPageMin {
 				page = max(page/2, listPageMin)
 				shrinks++
 				if err := sleepOrCancel(ctx, ghRetryDelay); err != nil {
-					return nil, err
+					return nil, "", err
 				}
 				continue
 			}
 			if len(prs) == 0 {
-				return nil, err
+				return nil, "", err
 			}
-			d.noteDegraded(repo, fmt.Sprintf("listing cut short at %d PR(s) of up to %d: %v", len(prs), limit, err))
-			return prs, nil
+			return prs, fmt.Sprintf("listing cut short at %d PR(s) of up to %d: %v", len(prs), limit, err), nil
 		}
 		for _, n := range resp.Data.Search.Nodes {
 			if n.Number == 0 || seen[n.Number] {
@@ -189,9 +189,9 @@ func (d *Discoverer) ghListPRs(ctx context.Context, repo string) ([]ghPR, error)
 		cursor = info.EndCursor
 	}
 	if shrinks > 0 {
-		d.noteDegraded(repo, fmt.Sprintf("pages shrunk to %d after %d exhaustion(s), listed %d PR(s)", page, shrinks, len(prs)))
+		degraded = fmt.Sprintf("pages shrunk to %d after %d exhaustion(s), listed %d PR(s)", page, shrinks, len(prs))
 	}
-	return prs, nil
+	return prs, degraded, nil
 }
 
 // searchPRs is one page of the listing, through the single-shot gh call so

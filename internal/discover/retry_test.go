@@ -41,12 +41,12 @@ func newSweepHarness(t *testing.T, repos []string) *sweepHarness {
 	h.d.warnf = func(format string, args ...any) {
 		h.warns = append(h.warns, fmt.Sprintf(format, args...))
 	}
-	h.d.listPRs = func(_ context.Context, repo string) ([]ghPR, error) {
+	h.d.listPRs = func(_ context.Context, repo string) ([]ghPR, string, error) {
 		h.calls = append(h.calls, repo)
 		if h.failing[repo] {
-			return nil, errors.New("gh pr list: HTTP 502: 502 Bad Gateway")
+			return nil, "", errors.New("gh pr list: HTTP 502: 502 Bad Gateway")
 		}
-		return nil, nil
+		return nil, "", nil
 	}
 	return h
 }
@@ -155,7 +155,7 @@ func TestSweepBudgetResumesAtUnreachedRepo(t *testing.T) {
 	// Each listing burns four minutes of a five-minute budget, so the first
 	// sweep gets through o/a and then finds itself over the line.
 	inner := h.d.listPRs
-	h.d.listPRs = func(ctx context.Context, repo string) ([]ghPR, error) {
+	h.d.listPRs = func(ctx context.Context, repo string) ([]ghPR, string, error) {
 		h.now = h.now.Add(4 * time.Minute)
 		return inner(ctx, repo)
 	}
@@ -210,16 +210,13 @@ func span(from, to int) []int {
 	return out
 }
 
-func newListDiscoverer(t *testing.T, limit int) (*Discoverer, *[]string) {
+func newListDiscoverer(t *testing.T, limit int) *Discoverer {
 	t.Helper()
 	cfg := config.Config{Repos: []string{"o/a"}}
 	if limit > 0 {
 		cfg.Discovery.ListLimit = &limit
 	}
-	d := New(staticConfig(cfg), &fakeStore{}, nil)
-	var warns []string
-	d.warnf = func(format string, args ...any) { warns = append(warns, fmt.Sprintf(format, args...)) }
-	return d, &warns
+	return New(staticConfig(cfg), &fakeStore{}, nil)
 }
 
 // An exhausted page is retried SMALLER, not repeated: asking again for the
@@ -236,8 +233,8 @@ func TestListPRsShrinksThePageOnExhaustion(t *testing.T) {
 	})
 	defer restore()
 
-	d, warns := newListDiscoverer(t, 0)
-	prs, err := d.ghListPRs(context.Background(), "o/a")
+	d := newListDiscoverer(t, 0)
+	prs, degraded, err := d.ghListPRs(context.Background(), "o/a")
 	if err != nil {
 		t.Fatalf("ghListPRs = %v, want success at the smaller page", err)
 	}
@@ -247,8 +244,8 @@ func TestListPRsShrinksThePageOnExhaustion(t *testing.T) {
 	if strings.Join(asked, ",") != "100,50" {
 		t.Fatalf("page sizes asked = %v, want [100 50]", asked)
 	}
-	if len(*warns) != 1 || !strings.Contains((*warns)[0], "pages shrunk to 50") {
-		t.Fatalf("expected one degraded warning, got %v", *warns)
+	if !strings.Contains(degraded, "pages shrunk to 50") {
+		t.Fatalf("degraded = %q, want the shrunk-page note", degraded)
 	}
 }
 
@@ -268,13 +265,13 @@ func TestListPRsPagesToTheLimit(t *testing.T) {
 	})
 	defer restore()
 
-	d, _ := newListDiscoverer(t, 250)
-	prs, err := d.ghListPRs(context.Background(), "o/a")
+	d := newListDiscoverer(t, 250)
+	prs, degraded, err := d.ghListPRs(context.Background(), "o/a")
 	if err != nil {
 		t.Fatalf("ghListPRs: %v", err)
 	}
-	if len(prs) != 250 {
-		t.Fatalf("got %d PRs, want the full 250", len(prs))
+	if len(prs) != 250 || degraded != "" {
+		t.Fatalf("got %d PRs (degraded %q), want the full 250 at full strength", len(prs), degraded)
 	}
 	if strings.Join(asked, ",") != "100,100,50" {
 		t.Fatalf("page sizes asked = %v, want [100 100 50]", asked)
@@ -296,8 +293,8 @@ func TestListPRsDropsARepeatedPR(t *testing.T) {
 	})
 	defer restore()
 
-	d, _ := newListDiscoverer(t, 0)
-	prs, err := d.ghListPRs(context.Background(), "o/a")
+	d := newListDiscoverer(t, 0)
+	prs, _, err := d.ghListPRs(context.Background(), "o/a")
 	if err != nil {
 		t.Fatalf("ghListPRs: %v", err)
 	}
@@ -321,13 +318,13 @@ func TestListPRsReturnsToFullPageSize(t *testing.T) {
 	})
 	defer restore()
 
-	d, _ := newListDiscoverer(t, 0)
-	if _, err := d.ghListPRs(context.Background(), "o/a"); err != nil {
+	d := newListDiscoverer(t, 0)
+	if _, _, err := d.ghListPRs(context.Background(), "o/a"); err != nil {
 		t.Fatalf("degraded listing: %v", err)
 	}
 	exhausted = false
 	mark := len(asked)
-	if _, err := d.ghListPRs(context.Background(), "o/a"); err != nil {
+	if _, _, err := d.ghListPRs(context.Background(), "o/a"); err != nil {
 		t.Fatalf("recovered listing: %v", err)
 	}
 	if got := asked[mark:]; len(got) != 1 || got[0] != "100" {
@@ -347,8 +344,8 @@ func TestListPRsExhaustsEveryRungBeforeGivingUp(t *testing.T) {
 	})
 	defer restore()
 
-	d, _ := newListDiscoverer(t, 0)
-	_, err := d.ghListPRs(context.Background(), "o/a")
+	d := newListDiscoverer(t, 0)
+	_, _, err := d.ghListPRs(context.Background(), "o/a")
 	if err == nil {
 		t.Fatal("want an error when every rung fails")
 	}
@@ -371,16 +368,16 @@ func TestListPRsKeepsWhatItListedBeforeFailing(t *testing.T) {
 	})
 	defer restore()
 
-	d, warns := newListDiscoverer(t, 0)
-	prs, err := d.ghListPRs(context.Background(), "o/a")
+	d := newListDiscoverer(t, 0)
+	prs, degraded, err := d.ghListPRs(context.Background(), "o/a")
 	if err != nil {
 		t.Fatalf("ghListPRs = %v, want the first page kept", err)
 	}
 	if len(prs) != 100 {
 		t.Fatalf("got %d PRs, want the 100 listed before the failure", len(prs))
 	}
-	if len(*warns) != 1 || !strings.Contains((*warns)[0], "cut short at 100") {
-		t.Fatalf("expected a cut-short warning, got %v", *warns)
+	if !strings.Contains(degraded, "cut short at 100") {
+		t.Fatalf("degraded = %q, want the cut-short note", degraded)
 	}
 }
 
@@ -435,8 +432,8 @@ func TestListPRsDoesNotLadderPermanentFailure(t *testing.T) {
 	})
 	defer restore()
 
-	d, _ := newListDiscoverer(t, 0)
-	if _, err := d.ghListPRs(context.Background(), "o/a"); err == nil {
+	d := newListDiscoverer(t, 0)
+	if _, _, err := d.ghListPRs(context.Background(), "o/a"); err == nil {
 		t.Fatal("want an error for a missing repo")
 	}
 	if calls != 1 {

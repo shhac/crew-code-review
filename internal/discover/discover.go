@@ -55,7 +55,7 @@ type Discoverer struct {
 	statusPath string
 	// listPRs fetches one repo's open PRs (gh in production; injected in
 	// tests so the sweep's per-repo resilience is testable without gh).
-	listPRs func(ctx context.Context, repo string) ([]ghPR, error)
+	listPRs func(ctx context.Context, repo string) (prs []ghPR, degraded string, err error)
 	// lastHumanActivity returns the newest time somebody other than us said
 	// something on a PR (gh in production; injected in tests, same reason).
 	lastHumanActivity func(ctx context.Context, repo string, number int) (time.Time, error)
@@ -134,7 +134,7 @@ func (d *Discoverer) Discover(ctx context.Context) ([]store.Candidate, error) {
 			continue
 		}
 		d.recordAttempt(repo, d.now())
-		prs, err := d.listPRs(ctx, repo)
+		prs, degraded, err := d.listPRs(ctx, repo)
 		if err != nil {
 			fails, wait := d.noteFailure(repo, d.now(), err)
 			d.warnf("discover %s: %v, skipping repo this cycle (consecutive failure %d, backing off %s)",
@@ -143,7 +143,10 @@ func (d *Discoverer) Discover(ctx context.Context) ([]store.Candidate, error) {
 			lastErr = err
 			continue
 		}
-		if fails := d.noteSuccess(repo, d.now(), len(prs)); fails > 0 {
+		if degraded != "" {
+			d.warnf("discover %s: %s; full page size resumes next cycle", repo, degraded)
+		}
+		if fails := d.noteSuccess(repo, d.now(), len(prs), degraded); fails > 0 {
 			d.logf("discover %s: recovered after %d consecutive failure(s)", repo, fails)
 		}
 		var cands []store.Candidate
@@ -228,10 +231,4 @@ func (d *Discoverer) measure(ctx context.Context, repo string, cands []store.Can
 		s := sizes[cands[i].Number]
 		cands[i].Additions, cands[i].Deletions, cands[i].ChangedFiles = s.Additions, s.Deletions, s.ChangedFiles
 	}
-}
-
-// noteDegraded reports a listing that got through, but not at full strength.
-func (d *Discoverer) noteDegraded(repo, note string) {
-	d.recordDegraded(repo, note)
-	d.warnf("discover %s: %s; full page size resumes next cycle", repo, note)
 }

@@ -21,11 +21,14 @@ func TestLiveDiscovery(t *testing.T) {
 	}
 
 	d := New(staticConfig(config.Config{Repos: []string{repo}}), &fakeStore{}, t.Logf)
-	prs, err := d.listPRs(context.Background(), repo)
+	prs, degraded, err := d.listPRs(context.Background(), repo)
 	if err != nil {
 		t.Fatalf("listPRs: %v", err)
 	}
 	t.Logf("%s: %d open PRs fetched", repo, len(prs))
+	if degraded != "" {
+		t.Logf("%s: degraded: %s", repo, degraded)
+	}
 
 	var cands []store.Candidate
 	for _, pr := range prs {

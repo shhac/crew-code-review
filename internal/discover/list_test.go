@@ -117,7 +117,7 @@ func TestSweepMeasuresCandidatesBestEffort(t *testing.T) {
 			cfg.Candidates.RequireReviewRequest = config.Bool(false)
 			d := newDiscoverer(fs)
 			d.cfg = staticConfig(cfg)
-			d.listPRs = func(context.Context, string) ([]ghPR, error) { return []ghPR{pr}, nil }
+			d.listPRs = func(context.Context, string) ([]ghPR, string, error) { return []ghPR{pr}, "", nil }
 			d.prSizes = tc.sizes
 			var warns []string
 			d.warnf = func(f string, a ...any) { warns = append(warns, fmt.Sprintf(f, a...)) }

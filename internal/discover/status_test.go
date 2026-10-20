@@ -3,6 +3,7 @@ package discover
 import (
 	"context"
 	"errors"
+	"fmt"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -61,8 +62,8 @@ func TestSweepRecordsEachReposHealth(t *testing.T) {
 // still appears: a missing row reads as "this repo is not watched".
 func TestStatusCoversExactlyTheWatchList(t *testing.T) {
 	d := New(staticConfig(config.Config{}), &fakeStore{}, nil)
-	d.noteSuccess("o/gone", fixedNow(), 3)
-	d.noteSuccess("o/a", fixedNow(), 3)
+	d.noteSuccess("o/gone", fixedNow(), 3, "")
+	d.noteSuccess("o/a", fixedNow(), 3, "")
 
 	st := d.Status([]string{"o/a", "o/new"}, fixedNow())
 	if len(st.Repos) != 2 || st.Repos[0].Repo != "o/a" || st.Repos[1].Repo != "o/new" {
@@ -73,8 +74,8 @@ func TestStatusCoversExactlyTheWatchList(t *testing.T) {
 	}
 }
 
-// A listing that got through at reduced strength says so, and the next
-// attempt starts clean.
+// A listing that got through at reduced strength says so, and the sweep both
+// warns and records it; the next outcome replaces the note.
 func TestStatusRecordsADegradedListing(t *testing.T) {
 	restore := stubRunGHOnce(func(args []string) ([]byte, error) {
 		if listArg(args, "n") == "100" {
@@ -88,16 +89,21 @@ func TestStatusRecordsADegradedListing(t *testing.T) {
 	d := New(staticConfig(cfg), &fakeStore{}, nil)
 	d.now = fixedNow
 	d.prSizes = noSizes
+	var warns []string
+	d.warnf = func(f string, a ...any) { warns = append(warns, fmt.Sprintf(f, a...)) }
 	if _, err := d.Discover(context.Background()); err != nil {
 		t.Fatalf("Discover: %v", err)
 	}
 	if got := d.Status(cfg.Repos, fixedNow()).Repos[0].Degraded; !strings.Contains(got, "pages shrunk to 50") {
 		t.Fatalf("degraded = %q, want the shrunk-page note", got)
 	}
+	if len(warns) != 1 || !strings.Contains(warns[0], "pages shrunk to 50") {
+		t.Errorf("warnings = %v, want one degraded line", warns)
+	}
 
-	d.recordAttempt("o/a", fixedNow())
+	d.noteFailure("o/a", fixedNow(), errors.New("boom"))
 	if got := d.Status(cfg.Repos, fixedNow()).Repos[0].Degraded; got != "" {
-		t.Errorf("a new attempt kept the old note %q", got)
+		t.Errorf("a failed attempt kept the old note %q", got)
 	}
 }
 

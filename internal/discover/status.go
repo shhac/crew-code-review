@@ -27,7 +27,7 @@ type RepoStatus struct {
 	LastSuccess time.Time `json:"last_success,omitzero"`
 	Listed      int       `json:"listed"`
 	// Degraded is set when the last listing got through, but not at full
-	// strength (shrunk pages, cut short). Cleared by the next attempt.
+	// strength (shrunk pages, cut short). Cleared by the next outcome.
 	Degraded     string    `json:"degraded,omitempty"`
 	Failures     int       `json:"failures,omitempty"`
 	BackoffUntil time.Time `json:"backoff_until,omitzero"`
@@ -53,13 +53,7 @@ func (d *Discoverer) WithStatusPath(path string) *Discoverer {
 }
 
 func (d *Discoverer) recordAttempt(repo string, now time.Time) {
-	d.updateHealth(repo, func(h *RepoStatus) {
-		h.LastAttempt, h.Degraded = now, ""
-	})
-}
-
-func (d *Discoverer) recordDegraded(repo, note string) {
-	d.updateHealth(repo, func(h *RepoStatus) { h.Degraded = note })
+	d.updateHealth(repo, func(h *RepoStatus) { h.LastAttempt = now })
 }
 
 func (d *Discoverer) updateHealth(repo string, fn func(*RepoStatus)) {
