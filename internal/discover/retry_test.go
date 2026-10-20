@@ -381,6 +381,73 @@ func TestListPRsKeepsWhatItListedBeforeFailing(t *testing.T) {
 	}
 }
 
+// GitHub's search stops at 1000 results and asking past it is an error, so a
+// list_limit above that is clamped rather than passed through.
+func TestListPRsClampsToTheSearchCap(t *testing.T) {
+	var asked []string
+	restore := stubRunGHOnce(func(args []string) ([]byte, error) {
+		asked = append(asked, listArg(args, "n"))
+		start := len(asked)*100 - 99
+		return listPage(span(start, start+99), true, fmt.Sprintf("c%d", len(asked))), nil
+	})
+	defer restore()
+
+	d := newListDiscoverer(t, 1500)
+	prs, _, err := d.ghListPRs(context.Background(), "o/a")
+	if err != nil {
+		t.Fatalf("ghListPRs: %v", err)
+	}
+	if len(prs) != searchResultCap || len(asked) != 10 {
+		t.Fatalf("listed %d PRs in %d pages, want %d in 10", len(prs), len(asked), searchResultCap)
+	}
+}
+
+// A failure that will not go away by asking for less still leaves the pages
+// already listed as good as they were: the same reasoning as a transient one
+// that outlasted the ladder.
+func TestListPRsKeepsWhatItListedBeforeAPermanentFailure(t *testing.T) {
+	calls := 0
+	restore := stubRunGHOnce(func(args []string) ([]byte, error) {
+		calls++
+		if listArg(args, "after") == "" {
+			return listPage(span(1, 100), true, "c1"), nil
+		}
+		return nil, errors.New("gh api graphql: HTTP 401: Bad credentials")
+	})
+	defer restore()
+
+	d := newListDiscoverer(t, 0)
+	prs, degraded, err := d.ghListPRs(context.Background(), "o/a")
+	if err != nil {
+		t.Fatalf("ghListPRs = %v, want the first page kept", err)
+	}
+	if len(prs) != 100 || !strings.Contains(degraded, "401") {
+		t.Fatalf("got %d PRs, degraded %q; want 100 and the reason", len(prs), degraded)
+	}
+	if calls != 2 {
+		t.Errorf("gh called %d times, want 2: a permanent failure is not laddered", calls)
+	}
+}
+
+// A listing stopped by shutdown is not a listing cut short: nothing it holds
+// will be used.
+func TestListPRsGivesUpOnShutdown(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	restore := stubRunGHOnce(func(args []string) ([]byte, error) {
+		if listArg(args, "after") == "" {
+			return listPage(span(1, 100), true, "c1"), nil
+		}
+		cancel()
+		return nil, context.Canceled
+	})
+	defer restore()
+
+	d := newListDiscoverer(t, 0)
+	if _, _, err := d.ghListPRs(ctx, "o/a"); !errors.Is(err, context.Canceled) {
+		t.Fatalf("ghListPRs after shutdown = %v, want context.Canceled", err)
+	}
+}
+
 // An exhausted ladder is ONE repo failure, not three. The ladder is how a repo
 // spends a single cycle's attempt; if each rung counted, a repo would be
 // thrown into deep backoff by its first bad moment.
@@ -543,6 +610,23 @@ func TestRunGHOnceTimesOutAHungCall(t *testing.T) {
 	}
 	if elapsed := time.Since(start); elapsed > 5*time.Second {
 		t.Errorf("runGHOnce took %s, want it cut off near the timeout", elapsed)
+	}
+}
+
+// Only our own timeout is "timed out": a cancelled parent is a shutdown, and
+// labelling it transient would walk a dying sweep down the whole ladder.
+func TestRunGHOnceDoesNotCallAShutdownATimeout(t *testing.T) {
+	restore := fakeGH(t, `exec sleep 10`)
+	defer restore()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	time.AfterFunc(100*time.Millisecond, cancel)
+	_, err := runGHOnce(ctx, "api", "graphql")
+	if err == nil {
+		t.Fatal("runGHOnce on a cancelled call = nil, want an error")
+	}
+	if strings.Contains(err.Error(), "timed out") || transient(err.Error()) {
+		t.Errorf("error = %q: a shutdown must not read as a transient timeout", err)
 	}
 }
 

@@ -169,10 +169,10 @@ func (f *UsageFloorLimits) merge(src UsageFloorLimits) {
 type DiscoverySettings struct {
 	Enabled  *bool  `json:"enabled,omitempty"`
 	Interval string `json:"interval,omitempty"` // e.g. "5m"
-	// ListLimit bounds how many open PRs one repo's sweep pulls. gh pages
-	// internally at 100 per request, so this doubles as the per-repo page
+	// ListLimit bounds how many open PRs one repo's sweep pulls. The listing
+	// pages at up to 100 per request, so this doubles as the per-repo page
 	// budget: a sweep's cost is set by config, not by how many PRs the repo
-	// happens to have open.
+	// happens to have open. GitHub's search stops at 1000.
 	ListLimit *int `json:"list_limit,omitempty"`
 	// SweepBudget caps the wall time one sweep may spend before it stops and
 	// resumes at the repo it did not reach on the next cycle. Empty means the

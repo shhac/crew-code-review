@@ -158,10 +158,7 @@ func (d *Discoverer) ghListPRs(ctx context.Context, repo string) (prs []ghPR, de
 	for len(prs) < limit {
 		resp, err := searchPRs(ctx, search, min(page, limit-len(prs)), cursor)
 		if err != nil {
-			if !transient(err.Error()) {
-				return nil, "", err
-			}
-			if page > listPageMin {
+			if transient(err.Error()) && page > listPageMin {
 				page = max(page/2, listPageMin)
 				shrinks++
 				if err := sleepOrCancel(ctx, ghRetryDelay); err != nil {
@@ -169,7 +166,9 @@ func (d *Discoverer) ghListPRs(ctx context.Context, repo string) (prs []ghPR, de
 				}
 				continue
 			}
-			if len(prs) == 0 {
+			// Whatever stopped the listing, the PRs already listed are the
+			// most recently active, and as good as they were a page ago.
+			if len(prs) == 0 || ctx.Err() != nil {
 				return nil, "", err
 			}
 			return prs, fmt.Sprintf("listing cut short at %d PR(s) of up to %d: %v", len(prs), limit, err), nil

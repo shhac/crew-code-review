@@ -204,9 +204,10 @@ func (c Config) RequireReviewRequest() bool {
 	return false
 }
 
-// DiscoveryListLimit bounds one repo's PR listing (default 300). gh pages at
-// 100 per request, so this is the per-repo page budget too: three requests,
-// not the six a 500-PR repo would otherwise cost every cycle.
+// DiscoveryListLimit bounds one repo's PR listing (default 300). The listing
+// pages at up to 100 per request, so this is the per-repo page budget too:
+// three requests, not the six a 500-PR repo would otherwise cost every cycle.
+// GitHub's search stops at 1000, and the listing clamps to that.
 func (c Config) DiscoveryListLimit() int {
 	if c.Discovery.ListLimit != nil && *c.Discovery.ListLimit > 0 {
 		return *c.Discovery.ListLimit

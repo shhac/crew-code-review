@@ -136,6 +136,12 @@ func (d *Discoverer) Discover(ctx context.Context) ([]store.Candidate, error) {
 		d.recordAttempt(repo, d.now())
 		prs, degraded, err := d.listPRs(ctx, repo)
 		if err != nil {
+			// A sweep cut off by shutdown says nothing about the repo.
+			// Recording it would mark every repo the sweep reached as failing,
+			// in the record the next daemon boots with.
+			if ctx.Err() != nil {
+				return nil, ctx.Err()
+			}
 			fails, wait := d.noteFailure(repo, d.now(), err)
 			d.warnf("discover %s: %v, skipping repo this cycle (consecutive failure %d, backing off %s)",
 				repo, err, fails, wait)

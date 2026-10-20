@@ -130,3 +130,63 @@ func TestWriteStatusIsWorldReadable(t *testing.T) {
 		t.Errorf("mode = %o, want 644", got)
 	}
 }
+
+// A sweep that stops on a store error is still recorded: the repos it reached
+// before stopping have news, and the record is how anybody finds out.
+func TestStatusIsWrittenWhenASweepStopsEarly(t *testing.T) {
+	fs := &fakeStore{enqueueErr: errors.New("duckdb: database is locked")}
+	cfg := config.Config{Repos: []string{"o/a"}}
+	cfg.Candidates.RequireReviewRequest = config.Bool(false)
+	d := newDiscoverer(fs)
+	d.cfg = staticConfig(cfg)
+	d.listPRs = func(context.Context, string) ([]ghPR, string, error) { return []ghPR{readyPR()}, "", nil }
+	path := filepath.Join(t.TempDir(), "discovery.json")
+	d.WithStatusPath(path)
+
+	if _, err := d.Discover(context.Background()); err == nil {
+		t.Fatal("Discover = nil, want the store error")
+	}
+	st, ok, err := ReadStatus(path)
+	if err != nil || !ok {
+		t.Fatalf("ReadStatus = %v, %v; want the early-stopped sweep recorded", ok, err)
+	}
+	if got := st.Repos[0]; got.LastSuccess.IsZero() || got.Listed != 1 {
+		t.Errorf("record = %+v, want the listing that happened", got)
+	}
+}
+
+// Losing the record costs a diagnosis, never a review.
+func TestAnUnwritableRecordDoesNotFailTheSweep(t *testing.T) {
+	h := newSweepHarness(t, []string{"o/a"})
+	blocker := filepath.Join(t.TempDir(), "file")
+	if err := os.WriteFile(blocker, nil, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	h.d.WithStatusPath(filepath.Join(blocker, "discovery.json"))
+
+	if err := h.sweep(t); err != nil {
+		t.Fatalf("sweep = %v, want success without its record", err)
+	}
+	if len(h.warns) != 1 || !strings.Contains(h.warns[0], "recording discovery status") {
+		t.Errorf("warnings = %v, want one about the record", h.warns)
+	}
+}
+
+// Shutdown cutting a listing off says nothing about the repo.
+func TestShutdownIsNotARepoFailure(t *testing.T) {
+	h := newSweepHarness(t, []string{"o/a", "o/b"})
+	ctx, cancel := context.WithCancel(context.Background())
+	h.d.listPRs = func(context.Context, string) ([]ghPR, string, error) {
+		cancel()
+		return nil, "", context.Canceled
+	}
+
+	if _, err := h.d.Discover(ctx); !errors.Is(err, context.Canceled) {
+		t.Fatalf("Discover = %v, want context.Canceled", err)
+	}
+	for _, r := range h.d.Status([]string{"o/a", "o/b"}, h.now).Repos {
+		if r.Failures != 0 || r.LastError != "" {
+			t.Errorf("%s recorded as failing after a shutdown: %+v", r.Repo, r)
+		}
+	}
+}

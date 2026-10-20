@@ -21,10 +21,14 @@ type fakeStore struct {
 	hasOutcome   bool
 	authorGroups map[string]string // handle → group; absent = unlisted
 	authorErr    error             // simulate the roster lookup failing
+	enqueueErr   error             // simulate the queue write failing
 	enqueued     []store.Candidate
 }
 
 func (f *fakeStore) Enqueue(_ context.Context, c store.Candidate) error {
+	if f.enqueueErr != nil {
+		return f.enqueueErr
+	}
 	f.enqueued = append(f.enqueued, c)
 	return nil
 }

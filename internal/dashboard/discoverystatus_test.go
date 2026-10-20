@@ -62,3 +62,18 @@ func TestConfigWithoutDiscoveryRecord(t *testing.T) {
 		t.Errorf("no recorded sweep must omit discovery_status, got %v", resp["discovery_status"])
 	}
 }
+
+// An unreadable record says so, rather than reading as "nothing recorded".
+func TestConfigWithAnUnreadableDiscoveryRecord(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "discovery.json")
+	if err := os.WriteFile(path, []byte("{not json"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	s := newTestServer(&fakeStore{}, config.Config{Repos: []string{"o/a"}})
+	s.discoveryStatus = path
+	_, resp := doJSON(t, s.handleConfig, http.MethodGet, "/api/config", "")
+	st, ok := resp["discovery_status"].(map[string]any)
+	if !ok || st["error"] == nil || st["error"] == "" {
+		t.Errorf("discovery_status = %v, want the parse error reported", resp["discovery_status"])
+	}
+}
