@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { PageMap } from '../floors';
 import type { Cursor } from '../pointer';
-import { clearOfContent, dashboardPage, fixed, scene, seeded, steps } from '../test-scene';
+import { CARDS, clearOfContent, dashboardPage, fixed, scene, seeded, spacedAfterRelayout, steps } from '../test-scene';
 import { foxView, POSES, type Fox } from './fox';
 import { asleep, card, rule, still } from './fox-fixtures';
 import { createFoxes, reconcileFoxes, restingFoxes, stepFoxes, type Foxes } from './foxes';
@@ -158,6 +158,13 @@ describe('foxes together', () => {
       }
     }
   });
+  it('keeps them apart when a layout change crowds the page', () => {
+    const narrow = CARDS.map((c) => ({ ...c, right: c.left + 220 }));
+    const foxes = { create: createFoxes, reconcile: reconcileFoxes, members: (g: Foxes) => g.foxes.filter((f) => f.mode !== 'away') };
+    const apart = (a: Fox, b: Fox) => a.floor !== b.floor || Math.abs(a.x - b.x) >= SPACING - 1e-6;
+    for (const seed of [1, 2, 3]) expect(spacedAfterRelayout(foxes, dashboardPage(), dashboardPage([], narrow), apart, seeded(seed))).toEqual([]);
+  });
+
   it('sleeps them all at once when reduced motion comes on mid-run, those asleep where they lay', () => {
     const page = dashboardPage([{ left: 900, right: 1000, top: 135, bottom: 158 }]);
     const rand = seeded(6);

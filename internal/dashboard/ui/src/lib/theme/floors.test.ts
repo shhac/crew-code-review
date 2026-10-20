@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { clearance, clearRuns, measureFloors, reachOf, samePage, wallRuns, walls, type Ledge, type PageMap } from './floors';
-import { dashboardPage } from './test-scene';
+import { CARDS, dashboardPage, MAIN } from './test-scene';
 import { fits } from './spiderwalk/model';
 
 // measureFloors only needs querySelectorAll and rects, so a fake page stands
@@ -143,10 +143,7 @@ describe('reachOf', () => {
 });
 
 describe('walls', () => {
-  // The dashboard fixture's cards (2, 3, 4) under its heading rule (1), with
-  // main beside a 236px rail.
-  const MAIN = { left: 236, right: 1440, top: 0, bottom: 1600 };
-  const withMain = (p: PageMap): PageMap => ({ ...p, main: MAIN });
+  // The dashboard fixture's cards (2, 3, 4) under its heading rule (1).
   const plus = (p: PageMap, id: number, f: Ledge): PageMap => ({
     ...p, floors: new Map([...p.floors, [id, f]]),
     obstacles: [...p.obstacles, ...(f.base > f.y ? [{ left: f.left, right: f.right, top: f.y, bottom: f.base, block: true }] : [])],
@@ -188,8 +185,7 @@ describe('walls', () => {
 });
 
 describe('wallRuns', () => {
-  const MAIN = { left: 236, right: 1440, top: 0, bottom: 1600 };
-  const page = (extra: PageMap['obstacles'] = []): PageMap => ({ ...dashboardPage(extra), main: MAIN });
+  const page = (extra: PageMap['obstacles'] = []): PageMap => dashboardPage(extra, CARDS, { main: MAIN });
   const wall = (p: PageMap, id: string) => walls(p).find((w) => w.id === id)!;
 
   it('runs the length of the wall, inset at each end, where nothing stands in front', () => {
