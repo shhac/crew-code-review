@@ -408,10 +408,11 @@ mode (lab spec `lab-tests/crow.spec.ts`).
 grain, and grain comes back once the crows have left it alone. Decided
 while building, each within the contract:
 
-- **The air** is the surfaces kit's bounds with the top and right exits
-  (`boundsOf(page, ['top', 'right'])`; no hover spots, which would cost a
-  frame on every scroll), cards shrunk so a crow may reach 6px into one
-  (shrunk by 6 plus the air's GAP), and every route swept with the bird
+- **The air** is the surfaces kit's airspace with the top and right exits
+  (`airspaceOf(page, { exits: ['top', 'right'] })`; no hover spots, which
+  would cost a frame on every scroll), keeping off cards by the kit's card
+  reach so a crow may reach 6px into one (`cardReach` with 6 every way),
+  and every route swept with the bird
   kit's `sweptPath`, each piece with its own envelope. On a phone the rail
   stacks above main, so there is no top exit, only the right.
 - **Taking off and landing low.** Where only a skim fits (a first row of

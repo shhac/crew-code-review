@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
+import { fitsAir } from '../air';
 import type { PageMap } from '../floors';
 import { away, comeIn, standing, takeOff, type Crow } from './crow';
-import { crowAir, ENVELOPES, fieldOf, inCrowAir } from './field';
+import { crowAir, ENVELOPES, fieldOf } from './field';
 import { card, OPEN, PAGE } from './fixtures';
 import { arrive, departures, fly, leave } from './flight';
 import { crowView, remembered } from './view';
@@ -66,7 +67,7 @@ describe('a crow as drawn', () => {
 
 describe('the crows’ air', () => {
   const page: PageMap = { ...PAGE, obstacles: [{ ...card(300, 1300, 200), left: 300, right: 1300, top: 200, bottom: 400, block: true }, { left: 320, right: 500, top: 220, bottom: 236 }] };
-  const inside = inCrowAir(crowAir(page));
+  const inside = fitsAir(crowAir(page));
   const box = (top: number, bottom: number) => ({ left: 600, right: 640, top, bottom });
 
   it('lets a crow reach 6px into a card, never its inside, nor near its text', () => {

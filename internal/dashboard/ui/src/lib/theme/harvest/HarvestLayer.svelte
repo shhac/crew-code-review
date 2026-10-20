@@ -4,6 +4,7 @@
   // rail's shelf scatters off the page by the top or the right edge, and
   // which drift back after a while. The layer takes no pointer events.
   import { onDestroy, onMount } from 'svelte';
+  import { fitsAir } from '../air';
   import { cueOf, debugOn } from '../cue';
   import { pageAt } from '../ledges';
   import { samePage, type Ledge, type PageMap } from '../floors';
@@ -16,7 +17,7 @@
   import { grounded, type Crow } from './crow';
   import { crowGaze, crowRig } from './crow-rig';
   import { createCrows, feedingSpots, pointOf, reconcileCrows, restingCrows, stepCrows, type Crows, type Field } from './crows';
-  import { crowAir, fieldOf, inCrowAir, sweep } from './field';
+  import { crowAir, fieldOf, sweep } from './field';
   import { leave } from './flight';
   import { crowView, remembered, type Memory } from './view';
 
@@ -60,7 +61,7 @@
 
   // The boxes each flying crow's route was found clear by, each piece swept
   // with its own envelope.
-  $: inAir = debug ? inCrowAir(crowAir(page)) : null;
+  $: inAir = debug ? fitsAir(crowAir(page)) : null;
   $: swept = inAir ? shown.flatMap(({ c }) => (c.flight ? sweep(c.flight, c.flight.leg, inAir).boxes : [])) : [];
 
   // Leaving reduced motion brings a fresh family; entering it keeps these

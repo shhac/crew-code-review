@@ -1,5 +1,5 @@
-import { boundsOf, fits, GAP, sweptPath, type Air } from '../air';
-import { reachOf, type Box, type Obstacle, type PageMap, type Reach } from '../floors';
+import { airspaceOf, cardReach, fitsAir, sweptPath, type Airspace } from '../air';
+import { CARD_REACH, reachOf, type Box, type PageMap, type Reach } from '../floors';
 import type { Point } from '../pointer';
 import type { Chaff } from './chaff';
 import { FOOTPRINTS, LOW_FOOTPRINTS, type Footprint } from './crow-rig';
@@ -10,12 +10,9 @@ import type { Leg, Piece, Route } from './flight';
 // past its top and right edges (the surfaces kit's exits), minus every
 // text, control and chart and each card's box shrunk by 6px on every side,
 // since a crow may overlap a card's empty edge by as much as a standing
-// animal may, never its inside. Each piece of a route is swept with its own
-// reach: taking off or flaring to land at the ledge, skimming its band,
-// or flapping in open air.
-
-// How far into a card's empty edge a crow may reach.
-const EDGE = 6;
+// animal may, never its inside (the kit's card reach). Each piece of a
+// route is swept with its own reach: taking off or flaring to land at the
+// ledge, skimming its band, or flapping in open air.
 
 // The box every flying pose stays inside, for the bird kit's sweep.
 const largest = (...boxes: Footprint[]): Footprint => ({
@@ -36,23 +33,8 @@ export const ENVELOPES: Record<Leg, Record<Piece, Reach>> = {
   },
 };
 
-// Cards shrunk so that, widened again by the air's GAP, a crow may reach
-// EDGE into them.
-const shrunk = (o: Obstacle): Obstacle => {
-  if (!o.block) return o;
-  const by = EDGE + GAP;
-  return { ...o, left: o.left + by, right: o.right - by, top: o.top + by, bottom: o.bottom - by };
-};
-
-// No hover spots: crows never hover, and sampling the page for them on every
-// scroll would cost a frame.
-export const crowAir = (page: PageMap): Air => ({ page, ...boundsOf(page, ['top', 'right']), spots: [] });
-
-// Whether a box is in the crows' air.
-export function inCrowAir(air: Air): (box: Box) => boolean {
-  const obstacles = air.page.obstacles.map(shrunk).filter((o) => o.right > o.left && o.bottom > o.top);
-  return (box) => fits(air, box, [], obstacles);
-}
+export const crowAir = (page: PageMap): Airspace =>
+  airspaceOf(page, { exits: ['top', 'right'], keepOff: cardReach({ top: CARD_REACH, bottom: CARD_REACH, sides: CARD_REACH }) });
 
 // The route's pieces swept with their reaches, the boxes for the debug
 // overlay.
@@ -62,8 +44,7 @@ export function sweep(route: Route, leg: Leg, clear: (box: Box) => boolean) {
 
 // Everything the crows are placed against on this page.
 export function fieldOf(page: PageMap, chaff: ReadonlyMap<number, Chaff>): Field {
-  const air = crowAir(page);
-  const inside = inCrowAir(air);
+  const inside = fitsAir(crowAir(page));
   const flap = FOOTPRINTS.flap;
   return {
     page, chaff,
