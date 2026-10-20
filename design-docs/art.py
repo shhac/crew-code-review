@@ -130,20 +130,18 @@ def rescaled(rgba: np.ndarray, k: float) -> np.ndarray:
     return np.asarray(img.resize((round(img.width * k), round(img.height * k)), Image.LANCZOS))
 
 
-def place(part: np.ndarray, whole: np.ndarray, step: int = 4, mask=opaque) -> tuple[int, int]:
-    """Where a part cut from a whole picture sits in it (its top left, in the
-    whole's pixels): the offset at which their shapes (or what mask picks
-    out of them) overlap best, found on copies shrunk step times, then
-    refined at full size."""
-    a = mask(part).astype(np.float32)
-    b = mask(whole).astype(np.float32)
+# Given a part, what a window of the whole the same size as it scores: the
+# higher, the better the part fits there.
+Score = Callable[[np.ndarray], Callable[[np.ndarray], float]]
 
+
+def search(a: np.ndarray, b: np.ndarray, score: Score, step: int = 4) -> tuple[int, int]:
+    """The offset (y, x) of a wholly inside b where a's window of b scores
+    best, found on copies shrunk step times, then refined at full size."""
     def best(a: np.ndarray, b: np.ndarray, ys, xs) -> tuple[int, int]:
         h, w = a.shape
-        def score(y: int, x: int) -> float:
-            window = b[y:y + h, x:x + w]
-            return float((window * a).sum() - 0.5 * ((1 - window) * a).sum())
-        return max(((y, x) for y in ys for x in xs), key=lambda p: score(*p))
+        rate = score(a)
+        return max(((y, x) for y in ys for x in xs), key=lambda p: rate(b[p[0]:p[0] + h, p[1]:p[1] + w]))
 
     small_a, small_b = a[::step, ::step], b[::step, ::step]
     cy, cx = best(small_a, small_b, range(small_b.shape[0] - small_a.shape[0] + 1), range(small_b.shape[1] - small_a.shape[1] + 1))
@@ -151,6 +149,15 @@ def place(part: np.ndarray, whole: np.ndarray, step: int = 4, mask=opaque) -> tu
     ys = range(max(0, cy * step - step), min(b.shape[0] - h, cy * step + step) + 1)
     xs = range(max(0, cx * step - step), min(b.shape[1] - w, cx * step + step) + 1)
     return best(a, b, ys, xs)
+
+
+def place(part: np.ndarray, whole: np.ndarray, step: int = 4, mask=opaque) -> tuple[int, int]:
+    """Where a part cut from a whole picture sits in it (its top left, in the
+    whole's pixels): the offset at which their shapes (or what mask picks
+    out of them) overlap best."""
+    def overlap(a: np.ndarray) -> Callable[[np.ndarray], float]:
+        return lambda window: float((window * a).sum() - 0.5 * ((1 - window) * a).sum())
+    return search(mask(part).astype(np.float32), mask(whole).astype(np.float32), overlap, step)
 
 
 def _correlate(a: np.ndarray, b: np.ndarray) -> np.ndarray:
@@ -287,10 +294,13 @@ class EyeScale:
             print(f'{name}: {self.units(size)}')
             return size
         per_unit = self.per_unit()
-        grown = rescaled(art, k)
-        y, x = by_colour(grown, self.standing) if mask is by_colour else place(grown, self.standing, mask=mask)
+        y, x = self.find(rescaled(art, k), mask)
         print(f'{name}: {self.units(size)} at {x / per_unit + self.margin:.2f}, {y / per_unit + self.margin:.2f}')
         return size
+
+    def find(self, part: np.ndarray, mask: Mask | Placer) -> tuple[int, int]:
+        """Where a part, grown onto the reference's pixels, sits in it."""
+        return by_colour(part, self.standing) if mask is by_colour else place(part, self.standing, mask=mask)
 
     def parts(self, arts: dict[str, np.ndarray], sheet: str, out: Path, mask: Mask | Placer = opaque, masks: dict[str, Mask | Placer | None] | None = None) -> dict[str, Size]:
         """The parts cut from the reference into sheet, each placed; masks

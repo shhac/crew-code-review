@@ -21,11 +21,12 @@ reference) into wasp-parts.png, each printed with where it sat in the
 reference: its place in the rig. The open wing is cut from the hovering key
 pose (wasp-wing.png) and placed by hand at its hinge.
 """
+from collections.abc import Callable
 from pathlib import Path
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from art import EyeScale, blob, crop, crop_origin, cut, export, keyed, lum, opaque, rescaled  # noqa: E402
+from art import EyeScale, blob, crop, crop_origin, cut, export, keyed, lum, opaque, search  # noqa: E402
 import numpy as np  # noqa: E402
 from PIL import Image  # noqa: E402
 
@@ -69,13 +70,8 @@ def iris_middle(path: Path, seed: tuple[int, int]) -> tuple[float, float]:
 
 
 class IrisScale(EyeScale):
-    def placed(self, name: str, art: np.ndarray, out: Path, scale: float, k: float, mask=None) -> tuple[int, int]:
-        size = export(art, out, name, scale)
-        per_unit = self.per_unit()
-        y, x = matched(rescaled(art, k), self.standing)
-        PLACED[name] = (x / per_unit + self.margin, y / per_unit + self.margin)
-        print(f'{name}: {self.units(size)} at {PLACED[name][0]:.2f}, {PLACED[name][1]:.2f}')
-        return size
+    def find(self, part: np.ndarray, mask=None) -> tuple[int, int]:
+        return matched(part, self.standing)
 
 
 def colours(rgba: np.ndarray) -> np.ndarray:
@@ -90,31 +86,14 @@ def colours(rgba: np.ndarray) -> np.ndarray:
     return np.where(opaque(rgba), out, 0)
 
 
-def matched(part: np.ndarray, whole: np.ndarray, step: int = 4) -> tuple[int, int]:
+def matched(part: np.ndarray, whole: np.ndarray) -> tuple[int, int]:
     """Where a part sits in the whole (its top left, in the whole's pixels):
     the offset where most of its opaque pixels are the same colour as the
-    whole's beneath them, found on copies shrunk step times, then refined."""
-    a, b = colours(part), colours(whole)
-
-    def best(a: np.ndarray, b: np.ndarray, ys, xs) -> tuple[int, int]:
-        h, w = a.shape
+    whole's beneath them."""
+    def same(a: np.ndarray) -> Callable[[np.ndarray], float]:
         solid = a > 0
-
-        def score(y: int, x: int) -> int:
-            window = b[y:y + h, x:x + w]
-            return int((window[solid] == a[solid]).sum())
-        return max(((y, x) for y in ys for x in xs), key=lambda p: score(*p))
-
-    sa, sb = a[::step, ::step], b[::step, ::step]
-    cy, cx = best(sa, sb, range(sb.shape[0] - sa.shape[0] + 1), range(sb.shape[1] - sa.shape[1] + 1))
-    h, w = a.shape
-    ys = range(max(0, cy * step - step), min(b.shape[0] - h, cy * step + step) + 1)
-    xs = range(max(0, cx * step - step), min(b.shape[1] - w, cx * step + step) + 1)
-    return best(a, b, ys, xs)
-
-
-# Where each part sat in the reference, in drawing units, for the overlay.
-PLACED: dict[str, tuple[float, float]] = {}
+        return lambda window: int((window[solid] == a[solid]).sum())
+    return search(colours(part), colours(whole), same)
 
 
 def table() -> None:
