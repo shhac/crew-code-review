@@ -19,7 +19,7 @@ export const TALL = waspAir(railAir(262), STAGE)!;
 export const MEDIUM = waspAir(railAir(54 - CAKE.y), STAGE)!;
 export const SHORT = waspAir(railAir(20 - CAKE.y), STAGE)!;
 
-export const worldOf = (air: WaspAir, now: number, rand: Rand, cursor: Pointer | null = null): World => ({ air, places, now, rand, cursor });
+const worldOf = (air: WaspAir, now: number, rand: Rand, cursor: Pointer | null = null): World => ({ air, places, now, rand, cursor });
 
 // Runs the pair from `from` to `to`, calling look on each frame.
 export function run(start: Wasp[], air: (now: number) => WaspAir, from: number, to: number, rand: Rand, cursor: (now: number) => Pointer | null = () => null, look: (w: Wasp[], now: number, air: WaspAir) => void = () => {}): Wasp[] {
