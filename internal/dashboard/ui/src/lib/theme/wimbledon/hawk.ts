@@ -1,4 +1,5 @@
-import { around, laneOf, meets, rowsOf, type Lane, type Row } from '../air';
+import { around, laneOf, rowsOf, type Lane, type Row } from '../air';
+import { grow, meets, union } from '../box';
 import type { Box, Ledge, PageMap, Reach } from '../floors';
 import { inView } from '../floors';
 import { pageOf } from '../ledges';
@@ -75,7 +76,6 @@ export function laneFor(row: Row, sky: Sky): Lane | null {
 // The glide's box with its belly line `y` above the row's ledge and its
 // middle at x (row-local), its rise and fall included.
 const glideBox = (row: Ledge, y: number, x: number): Box => ({ left: row.left + x - GLIDE.half, right: row.left + x + GLIDE.half, top: row.y + y - GLIDE.up - BOB, bottom: row.y + y + GLIDE.down + BOB });
-const join = (a: Box, b: Box): Box => ({ left: Math.min(a.left, b.left), right: Math.max(a.right, b.right), top: Math.min(a.top, b.top), bottom: Math.max(a.bottom, b.bottom) });
 
 // The hawk's belly point at now (row-local), or null outside its sweep.
 export function hawkAt(plan: Plan, now: number): { x: number; y: number } | null {
@@ -110,7 +110,6 @@ function drawnAt(plan: Plan, pigeons: readonly Pigeon[], page: PageMap, now: num
   return hawkBox ? [{ id: -1, box: hawkBox }, ...birds] : birds;
 }
 
-const grown = (b: Box, by: number): Box => ({ left: b.left - by, right: b.right + by, top: b.top - by, bottom: b.bottom + by });
 const visible = (b: Box, page: PageMap) => b.right > 0 && b.left < page.width && b.bottom > 0 && b.top < page.height;
 
 // The whole sweep, frame by frame from start to the last bird out: every
@@ -126,11 +125,11 @@ export function simulate(plan: Plan, pigeons: readonly Pigeon[], page: PageMap, 
     const before = i ? all[i - 1] ?? [] : [];
     const swept = (now ?? []).map((d) => {
       const prev = before.find((b) => b.id === d.id);
-      return { id: d.id, box: prev ? join(prev.box, d.box) : d.box };
+      return { id: d.id, box: prev ? union(prev.box, d.box) : d.box };
     });
     if (!swept.every((d) => sky.clear(d.box))) return false;
     const seen = swept.filter((d) => visible(d.box, page));
-    return seen.every((a, j) => seen.slice(j + 1).every((b) => !meets(grown(a.box, GAP), b.box)));
+    return seen.every((a, j) => seen.slice(j + 1).every((b) => !meets(grow(a.box, GAP), b.box)));
   });
 }
 

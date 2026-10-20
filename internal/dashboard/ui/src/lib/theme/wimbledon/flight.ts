@@ -1,5 +1,5 @@
-import { around, type Air } from '../air';
-import { cubic, samples, type Curve } from '../curves';
+import { around, sweptBoxes, type Air } from '../air';
+import { cubic, reversedCurves, samples, straight, type Curve } from '../curves';
 import type { Box, Ledge, Reach } from '../floors';
 import { apart, clamp01, mix, smooth } from '../math';
 import type { Point } from '../pointer';
@@ -57,8 +57,6 @@ const TOP_RUN = 160;
 // Routes are checked at boxes this far apart.
 const STEP = 4;
 
-const line = (from: Point, to: Point): Curve => ({ from, c1: { x: from.x + (to.x - from.x) / 3, y: from.y + (to.y - from.y) / 3 }, c2: { x: from.x + (2 * (to.x - from.x)) / 3, y: from.y + (2 * (to.y - from.y)) / 3 }, to });
-
 // Where a box of reach fully past an exit puts the bird's feet, in ledge-
 // local x: past the window's right edge, or behind the rail's edge.
 function exitX(f: Ledge, way: 'left' | 'right', exits: Exits, reach: Reach): number | null {
@@ -73,7 +71,7 @@ export function bandRoute(floor: number, f: Ledge, x: number, way: 'left' | 'rig
   const dir = way === 'right' ? 1 : -1;
   const top = { x: x + dir * run, y: -h };
   const climb: Curve = { from: { x, y: 0 }, c1: { x: x + dir * run * 0.3, y: -h * 0.25 }, c2: { x: x + dir * run * 0.6, y: -h }, to: top };
-  return { floor, way, curves: [climb, line(top, { x: end, y: -h })] };
+  return { floor, way, curves: [climb, straight(top, { x: end, y: -h })] };
 }
 
 // Up and out of the top of the window, ahead in dir: a climb that steepens
@@ -121,8 +119,7 @@ const blend = (a: Reach, b: Reach, k: number): Reach => ({ half: mix(a.half, b.h
 // envelope it has there, each neighbouring pair joined so nothing between
 // two samples is missed. A route out lifts off its ledge; one in lands.
 export function routeClear(route: Route, f: Ledge, env: Envelopes, clear: Clear, lands = false): boolean {
-  const boxes = routeBoxes(route, f, env, lands);
-  return boxes.every((b, i) => clear(i ? join(boxes[i - 1], b) : b));
+  return sweptBoxes(routeBoxes(route, f, env, lands), clear);
 }
 // The envelope's box at each point of a route, on the page.
 export function routeBoxes(route: Route, f: Ledge, env: Envelopes, lands: boolean): Box[] {
@@ -154,7 +151,6 @@ export function corridor(route: Route, f: Ledge, env: Envelopes, lands: boolean,
     return [{ floor, lo: Math.min(...low.map((b) => b.left)) - g.left - gap, hi: Math.max(...low.map((b) => b.right)) - g.left + gap }];
   });
 }
-const join = (a: Box, b: Box): Box => ({ left: Math.min(a.left, b.left), right: Math.max(a.right, b.right), top: Math.min(a.top, b.top), bottom: Math.max(a.bottom, b.bottom) });
 
 // The way out from x on ledge f, heading `way` along the band or up and out
 // of the top going that way, whichever is clear and shorter; null for none.
@@ -184,7 +180,7 @@ export function routeIn(floor: number, f: Ledge, x: number, way: Way, env: Envel
   return back ?? null;
 }
 
-export const reversed = (r: Route): Route => ({ ...r, curves: [...r.curves].reverse().map((c) => ({ from: c.to, c1: c.c2, c2: c.c1, to: c.from })) });
+export const reversed = (r: Route): Route => ({ ...r, curves: reversedCurves(r.curves) });
 
 // Where a flight is at `ms` after it began: its feet's point (ledge-local),
 // its pose, how far along it is, and whether it is over. Out: a TAKEOFF ms
