@@ -3,7 +3,7 @@ import { clearance, inView, type Ledge, type Run } from '../floors';
 import type { Claim } from '../ledges';
 import { clamp01, degrees } from '../math';
 import { segmentsApart, type Point, type Segment } from '../pointer';
-import { between, type Rand } from '../seed';
+import { between, firstOf, type Rand } from '../seed';
 import { meets, union } from '../air';
 import { parabola, samples } from '../curves';
 
@@ -213,7 +213,7 @@ function overNet(s: Seg, t: Table): boolean {
 function shotTo(c: Court, shot: Shot, rand: Rand): Seg[] | null {
   const side = c.t.sides[shot.s];
   if (side.hi < side.lo) return null;
-  return Array.from({ length: TRIES }).reduce<Seg[] | null>((found) => found ?? exchange(c, shot, between(rand, side.lo, side.hi), between(rand, MIN_APEX, MAX_APEX)), null);
+  return firstOf(Array.from({ length: TRIES }), () => exchange(c, shot, between(rand, side.lo, side.hi), between(rand, MIN_APEX, MAX_APEX)));
 }
 
 const endOf = (segs: readonly Seg[]) => {
@@ -252,7 +252,7 @@ export function courtsInView(courts: readonly CourtPair[], page: PageMap): Court
 // the net. Falls back to the other ending, then to none.
 function finish(play: Play, c: Court, from: Point, start: number, rand: Rand): Seg[] | null {
   const tries = play.ending === 'out' ? [outShot, netShot] : [netShot, outShot];
-  return tries.reduce<Seg[] | null>((found, f) => found ?? f(play, c, from, start, rand), null);
+  return firstOf(tries, (f) => f(play, c, from, start, rand));
 }
 
 function outShot(play: Play, c: Court, from: Point, start: number, rand: Rand): Seg[] | null {
@@ -360,7 +360,7 @@ export function stepRally(r: Rally, page: PageMap, courts: readonly CourtPair[],
 // one once its time comes, or another look 5s later.
 function serveWhenDue(r: Rally, page: PageMap, courts: readonly CourtPair[], free: (court: CourtPair) => boolean, now: number, rand: Rand): Rally {
   if (now < r.next) return r;
-  const play = courtsInView(courts, page).filter(free).reduce<Play | null>((found, c) => found ?? serve(c, page, now, rand), null);
+  const play = firstOf(courtsInView(courts, page).filter(free), (c) => serve(c, page, now, rand));
   return play ? { next: Infinity, play } : { next: now + 5000, play: null };
 }
 

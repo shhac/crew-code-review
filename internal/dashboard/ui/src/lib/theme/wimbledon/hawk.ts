@@ -2,7 +2,7 @@ import { around, laneOf, meets, rowsOf, type Lane, type Row } from '../air';
 import type { Box, Ledge, PageMap, Reach } from '../floors';
 import { inView } from '../floors';
 import { pageOf } from '../ledges';
-import { between, type Rand } from '../seed';
+import { between, firstOf, type Rand } from '../seed';
 import { durationOf, escape, flying, lengthOfTrack, reachAt, trackOf, type Route, type Sky, type Track } from './flight';
 import { FOOTPRINTS as HAWK_FOOTPRINTS } from './hawk-rig';
 import { ENVELOPES, grounded, POSES, type Pigeon } from './pigeon';
@@ -169,7 +169,7 @@ export function planOn(row: Row, dir: 1 | -1, pigeons: readonly Pigeon[], page: 
     const whole = planned([...ahead, ...chosen.takeoffs], chosen.alerts);
     return simulate(whole, pigeons, page, sky) ? whole : null;
   };
-  return [farFirst, [...farFirst].reverse()].reduce<Plan | null>((found, order) => found ?? inOrder(order), null);
+  return firstOf([farFirst, [...farFirst].reverse()], inOrder);
 }
 
 // When each comes back: the first RETURN after the sweep has ended, each
@@ -208,15 +208,15 @@ export function planSweep(pigeons: readonly Pigeon[], page: PageMap, sky: Sky, n
   if (!pigeons.length || !pigeons.every(grounded)) return null;
   const rows = rowsOf(page);
   const watched = rows.filter((r) => pigeons.some((p) => r.ledges.includes(p.floor) && inView(page.floors.get(p.floor)!, page)));
-  return watched.reduce<Plan | null>((found, row) => {
-    const lane = found ? null : laneFor(row, sky);
-    if (!lane) return found;
+  return firstOf(watched, (row) => {
+    const lane = laneFor(row, sky);
+    if (!lane) return null;
     const xs = pigeons.filter((p) => row.ledges.includes(p.floor)).map((p) => pageX(p, page));
     const nearLeft = Math.min(...xs.map((x) => x - lane.from));
     const nearRight = Math.min(...xs.map((x) => lane.to - x));
     const dirs: (1 | -1)[] = nearLeft >= nearRight ? [1, -1] : [-1, 1];
-    return dirs.reduce<Plan | null>((p, dir) => p ?? planOn(row, dir, pigeons, page, sky, now, rand), null);
-  }, null);
+    return firstOf(dirs, (dir) => planOn(row, dir, pigeons, page, sky, now, rand));
+  });
 }
 
 // The hawk between sweeps and during one.

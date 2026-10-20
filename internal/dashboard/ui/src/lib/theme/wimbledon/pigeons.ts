@@ -2,7 +2,7 @@ import { inView, type PageMap } from '../floors';
 import { inTurn, placeIds, regroup, troupeSize } from '../group';
 import { clearOf, pageOf, spots, type Claim, type Walker } from '../ledges';
 import type { Point } from '../pointer';
-import { between, type Rand } from '../seed';
+import { between, firstOf, type Rand } from '../seed';
 import { corridor, escape, escapeFrom, routeClear, routeIn, type Route, type Sky, type Stretch, type Way } from './flight';
 import { createHawk, GAP, hawkRemeasured, stepHawk, type Hawk } from './hawk';
 import {
@@ -101,12 +101,11 @@ function wayOut(p: Pigeon, from: number, others: readonly Pigeon[], scene: PageM
   if (!f) return null;
   const away: 'left' | 'right' = from <= f.left + p.x ? 'right' : 'left';
   const ways: ('left' | 'right')[] = away === 'right' ? ['right', 'left'] : ['left', 'right'];
-  return ways.reduce<{ route: Route; over: Stretch[] } | null>((found, way) => {
-    if (found) return found;
+  return firstOf(ways, (way) => {
     const route = escape(p.floor, f, p.x, way, ENVELOPES, sky);
     const over = route ? overOf(route, scene, false) : [];
     return route && !flownOver(over, others) ? { route, over } : null;
-  }, null);
+  });
 }
 
 // A bird already in the air, which another flight must wait for.
@@ -195,12 +194,12 @@ function comeBack(p: Pigeon, others: readonly Pigeon[], scene: PageMap, sky: Sky
   const home = p.home && pageOf(scene, p.home);
   const way = p.way ?? 'right';
   const spots = standingSpots(scene, sky, taken, home ?? null, rand, (c) => openApproach(c, way, others, scene));
-  const found = spots.reduce<{ route: Route; over: Stretch[] } | null>((done, c) => {
+  const found = firstOf(spots, (c) => {
     const f = scene.floors.get(c.floor);
-    const route = done || !f || !inView(f, scene) ? null : routeIn(c.floor, f, c.x, way, ENVELOPES, sky);
+    const route = f && inView(f, scene) ? routeIn(c.floor, f, c.x, way, ENVELOPES, sky) : null;
     const over = route ? overOf(route, scene, true) : [];
-    return done ?? (route && !flownOver(over, others) ? { route, over } : null);
-  }, null);
+    return route && !flownOver(over, others) ? { route, over } : null;
+  });
   return found ? flyIn(p, found.route, now, found.over) : { ...p, back: now + RETRY };
 }
 

@@ -3,6 +3,7 @@ import { cubic, lengthOf, type Curve } from '../curves';
 import type { PageMap } from '../floors';
 import { clamp01 } from '../math';
 import type { Point } from '../pointer';
+import { firstOf } from '../seed';
 import type { AirPose } from './gull-poses';
 
 // A gull's flight in time: the legs a route is flown in, how long each
@@ -61,11 +62,10 @@ export const routeLength = (legs: readonly Leg[]) => legs.reduce((sum, l) => sum
 // flight over.
 export type InFlight = { leg: Leg; index: number; u: number; at: Point; heading: Point };
 export function inFlight(page: PageMap, f: Flight, now: number): InFlight | null {
-  const found = f.legs.reduce<{ index: number; begin: number } | null>((hit, l, i) => {
-    if (hit) return hit;
+  const found = firstOf(f.legs, (l, i) => {
     const begin = f.start + f.legs.slice(0, i).reduce((s, x) => s + x.duration, 0);
     return now < begin + l.duration ? { index: i, begin } : null;
-  }, null);
+  });
   if (!found) return null;
   const l = f.legs[found.index];
   const curve = fromLedge(page, f.floor, l.curve);

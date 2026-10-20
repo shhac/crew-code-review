@@ -15,6 +15,12 @@ export const between = (rand: Rand, lo: number, hi: number) => lo + Math.max(0, 
 // margin keep a stand-in returning exactly 1 on the last item.
 export const pick = <T>(rand: Rand, items: readonly T[]): T => items[Math.floor(between(rand, 0, items.length - 0.001))];
 
+// What fn makes of the first of items it makes anything of, trying them in
+// order; null for none. fn is not called again once one is found, so what
+// it draws from a rand is drawn just as a loop stopping there would draw it.
+export const firstOf = <T, U>(items: readonly T[], fn: (item: T, i: number) => U | null): U | null =>
+  items.reduce<U | null>((found, item, i) => found ?? fn(item, i), null);
+
 // The item scoring highest, the first of any tie; undefined for none.
 export const maxBy = <T>(items: readonly T[], score: (item: T) => number): T | undefined =>
   items.reduce<T | undefined>((best, item) => (best === undefined || score(item) > score(best) ? item : best), undefined);

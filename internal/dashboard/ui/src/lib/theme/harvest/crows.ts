@@ -3,7 +3,7 @@ import { fillTo, inTurn, placeIds, troupeSize } from '../group';
 import { bodyOf, clampTo, lengthOf, pageOf, pointsAlong, runAt, runsOf } from '../ledges';
 import { apart } from '../math';
 import type { Cursor, Point } from '../pointer';
-import { between, type Rand } from '../seed';
+import { between, firstOf, type Rand } from '../seed';
 import type { Alarm } from './alarm';
 import { grainNear, type Chaff } from './chaff';
 import { away, comeIn, CROUCH, flying, grounded, standing, stepCrow, takeOff, WALKER, type Bite, type Crow } from './crow';
@@ -196,12 +196,11 @@ function comeBack(g: Crows, field: Field, now: number, rand: Rand): Crows {
   const far = (s: Spot) => (scarecrow ? -apart(feetAt(field, s) ?? scarecrow, scarecrow) : 0);
   const left = (s: Spot) => !!c.from && c.from.floor === s.floor && Math.abs(c.from.x - s.x) < SPOT_APART;
   const spots = shuffled(feedingSpots(field, claimsOf(g.crows)), rand).sort((a, b) => Number(left(a)) - Number(left(b)) || far(a) - far(b));
-  const landing = spots.slice(0, TRIES).reduce<{ spot: Spot; flight: Flight } | null>((found, s) => {
-    if (found) return found;
+  const landing = firstOf(spots.slice(0, TRIES), (s) => {
     const p = feetAt(field, s);
     const flight = p && arrive(p, field.page.width, field.clear, now, speedOf(rand));
     return flight && apartInAir(g, field, c, flight, now) ? { spot: s, flight } : null;
-  }, null);
+  });
   if (!landing) return update(g, { ...c, back: now + LOOK_AGAIN });
   return update(g, { ...comeIn(c, landing.flight, landing.spot.floor, landing.spot.x, now), wait: 0 });
 }
