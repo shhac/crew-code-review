@@ -1,4 +1,4 @@
-import { around, sweptBoxes, type Air } from '../air';
+import { around, fitsAir, pastExit, sweptBoxes, type Airspace } from '../air';
 import { cubic, reversedCurves, samples, straight, type Curve } from '../curves';
 import type { Box, Ledge, Reach } from '../floors';
 import { apart, clamp01, mix, smooth } from '../math';
@@ -13,13 +13,9 @@ import type { Point } from '../pointer';
 // Routes are kept relative to the ledge the flight belongs to, so a scroll
 // carries a bird in the air with its card.
 
-// Whether a box is in air, or past an exit (airspace.ts's skyOf, on the
-// surfaces kit). Exits are the window's right edge, its top, and the rail's
-// edge when the rail is a column (null otherwise); `air` is the kit's own
-// view of it, for its lanes.
-export type Clear = (box: Box) => boolean;
-export type Exits = { left: number | null; right: number };
-export type Sky = { clear: Clear; exits: Exits; air: Air };
+// The air a bird may be in is airspace.ts's skyOf, on the surfaces kit: a
+// box fits it in air or wholly past an exit, and the exits are the window's
+// right edge, its top, and the rail's edge when the rail is a column.
 export type Way = 'left' | 'right' | 'top';
 
 // A flight's ledge, its curves in that ledge's local space (x from its left
@@ -58,15 +54,16 @@ const TOP_RUN = 160;
 const STEP = 4;
 
 // Where a box of reach fully past an exit puts the bird's feet, in ledge-
-// local x: past the window's right edge, or behind the rail's edge.
-function exitX(f: Ledge, way: 'left' | 'right', exits: Exits, reach: Reach): number | null {
-  if (way === 'right') return exits.right + reach.half + 1 - f.left;
-  return exits.left === null ? null : exits.left - reach.half - 1 - f.left;
+// local x: past the window's right edge, or behind the rail's edge, and a
+// pixel further.
+function exitX(f: Ledge, way: 'left' | 'right', sky: Pick<Airspace, 'exits'>, reach: Reach): number | null {
+  const past = pastExit(sky, way === 'right' ? 'right' : 'rail', reach, f.y);
+  return past && past.x + (way === 'right' ? 1 : -1) - f.left;
 }
 
 // Out along the band: a climb to h above the ledge, then level to the exit.
-export function bandRoute(floor: number, f: Ledge, x: number, way: 'left' | 'right', h: number, exits: Exits, reach: Reach, run = RISE_RUN): Route | null {
-  const end = exitX(f, way, exits, reach);
+export function bandRoute(floor: number, f: Ledge, x: number, way: 'left' | 'right', h: number, sky: Pick<Airspace, 'exits'>, reach: Reach, run = RISE_RUN): Route | null {
+  const end = exitX(f, way, sky, reach);
   if (end === null) return null;
   const dir = way === 'right' ? 1 : -1;
   const top = { x: x + dir * run, y: -h };
@@ -118,8 +115,8 @@ const blend = (a: Reach, b: Reach, k: number): Reach => ({ half: mix(a.half, b.h
 // Whether a route is clear for its whole length, each point with the
 // envelope it has there, each neighbouring pair joined so nothing between
 // two samples is missed. A route out lifts off its ledge; one in lands.
-export function routeClear(route: Route, f: Ledge, env: Envelopes, clear: Clear, lands = false): boolean {
-  return sweptBoxes(routeBoxes(route, f, env, lands), clear);
+export function routeClear(route: Route, f: Ledge, env: Envelopes, sky: Airspace, lands = false): boolean {
+  return sweptBoxes(routeBoxes(route, f, env, lands), fitsAir(sky));
 }
 // The envelope's box at each point of a route, on the page.
 export function routeBoxes(route: Route, f: Ledge, env: Envelopes, lands: boolean): Box[] {
@@ -154,17 +151,17 @@ export function corridor(route: Route, f: Ledge, env: Envelopes, lands: boolean,
 
 // The way out from x on ledge f, heading `way` along the band or up and out
 // of the top going that way, whichever is clear and shorter; null for none.
-export function escape(floor: number, f: Ledge, x: number, way: 'left' | 'right', env: Envelopes, sky: Sky): Route | null {
-  const band = BANDS.map((h) => bandRoute(floor, f, x, way, h, sky.exits, env.fly)).find((r) => r !== null && routeClear(r, f, env, sky.clear)) ?? null;
+export function escape(floor: number, f: Ledge, x: number, way: 'left' | 'right', env: Envelopes, sky: Airspace): Route | null {
+  const band = BANDS.map((h) => bandRoute(floor, f, x, way, h, sky, env.fly)).find((r) => r !== null && routeClear(r, f, env, sky)) ?? null;
   const up = topRoute(floor, f, x, way === 'right' ? 1 : -1, env.fly);
-  const top = routeClear(up, f, env, sky.clear) ? up : null;
+  const top = routeClear(up, f, env, sky) ? up : null;
   const options = [band, top].filter((r): r is Route => r !== null);
   return options.sort((a, b) => lengthOfTrack(trackOf(a)) - lengthOfTrack(trackOf(b)))[0] ?? null;
 }
 
 // Either way out from x: away from `from` first (a cursor, the hawk), else
 // the other way.
-export function escapeFrom(floor: number, f: Ledge, x: number, from: number | null, env: Envelopes, sky: Sky): Route | null {
+export function escapeFrom(floor: number, f: Ledge, x: number, from: number | null, env: Envelopes, sky: Airspace): Route | null {
   const first: 'left' | 'right' = from === null || from <= f.left + x ? 'right' : 'left';
   const second: 'left' | 'right' = first === 'right' ? 'left' : 'right';
   return escape(floor, f, x, first, env, sky) ?? escape(floor, f, x, second, env, sky);
@@ -172,11 +169,11 @@ export function escapeFrom(floor: number, f: Ledge, x: number, from: number | nu
 
 // The way back in to x on ledge f by the exit `way`: an escape that way,
 // flown backwards, landing at the end.
-export function routeIn(floor: number, f: Ledge, x: number, way: Way, env: Envelopes, sky: Sky): Route | null {
+export function routeIn(floor: number, f: Ledge, x: number, way: Way, env: Envelopes, sky: Airspace): Route | null {
   const out = way === 'top'
     ? [topRoute(floor, f, x, 1, env.fly), topRoute(floor, f, x, -1, env.fly)]
-    : BANDS.map((h) => bandRoute(floor, f, x, way, h, sky.exits, env.fly, LAND_RUN)).filter((r): r is Route => r !== null);
-  const back = out.map(reversed).find((r) => routeClear(r, f, env, sky.clear, true));
+    : BANDS.map((h) => bandRoute(floor, f, x, way, h, sky, env.fly, LAND_RUN)).filter((r): r is Route => r !== null);
+  const back = out.map(reversed).find((r) => routeClear(r, f, env, sky, true));
   return back ?? null;
 }
 

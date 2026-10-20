@@ -1,10 +1,10 @@
-import { around, laneOf, rowsOf, type Lane, type Row } from '../air';
+import { around, fits, laneOf, rowsOf, type Airspace, type Lane, type Row } from '../air';
 import { grow, meets, union } from '../box';
 import type { Box, Ledge, PageMap, Reach } from '../floors';
 import { inView } from '../floors';
 import { pageOf } from '../ledges';
 import { between, firstOf, type Rand } from '../seed';
-import { durationOf, escape, flying, lengthOfTrack, reachAt, trackOf, type Route, type Sky, type Track } from './flight';
+import { durationOf, escape, flying, lengthOfTrack, reachAt, trackOf, type Route, type Track } from './flight';
 import { FOOTPRINTS as HAWK_FOOTPRINTS } from './hawk-rig';
 import { ENVELOPES, grounded, POSES, type Pigeon } from './pigeon';
 
@@ -68,9 +68,9 @@ const SWEPT: Reach = { half: GLIDE.half, up: GLIDE.up + BOB, down: GLIDE.down + 
 // rail to past the window's right edge with the glide's box in air all the
 // way. A sweep needs both ends to be exits, so there is none on a phone,
 // where the rail is not a column and the hawk would appear in view.
-export function laneFor(row: Row, sky: Sky): Lane | null {
-  if (sky.exits.left === null) return null;
-  return laneOf(sky.air, row, ABOVE, SWEPT);
+export function laneFor(row: Row, sky: Airspace): Lane | null {
+  if (sky.exits?.rail === undefined) return null;
+  return laneOf(sky, row, ABOVE, SWEPT);
 }
 
 // The glide's box with its belly line `y` above the row's ledge and its
@@ -116,7 +116,7 @@ const visible = (b: Box, page: PageMap) => b.right > 0 && b.left < page.width &&
 // box in air (or past an exit), and no two visible birds within GAP. Each
 // frame's boxes are joined to the last's, so nothing between frames is
 // missed.
-export function simulate(plan: Plan, pigeons: readonly Pigeon[], page: PageMap, sky: Sky, from = plan.start): boolean {
+export function simulate(plan: Plan, pigeons: readonly Pigeon[], page: PageMap, sky: Airspace, from = plan.start): boolean {
   const last = Math.max(plan.end, ...plan.takeoffs.map((t) => t.at + durationOf(t.track, false)));
   const frames = Math.ceil((last - from) / FRAME);
   const all = Array.from({ length: frames + 1 }, (_, i) => drawnAt(plan, pigeons, page, from + i * FRAME));
@@ -127,7 +127,7 @@ export function simulate(plan: Plan, pigeons: readonly Pigeon[], page: PageMap, 
       const prev = before.find((b) => b.id === d.id);
       return { id: d.id, box: prev ? union(prev.box, d.box) : d.box };
     });
-    if (!swept.every((d) => sky.clear(d.box))) return false;
+    if (!swept.every((d) => fits(sky, d.box))) return false;
     const seen = swept.filter((d) => visible(d.box, page));
     return seen.every((a, j) => seen.slice(j + 1).every((b) => !meets(grow(a.box, GAP), b.box)));
   });
@@ -136,7 +136,7 @@ export function simulate(plan: Plan, pigeons: readonly Pigeon[], page: PageMap, 
 // A sweep along this row going dir, starting at start, with every pigeon's
 // reaction; null when a pigeon on the row has no way out ahead of it, or
 // the simulation finds any box out of air or two birds too close.
-export function planOn(row: Row, dir: 1 | -1, pigeons: readonly Pigeon[], page: PageMap, sky: Sky, start: number, rand: Rand): Plan | null {
+export function planOn(row: Row, dir: 1 | -1, pigeons: readonly Pigeon[], page: PageMap, sky: Airspace, start: number, rand: Rand): Plan | null {
   const first = page.floors.get(row.id);
   const lane = laneFor(row, sky);
   if (!first || !lane) return null;
@@ -194,7 +194,7 @@ function followers(others: readonly Pigeon[], at: number, wayOut: (p: Pigeon) =>
 }
 
 const pageX = (p: Pigeon, page: PageMap) => (page.floors.get(p.floor)?.left ?? 0) + p.x;
-function escapeOf(p: Pigeon, page: PageMap, way: 'left' | 'right', sky: Sky): Route | null {
+function escapeOf(p: Pigeon, page: PageMap, way: 'left' | 'right', sky: Airspace): Route | null {
   const f = page.floors.get(p.floor);
   return f ? escape(p.floor, f, p.x, way, ENVELOPES, sky) : null;
 }
@@ -203,7 +203,7 @@ function escapeOf(p: Pigeon, page: PageMap, way: 'left' | 'right', sky: Sky): Ro
 // view and a lane at ABOVE; entering from the side farther from the
 // nearest pigeon on the row, so they get the longest warning, and from the
 // other side if that fails. Every pigeon must be on the ground.
-export function planSweep(pigeons: readonly Pigeon[], page: PageMap, sky: Sky, now: number, rand: Rand): Plan | null {
+export function planSweep(pigeons: readonly Pigeon[], page: PageMap, sky: Airspace, now: number, rand: Rand): Plan | null {
   if (!pigeons.length || !pigeons.every(grounded)) return null;
   const rows = rowsOf(page);
   const watched = rows.filter((r) => pigeons.some((p) => r.ledges.includes(p.floor) && inView(page.floors.get(p.floor)!, page)));
@@ -225,7 +225,7 @@ export const createHawk = (now: number, rand: Rand): Hawk => ({ next: now + betw
 // A frame on: its sweep ends once it is past the far exit; when its time
 // comes it plans one if the page is calm (no ball in play, no bird in the
 // air or away), or tries again shortly.
-export function stepHawk(h: Hawk, pigeons: readonly Pigeon[], page: PageMap, sky: Sky, now: number, rand: Rand, calm: boolean): Hawk {
+export function stepHawk(h: Hawk, pigeons: readonly Pigeon[], page: PageMap, sky: Airspace, now: number, rand: Rand, calm: boolean): Hawk {
   if (h.plan) return now < h.plan.end ? h : { next: now + between(rand, AGAIN[0], AGAIN[1]), plan: null };
   if (now < h.next) return h;
   const plan = calm ? planSweep(pigeons, page, sky, now, rand) : null;
@@ -235,7 +235,7 @@ export function stepHawk(h: Hawk, pigeons: readonly Pigeon[], page: PageMap, sky
 // After the page changes mid-sweep: the rest of it simulated again; if any
 // of it is no longer clear the hawk is gone at once (and the flock sends
 // its pigeons on or away by their own routes).
-export function hawkRemeasured(h: Hawk, pigeons: readonly Pigeon[], page: PageMap, sky: Sky, now: number, rand: Rand): Hawk {
+export function hawkRemeasured(h: Hawk, pigeons: readonly Pigeon[], page: PageMap, sky: Airspace, now: number, rand: Rand): Hawk {
   if (!h.plan || simulate(h.plan, pigeons, page, sky, now)) return h;
   return { next: now + between(rand, AGAIN[0], AGAIN[1]), plan: null };
 }

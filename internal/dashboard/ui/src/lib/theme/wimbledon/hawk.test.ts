@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { around, meets, rowsOf } from '../air';
+import { around, fits, meets, rowsOf } from '../air';
 import type { Box, Obstacle, PageMap } from '../floors';
 import { seeded } from '../test-scene';
 import { flying, lengthOfTrack, reachAt } from './flight';
@@ -56,7 +56,7 @@ describe("the hawk's sweep", { timeout: 30_000 }, () => {
       expect(plan.takeoffs.map((t) => t.id).sort()).toEqual([0, 1, 2]);
       for (const now of Array.from({ length: Math.ceil((plan.end + 4000 - plan.start) * 0.06) }, (_, i) => plan.start + i * (1000 / 60))) {
         const boxes = boxesAt(plan, FLOCK, PAGE, now).filter((d) => onScreen(d.box));
-        for (const d of boxes) expect(SKY.clear(d.box), `${d.id} at ${now}`).toBe(true);
+        for (const d of boxes) expect(fits(SKY, d.box), `${d.id} at ${now}`).toBe(true);
         boxes.forEach((a, i) => boxes.slice(i + 1).forEach((b) => expect(meets(grow(a.box, GAP), b.box), `${a.id} and ${b.id} at ${now}`).toBe(false)));
       }
     }
@@ -151,7 +151,7 @@ describe("the hawk's sweep", { timeout: 30_000 }, () => {
     // It starts out of sight, half a second before it comes in past the
     // exit, while the pigeons already see it coming.
     const lead = (SPEED * SIGHTED) / 1000;
-    expect(board.left + first.x + (plan.dir > 0 ? GLIDE.half : -GLIDE.half)).toBeCloseTo(plan.dir > 0 ? EXITS.left! - lead : EXITS.right + lead);
+    expect(board.left + first.x + (plan.dir > 0 ? GLIDE.half : -GLIDE.half)).toBeCloseTo(plan.dir > 0 ? EXITS.rail - lead : EXITS.right + lead);
     const ys = Array.from({ length: 50 }, (_, i) => hawkAt(plan, plan.start + i * 40)!.y);
     expect(Math.max(...ys)).toBeLessThanOrEqual(-3);
     expect(Math.min(...ys)).toBeGreaterThanOrEqual(-5);

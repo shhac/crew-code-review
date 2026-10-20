@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { around, meets } from '../air';
+import { around, fits, meets } from '../air';
 import type { Box } from '../floors';
 import { fixed, seeded } from '../test-scene';
 import { escape, flying, lengthOfTrack, reachAt, routeClear } from './flight';
@@ -131,7 +131,7 @@ describe('the flock', { timeout: 30_000 }, () => {
         const boxes = next.pigeons.map((p) => ({ p, box: boxOf(p, now) })).filter((d): d is { p: Pigeon; box: Box } => d.box !== null);
         const hawk = hawkView(next.hawk, PAGE, now);
         const all = hawk ? [...boxes, { p: null, box: { left: hawk.x - 23, right: hawk.x + 23, top: hawk.y - 15, bottom: hawk.y + 1 } }] : boxes;
-        for (const d of all) expect(SKY.clear(d.box), `seed ${seed} frame ${i} ${d.p?.id} ${d.p?.mode}`).toBe(true);
+        for (const d of all) expect(fits(SKY, d.box), `seed ${seed} frame ${i} ${d.p?.id} ${d.p?.mode}`).toBe(true);
         const onScreen = all.filter((d) => d.box.right > 0 && d.box.left < 1440 && d.box.top < 900);
         onScreen.forEach((a, j) => onScreen.slice(j + 1).forEach((b) => {
           const grown = { left: a.box.left - GAP, right: a.box.right + GAP, top: a.box.top - GAP, bottom: a.box.bottom + GAP };
@@ -158,7 +158,7 @@ describe('the flock', { timeout: 30_000 }, () => {
     const closed = overview([{ left: 1320, right: 1380, top: 150, bottom: 176 }]);
     const after = reconcileFlock(flock, closed, skyOf(closed), 500, seeded(6));
     expect(after.pigeons[0]).toMatchObject({ mode: 'away', flight: null, back: 500 + RETRY });
-    expect(routeClear(route, board, ENVELOPES, skyOf(closed).clear)).toBe(false);
+    expect(routeClear(route, board, ENVELOPES, skyOf(closed))).toBe(false);
     expect(after.pigeons[1]).toMatchObject({ floor: 3, x: 250 });
   });
 

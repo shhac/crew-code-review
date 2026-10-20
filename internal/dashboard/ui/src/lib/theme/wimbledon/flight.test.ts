@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { around } from '../air';
+import { around, fits } from '../air';
 import {
   along, durationOf, escape, reachAt, escapeFrom, flying, LAND, LAND_RUN, LIFT_RUN, lengthOfTrack, routeClear, routeIn, SPEED, TAKEOFF, trackOf, type Route,
 } from './flight';
@@ -23,14 +23,14 @@ describe('pigeon flights', { timeout: 30_000 }, () => {
     for (const p of pts) {
       const box = around(p, reachAt(ENV, { x: 0, y: p.y - 182 }, p.s, total, false));
       expect(box.bottom).toBeLessThanOrEqual(182);
-      expect(SKY.clear(box)).toBe(true);
+      expect(fits(SKY, box)).toBe(true);
     }
   });
 
   it('goes the other way behind the rail, and away from what flushed it first', () => {
     const left = escape(2, board, 300, 'left', ENV, SKY)!;
     const end = onPage(left).at(-1)!;
-    expect(end.x + ENV.fly.half).toBeLessThan(EXITS.left!);
+    expect(end.x + ENV.fly.half).toBeLessThan(EXITS.rail);
     // A cursor to its right sends it left, one to its left right.
     expect(escapeFrom(2, board, 300, 700, ENV, SKY)!.way).toBe('left');
     expect(escapeFrom(2, board, 300, 400, ENV, SKY)!.way).toBe('right');
@@ -63,7 +63,7 @@ describe('pigeon flights', { timeout: 30_000 }, () => {
     const pts = trackOf(r);
     expect(pts[0].at.x + side.left - ENV.fly.half).toBeGreaterThan(EXITS.right);
     expect(pts.at(-1)!.at).toEqual({ x: 120, y: 0 });
-    expect(routeClear(r, side, ENV, SKY.clear, true)).toBe(true);
+    expect(routeClear(r, side, ENV, SKY, true)).toBe(true);
     // No way in to the deeper row.
     expect(routeIn(4, lower, 300, 'right', ENV, SKY)).toBeNull();
   });

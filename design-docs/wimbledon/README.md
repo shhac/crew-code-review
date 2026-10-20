@@ -201,14 +201,14 @@ August's gull, September's crows and February's cupids can use it.
 - **Reduced motion**: no flight at all. The pigeons stand still on their
   spots; there is no hawk and no ball.
 
-**As built**: the models take the air as `flight.ts`'s `Sky` (`clear(box)`,
-true for a box in air or wholly past an exit, and the exits' x), built by
-`airspace.ts`'s `skyOf` on the surfaces kit: `air.ts`'s `boundsOf` with all
-three exits and its `fits`, which counts only the part of a box still in
-sight. The kit keeps a flier 4px from everything, cards too; this contract
-lets a bird touch the top of the card it stands on, leaves or lands on, and
-reach 6px into the empty bottom edge of a card above, so `skyOf` hands the
-kit the cards trimmed by those amounts (`julyObstacles`). The tests use the
+**As built**: the models take the air as the surfaces kit's `Airspace`,
+built by `airspace.ts`'s `skyOf`: `air.ts`'s `airspaceOf` with all three
+exits, checked by its `fits` (true for a box in air or wholly past an exit,
+counting only the part of a box still in sight). The kit keeps a flier 4px
+from everything, cards too; this contract lets a bird touch the top of the
+card it stands on, leaves or lands on, and reach 6px into the empty bottom
+edge of a card above, which is the kit's keep-off rule `cardReach` with
+those amounts (`julyKeepOff`). The tests use the
 same air on their fixture pages. Rows and the hawk's lane are the kit's
 (`rowsOf`, `laneOf`), as are the rally's courts (`gaps.ts`'s `courts`).
 The kit's `sweptPath` checks a route curve by curve with one envelope for

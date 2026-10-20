@@ -2,7 +2,6 @@
 // heading's text ending at y 135 and the first row of cards at 182, with
 // the band of air between them the pigeons fly out along.
 import type { Box, Ledge, Obstacle, PageMap } from '../floors';
-import type { Exits } from './flight';
 
 export const MAIN: Box = { left: 236, right: 1440, top: 0, bottom: 1600 };
 export const rule: Ledge = { left: 290, right: 1386, y: 158, base: 158, room: 40, headroom: Infinity, kind: 'heading' };
@@ -24,7 +23,7 @@ export const overview = (extra: readonly Obstacle[] = [], floors: [number, Ledge
 });
 
 // The exits at 1440: the rail's edge (main's left) and the window's right.
-export const EXITS: Exits = { left: MAIN.left, right: 1440 };
+export const EXITS = { rail: MAIN.left, right: 1440 };
 
 // The pigeon's envelopes, as the model has them.
 export { ENVELOPES as PIGEON_ENVELOPES } from './pigeon';

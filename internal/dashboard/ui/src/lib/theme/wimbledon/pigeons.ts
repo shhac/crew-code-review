@@ -1,9 +1,10 @@
+import type { Airspace } from '../air';
 import { inView, type PageMap } from '../floors';
 import { inTurn, placeIds, regroup, troupeSize } from '../group';
 import { clearOf, pageOf, spots, type Claim, type Walker } from '../ledges';
 import type { Point } from '../pointer';
 import { between, firstOf, type Rand } from '../seed';
-import { corridor, escape, escapeFrom, routeClear, routeIn, type Route, type Sky, type Stretch, type Way } from './flight';
+import { corridor, escape, escapeFrom, routeClear, routeIn, type Route, type Stretch, type Way } from './flight';
 import { createHawk, GAP, hawkRemeasured, stepHawk, type Hawk } from './hawk';
 import {
   alert, claimsOf, ENVELOPES, FLUSH_REACH, FLUSH_SPEED, flyIn, flyingNow, fresh, grounded, HALF, kept, PIGEON, POSES, standing, stepPigeon, takeOff, type Pigeon, type Self,
@@ -43,7 +44,7 @@ export type Flock = { target: number; pigeons: Pigeon[]; lastFlush: number; hawk
 // along, so a bird standing there would be in their way. Placed afresh, ledges
 // with no bird come first, in no order; coming back, nearest `near` first,
 // on any ledge.
-export function standingSpots(scene: PageMap, sky: Sky, taken: readonly Claim[], near: Point | null, rand: Rand, keep: (c: { floor: number; x: number }) => boolean = () => true): { floor: number; x: number }[] {
+export function standingSpots(scene: PageMap, sky: Airspace, taken: readonly Claim[], near: Point | null, rand: Rand, keep: (c: { floor: number; x: number }) => boolean = () => true): { floor: number; x: number }[] {
   const all = spots(scene, [], PLACED, 2 * PLACED.half).flatMap((s) => {
     const count = Math.max(1, Math.floor((s.room.hi - s.room.lo) / SAMPLE) + 1);
     return Array.from({ length: count }, (_, i) => ({ floor: s.floor, x: count === 1 ? (s.room.lo + s.room.hi) / 2 : s.room.lo + ((s.room.hi - s.room.lo) * i) / (count - 1) }));
@@ -73,7 +74,7 @@ const distanceTo = (scene: PageMap, c: { floor: number; x: number }, p: Point) =
 };
 
 // A pigeon placed on a spot it could fly away from, standing.
-export function placePigeon(scene: PageMap, sky: Sky, others: readonly Pigeon[], self: Self, now: number, rand: Rand, extra: readonly Claim[] = []): Pigeon | null {
+export function placePigeon(scene: PageMap, sky: Airspace, others: readonly Pigeon[], self: Self, now: number, rand: Rand, extra: readonly Claim[] = []): Pigeon | null {
   const spot = standingSpots(scene, sky, [...landingClaims(others), ...extra], null, rand)[0];
   return spot ? standing(self, spot.floor, spot.x, rand() < 0.5 ? -1 : 1, now, rand) : null;
 }
@@ -96,7 +97,7 @@ const flownOver = (over: readonly Stretch[], others: readonly Pigeon[]) =>
   others.filter(grounded).some((o) => over.some((c) => c.floor === o.floor && c.hi > Math.min(o.x, o.target) - HALF && c.lo < Math.max(o.x, o.target) + HALF));
 // A way out for a flushed bird: away from what flushed it first, else the
 // other way, over no bird on the ground; null (it shies instead) for none.
-function wayOut(p: Pigeon, from: number, others: readonly Pigeon[], scene: PageMap, sky: Sky): { route: Route; over: Stretch[] } | null {
+function wayOut(p: Pigeon, from: number, others: readonly Pigeon[], scene: PageMap, sky: Airspace): { route: Route; over: Stretch[] } | null {
   const f = scene.floors.get(p.floor);
   if (!f) return null;
   const away: 'left' | 'right' = from <= f.left + p.x ? 'right' : 'left';
@@ -112,7 +113,7 @@ function wayOut(p: Pigeon, from: number, others: readonly Pigeon[], scene: PageM
 const airborne = (others: readonly Pigeon[]) => others.some((o) => o.flight !== null);
 
 // Placed fresh, keeping off any stretches given (a court cued for a rally).
-export function createFlock(scene: PageMap, sky: Sky, now: number, rand: Rand, avoid: readonly Claim[] = []): Flock {
+export function createFlock(scene: PageMap, sky: Airspace, now: number, rand: Rand, avoid: readonly Claim[] = []): Flock {
   const three = placeIds<Pigeon>([0, 1, 2], (others, id) => placePigeon(scene, sky, others, fresh(id), now, rand, avoid));
   const target = troupeSize(three);
   return { target, pigeons: three.slice(0, target), lastFlush: -Infinity, hawk: createHawk(now, rand) };
@@ -127,7 +128,7 @@ export type Pass = { cursor: Point; speed: number } | null;
 // Then each bird in turn: its own doings, a flush when the cursor passes
 // fast and close, and coming back when its time comes. `taken` is what the
 // rally holds; `ball` whether one is in play.
-export function stepFlock(flock: Flock, scene: PageMap, sky: Sky, now: number, dt: number, rand: Rand, pass: Pass, taken: readonly Claim[] = [], ball = false): Flock {
+export function stepFlock(flock: Flock, scene: PageMap, sky: Airspace, now: number, dt: number, rand: Rand, pass: Pass, taken: readonly Claim[] = [], ball = false): Flock {
   const calm = !ball && flock.pigeons.every(grounded);
   const hawk = stepHawk(flock.hawk, flock.pigeons, scene, sky, now, rand, calm);
   const swept = hawk.plan ? flock.pigeons.map((p) => reactToHawk(p, hawk, scene, now, rand)) : flock.pigeons;
@@ -189,7 +190,7 @@ function openApproach(c: { floor: number; x: number }, way: Way, others: readonl
   });
 }
 const SAME_ROW = 2;
-function comeBack(p: Pigeon, others: readonly Pigeon[], scene: PageMap, sky: Sky, taken: readonly Claim[], now: number, rand: Rand): Pigeon {
+function comeBack(p: Pigeon, others: readonly Pigeon[], scene: PageMap, sky: Airspace, taken: readonly Claim[], now: number, rand: Rand): Pigeon {
   if (airborne(others)) return { ...p, back: now + WAIT };
   const home = p.home && pageOf(scene, p.home);
   const way = p.way ?? 'right';
@@ -208,12 +209,12 @@ function comeBack(p: Pigeon, others: readonly Pigeon[], scene: PageMap, sky: Sky
 // else is placed again with no animation; one in the air flies on if the
 // rest of its route is still clear, else counts as away at once (it is
 // never drawn over content); missing ones are placed up to the target.
-export function reconcileFlock(flock: Flock, scene: PageMap, sky: Sky, now: number, rand: Rand): Flock {
+export function reconcileFlock(flock: Flock, scene: PageMap, sky: Airspace, now: number, rand: Rand): Flock {
   const keep = (p: Pigeon, settled: Pigeon[], all: Pigeon[]): Pigeon | null => {
     if (p.mode === 'away') return p;
     if (p.flight) {
       const f = scene.floors.get(p.flight.route.floor);
-      return f && routeClear(p.flight.route, f, ENVELOPES, sky.clear, p.flight.lands) ? p : { ...p, mode: 'away', flight: null, back: now + RETRY };
+      return f && routeClear(p.flight.route, f, ENVELOPES, sky, p.flight.lands) ? p : { ...p, mode: 'away', flight: null, back: now + RETRY };
     }
     return kept(p, scene, landingClaims(settled)) ?? placePigeon(scene, sky, all.filter((o) => o.id !== p.id), p, now, rand);
   };
@@ -223,7 +224,7 @@ export function reconcileFlock(flock: Flock, scene: PageMap, sky: Sky, now: numb
 
 // Reduced motion: every pigeon standing still on its spot, kept there while
 // it stays clear; no hawk.
-export function restingFlock(scene: PageMap, sky: Sky, previous: Flock | null, now: number): Flock {
+export function restingFlock(scene: PageMap, sky: Airspace, previous: Flock | null, now: number): Flock {
   const still = () => 0.5;
   const target = previous?.target ?? createFlock(scene, sky, now, still).target;
   const rest = (p: Pigeon): Pigeon => ({ ...p, mode: 'stand', until: Infinity, target: p.x, flight: null });

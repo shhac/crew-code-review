@@ -1,9 +1,9 @@
+import type { Airspace } from '../air';
 import { courts } from '../gaps';
 import type { PageMap } from '../floors';
 import type { Point, Segment } from '../pointer';
 import type { Rand } from '../seed';
 import { skyOf } from './airspace';
-import type { Sky } from './flight';
 import { livePuffs, markNear, puffAt, type Lines, type Puff } from './lines';
 import { courtFree, createFlock, reconcileFlock, restingFlock, stepFlock, type Flock, type Pass } from './pigeons';
 import { courtClaims, claimsOf, createRally, remeasured, stepRally, tableOf, type CourtPair, type Rally } from './rally';
@@ -15,7 +15,7 @@ import { courtClaims, claimsOf, createRally, remeasured, stepRally, tableOf, typ
 
 // The page as summer tennis sees it: its air (on the surfaces kit) and its
 // courts, two cards side by side with the gap between them the net.
-export type Summer = { page: PageMap; sky: Sky; courts: readonly CourtPair[] };
+export type Summer = { page: PageMap; sky: Airspace; courts: readonly CourtPair[] };
 export function summerOf(page: PageMap): Summer {
   return { page, sky: skyOf(page), courts: courts(page).map((g) => ({ left: g.from.ledge, right: g.to.ledge })) };
 }
