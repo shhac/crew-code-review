@@ -366,7 +366,7 @@ function hovering(b: Bee, ctx: Context, now: number, rand: Rand): Bee {
   if (bonked) return bonked;
   const visit = visitFrom(b, ctx, here, now, rand, b.fled);
   if (visit) return { ...visit, stuck: -Infinity, fled: null };
-  if (now - stuckSince >= STUCK) return leave(b, ctx, here, now, rand);
+  if (now - stuckSince >= STUCK) return leave(b, ctx, here, now);
   return { ...b, until: now + 500, stuck: stuckSince };
 }
 
@@ -525,7 +525,7 @@ function facingOn(b: Bee, f: Flight, s: number): 1 | -1 {
 
 // Nowhere to go: out of the window through the top or the bottom, along
 // the nearer of main's margins if a way exists, else it fades where it is.
-function leave(b: Bee, ctx: Context, here: Point, now: number, rand: Rand): Bee {
+function leave(b: Bee, ctx: Context, here: Point, now: number): Bee {
   const page = ctx.air.page;
   const main = page.main;
   const exits = main ? [here.x, main.left + 30, main.right - 30].flatMap((x) => [{ x, y: -40 }, { x, y: page.height + 40 }]) : [];
