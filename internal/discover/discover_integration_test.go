@@ -45,7 +45,7 @@ func TestLiveDiscovery(t *testing.T) {
 	}
 
 	// The sizes the listing leaves out, fetched for the candidates alone.
-	d.measure(context.Background(), repo, cands)
+	d.fillSizes(context.Background(), repo, cands)
 	measured := 0
 	for _, c := range cands {
 		t.Logf("candidate: #%d %s type=%s author=%s sha=%.8s +%d -%d files=%d", c.Number, c.Title, c.Type, c.Author, c.HeadSHA, c.Additions, c.Deletions, c.ChangedFiles)

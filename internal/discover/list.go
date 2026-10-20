@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"strconv"
-	"strings"
 	"time"
 )
 
@@ -25,7 +24,7 @@ import (
 // So the listing asks for counts where classify needs only "is there one"
 // (review requests, reviews), and leaves the line counts out. They feed the
 // queue display alone, and are fetched afterwards for the handful of PRs that
-// became candidates (prSizes).
+// became candidates (sizes.go).
 
 // listQuery is the search behind `gh pr list --search`, without gh's field
 // expansion. $q, not $query: `-f query=` is how gh api graphql takes the
@@ -210,45 +209,4 @@ func searchPRs(ctx context.Context, search string, n int, cursor string) (ghList
 		return resp, fmt.Errorf("decode PR listing: %w", err)
 	}
 	return resp, nil
-}
-
-// prSize is a PR's raw diff totals, as the queue displays them.
-type prSize struct {
-	Number       int `json:"number"`
-	Additions    int `json:"additions"`
-	Deletions    int `json:"deletions"`
-	ChangedFiles int `json:"changedFiles"`
-}
-
-// sizeBatch bounds one size query. Each PR costs GitHub a diff summary, which
-// is what made the listing too slow when it asked for all of them; fifty is
-// well inside the timeout and more candidates than one repo has in a sweep.
-const sizeBatch = 50
-
-// ghPRSizes fetches the line counts for just these PRs, aliased into one query
-// per batch: the production prSizes.
-func ghPRSizes(ctx context.Context, repo string, numbers []int) (map[int]prSize, error) {
-	out := make(map[int]prSize, len(numbers))
-	for start := 0; start < len(numbers); start += sizeBatch {
-		batch := numbers[start:min(start+sizeBatch, len(numbers))]
-		var fields strings.Builder
-		for _, n := range batch {
-			fmt.Fprintf(&fields, "p%d: pullRequest(number:%d) { number additions deletions changedFiles }\n", n, n)
-		}
-		query := "query($owner:String!, $repo:String!) { repository(owner:$owner, name:$repo) {\n" + fields.String() + "} }"
-		resp, err := ghGraphQL[struct {
-			Data struct {
-				Repository map[string]*prSize `json:"repository"`
-			} `json:"data"`
-		}](ctx, repo, "PR sizes", query)
-		if err != nil {
-			return nil, err
-		}
-		for _, s := range resp.Data.Repository {
-			if s != nil {
-				out[s.Number] = *s
-			}
-		}
-	}
-	return out, nil
 }

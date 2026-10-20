@@ -159,7 +159,7 @@ func (d *Discoverer) Discover(ctx context.Context) ([]store.Candidate, error) {
 				cands = append(cands, cand)
 			}
 		}
-		d.measure(ctx, repo, cands)
+		d.fillSizes(ctx, repo, cands)
 		for _, cand := range cands {
 			if err := d.store.Enqueue(ctx, cand); err != nil {
 				return nil, err
@@ -208,27 +208,4 @@ func (d *Discoverer) resumeAt(repos []string, repo string) {
 		return
 	}
 	d.resume = repo
-}
-
-// measure fills in the line counts the listing leaves out (list.go), for
-// candidates only. Best-effort: they are for display, so a failed fetch is a
-// warning and the candidates are enqueued unmeasured, which leaves any figures
-// already stored on their rows alone.
-func (d *Discoverer) measure(ctx context.Context, repo string, cands []store.Candidate) {
-	if len(cands) == 0 {
-		return
-	}
-	numbers := make([]int, len(cands))
-	for i, c := range cands {
-		numbers[i] = c.Number
-	}
-	sizes, err := d.prSizes(ctx, repo, numbers)
-	if err != nil {
-		d.warnf("discover %s: measuring %d candidate(s) failed, enqueued without sizes: %v", repo, len(cands), err)
-		return
-	}
-	for i := range cands {
-		s := sizes[cands[i].Number]
-		cands[i].Additions, cands[i].Deletions, cands[i].ChangedFiles = s.Additions, s.Deletions, s.ChangedFiles
-	}
 }
