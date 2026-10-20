@@ -4,7 +4,7 @@
   // rail's shelf scatters off the page by the top or the right edge, and
   // which drift back after a while. The layer takes no pointer events.
   import { onDestroy, onMount } from 'svelte';
-  import { cueOf } from '../cue';
+  import { cueOf, debugOn } from '../cue';
   import { pageAt } from '../ledges';
   import { samePage, type Ledge, type PageMap } from '../floors';
   import Geometry from '../Geometry.svelte';
@@ -20,7 +20,7 @@
   import { leave } from './flight';
   import { crowView, remembered, type Memory } from './view';
 
-  const debug = new URLSearchParams(location.search).get('theme-debug') === '1';
+  const debug = debugOn();
   // `?theme-cue=scatter` (tests only): the crows are scattered once they
   // have been placed a moment, as if the scarecrow had flapped, and its
   // flapping is taken to have ended 8s before, so they start back within

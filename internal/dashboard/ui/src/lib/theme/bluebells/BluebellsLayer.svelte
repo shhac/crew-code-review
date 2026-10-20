@@ -6,7 +6,7 @@
   // under reduced motion as at any other time, and the bees perch still.
   // The layer takes no pointer events.
   import { onMount } from 'svelte';
-  import { cueOf } from '../cue';
+  import { cueOf, debugOn } from '../cue';
   import { samePage, type Box, type Ledge, type PageMap } from '../floors';
   import Geometry from '../Geometry.svelte';
   import { ledgeScene, placeTroupe } from '../layout';
@@ -30,7 +30,7 @@
 
   const CLUMP_ART = [clump0, clump1, clump2];
   const CUSHION_ART = [cushion0, cushion1];
-  const debug = new URLSearchParams(location.search).get('theme-debug') === '1';
+  const debug = debugOn();
   // Perched or hovering, a bee's antennae lean toward a cursor within 120px.
   const gaze = gazeFrom({ eye: EYE, anchor: ANCHOR, scale: SCALE, look: 15, reach: 120 });
   const LOOKING = new Set(['perch', 'shiver', 'hover', 'approach']);

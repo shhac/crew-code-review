@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { boundsOf, EXITS, type Lane } from './air';
+  import { debugOn } from './cue';
   import { measurePage, wallRuns, walls, type Ledge, type PageMap, type Run } from './floors';
   import { courts, endId, gapRuns, measureGaps, type Gap } from './gaps';
   import { measureRailAir, measureRailSky, watchRailSky, type Sky } from './sky';
@@ -9,7 +10,7 @@
   export let lanes: readonly Lane[] = [];
 
   // Drawn only on request (?theme-debug=1), whichever theme is showing.
-  const shown = new URLSearchParams(location.search).get('theme-debug') === '1';
+  const shown = debugOn();
 
   // The rail is remeasured with the ledges, and whenever it changes on its
   // own: the shelf's art settling resizes nothing the ledges watch.

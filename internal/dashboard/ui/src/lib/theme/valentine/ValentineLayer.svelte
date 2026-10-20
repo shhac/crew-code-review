@@ -6,6 +6,7 @@
   // takes no pointer events.
   import { onMount } from 'svelte';
   import { airOf, around, type Air } from '../air';
+  import { debugOn } from '../cue';
   import { samePage, type Ledge, type PageMap } from '../floors';
   import Geometry from '../Geometry.svelte';
   import { ledgeScene, placeTroupe } from '../layout';
@@ -18,7 +19,7 @@
   import { SPOT } from './footprints';
   import { EDGE, petalPath, scatterPetals, type Petal } from './petals';
 
-  const debug = new URLSearchParams(location.search).get('theme-debug') === '1';
+  const debug = debugOn();
   let floors: ReadonlyMap<number, Ledge> = new Map();
   let page: PageMap = { floors, obstacles: [], width: 0, height: 0 };
   let air: Air | null = null;

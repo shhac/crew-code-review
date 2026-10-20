@@ -5,7 +5,7 @@
   // pointer events.
   import { onMount } from 'svelte';
   import { samePage, type Ledge, type PageMap } from '../floors';
-  import { cueOf } from '../cue';
+  import { cueOf, debugOn } from '../cue';
   import Geometry from '../Geometry.svelte';
   import { ledgeScene, placeTroupe } from '../layout';
   import type { Cursor, Point } from '../pointer';
@@ -31,7 +31,7 @@
   const LOOKING = new Set(['stand', 'eye']);
   // A glance about after a wander: down at the ledge ahead, or a little up.
   const glance = (side: number) => (side > 0 ? 10 : -4);
-  const debug = new URLSearchParams(location.search).get('theme-debug') === '1';
+  const debug = debugOn();
   // A test's cue: swoop at a cursor as soon as it stops.
   const pace = cueOf(['swoop'] as const) ? CUED : PACE;
 

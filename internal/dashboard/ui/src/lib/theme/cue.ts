@@ -10,3 +10,9 @@ const cue = new URLSearchParams(location.search).get('theme-cue');
 //
 //   const SWEEP = cueOf(['sweep', 'rally'] as const); // 'sweep' | 'rally' | null
 export const cueOf = <const N extends string>(names: readonly N[]): N | null => names.find((n) => n === cue) ?? null;
+
+// Whether each month's debug overlay, and the page's geometry, are drawn:
+// `?theme-debug=1`. Unlike a cue it is read when asked, as each layer
+// mounts, so a layer mounted after in-app navigation has dropped the query
+// draws none.
+export const debugOn = (): boolean => new URLSearchParams(location.search).get('theme-debug') === '1';
