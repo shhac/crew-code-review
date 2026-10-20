@@ -2,9 +2,10 @@ import { describe, expect, it } from 'vitest';
 import { around, meets } from '../air';
 import { reachOf, type Box, type PageMap } from '../floors';
 import type { Cursor } from '../pointer';
-import { fixed, seeded, steps } from '../test-scene';
+import { fixed, seeded, spacedAfterRelayout, steps } from '../test-scene';
 import { airborne, gullView, standingAt, fresh, type Gull } from './gull';
-import { cursorAt, OBSTACLES, OPEN, page, rule } from './gull-fixtures';
+import { board, cursorAt, lower, OBSTACLES, OPEN, page, rule } from './gull-fixtures';
+import { GULL } from './gull-poses';
 import { FOOTPRINTS } from './gull-rig';
 import { roomToTakeOff } from './swoop';
 import { COOLDOWN, createGulls, CUED, reconcileGulls, restingGulls, stepGulls, STILL, type Gulls } from './gulls';
@@ -142,6 +143,15 @@ describe('layout changes and reduced motion', () => {
     expect(again.gulls.map((x) => [x.floor, x.x])).toEqual(g.gulls.map((x) => [x.floor, x.x]));
     const two = { ...g, target: 2, gulls: g.gulls.slice(0, 2) };
     expect(reconcileGulls(two, p, 100, fixed(0.5)).gulls).toHaveLength(2);
+  });
+
+  it('keeps them apart when a layout change crowds the page', () => {
+    // The rule and the short card go, and the cards left narrow: the gulls
+    // must share them.
+    const crowded = page(OBSTACLES, [[2, { ...board, right: board.left + 400 }], [4, { ...lower, right: lower.left + 400 }]]);
+    const gulls = { create: createGulls, reconcile: reconcileGulls, members: (g: Gulls) => g.gulls.filter((x) => x.mode !== 'away') };
+    const apart = (a: Gull, b: Gull) => a.floor !== b.floor || Math.abs(a.x - b.x) >= GULL.spacing;
+    for (const seed of [1, 2, 3]) expect(spacedAfterRelayout(gulls, p, crowded, apart, seeded(seed))).toEqual([]);
   });
 
   it('stands them all still under reduced motion, kept where they stood', () => {
