@@ -1,17 +1,9 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test } from '@playwright/test';
+import { big, decoded, legBones } from './critter';
 
 // The hare in the critters lab: every part decodes, it bounds on stepping
 // legs, sits on its long hind feet, holds still under reduced motion, and
 // each mode has its key pose to lay over it.
-
-const big = (page: Page) => page.locator('[data-stage] [data-critter]');
-const legBones = (page: Page) => big(page).locator('[data-legs] image').evaluateAll((els) => els.map((el) => el.getAttribute('transform')));
-const decoded = (page: Page) => big(page).locator('image').evaluateAll((els) => Promise.all(els.map(async (el) => {
-  const image = new Image();
-  image.src = el.getAttribute('href')!;
-  await image.decode();
-  return image.naturalWidth * image.naturalHeight;
-})));
 
 test.beforeEach(async ({ page }) => {
   await page.route('**/api/**', (route) => route.abort());
@@ -40,12 +32,8 @@ test('the hare has its drawings to lay over it, each mode its own', async ({ pag
   const drawing = page.locator('[data-stage] image[href*="hare-pose"], [data-stage] image[href*="hare-reference"]');
   await page.goto('/lab/critters.html#animal=hare&mode=sit&frame=10&ref=sit');
   await expect(drawing).toHaveAttribute('href', /hare-pose-sit/);
-  expect(await drawing.evaluate(async (el) => {
-    const image = new Image();
-    image.src = el.getAttribute('href')!;
-    await image.decode();
-    return image.naturalWidth;
-  })).toBeGreaterThan(0);
+  const [size] = await decoded(page, drawing);
+  expect(size).toBeGreaterThan(0);
   for (const [mode, pose] of [['bound', 'bound-reach'], ['box', 'box'], ['alert', 'freeze'], ['graze', 'graze'], ['lope', 'lope']]) {
     await page.getByRole('button', { name: mode, exact: true }).click();
     await expect(drawing).toHaveAttribute('href', new RegExp(`hare-pose-${pose}`));

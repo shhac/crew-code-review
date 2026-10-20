@@ -1,18 +1,10 @@
 import { expect, test, type Page } from '@playwright/test';
+import { big, decoded, legBones } from './critter';
 
 // Every seasonal animal in its workbench: each draws, the parts-drawn ones'
 // parts decode, their legs step while walking and hold when paused,
 // stillness holds under reduced motion, and the layer controls hide and
 // separate parts.
-
-const big = (page: Page) => page.locator('[data-stage] [data-critter]');
-const legBones = (page: Page) => big(page).locator('[data-legs] image').evaluateAll((els) => els.map((el) => el.getAttribute('transform')));
-const decoded = (page: Page) => big(page).locator('image').evaluateAll((els) => Promise.all(els.map(async (el) => {
-  const image = new Image();
-  image.src = el.getAttribute('href')!;
-  await image.decode();
-  return image.naturalWidth * image.naturalHeight;
-})));
 
 test.beforeEach(async ({ page }) => {
   await page.route('**/api/**', (route) => route.abort());
@@ -129,12 +121,8 @@ test('the hedgehog has its drawings to lay over it, each mode its own', async ({
   const drawing = page.locator('[data-stage] image[href*="hedgehog-pose"], [data-stage] image[href*="hedgehog-reference"]');
   await page.goto('/lab/critters.html#animal=hedgehog&mode=sniff&frame=10&ref=sniff');
   await expect(drawing).toHaveAttribute('href', /hedgehog-pose-sniff/);
-  expect(await drawing.evaluate(async (el) => {
-    const image = new Image();
-    image.src = el.getAttribute('href')!;
-    await image.decode();
-    return image.naturalWidth;
-  })).toBeGreaterThan(0);
+  const [size] = await decoded(page, drawing);
+  expect(size).toBeGreaterThan(0);
   await page.getByRole('button', { name: 'walk', exact: true }).click();
   await expect(drawing).toHaveAttribute('href', /hedgehog-pose-walk-contact/);
   await page.getByLabel('drawing').selectOption('standing');
