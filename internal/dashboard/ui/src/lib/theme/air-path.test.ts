@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { fitsAir, sweeps, sweptPath, type Piece } from './air';
 import { clearFlight, curvePoint, type FlightCurve } from './christmas/flight-route';
 import type { Curve } from './curves';
-import type { Box, Obstacle, PageMap, Reach } from './floors';
+import type { Obstacle, PageMap, Reach } from './floors';
 import { hash } from './seed';
 import { airFor, page } from './valentine/fixtures';
 
@@ -65,23 +65,6 @@ describe('sweptPath', () => {
       const drawn = { left: p.x - reach.half, right: p.x + reach.half, top: p.y - reach.up, bottom: p.y + reach.down };
       expect(boxes.some((b) => b.left <= drawn.left + 1e-9 && b.right >= drawn.right - 1e-9 && b.top <= drawn.top + 1e-9 && b.bottom >= drawn.bottom - 1e-9), `at ${i}`).toBe(true);
     }
-  });
-
-  it('splits no further than asked: to a depth, or down to pieces `least` px long', () => {
-    const thin = airFor(page([{ left: 449, right: 451, top: 590, bottom: 610 }], []));
-    const seen = (sweep: { depth?: number; least?: number }) => {
-      const tried: Box[] = [];
-      sweptPath([{ curve: level, reach: { half: 1, up: 1, down: 1 } }], (b) => (tried.push(b), fitsAir(thin)(b)), sweep);
-      return tried.length;
-    };
-    // Blocked at its middle: the whole, its blocked first half, then at
-    // each depth below a clear half and the blocked one beside it.
-    expect(seen({ depth: 3 })).toBe(2 * 3);
-    expect(seen({})).toBe(seen({ depth: 12 }));
-    expect(seen({})).toBeGreaterThan(seen({ depth: 3 }));
-    // 300px long and 100 out to its first control, halved three times is
-    // 37.5 and 12.5: 50, short of 60.
-    expect(seen({ least: 60 })).toBe(2 * 3);
   });
 
   it('refuses a piece that is not a number anywhere', () => {

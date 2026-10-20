@@ -198,13 +198,9 @@ export function sweeps(air: Bounded, boxes: readonly Box[], also: readonly Box[]
 // side, so it holds whichever way the flier faces.
 export type Piece = { curve: Curve; reach: Reach };
 
-// How far a piece is split before it counts as blocked: `depth` halvings
-// (as deep as the robin's clearFlight goes, unless asked), or sooner where
-// a piece is shorter than `least` px, measured as the bees measure it (end
-// to end, and out to its first control).
-export type Sweep = { depth?: number; least?: number };
+// How many halvings a piece is split into before it counts as blocked: as
+// deep as the robin's clearFlight goes.
 const DEPTH = 12;
-const spanOf = (c: Curve) => Math.hypot(c.to.x - c.from.x, c.to.y - c.from.y) + Math.hypot(c.c1.x - c.from.x, c.c1.y - c.from.y);
 
 const hullOf = (c: Curve, r: Reach): Box => {
   const points = [c.from, c.c1, c.c2, c.to];
@@ -217,15 +213,15 @@ const hullOf = (c: Curve, r: Reach): Box => {
 // (by de Casteljau), and so on, so every point of the curve is covered, its
 // exact extremes included, and nothing is checked only at its ends. Null
 // when some part of it, split as far as it may be, is still not clear.
-function hullBoxes(curve: Curve, reach: Reach, clear: (box: Box) => boolean, sweep: Required<Sweep>, depth: number): Box[] | null {
+function hullBoxes(curve: Curve, reach: Reach, clear: (box: Box) => boolean, depth: number): Box[] | null {
   const box = hullOf(curve, reach);
   if (!finite(box)) return null;
   if (clear(box)) return [box];
-  if (depth === sweep.depth || spanOf(curve) < sweep.least) return null;
+  if (depth === DEPTH) return null;
   const [a, b] = halves(curve);
-  const first = hullBoxes(a, reach, clear, sweep, depth + 1);
+  const first = hullBoxes(a, reach, clear, depth + 1);
   if (!first) return null;
-  const second = hullBoxes(b, reach, clear, sweep, depth + 1);
+  const second = hullBoxes(b, reach, clear, depth + 1);
   return second && [...first, ...second];
 }
 
@@ -233,8 +229,8 @@ function hullBoxes(curve: Curve, reach: Reach, clear: (box: Box) => boolean, swe
 // boxes it was found clear by (for the debug overlay to draw). `clear` says
 // whether a box is all in air: a month's own rule (its exits, the rail's
 // sky, the card edges it may reach into), or fitsAir's.
-export function sweptPath(pieces: readonly Piece[], clear: (box: Box) => boolean, { depth = DEPTH, least = 0 }: Sweep = {}): { clear: boolean; boxes: Box[] } {
-  const found = pieces.map((p) => hullBoxes(p.curve, p.reach, clear, { depth, least }, 0));
+export function sweptPath(pieces: readonly Piece[], clear: (box: Box) => boolean): { clear: boolean; boxes: Box[] } {
+  const found = pieces.map((p) => hullBoxes(p.curve, p.reach, clear, 0));
   return { clear: found.every((b) => b !== null), boxes: found.flatMap((b) => b ?? []) };
 }
 
