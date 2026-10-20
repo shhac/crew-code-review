@@ -121,10 +121,10 @@ export const SETS: readonly SeasonalSet[] = [
   },
   {
     // The crows feed where they can get away; drawn is every picture still
-    // seen (a wing's hidden side lies under its seen one). No cue: resized
-    // mid-scatter, they come back at their own pace, one in about half a
-    // minute, not the cue's few seconds, so the contract would wait a minute
-    // or more to see them all back.
+    // seen (a wing's hidden side lies under its seen one). No cue until a
+    // known bug is fixed: the scatter cue's shortened absence is lost when
+    // the page reconciles, so after a resize mid-scatter the crows come back
+    // at the normal pace (the second in 30 to 40s), not the cue's few seconds.
     theme: 'harvest', overlay: '[data-harvest]', shelf: '.harvest-shelf', accent: 'rgb(195, 155, 224)',
     animal: 'crow', drawn: 'image:not([visibility="hidden"])', decoration: '[data-chaff]', parts: [['[data-chaff]', 'path']],
     min: { 1440: 2, 1024: 2, 390: 1 }, still: 'scan', settle: 400,
