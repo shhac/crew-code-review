@@ -35,9 +35,10 @@ internal/
 │   ├── rules.go                # the resolved ruleset, its hash, and its validator
 │   ├── gitattributes.go        # linguist-generated/vendored matching, git's own semantics
 │   └── exclude.go              # what counts toward size, after exclusions
-├── discover/                   # gh pr list → New/Refreshed/Discussion classification
+├── discover/                   # PR listing → New/Refreshed/Discussion classification
 │   ├── discover.go             # the sweep: budget, backoff, rotation
 │   ├── classify.go             # per-PR candidacy + type rules (shared with the claim recheck)
+│   ├── list.go                 # the lean paged listing (own GraphQL, page-size ladder) + candidate sizes
 │   ├── gh.go                   # the gh read frame (ghGraphQL, ghPRView) and the recheck
 │   └── diff.go                 # per-file line counts + .gitattributes, GraphQL (never REST)
 ├── review/                     # Engine interface + the one driver + prompt/rule assembly

@@ -277,8 +277,9 @@ WHERE steering_message IS NULL
 -- itself, frozen per review.
 --
 -- The diff columns are on BOTH tables on purpose. The queue row carries what
--- discovery saw (free: `gh pr list --json` already costs one GraphQL call
--- whatever fields it names), for display and for the dispatcher. The history
+-- discovery saw (measured for candidates in a query of their own: asking for
+-- them in the listing is what made it too slow for GitHub), for display and
+-- for the dispatcher. The history
 -- row carries what the review actually scored, which is a different number:
 -- generated and vendored files have been taken out of it.
 ALTER TABLE queue ADD COLUMN IF NOT EXISTS additions INTEGER;

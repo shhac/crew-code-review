@@ -1,8 +1,9 @@
 // Package discover finds candidate PRs deterministically via the gh CLI and
 // reconciles them into the store. It replaces the "set up a python script"
-// step from the original schedule with native Go: `gh pr list --json` per repo,
-// then the New/Refreshed rules applied in-process. Refreshed detection joins
-// against the store's review history (last reviewed head SHA).
+// step from the original schedule with native Go: one paged GraphQL listing
+// per repo (list.go), then the New/Refreshed rules applied in-process.
+// Refreshed detection joins against the store's review history (last reviewed
+// head SHA).
 package discover
 
 import (

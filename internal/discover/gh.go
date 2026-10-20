@@ -11,7 +11,8 @@ import (
 	"github.com/shhac/crew-code-review/internal/store"
 )
 
-// ghPR is the subset of `gh pr list --json ...` we consume.
+// ghPR is the PR wire shape every read decodes into: `gh pr view --json`
+// directly, and the listing's own query by conversion (ghListNode.pr).
 type ghPR struct {
 	Number     int       `json:"number"`
 	Title      string    `json:"title"`
