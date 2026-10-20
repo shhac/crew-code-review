@@ -45,13 +45,12 @@ type Discoverer struct {
 	// backoff lines. Discovery skipping a repo is the one thing in this
 	// package somebody grepping a log actually needs to find.
 	warnf Logf
-	// mu guards backoff, resume and health: sweeps are serialised by the
-	// scheduler, but the Discoverer outlives any one of them.
-	mu      sync.Mutex
-	backoff map[string]repoBackoff
-	resume  string
-	// health is each repo's discovery record (status.go), written to
-	// statusPath after every sweep when one is set.
+	// mu guards resume and health: sweeps are serialised by the scheduler,
+	// but the Discoverer outlives any one of them.
+	mu     sync.Mutex
+	resume string
+	// health is each repo's discovery record (status.go), backoff included
+	// (backoff.go), written to statusPath after every sweep when one is set.
 	health     map[string]RepoStatus
 	statusPath string
 	// listPRs fetches one repo's open PRs (gh in production; injected in
@@ -72,7 +71,7 @@ func New(cfg func() config.Config, s candidateStore, logf Logf) *Discoverer {
 	if logf == nil {
 		logf = func(string, ...any) {}
 	}
-	d := &Discoverer{cfg: cfg, store: s, now: time.Now, logf: logf, warnf: logf, backoff: map[string]repoBackoff{}}
+	d := &Discoverer{cfg: cfg, store: s, now: time.Now, logf: logf, warnf: logf, health: map[string]RepoStatus{}}
 	d.listPRs = d.ghListPRs
 	d.prSizes = ghPRSizes
 	d.lastHumanActivity = func(ctx context.Context, repo string, number int) (time.Time, error) {
@@ -137,16 +136,14 @@ func (d *Discoverer) Discover(ctx context.Context) ([]store.Candidate, error) {
 		d.recordAttempt(repo, d.now())
 		prs, err := d.listPRs(ctx, repo)
 		if err != nil {
-			fails, wait := d.noteFailure(repo, d.now())
-			d.recordFailure(repo, d.now(), fails, wait, err)
+			fails, wait := d.noteFailure(repo, d.now(), err)
 			d.warnf("discover %s: %v, skipping repo this cycle (consecutive failure %d, backing off %s)",
 				repo, err, fails, wait)
 			failed++
 			lastErr = err
 			continue
 		}
-		d.recordSuccess(repo, d.now(), len(prs))
-		if fails := d.noteSuccess(repo); fails > 0 {
+		if fails := d.noteSuccess(repo, d.now(), len(prs)); fails > 0 {
 			d.logf("discover %s: recovered after %d consecutive failure(s)", repo, fails)
 		}
 		var cands []store.Candidate

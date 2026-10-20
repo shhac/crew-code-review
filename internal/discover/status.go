@@ -58,20 +58,6 @@ func (d *Discoverer) recordAttempt(repo string, now time.Time) {
 	})
 }
 
-func (d *Discoverer) recordFailure(repo string, now time.Time, fails int, wait time.Duration, err error) {
-	d.updateHealth(repo, func(h *RepoStatus) {
-		h.Failures, h.BackoffUntil = fails, now.Add(wait)
-		h.LastError, h.LastErrorAt = err.Error(), now
-	})
-}
-
-func (d *Discoverer) recordSuccess(repo string, now time.Time, listed int) {
-	d.updateHealth(repo, func(h *RepoStatus) {
-		h.LastSuccess, h.Listed = now, listed
-		h.Failures, h.BackoffUntil = 0, time.Time{}
-	})
-}
-
 func (d *Discoverer) recordDegraded(repo, note string) {
 	d.updateHealth(repo, func(h *RepoStatus) { h.Degraded = note })
 }

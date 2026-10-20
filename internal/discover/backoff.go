@@ -9,14 +9,6 @@ import (
 // retry.go: the ladder survives one expensive query inside a single call,
 // this survives a repo that is simply down, across sweeps.
 
-// repoBackoff is one repo's consecutive-failure state, held across sweeps so
-// a repo GitHub is failing on is skipped outright rather than re-attempted
-// (and re-logged) every cycle.
-type repoBackoff struct {
-	failures int
-	until    time.Time
-}
-
 // Backoff bounds, deliberately not configurable: they are a property of how
 // GitHub misbehaves, not of any one deployment. Doubling from 2m caps at 30m,
 // so a repo that is genuinely down costs two sweeps an hour rather than twelve,
@@ -41,43 +33,43 @@ func backoffFor(failures int) time.Duration {
 	return d
 }
 
+// The backoff state is the repo's health record (status.go), not a map of
+// its own. It used to be both, kept equal by hand at every call site, and the
+// copy the dashboard and doctor read could drift from the one that actually
+// decided the skip.
+
 // inBackoff reports whether repo is still inside the window a previous
 // failure opened, with the failure count and expiry for the log line.
 func (d *Discoverer) inBackoff(repo string, now time.Time) (time.Time, int, bool) {
 	d.mu.Lock()
 	defer d.mu.Unlock()
-	b, ok := d.backoff[repo]
-	if !ok || !now.Before(b.until) {
+	h := d.health[repo]
+	if !now.Before(h.BackoffUntil) {
 		return time.Time{}, 0, false
 	}
-	return b.until, b.failures, true
+	return h.BackoffUntil, h.Failures, true
 }
 
 // noteFailure records one failed listing and returns the new consecutive
 // failure count and the window it opens.
-func (d *Discoverer) noteFailure(repo string, now time.Time) (int, time.Duration) {
-	d.mu.Lock()
-	defer d.mu.Unlock()
-	if d.backoff == nil {
-		d.backoff = map[string]repoBackoff{}
-	}
-	b := d.backoff[repo]
-	b.failures++
-	wait := backoffFor(b.failures)
-	b.until = now.Add(wait)
-	d.backoff[repo] = b
-	return b.failures, wait
+func (d *Discoverer) noteFailure(repo string, now time.Time, err error) (fails int, wait time.Duration) {
+	d.updateHealth(repo, func(h *RepoStatus) {
+		h.Failures++
+		fails, wait = h.Failures, backoffFor(h.Failures)
+		h.BackoffUntil = now.Add(wait)
+		h.LastError, h.LastErrorAt = err.Error(), now
+	})
+	return fails, wait
 }
 
-// noteSuccess clears any backoff and returns how many failures it forgave, so
-// the caller can log a recovery exactly once.
-func (d *Discoverer) noteSuccess(repo string) int {
-	d.mu.Lock()
-	defer d.mu.Unlock()
-	b, ok := d.backoff[repo]
-	if !ok {
-		return 0
-	}
-	delete(d.backoff, repo)
-	return b.failures
+// noteSuccess records a listing that got through, clears any backoff, and
+// returns how many failures it forgave, so the caller can log a recovery
+// exactly once.
+func (d *Discoverer) noteSuccess(repo string, now time.Time, listed int) (forgiven int) {
+	d.updateHealth(repo, func(h *RepoStatus) {
+		forgiven = h.Failures
+		h.LastSuccess, h.Listed = now, listed
+		h.Failures, h.BackoffUntil = 0, time.Time{}
+	})
+	return forgiven
 }

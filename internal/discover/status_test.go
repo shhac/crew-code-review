@@ -61,8 +61,8 @@ func TestSweepRecordsEachReposHealth(t *testing.T) {
 // still appears: a missing row reads as "this repo is not watched".
 func TestStatusCoversExactlyTheWatchList(t *testing.T) {
 	d := New(staticConfig(config.Config{}), &fakeStore{}, nil)
-	d.recordSuccess("o/gone", fixedNow(), 3)
-	d.recordSuccess("o/a", fixedNow(), 3)
+	d.noteSuccess("o/gone", fixedNow(), 3)
+	d.noteSuccess("o/a", fixedNow(), 3)
 
 	st := d.Status([]string{"o/a", "o/new"}, fixedNow())
 	if len(st.Repos) != 2 || st.Repos[0].Repo != "o/a" || st.Repos[1].Repo != "o/new" {
