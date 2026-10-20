@@ -1,15 +1,16 @@
+import { clip, meets, type Box } from '../box';
 import type { Curve } from '../curves';
-import { meets } from '../air';
-import type { Box, Obstacle, PageMap } from '../floors';
+import { BOTTOM_MARGIN, CARD_REACH, TOP_MARGIN, type Obstacle, type PageMap } from '../floors';
 import { mixPoint } from '../math';
 import type { Point } from '../pointer';
 import type { Sky } from '../sky';
 
 // Where a bee may be: main's box minus everything the page map knows as an
 // obstacle (text, controls, charts and every card's own box), plus the
-// rail's air when the shelf is shown. A footprint may reach REACH px into
-// the empty bottom edge of a card above it, as the walkers may, and keeps
-// MARGIN px off content. design-docs/bluebells/README.md has the contract.
+// rail's air when the shelf is shown. A footprint may reach CARD_REACH px
+// into the empty bottom edge of a card above it, as the walkers may, and
+// keeps MARGIN px off content. design-docs/bluebells/README.md has the
+// contract.
 
 export type BeeAir = {
   page: PageMap;
@@ -25,20 +26,11 @@ export type BeeAir = {
   rail: Box | null;
 };
 
-export const REACH = 6;
-export const MARGIN = 2;
-// As the shared TOP_MARGIN and BOTTOM_MARGIN in floors.ts.
-const TOP = 70;
-const BOTTOM = 30;
+const MARGIN = 2;
 // The rail's air is used only where its sky is at least this tall.
 const SKY = 60;
 // Obstacles are looked up by band, so a test looks at those near it only.
 const BAND = 48;
-
-const clip = (a: Box, b: Box): Box | null => {
-  const c = { left: Math.max(a.left, b.left), right: Math.min(a.right, b.right), top: Math.max(a.top, b.top), bottom: Math.min(a.bottom, b.bottom) };
-  return c.left < c.right && c.top < c.bottom ? c : null;
-};
 
 // The rail's air as the bees use it (the sky down through the shelf, as
 // sky.ts measures it), widened rightward to main's left edge: the rail's
@@ -52,7 +44,7 @@ export function railRoom(sky: Sky | null, railAir: Sky | null, page: PageMap): B
 export function beeAirOf(page: PageMap, rail: Box | null = null): BeeAir {
   const main = page.main;
   const rooms = [...(main ? [main] : []), ...(rail ? [rail] : [])];
-  const window = { left: 0, right: page.width, top: TOP, bottom: page.height - BOTTOM };
+  const window = { left: 0, right: page.width, top: TOP_MARGIN, bottom: page.height - BOTTOM_MARGIN };
   const views = rooms.flatMap((r) => clip(r, window) ?? []);
   return { page, rooms, views, rail };
 }
@@ -76,7 +68,7 @@ const index = new WeakMap<PageMap, Map<number, Obstacle[]>>();
 // The obstacles near a box, by band.
 function near(page: PageMap, box: Box): Obstacle[] {
   const bands = index.get(page) ?? page.obstacles.reduce((m, o) => {
-    const first = Math.floor((o.top - MARGIN) / BAND), last = Math.floor((o.bottom + MARGIN + REACH) / BAND);
+    const first = Math.floor((o.top - MARGIN) / BAND), last = Math.floor((o.bottom + MARGIN + CARD_REACH) / BAND);
     for (const k of Array.from({ length: last - first + 1 }, (_, i) => first + i)) m.set(k, [...(m.get(k) ?? []), o]);
     return m;
   }, new Map<number, Obstacle[]>());
@@ -91,7 +83,7 @@ function near(page: PageMap, box: Box): Obstacle[] {
 // What a box may not meet of an obstacle: content and a margin round it;
 // a card's box, less its empty bottom edge.
 export const keepOff = (o: Obstacle): Box => (o.block
-  ? { left: o.left, right: o.right, top: o.top, bottom: o.bottom - REACH }
+  ? { left: o.left, right: o.right, top: o.top, bottom: o.bottom - CARD_REACH }
   : { left: o.left - MARGIN, right: o.right + MARGIN, top: o.top - MARGIN, bottom: o.bottom + MARGIN });
 
 export type Clear = {
