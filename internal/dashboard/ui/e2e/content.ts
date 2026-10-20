@@ -27,7 +27,10 @@ export type Watched = { covered: string[]; seen: string[]; done: boolean };
 // boxes are not content; an animal may stand into their empty edges. slack
 // is how far a drawing may reach into content and still not count. Walking
 // every text range is most of the cost, so the content is measured again
-// only when the page under the drawings changes.
+// only when the page under the drawings changes. Every look is in a frame,
+// after the layers have moved their animals for it: looked at between
+// frames, a page just resized has its new layout while its animals still
+// stand where the last frame drew them, which no frame ever shows.
 export function watchFrames(page: Page, groups: readonly Drawn[], { ms, slack = 1, until = [], keepOut = [] }: Watch): Promise<Watched> {
   return page.evaluate(({ groups, ms, slack, until, keepOut }) => new Promise<Watched>((resolve) => {
     const main = document.querySelector('main');
@@ -123,7 +126,7 @@ export function watchFrames(page: Page, groups: readonly Drawn[], { ms, slack = 
       if (performance.now() - start >= ms) return finish(false);
       requestAnimationFrame(look);
     };
-    look();
+    requestAnimationFrame(look);
   }), { groups, ms, slack, until, keepOut });
 }
 
