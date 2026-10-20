@@ -1,5 +1,5 @@
 import { shareOut } from '../decor';
-import { clearRuns, type Ledge, type Obstacle, type Run } from '../floors';
+import { CARD_REACH, clearRuns, type Ledge, type Obstacle, type Run } from '../floors';
 import { hash } from '../seed';
 import { CLUMPS, CUSHIONS, type Bell } from './art';
 
@@ -28,10 +28,9 @@ export const MOSS_LINE = 0.6;
 
 // Clumps are seeded in slots this far apart along a ledge, each kept where
 // a clump stands clear with room either side for a bee to perch, rising up
-// to REACH into the empty bottom edge of a card above, as the walkers may.
+// into the empty bottom edge of a card above as the walkers may (CARD_REACH).
 const SLOT = 140;
 const CLUMP_CLEAR = 26;
-const REACH = 6;
 const CLUMP_ROOM = 10;
 const CLUMP_CHANCE = 0.7;
 export const MAX_CLUMPS_A_LEDGE = 3;
@@ -99,7 +98,7 @@ const slotX = (id: number, i: number) => SLOT * (i + 0.25 + 0.5 * hash(id * 71 +
 // What grows on one ledge, before the page's caps.
 export function mossOn(id: number, f: Ledge, obstacles: readonly Obstacle[]): Moss {
   const moss = clearRuns(f, obstacles, MOSS_CLEAR, { inset: MOSS_INSET });
-  const tall = clearRuns(f, obstacles, CLUMP_CLEAR, { inset: MOSS_INSET, reach: REACH });
+  const tall = clearRuns(f, obstacles, CLUMP_CLEAR, { inset: MOSS_INSET, reach: CARD_REACH });
   const low = clearRuns(f, obstacles, CUSHION_CLEAR, { inset: MOSS_INSET });
   const count = Math.floor((f.right - f.left) / SLOT);
   const grown = Array.from({ length: count }, (_, i) => {
