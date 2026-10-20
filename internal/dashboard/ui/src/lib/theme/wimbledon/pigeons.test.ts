@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { around, fits, meets } from '../air';
-import type { Box } from '../floors';
-import { fixed, seeded } from '../test-scene';
+import type { Box, PageMap } from '../floors';
+import type { Rand } from '../seed';
+import { fixed, seeded, spacedAfterRelayout } from '../test-scene';
 import { escape, flying, lengthOfTrack, reachAt, routeClear } from './flight';
-import { board, overview, side } from './fixtures';
+import { board, lower, overview, rule, side } from './fixtures';
 import { skyOf } from './airspace';
 import { GAP, hawkView } from './hawk';
 import { ENVELOPES, fresh, grounded, POSES, standing, takeOff, viewOf, type Pigeon } from './pigeon';
@@ -160,6 +161,17 @@ describe('the flock', { timeout: 30_000 }, () => {
     expect(after.pigeons[0]).toMatchObject({ mode: 'away', flight: null, back: 500 + RETRY });
     expect(routeClear(route, board, ENVELOPES, skyOf(closed))).toBe(false);
     expect(after.pigeons[1]).toMatchObject({ floor: 3, x: 250 });
+  });
+
+  it('keeps them apart when a layout change crowds the page', () => {
+    const crowded = overview([], [[1, rule], [2, { ...board, right: board.left + 160 }], [3, { ...side, right: side.left + 160 }], [4, lower]]);
+    const flock = {
+      create: (page: PageMap, now: number, rand: Rand) => createFlock(page, skyOf(page), now, rand),
+      reconcile: (f: Flock, page: PageMap, now: number, rand: Rand) => reconcileFlock(f, page, skyOf(page), now, rand),
+      members: (f: Flock) => f.pigeons.filter((p) => p.mode !== 'away'),
+    };
+    const apart = (a: Pigeon, b: Pigeon) => a.floor !== b.floor || Math.abs(a.x - b.x) >= APART;
+    for (const seed of [1, 2, 3]) expect(spacedAfterRelayout(flock, PAGE, crowded, apart, seeded(seed))).toEqual([]);
   });
 
   it('stands still under reduced motion, every bird on a spot, with no hawk', () => {
