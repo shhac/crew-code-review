@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import type { Box, PageMap } from '../floors';
 import type { Cursor } from '../pointer';
-import { seeded } from '../test-scene';
+import type { Rand } from '../seed';
+import { seeded, spacedAfterRelayout } from '../test-scene';
 import { clear } from './beeair';
 import { beeView, boxOf, stepBee, where, type Bee } from './bee';
 import { boxesOf, createBees, reconcileBees, restingBees, SPACE, stepBees, type Bees, type Meadow } from './bees';
@@ -228,6 +229,15 @@ describe('the bees', () => {
       expect(next.flight).toBeNull();
       expect(clear(covered.air, boxOf(next, covered.air.page, t)!)).toBe(true);
     });
+  });
+
+  it('keep 8px apart when a layout change crowds the page', () => {
+    // Text over the whole left column: the bees there must find flowers on
+    // the right, beside those already on them.
+    const crowded = meadowOn(dashboard(0, [{ left: 236, right: 840, top: 120, bottom: 900 }]));
+    const bees = { create: (m: Meadow, now: number, rand: Rand) => createBees(m, now, rand), reconcile: reconcileBees, members: (g: Bees) => g.bees.filter((b) => b.mode !== 'away') };
+    const apart = (a: Bee, b: Bee) => gap(boxOf(a, crowded.air.page, 1000)!, boxOf(b, crowded.air.page, 1000)!) >= SPACE - 0.01;
+    for (const seed of [1, 2, 3]) expect(spacedAfterRelayout(bees, meadowOn(), crowded, apart, seeded(seed))).toEqual([]);
   });
 
   it('are put on flowers as soon as a page still loading has some', () => {
