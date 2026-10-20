@@ -57,6 +57,7 @@ func staticConfig(c config.Config) func() config.Config {
 func newDiscoverer(fs *fakeStore) *Discoverer {
 	d := New(staticConfig(config.Config{}), fs, nil)
 	d.now = fixedNow
+	d.prSizes = noSizes
 	// Default to "nobody has said anything", so only the tests that care about
 	// Discussion detection pay attention to it and none of them touch gh.
 	d.lastHumanActivity = func(context.Context, string, int) (time.Time, error) {
@@ -64,6 +65,10 @@ func newDiscoverer(fs *fakeStore) *Discoverer {
 	}
 	return d
 }
+
+// noSizes stands in for the size fetch in sweeps that are not about it, so
+// no unit test reaches the real gh.
+func noSizes(context.Context, string, []int) (map[int]prSize, error) { return nil, nil }
 
 func openReq() []ghActor { return []ghActor{{Login: "reviewer"}} }
 
@@ -449,6 +454,7 @@ func TestDiscoverSweep(t *testing.T) {
 		d := New(staticConfig(config.Config{Repos: []string{"o/broken", "o/healthy"}}), fs, nil)
 		d.now = fixedNow
 		d.listPRs = listPRs
+		d.prSizes = noSizes
 		found, err := d.Discover(context.Background())
 		return fs, found, err
 	}
@@ -789,6 +795,7 @@ func TestUnassignedPRDiscoveredOnlyWhenKnobIsOff(t *testing.T) {
 		d.now = fixedNow
 		d.lastHumanActivity = func(context.Context, string, int) (time.Time, error) { return time.Time{}, nil }
 		d.listPRs = func(context.Context, string) ([]ghPR, error) { return []ghPR{readyPR()}, nil }
+		d.prSizes = noSizes
 
 		found, err := d.Discover(context.Background())
 		if err != nil {

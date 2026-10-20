@@ -45,10 +45,11 @@ type Candidate struct {
 	// set. A field on the row rather than a joined entity: it shares the row's
 	// key and lifetime exactly, so it goes when the row goes.
 	Steering *Steering `json:"steering,omitempty"`
-	// Additions/Deletions/ChangedFiles are what discovery saw, and they cost
-	// nothing: `gh pr list --json` is one GraphQL query whatever fields it
-	// names. These are the RAW totals; the figures a score is computed from
-	// have generated files taken out and are fetched per-file at claim time.
+	// Additions/Deletions/ChangedFiles are the RAW totals discovery or a
+	// manual add saw, for display; the figures a score is computed from have
+	// generated files taken out and are fetched per-file at claim time. Zero
+	// means not measured: discovery fetches them in a second, best-effort
+	// query, and a sweep whose fetch failed leaves the stored figures alone.
 	Additions    int `json:"additions,omitempty"`
 	Deletions    int `json:"deletions,omitempty"`
 	ChangedFiles int `json:"changed_files,omitempty"`

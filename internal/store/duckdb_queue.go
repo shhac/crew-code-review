@@ -72,6 +72,12 @@ func (d *duckDB) Enqueue(ctx context.Context, c Candidate) error {
 	steerCase := func(column, incoming string) string {
 		return fmt.Sprintf("CASE WHEN %s IS NOT NULL THEN %s ELSE queue.%s END", incoming, incoming, column)
 	}
+	// Sizes are measured best-effort, in a query separate from the listing,
+	// so an incoming zero is "not measured this time", not "the PR is empty".
+	// All three follow changed_files so a row never mixes two measurements.
+	keepSize := func(column string) string {
+		return fmt.Sprintf("CASE WHEN excluded.changed_files > 0 THEN excluded.%s ELSE queue.%s END", column, column)
+	}
 	msg, by, at := "NULL", "NULL", "NULL"
 	if c.Steering != nil && c.Steering.Message != "" {
 		msg, by, at = text(c.Steering.Message), nullText(c.Steering.SetBy), ts(c.Steering.SetAt)
@@ -86,9 +92,9 @@ func (d *duckDB) Enqueue(ctx context.Context, c Candidate) error {
 	  url = excluded.url,
 	  head_sha = excluded.head_sha,
 	  updated_at = excluded.updated_at,
-	  additions = excluded.additions,
-	  deletions = excluded.deletions,
-	  changed_files = excluded.changed_files,
+	  additions = `+keepSize("additions")+`,
+	  deletions = `+keepSize("deletions")+`,
+	  changed_files = `+keepSize("changed_files")+`,
 	  holds = `+holdsMerge+`,
 	  steering_message = `+steerCase("steering_message", "excluded.steering_message")+`,
 	  steering_by = `+steerCase("steering_by", "excluded.steering_by")+`,

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -180,158 +181,221 @@ func TestSweepBudgetResumesAtUnreachedRepo(t *testing.T) {
 
 // --- page-size ladder ---
 
-func TestListLimitsHalvesToAFloor(t *testing.T) {
-	for _, tc := range []struct {
-		full int
-		want []int
-	}{
-		// The default depth: the ladder must reach the floor, not stall at a
-		// rung the repo that needs it is still too big to answer.
-		{300, []int{300, 150, 75, 37, 25}},
-		// A depth deeper than the default reaches the floor too. A ladder
-		// whose length was a hand-set count stopped here at 31, which is the
-		// same failure as stopping at 75, one config change away.
-		{500, []int{500, 250, 125, 62, 31, 25}},
-		{100, []int{100, 50, 25}},
-		{60, []int{60, 30, 25}},
-		// At or below the floor there is nothing to give up: one attempt,
-		// not several identical ones. Halving from here would clamp back up
-		// to the floor and ask for MORE than the rung before it.
-		{25, []int{25}},
-		{10, []int{10}},
-	} {
-		got := listLimits(tc.full)
-		if len(got) != len(tc.want) {
-			t.Errorf("listLimits(%d) = %v, want %v", tc.full, got, tc.want)
-			continue
-		}
-		for i := range got {
-			if got[i] != tc.want[i] {
-				t.Errorf("listLimits(%d) = %v, want %v", tc.full, got, tc.want)
-				break
-			}
+// listArg reads one `-f`/`-F` variable (name=value) out of a gh api argv.
+func listArg(args []string, name string) string {
+	for _, a := range args {
+		if v, ok := strings.CutPrefix(a, name+"="); ok {
+			return v
 		}
 	}
+	return ""
 }
 
-// An exhausted listing is retried SMALLER, not repeated: asking again for the
-// same too-expensive query is the thing that does not work.
-func TestListPRsHalvesOnExhaustion(t *testing.T) {
-	var asked []string
-	restore := stubRunGHOnce(func(args []string) ([]byte, error) {
-		limit := flagValue(args, "--limit")
-		asked = append(asked, limit)
-		if limit != "75" {
-			return nil, errors.New("gh pr list: HTTP 502: 502 Bad Gateway")
-		}
-		return []byte(`[{"number":1}]`), nil
-	})
-	defer restore()
+// listPage is a canned search response holding numbers, with a next page
+// behind cursor when next is set.
+func listPage(numbers []int, next bool, cursor string) []byte {
+	var nodes []string
+	for _, n := range numbers {
+		nodes = append(nodes, fmt.Sprintf(`{"number":%d,"headRefOid":"sha%d","author":{"login":"a","__typename":"User"},"reviewRequests":{"totalCount":0},"reviews":{"totalCount":0}}`, n, n))
+	}
+	return []byte(fmt.Sprintf(`{"data":{"search":{"pageInfo":{"hasNextPage":%v,"endCursor":%q},"nodes":[%s]}}}`,
+		next, cursor, strings.Join(nodes, ",")))
+}
 
+func span(from, to int) []int {
+	var out []int
+	for n := from; n <= to; n++ {
+		out = append(out, n)
+	}
+	return out
+}
+
+func newListDiscoverer(t *testing.T, limit int) (*Discoverer, *[]string) {
+	t.Helper()
 	cfg := config.Config{Repos: []string{"o/a"}}
-	limit := 300
-	cfg.Discovery.ListLimit = &limit
+	if limit > 0 {
+		cfg.Discovery.ListLimit = &limit
+	}
 	d := New(staticConfig(cfg), &fakeStore{}, nil)
 	var warns []string
 	d.warnf = func(format string, args ...any) { warns = append(warns, fmt.Sprintf(format, args...)) }
-
-	prs, err := d.ghListPRs(context.Background(), "o/a")
-	if err != nil {
-		t.Fatalf("ghListPRs = %v, want success at the third rung", err)
-	}
-	if len(prs) != 1 {
-		t.Fatalf("got %d PRs, want 1", len(prs))
-	}
-	if len(asked) != 3 || asked[0] != "300" || asked[1] != "150" || asked[2] != "75" {
-		t.Fatalf("limits asked = %v, want [300 150 75]", asked)
-	}
-	if len(warns) != 1 || !strings.Contains(warns[0], "degraded to limit 75") {
-		t.Fatalf("expected one degraded-depth warning, got %v", warns)
-	}
+	return d, &warns
 }
 
-// A degraded cycle must not become the new setting: the next sweep asks for
-// full depth again.
-func TestListPRsReturnsToFullDepth(t *testing.T) {
-	exhausted := true
+// An exhausted page is retried SMALLER, not repeated: asking again for the
+// same too-expensive query is the thing that does not work.
+func TestListPRsShrinksThePageOnExhaustion(t *testing.T) {
 	var asked []string
 	restore := stubRunGHOnce(func(args []string) ([]byte, error) {
-		limit := flagValue(args, "--limit")
-		asked = append(asked, limit)
-		if exhausted && limit == "300" {
-			return nil, errors.New("gh pr list: HTTP 502: 502 Bad Gateway")
+		n := listArg(args, "n")
+		asked = append(asked, n)
+		if n == "100" {
+			return nil, errors.New("gh api graphql: HTTP 502: 502 Bad Gateway")
 		}
-		return []byte(`[]`), nil
+		return listPage([]int{1, 2}, false, ""), nil
 	})
 	defer restore()
 
-	cfg := config.Config{Repos: []string{"o/a"}}
-	limit := 300
-	cfg.Discovery.ListLimit = &limit
-	d := New(staticConfig(cfg), &fakeStore{}, nil)
-	d.warnf = func(string, ...any) {}
+	d, warns := newListDiscoverer(t, 0)
+	prs, err := d.ghListPRs(context.Background(), "o/a")
+	if err != nil {
+		t.Fatalf("ghListPRs = %v, want success at the smaller page", err)
+	}
+	if len(prs) != 2 {
+		t.Fatalf("got %d PRs, want 2", len(prs))
+	}
+	if strings.Join(asked, ",") != "100,50" {
+		t.Fatalf("page sizes asked = %v, want [100 50]", asked)
+	}
+	if len(*warns) != 1 || !strings.Contains((*warns)[0], "pages shrunk to 50") {
+		t.Fatalf("expected one degraded warning, got %v", *warns)
+	}
+}
 
+// The depth is the listing's to keep: the old ladder bought its way past a
+// 502 by listing fewer PRs, which is exactly what hid PRs from discovery.
+// Pages walk the cursor until the limit, the last one asking only for the
+// remainder.
+func TestListPRsPagesToTheLimit(t *testing.T) {
+	var asked, cursors []string
+	restore := stubRunGHOnce(func(args []string) ([]byte, error) {
+		n := listArg(args, "n")
+		asked = append(asked, n)
+		cursors = append(cursors, listArg(args, "after"))
+		start := len(asked)*100 - 99
+		size, _ := strconv.Atoi(n)
+		return listPage(span(start, start+size-1), true, fmt.Sprintf("c%d", len(asked))), nil
+	})
+	defer restore()
+
+	d, _ := newListDiscoverer(t, 250)
+	prs, err := d.ghListPRs(context.Background(), "o/a")
+	if err != nil {
+		t.Fatalf("ghListPRs: %v", err)
+	}
+	if len(prs) != 250 {
+		t.Fatalf("got %d PRs, want the full 250", len(prs))
+	}
+	if strings.Join(asked, ",") != "100,100,50" {
+		t.Fatalf("page sizes asked = %v, want [100 100 50]", asked)
+	}
+	if strings.Join(cursors, ",") != ",c1,c2" {
+		t.Fatalf("cursors = %q, want each page to continue from the last", cursors)
+	}
+}
+
+// Sorting by updated time lets a PR touched mid-listing appear on two pages.
+func TestListPRsDropsARepeatedPR(t *testing.T) {
+	calls := 0
+	restore := stubRunGHOnce(func([]string) ([]byte, error) {
+		calls++
+		if calls == 1 {
+			return listPage([]int{1, 2}, true, "c1"), nil
+		}
+		return listPage([]int{2, 3}, false, ""), nil
+	})
+	defer restore()
+
+	d, _ := newListDiscoverer(t, 0)
+	prs, err := d.ghListPRs(context.Background(), "o/a")
+	if err != nil {
+		t.Fatalf("ghListPRs: %v", err)
+	}
+	if len(prs) != 3 {
+		t.Fatalf("got %d PRs, want 3 with the repeat dropped", len(prs))
+	}
+}
+
+// A shrunk page must not become the new setting: the next listing asks for
+// full pages again.
+func TestListPRsReturnsToFullPageSize(t *testing.T) {
+	exhausted := true
+	var asked []string
+	restore := stubRunGHOnce(func(args []string) ([]byte, error) {
+		n := listArg(args, "n")
+		asked = append(asked, n)
+		if exhausted && n == "100" {
+			return nil, errors.New("gh api graphql: HTTP 502: 502 Bad Gateway")
+		}
+		return listPage(nil, false, ""), nil
+	})
+	defer restore()
+
+	d, _ := newListDiscoverer(t, 0)
 	if _, err := d.ghListPRs(context.Background(), "o/a"); err != nil {
-		t.Fatalf("degraded sweep: %v", err)
+		t.Fatalf("degraded listing: %v", err)
 	}
 	exhausted = false
 	mark := len(asked)
 	if _, err := d.ghListPRs(context.Background(), "o/a"); err != nil {
-		t.Fatalf("recovered sweep: %v", err)
+		t.Fatalf("recovered listing: %v", err)
 	}
-	if got := asked[mark:]; len(got) != 1 || got[0] != "300" {
-		t.Fatalf("next sweep asked %v, want [300]: depth must not stay degraded", got)
+	if got := asked[mark:]; len(got) != 1 || got[0] != "100" {
+		t.Fatalf("next listing asked %v, want [100]: page size must not stay degraded", got)
 	}
 }
 
-// The ladder is only worth having if it is walked to the bottom. Every rung
-// must be asked, in descending order, and the error the caller sees must be
-// the FLOOR's -- an operator reading "backing off" needs to know the cheapest
-// question also failed, not the most expensive one.
+// The ladder is only worth having if it is walked to the bottom, and the
+// error the caller sees must be the FLOOR's: an operator reading "backing
+// off" needs to know the cheapest question also failed.
 func TestListPRsExhaustsEveryRungBeforeGivingUp(t *testing.T) {
 	var asked []string
 	restore := stubRunGHOnce(func(args []string) ([]byte, error) {
-		limit := flagValue(args, "--limit")
-		asked = append(asked, limit)
-		// Distinct per rung: an implementation that kept the FIRST error
-		// would otherwise pass this test unnoticed.
-		return nil, fmt.Errorf("gh pr list: HTTP 502: 502 Bad Gateway at limit %s", limit)
+		n := listArg(args, "n")
+		asked = append(asked, n)
+		return nil, fmt.Errorf("gh api graphql: HTTP 502: 502 Bad Gateway at page %s", n)
 	})
 	defer restore()
 
-	d := New(staticConfig(config.Config{Repos: []string{"o/a"}}), &fakeStore{}, nil)
-	d.warnf = func(string, ...any) {}
-
+	d, _ := newListDiscoverer(t, 0)
 	_, err := d.ghListPRs(context.Background(), "o/a")
 	if err == nil {
 		t.Fatal("want an error when every rung fails")
 	}
-	want := []string{"300", "150", "75", "37", "25"}
-	if len(asked) != len(want) {
-		t.Fatalf("limits asked = %v, want %v", asked, want)
+	if strings.Join(asked, ",") != "100,50,25" {
+		t.Fatalf("page sizes asked = %v, want [100 50 25]", asked)
 	}
-	for i := range want {
-		if asked[i] != want[i] {
-			t.Fatalf("limits asked = %v, want %v", asked, want)
-		}
-	}
-	if !strings.Contains(err.Error(), "at limit 25") {
-		t.Errorf("error = %q, want the floor rung's failure: the last question asked is the one worth reporting", err)
+	if !strings.Contains(err.Error(), "at page 25") {
+		t.Errorf("error = %q, want the floor rung's failure", err)
 	}
 }
 
-// An exhausted ladder is ONE repo failure, not five. The ladder is how a repo
+// Sorted by recent activity, the PRs already listed are the likeliest
+// candidates there are. A listing that fails further down keeps them.
+func TestListPRsKeepsWhatItListedBeforeFailing(t *testing.T) {
+	restore := stubRunGHOnce(func(args []string) ([]byte, error) {
+		if listArg(args, "after") == "" {
+			return listPage(span(1, 100), true, "c1"), nil
+		}
+		return nil, errors.New("gh api graphql: HTTP 502: 502 Bad Gateway")
+	})
+	defer restore()
+
+	d, warns := newListDiscoverer(t, 0)
+	prs, err := d.ghListPRs(context.Background(), "o/a")
+	if err != nil {
+		t.Fatalf("ghListPRs = %v, want the first page kept", err)
+	}
+	if len(prs) != 100 {
+		t.Fatalf("got %d PRs, want the 100 listed before the failure", len(prs))
+	}
+	if len(*warns) != 1 || !strings.Contains((*warns)[0], "cut short at 100") {
+		t.Fatalf("expected a cut-short warning, got %v", *warns)
+	}
+}
+
+// An exhausted ladder is ONE repo failure, not three. The ladder is how a repo
 // spends a single cycle's attempt; if each rung counted, a repo would be
 // thrown into deep backoff by its first bad moment.
 func TestLadderExhaustionCountsAsOneRepoFailure(t *testing.T) {
 	calls := map[string]int{}
 	restore := stubRunGHOnce(func(args []string) ([]byte, error) {
-		repo := flagValue(args, "--repo")
+		repo := strings.Fields(strings.TrimPrefix(listArg(args, "q"), "repo:"))[0]
 		calls[repo]++
 		if repo == "o/sick" {
-			return nil, errors.New("gh pr list: HTTP 502: 502 Bad Gateway")
+			return nil, errors.New("gh api graphql: HTTP 502: 502 Bad Gateway")
 		}
-		return []byte(`[]`), nil
+		return listPage(nil, false, ""), nil
 	})
 	defer restore()
 
@@ -347,8 +411,8 @@ func TestLadderExhaustionCountsAsOneRepoFailure(t *testing.T) {
 	if _, err := d.Discover(context.Background()); err != nil {
 		t.Fatalf("Discover: %v", err)
 	}
-	if calls["o/sick"] != 5 {
-		t.Errorf("sick repo made %d gh calls, want 5 (the whole ladder, within one cycle)", calls["o/sick"])
+	if calls["o/sick"] != 3 {
+		t.Errorf("sick repo made %d gh calls, want 3 (the whole ladder, within one cycle)", calls["o/sick"])
 	}
 	if calls["o/well"] != 1 {
 		t.Errorf("healthy repo made %d gh calls, want 1: one repo's bad cycle must not cost another repo anything", calls["o/well"])
@@ -362,32 +426,22 @@ func TestLadderExhaustionCountsAsOneRepoFailure(t *testing.T) {
 	}
 }
 
-// A permanent failure gets one attempt at each size only if it looks
-// transient; a 404 is the same answer at every depth.
+// A permanent failure is the same answer at every page size.
 func TestListPRsDoesNotLadderPermanentFailure(t *testing.T) {
 	calls := 0
 	restore := stubRunGHOnce(func([]string) ([]byte, error) {
 		calls++
-		return nil, errors.New("gh pr list: HTTP 404: Not Found")
+		return nil, errors.New("gh api graphql: GraphQL: Could not resolve to a Repository")
 	})
 	defer restore()
 
-	d := New(staticConfig(config.Config{Repos: []string{"o/a"}}), &fakeStore{}, nil)
+	d, _ := newListDiscoverer(t, 0)
 	if _, err := d.ghListPRs(context.Background(), "o/a"); err == nil {
-		t.Fatal("want an error on a 404")
+		t.Fatal("want an error for a missing repo")
 	}
 	if calls != 1 {
-		t.Fatalf("gh called %d times on a 404, want 1", calls)
+		t.Fatalf("gh called %d times on a permanent failure, want 1", calls)
 	}
-}
-
-func flagValue(args []string, flag string) string {
-	for i, a := range args {
-		if a == flag && i+1 < len(args) {
-			return args[i+1]
-		}
-	}
-	return ""
 }
 
 // stubRunGHOnce swaps the single-shot gh call for fn, which sees the argv.

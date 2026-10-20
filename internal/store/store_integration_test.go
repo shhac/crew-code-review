@@ -731,6 +731,33 @@ func TestEnqueueDiscoveredAtFirstSeen(t *testing.T) {
 	}
 }
 
+// TestEnqueueKeepsUnmeasuredSizes: discovery measures sizes in a best-effort
+// second query, so a sweep whose measurement failed arrives with zeros, and
+// must not wipe the figures a previous sweep (or a manual add) stored.
+func TestEnqueueKeepsUnmeasuredSizes(t *testing.T) {
+	s := newTestStore(t)
+	ctx := context.Background()
+
+	if err := s.Enqueue(ctx, Candidate{Repo: "o/r", Number: 21, HeadSHA: "sha", Additions: 40, Deletions: 4, ChangedFiles: 2}); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.Enqueue(ctx, Candidate{Repo: "o/r", Number: 21, HeadSHA: "sha2"}); err != nil {
+		t.Fatal(err)
+	}
+	c, _ := getQueued(t, s, "o/r", 21)
+	if c.Additions != 40 || c.Deletions != 4 || c.ChangedFiles != 2 {
+		t.Errorf("unmeasured re-enqueue wiped sizes: got +%d -%d %d files", c.Additions, c.Deletions, c.ChangedFiles)
+	}
+
+	if err := s.Enqueue(ctx, Candidate{Repo: "o/r", Number: 21, HeadSHA: "sha3", Additions: 7, Deletions: 1, ChangedFiles: 1}); err != nil {
+		t.Fatal(err)
+	}
+	c, _ = getQueued(t, s, "o/r", 21)
+	if c.Additions != 7 || c.Deletions != 1 || c.ChangedFiles != 1 {
+		t.Errorf("a new measurement must replace the old: got +%d -%d %d files", c.Additions, c.Deletions, c.ChangedFiles)
+	}
+}
+
 // TestEnqueueHoldSemantics pins the hold upsert rules: holds merge per NAME,
 // a sweep leaves names it does not own alone, the effective ready is the MAX
 // across them, a manual enqueue clears them all, and discovery never

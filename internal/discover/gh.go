@@ -32,13 +32,20 @@ type ghPR struct {
 	// State (OPEN | CLOSED | MERGED) is only populated by `gh pr view`; the
 	// list path filters to open PRs at the query.
 	State string `json:"state"`
-	// Diff size, for author scoring. Free to ask for: `gh pr list --json` is
-	// one GraphQL query whatever fields it names, and these carry no patch
-	// text. They are the PR's RAW totals; the counts a score is computed from
-	// have generated files taken out and are fetched per-file at claim time.
+	// Diff size, as the queue displays it: the PR's RAW totals. The counts a
+	// score is computed from have generated files taken out and are fetched
+	// per-file at claim time. Not free: GitHub computes a diff summary per PR
+	// to answer them, so the listing leaves them out and discovery fetches
+	// them for candidates only (prSizes).
 	Additions    int `json:"additions"`
 	Deletions    int `json:"deletions"`
 	ChangedFiles int `json:"changedFiles"`
+
+	// The listing asks GitHub to count review requests and reviews rather
+	// than list them (list.go), so it fills these and leaves the slices
+	// empty; `gh pr view` fills the slices. The predicates read either.
+	reviewRequestCount int
+	reviewCount        int
 }
 
 type ghActor struct {
@@ -81,9 +88,6 @@ func (p ghPR) AlreadyReviewedBy(login, head string) bool {
 // Our own login can come from the hand-typed gh_user override, so "Review-Bot"
 // against GitHub's "review-bot" must still be recognised as us.
 func sameLogin(a, b string) bool { return strings.EqualFold(a, b) }
-
-// prListFields is the JSON field set requested from `gh pr list`.
-const prListFields = "number,title,author,headRefOid,createdAt,updatedAt,isDraft,url,reviewRequests,reviews,reviewDecision,additions,deletions,changedFiles"
 
 // splitRepo parses "owner/name" into its halves, which is how a GraphQL
 // query names a repository. Every GraphQL read goes through ghGraphQL, so this
@@ -267,10 +271,15 @@ func (p ghPR) candidate(repo string, number int, typ, source string, now time.Ti
 }
 
 // hasOpenReviewRequest reports whether any review is currently requested.
-func (p ghPR) hasOpenReviewRequest() bool { return len(p.ReviewRequests) > 0 }
+func (p ghPR) hasOpenReviewRequest() bool {
+	return p.reviewRequestCount > 0 || len(p.ReviewRequests) > 0
+}
 
 // hasAnyReview reports whether anyone has ever reviewed this PR.
 func (p ghPR) hasAnyReview() bool {
+	if p.reviewCount > 0 {
+		return true
+	}
 	for _, r := range p.Reviews {
 		// GitHub check annotations don't appear here; any entry is a human/bot review.
 		if r.State != "" {

@@ -2,11 +2,9 @@ package discover
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"os/exec"
 	"regexp"
-	"strconv"
 	"strings"
 	"time"
 )
@@ -66,7 +64,7 @@ func runGH(ctx context.Context, args ...string) ([]byte, error) {
 
 // sleepOrCancel waits out a retry delay, or gives up early if the caller has
 // already stopped caring. Both of this package's retry shapes need it -- the
-// same-request retry here and the page-size ladder in discover.go -- and a
+// same-request retry here and the page-size ladder in list.go -- and a
 // sweep that is out of budget should not spend its last seconds asleep.
 func sleepOrCancel(ctx context.Context, d time.Duration) error {
 	select {
@@ -112,100 +110,4 @@ func elideQuery(args []string) []string {
 		out[i] = a
 	}
 	return out
-}
-
-// Page-size ladder for one repo's listing. GitHub answers an expensive
-// GraphQL query with a 502 when it runs out of budget building the response,
-// and the honest reply to that is to ask for less rather than to ask again
-// for the same thing. listMinLimit is the floor: below it the listing is too
-// shallow to be worth the call.
-const listMinLimit = 25
-
-// listLimits is the descending ladder tried within one sweep of one repo:
-// halve the configured depth until it lands on the floor.
-//
-// How MANY rungs that takes is a consequence of the depth and the floor, not a
-// dial of its own. A hand-set attempt count is a promise that the ladder
-// reaches the floor, and it is a promise kept only for the depths it happens
-// to be large enough for: at 3 the ladder stopped at 75 from the default depth
-// of 300, and the repo whose 502s justified the ladder -- hundreds of open
-// PRs, an expensive stitched listing -- cannot answer a 75-wide query either.
-// Raising the count to 5 bought the default depth its floor and left any
-// deployment configuring 500 stranded at 31. Deriving it means the ladder
-// reaches the floor at every depth, by construction.
-func listLimits(full int) []int {
-	// Below the floor there is nothing to give up, and halving would clamp
-	// back UP to it: an ascending ladder that asks for more after asking for
-	// less is not a retreat.
-	if full <= listMinLimit {
-		return []int{full}
-	}
-	limits := []int{full}
-	for last := full; last > listMinLimit; {
-		next := last / 2
-		if next < listMinLimit {
-			next = listMinLimit
-		}
-		limits = append(limits, next)
-		last = next
-	}
-	return limits
-}
-
-// ghListPRs fetches open PRs for one repo with the fields we classify on:
-// the production listPRs.
-//
-// Sorted by most recently updated, not by gh's default of most recently
-// created, because the limit truncates and the two orderings truncate
-// differently. Every candidate type we recognise is a statement about recent
-// activity: NEW is bounded by an age window, REFRESHED by a head SHA that
-// moved, DISCUSSION by somebody having just spoken. A PR that qualifies has,
-// by definition, been updated recently, while its NUMBER says only when it was
-// opened. Under created-desc, one repo with 528 open PRs hid 12 PRs with open
-// review requests behind 100 newer ones that were mostly drafts.
-//
-// The ordering is also what makes the page-size ladder cheap. A degraded
-// listing drops the LEAST recently active PRs, which are the least likely to
-// be candidates, so half a listing is far more than half the value. Depth
-// returns to full on the next cycle: the ladder is a way through one bad
-// moment, not a new setting.
-//
-// This is the one gh call that does not use runGH's retry. Retrying an
-// exhausted query unchanged is the thing that does not work; the ladder is the
-// retry, and it is a better one.
-func (d *Discoverer) ghListPRs(ctx context.Context, repo string) ([]ghPR, error) {
-	full := d.cfg().DiscoveryListLimit()
-	limits := listLimits(full)
-	var lastErr error
-	for i, limit := range limits {
-		if i > 0 {
-			if err := sleepOrCancel(ctx, ghRetryDelay); err != nil {
-				return nil, err
-			}
-		}
-		out, err := runGHOnce(ctx, "pr", "list",
-			"--repo", repo,
-			"--state", "open",
-			"--limit", strconv.Itoa(limit),
-			"--search", "sort:updated-desc",
-			"--json", prListFields,
-		)
-		if err != nil {
-			lastErr = err
-			if !transient(err.Error()) {
-				return nil, err
-			}
-			continue
-		}
-		var prs []ghPR
-		if err := json.Unmarshal(out, &prs); err != nil {
-			return nil, err
-		}
-		if limit < full {
-			d.warnf("discover %s: degraded to limit %d (from %d) after %d exhaustion(s), listed %d PR(s); full depth resumes next cycle",
-				repo, limit, full, i, len(prs))
-		}
-		return prs, nil
-	}
-	return nil, lastErr
 }
