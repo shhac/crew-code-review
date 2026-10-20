@@ -255,7 +255,7 @@ func startDashboard(addr string, dash *dashboard.Server, logf scheduler.Logf, st
 	return srv, nil
 }
 
-func startScheduler(ctx context.Context, running dashboard.Running, cfg func() config.Config, s store.Store, sinks logSinks, usageFn scheduler.UsageFn, stop scheduler.Stop) (<-chan error, error) {
+func startScheduler(ctx context.Context, running dashboard.Running, cfg func() config.Config, s store.Store, sinks logSinks, usageFn scheduler.UsageFn, stop scheduler.Stop) (<-chan struct{}, error) {
 	if !running.Discovery && !running.Review {
 		sinks.infof("scheduler: both loops disabled (config discovery.enabled/schedule.enabled, or --no-schedule/--no-discovery/--no-reviews)")
 		return nil, nil
@@ -267,13 +267,15 @@ func startScheduler(ctx context.Context, running dashboard.Running, cfg func() c
 	if err != nil {
 		return nil, err
 	}
-	done := make(chan error, 1)
+	// Closed once the scheduler has returned; a failure is logged here, so
+	// the waiter only needs to know it is over.
+	done := make(chan struct{})
 	go func() {
+		defer close(done)
 		err := sched.StartGraceful(stop, running.Discovery, running.Review)
 		if err != nil && !errors.Is(err, context.Canceled) {
 			sinks.warnf("scheduler stopped: %v", err)
 		}
-		done <- err
 	}()
 	return done, nil
 }

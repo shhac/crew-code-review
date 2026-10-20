@@ -110,7 +110,7 @@ func TestShutdownController(t *testing.T) {
 
 func TestWaitForScheduler(t *testing.T) {
 	t.Run("completed scheduler exits gracefully", func(t *testing.T) {
-		done := make(chan error)
+		done := make(chan struct{})
 		close(done)
 		if waitForScheduler(done, context.Background(), func(string, ...any) {}) {
 			t.Fatal("completed scheduler must not be treated as forced")
@@ -126,7 +126,7 @@ func TestWaitForScheduler(t *testing.T) {
 		forceCtx, force := context.WithCancel(context.Background())
 		force()
 		logs := &testLogs{}
-		done := make(chan error, 1)
+		done := make(chan struct{})
 
 		finished := make(chan bool, 1)
 		go func() { finished <- waitForScheduler(done, forceCtx, logs.logf) }()
@@ -158,7 +158,7 @@ func TestWaitForScheduler(t *testing.T) {
 		force()
 		logs := &testLogs{}
 		// Never closed: the reviewer will not exit.
-		if !waitForScheduler(make(chan error), forceCtx, logs.logf) {
+		if !waitForScheduler(make(chan struct{}), forceCtx, logs.logf) {
 			t.Fatal("canceled force context must force shutdown")
 		}
 		if !logs.contains("did not exit within") {

@@ -66,7 +66,7 @@ var shutdownSignals = []os.Signal{syscall.SIGINT, syscall.SIGTERM}
 // shrink it, like the scheduler's heartbeat.
 var forceDrain = 5 * time.Second
 
-func waitForScheduler(done <-chan error, forceCtx context.Context, logf scheduler.Logf) bool {
+func waitForScheduler(done <-chan struct{}, forceCtx context.Context, logf scheduler.Logf) bool {
 	if done == nil {
 		return false
 	}
