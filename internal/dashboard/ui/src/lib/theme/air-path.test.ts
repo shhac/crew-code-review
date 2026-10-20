@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { envelopeOf, fitsAir, sweeps, sweptPath, type Piece } from './air';
+import { fitsAir, sweeps, sweptPath, type Piece } from './air';
 import { clearFlight, curvePoint, type FlightCurve } from './christmas/flight-route';
 import type { Curve } from './curves';
 import type { Box, Obstacle, PageMap, Reach } from './floors';
@@ -82,14 +82,6 @@ describe('sweptPath', () => {
     // 300px long and 100 out to its first control, halved three times is
     // 37.5 and 12.5: 50, short of 60.
     expect(seen({ least: 60 })).toBe(2 * 3);
-  });
-
-  it('still takes the older segments, until every month\'s route is pieces', () => {
-    const glide = { left: 23, right: 23, up: 20, down: 0 };
-    const old = { from: level.from, control1: level.c1, control2: level.c2, to: level.to };
-    expect(sweptPath([{ curve: old, envelope: glide }], fitsAir(air))).toEqual(sweptPath([{ curve: level, reach: { half: 23, up: 20, down: 0 } }], fitsAir(air)));
-    expect(envelopeOf({ width: 44, height: 46, down: 6 })).toEqual({ left: 22, right: 22, up: 46, down: 6 });
-    expect(envelopeOf({ width: 36, height: 26 }).down).toBe(0);
   });
 
   it('refuses a piece that is not a number anywhere', () => {

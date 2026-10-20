@@ -1,4 +1,4 @@
-import { around, fitsAir, GAP, sweeps, sweptPath, type Air, type Envelope } from '../air';
+import { around, fitsAir, GAP, sweeps, sweptPath, type Air } from '../air';
 import { fromLedge } from '../anchored';
 import type { Curve } from '../curves';
 import { inView, type Box, type Ledge, type Obstacle, type PageMap, type Run } from '../floors';
@@ -9,7 +9,7 @@ import {
   add, along, inFlight, leg, routeLength, RUN_OUT, scale, sub, unit,
   type Flight, type Landing, type Leg,
 } from './flight';
-import { AIR, GULL, type AirPose } from './gull-poses';
+import { AIR, GULL } from './gull-poses';
 
 // The swoop at a cursor left still: where the gull pulls up beside it (the
 // pass point), the route there and on to a landing spot, and whether every
@@ -76,19 +76,11 @@ export function touching(air: Pick<Air, 'page' | 'room'>, f: Ledge): Pick<Air, '
   return { ...air, page: { ...air.page, obstacles } };
 }
 
-// Whether legs, each swept with its own pose's envelope (air.ts's
-// sweptPath), stay in the air, clear of `also` (the other gulls); and the
-// boxes they were found clear by, for the debug overlay.
-// The footprints are as wide either side of the anchor, so an envelope is
-// the same whichever way the gull faces.
-const envelope = (pose: AirPose): Envelope => {
-  const r = AIR[pose];
-  return { left: r.half, right: r.half, up: r.up, down: r.down };
-};
-const segment = (l: Pick<Leg, 'pose' | 'curve'>) =>
-  ({ curve: { from: l.curve.from, control1: l.curve.c1, control2: l.curve.c2, to: l.curve.to }, envelope: envelope(l.pose) });
+// Whether legs, each swept with its own pose's reach (air.ts's sweptPath),
+// stay in the air, clear of `also` (the other gulls); and the boxes they
+// were found clear by, for the debug overlay.
 export const swept = (air: Pick<Air, 'page' | 'room'>, legs: readonly Pick<Leg, 'pose' | 'curve'>[], also: readonly Box[] = []) =>
-  sweptPath(legs.map(segment), fitsAir(air, also));
+  sweptPath(legs.map((l) => ({ curve: l.curve, reach: AIR[l.pose] })), fitsAir(air, also));
 export const legClear = (air: Pick<Air, 'page' | 'room'>, l: Pick<Leg, 'pose' | 'curve'>, also: readonly Box[] = []): boolean => swept(air, [l], also).clear;
 
 // Every pass point for a cursor, nearest first: the swoop's box wholly in

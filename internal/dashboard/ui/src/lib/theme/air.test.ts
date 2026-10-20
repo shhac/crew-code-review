@@ -171,8 +171,8 @@ describe('exits', () => {
     const route = [around({ x: 600, y: 178 }, reach), around({ x: 1450, y: 178 }, reach)];
     expect(sweeps(airOf(desktop, SPOT), route)).toBe(false);
     expect(sweeps(airOf(desktop, SPOT, { exits: ['right'] }), route)).toBe(true);
-    const curve = { from: { x: 600, y: 178 }, control1: { x: 900, y: 178 }, control2: { x: 1200, y: 178 }, to: { x: 1450, y: 178 } };
-    const path = [{ curve, envelope: { left: 10, right: 10, up: 8, down: 0 } }];
+    const curve = { from: { x: 600, y: 178 }, c1: { x: 900, y: 178 }, c2: { x: 1200, y: 178 }, to: { x: 1450, y: 178 } };
+    const path = [{ curve, reach }];
     expect(sweptPath(path, fitsAir(airOf(desktop, SPOT))).clear).toBe(false);
     expect(sweptPath(path, fitsAir(airOf(desktop, SPOT, { exits: ['right'] }))).clear).toBe(true);
   });
