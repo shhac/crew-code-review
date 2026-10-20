@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import type { PageMap } from '../floors';
 import type { Cursor } from '../pointer';
+import type { Rand } from '../seed';
+import { spacedAfterRelayout } from '../test-scene';
 import type { Alarm } from './alarm';
 import { peck, type Chaff } from './chaff';
-import { away, comeIn, grounded, standing, type Crow } from './crow';
+import { away, comeIn, grounded, standing, WALKER, type Crow } from './crow';
 import { AWAY, createCrows, feedingSpots, LOOK_AGAIN, pointOf, reconcileCrows, RESTLESS_AWAY, restingCrows, RETURN_GAP, SPOT_APART, SPOT_GRAIN, STAGGER, stepCrows, type Crows, type Field } from './crows';
 import { card, field, OPEN, PAGE, seeded, SHUT } from './fixtures';
 import { arrive, flightAt, leave } from './flight';
@@ -196,6 +198,15 @@ describe('the crows', () => {
     const moved = reconcileCrows(g, field(without), 100, seeded(1));
     expect(moved.crows[0].floor === gone && moved.crows[0].mode !== 'away').toBe(false);
     expect(moved.crows.slice(1).map((c) => [c.floor, c.x])).toEqual(g.crows.slice(1).map((c) => [c.floor, c.x]));
+  });
+
+  it('keep apart when a layout change crowds the page', () => {
+    // The lower cards go and the top one narrows: the crows below must find
+    // room beside the one above.
+    const crowded: PageMap = { ...PAGE, floors: new Map([[1, card(300, 900, 200)]]) };
+    const crows = { create: (f: Field, now: number, rand: Rand) => createCrows(f, now, rand), reconcile: reconcileCrows, members: standingOn };
+    const apart = (a: Crow, b: Crow) => a.floor !== b.floor || Math.abs(a.x - b.x) >= WALKER.spacing;
+    for (const seed of [1, 2, 3]) expect(spacedAfterRelayout(crows, field(), field(crowded), apart, seeded(seed))).toEqual([]);
   });
 
   it('keep flying a clear route through a layout change, and find another when it is not', () => {
