@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { meets } from '../air';
-import type { Box, PageMap } from '../floors';
+import { around, meets } from '../air';
+import { reachOf, type Box, type PageMap } from '../floors';
 import type { Cursor } from '../pointer';
 import { fixed, seeded, steps } from '../test-scene';
 import { airborne, gullView, standingAt, fresh, type Gull } from './gull';
 import { cursorAt, OBSTACLES, OPEN, page, rule } from './gull-fixtures';
-import { poseBox } from './gull-poses';
+import { FOOTPRINTS } from './gull-rig';
 import { roomToTakeOff } from './swoop';
 import { COOLDOWN, createGulls, CUED, reconcileGulls, restingGulls, stepGulls, STILL, type Gulls } from './gulls';
 
@@ -23,7 +23,7 @@ const three = () => group([
 // The box a gull's drawing takes up now, on the page.
 function boxOf(g: Gull, s: PageMap, now: number): Box | null {
   const v = gullView(g, s, now);
-  return v && poseBox(v.pose, v);
+  return v && around(v, reachOf(FOOTPRINTS[v.pose]));
 }
 
 describe('gulls together', () => {

@@ -1,5 +1,5 @@
 import { boundsOf, type Air } from '../air';
-import { inView, type Box, type PageMap } from '../floors';
+import { inView, reachOf, type Box, type PageMap } from '../floors';
 import { inTurn, placeIds, regroup, troupeSize } from '../group';
 import { apart, sign } from '../math';
 import type { Cursor, Point } from '../pointer';
@@ -8,7 +8,8 @@ import {
   airborne, anchorOf, call, claimsIn, createGull, fresh, idle, middleOf, reconcileGull, restingGull, stepGull, takeOff, MOVING,
   type Airspace, type Gull,
 } from './gull';
-import { AIR, reachOf } from './gull-poses';
+import { AIR } from './gull-poses';
+import { FOOTPRINTS } from './gull-rig';
 import { flightOf } from './flight';
 import { berths, planSwoop, type Plan, type SwoopAsk } from './swoop';
 
@@ -67,7 +68,7 @@ export function airspace(page: PageMap): { room: Pick<Air, 'page' | 'room'>; vie
 // The boxes a route keeps clear of: every other gull where it is and where
 // it is going, as big as it will be there.
 function berthsOf(others: readonly Gull[], page: PageMap, now: number): Box[] {
-  const ground = reachOf('call');
+  const ground = reachOf(FOOTPRINTS.call);
   return berths(others.flatMap((o) => {
     const at = anchorOf(o, page, now);
     if (!at) return [];

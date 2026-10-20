@@ -1,4 +1,4 @@
-import type { Box } from '../floors';
+import { reachOf, type Reach } from '../floors';
 import type { Walker } from '../ledges';
 import { FOOTPRINTS, type GullPose } from './gull-rig';
 
@@ -14,19 +14,10 @@ export type GroundPose = 'stand' | 'strut' | 'eye' | 'call';
 export type AirPose = 'takeoff' | 'flap' | 'stoop' | 'flare';
 export type Pose = Extract<GullPose, GroundPose | AirPose | 'settle'>;
 
-// How far each pose reaches from the anchor.
-export type Reach = { half: number; up: number; down: number };
-export const reachOf = (pose: GullPose): Reach => {
-  const { width, height, down = 0 } = FOOTPRINTS[pose];
-  return { half: width / 2, up: height, down };
+// How far each pose flown in reaches from the anchor.
+export const AIR: Record<AirPose, Reach> = {
+  takeoff: reachOf(FOOTPRINTS.takeoff), flap: reachOf(FOOTPRINTS.flap), stoop: reachOf(FOOTPRINTS.stoop), flare: reachOf(FOOTPRINTS.flare),
 };
-export const AIR: Record<AirPose, Reach> = { takeoff: reachOf('takeoff'), flap: reachOf('flap'), stoop: reachOf('stoop'), flare: reachOf('flare') };
-
-// The box a pose takes up on the page, drawn with its anchor at p.
-export function poseBox(pose: GullPose, p: { x: number; y: number }): Box {
-  const r = reachOf(pose);
-  return { left: p.x - r.half, right: p.x + r.half, top: p.y - r.up, bottom: p.y + r.down };
-}
 
 // The body's middle, this far above the anchor: what the cursor is near to
 // or far from.
