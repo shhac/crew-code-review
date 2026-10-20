@@ -111,6 +111,10 @@ type Server struct {
 	// vouches for. Fixed at boot: whether the header can mean anything is a
 	// property of how the daemon was started, not of a request.
 	trustProxyIdentity bool
+
+	// discoveryStatus is where the daemon records discovery's per-repo
+	// health; empty means there is none to show.
+	discoveryStatus string
 }
 
 // Deps is everything a Server is built from, matching scheduler.Deps. A struct
@@ -140,6 +144,10 @@ type Deps struct {
 	// Defaults to discover.ManualCandidate; injected in tests so the add path
 	// is exercisable without gh.
 	ManualCandidate func(ctx context.Context, repo string, number int) (store.Candidate, error)
+
+	// DiscoveryStatus is the path the daemon records each repo's discovery
+	// health at. Empty shows none, which is what tests get without asking.
+	DiscoveryStatus string
 }
 
 // NewServer builds a Server from d, filling unset optional fields.
@@ -152,6 +160,7 @@ func NewServer(d Deps) *Server {
 		ghUser: d.GHUser, logs: d.Logs, version: d.Version,
 		manualCandidate:    d.ManualCandidate,
 		trustProxyIdentity: d.TrustProxyIdentity,
+		discoveryStatus:    d.DiscoveryStatus,
 	}
 }
 

@@ -45,11 +45,15 @@ type Discoverer struct {
 	// backoff lines. Discovery skipping a repo is the one thing in this
 	// package somebody grepping a log actually needs to find.
 	warnf Logf
-	// mu guards backoff and resume: sweeps are serialised by the scheduler,
-	// but the Discoverer outlives any one of them.
+	// mu guards backoff, resume and health: sweeps are serialised by the
+	// scheduler, but the Discoverer outlives any one of them.
 	mu      sync.Mutex
 	backoff map[string]repoBackoff
 	resume  string
+	// health is each repo's discovery record (status.go), written to
+	// statusPath after every sweep when one is set.
+	health     map[string]RepoStatus
+	statusPath string
 	// listPRs fetches one repo's open PRs (gh in production; injected in
 	// tests so the sweep's per-repo resilience is testable without gh).
 	listPRs func(ctx context.Context, repo string) ([]ghPR, error)
@@ -113,6 +117,9 @@ func (d *Discoverer) Discover(ctx context.Context) ([]store.Candidate, error) {
 	budget := cfg.DiscoverySweepBudget()
 	deadline := d.now().Add(budget)
 	repos := d.rotate(cfg.Repos)
+	// Deferred so a sweep that returns early on a store error is recorded
+	// too: the repos it did reach still have news.
+	defer d.writeStatus(cfg.Repos)
 
 	for i, repo := range repos {
 		if now := d.now(); now.After(deadline) {
@@ -127,15 +134,18 @@ func (d *Discoverer) Discover(ctx context.Context) ([]store.Candidate, error) {
 			backedOff++
 			continue
 		}
+		d.recordAttempt(repo, d.now())
 		prs, err := d.listPRs(ctx, repo)
 		if err != nil {
 			fails, wait := d.noteFailure(repo, d.now())
+			d.recordFailure(repo, d.now(), fails, wait, err)
 			d.warnf("discover %s: %v, skipping repo this cycle (consecutive failure %d, backing off %s)",
 				repo, err, fails, wait)
 			failed++
 			lastErr = err
 			continue
 		}
+		d.recordSuccess(repo, d.now(), len(prs))
 		if fails := d.noteSuccess(repo); fails > 0 {
 			d.logf("discover %s: recovered after %d consecutive failure(s)", repo, fails)
 		}
@@ -225,5 +235,6 @@ func (d *Discoverer) measure(ctx context.Context, repo string, cands []store.Can
 
 // noteDegraded reports a listing that got through, but not at full strength.
 func (d *Discoverer) noteDegraded(repo, note string) {
+	d.recordDegraded(repo, note)
 	d.warnf("discover %s: %s; full page size resumes next cycle", repo, note)
 }

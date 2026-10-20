@@ -39,6 +39,7 @@ internal/
 │   ├── discover.go             # the sweep: budget, backoff, rotation
 │   ├── classify.go             # per-PR candidacy + type rules (shared with the claim recheck)
 │   ├── list.go                 # the lean paged listing (own GraphQL, page-size ladder) + candidate sizes
+│   ├── status.go               # per-repo discovery health, written to the state dir after each sweep
 │   ├── gh.go                   # the gh read frame (ghGraphQL, ghPRView) and the recheck
 │   └── diff.go                 # per-file line counts + .gitattributes, GraphQL (never REST)
 ├── review/                     # Engine interface + the one driver + prompt/rule assembly

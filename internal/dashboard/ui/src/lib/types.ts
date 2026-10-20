@@ -282,12 +282,36 @@ export type ConfigResponse = {
   };
   review_running: boolean;
   discovery_running: boolean;
+  // Absent until the daemon has recorded a sweep.
+  discovery_status?: DiscoveryStatus;
   engine: string;
   engine_config: {
     model: string;
     effort: string;
   };
   version?: string;
+};
+
+// What discovery last managed per watched repo, as the daemon recorded it
+// after its latest sweep. Times are omitted rather than zero when unset.
+export type RepoDiscovery = {
+  repo: string;
+  last_attempt?: string;
+  last_success?: string;
+  listed: number;
+  degraded?: string;
+  failures?: number;
+  backoff_until?: string;
+  last_error?: string;
+  last_error_at?: string;
+};
+
+export type DiscoveryStatus = {
+  written_at: string;
+  // Whether the daemon serving this page wrote it, rather than an earlier one.
+  current: boolean;
+  repos: RepoDiscovery[];
+  error?: string;
 };
 
 export type AllowedAuthor = {

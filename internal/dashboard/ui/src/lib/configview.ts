@@ -3,7 +3,8 @@
 // rather than only reachable by rendering the page — which is how the rest of
 // this project's route logic is already organised (lib/metrics.ts, poll.ts).
 
-import type { AllowedAuthor, ConfigResponse, ScoringMode } from './types';
+import { ago } from './format';
+import type { AllowedAuthor, ConfigResponse, RepoDiscovery, ScoringMode } from './types';
 
 export type SettingsGroup = [string, [string, string][]];
 
@@ -35,6 +36,50 @@ export function codeSpans(value: string): { text: string; code: boolean }[] {
     .map((text, i) => ({ text, code: i % 2 === 1 }))
     .filter((s) => s.text !== '');
 }
+
+// discoveryRows reports the daemon's last recorded sweep, one row per watched
+// repo. A repo discovery is skipping used to be one line in the daemon's log;
+// what people saw was PRs nobody reviewed.
+function discoveryRows(c: ConfigResponse): [string, string][] {
+  const st = c.discovery_status;
+  if (!st) return [];
+  if (st.error) return [['Last sweep', `unreadable: \`${plain(st.error)}\``]];
+  const recorded = `\`${ago(st.written_at) || 'just now'}\`` + (st.current ? '' : ' (by an earlier daemon)');
+  return [['Last sweep', recorded], ...st.repos.map((r): [string, string] => [repoLabel(r.repo), repoHealth(r)])];
+}
+
+// repoLabel lets a repo name break after its owner: the label column is
+// narrow, and "stampedeapp/data-transforms-v2" otherwise runs into the value.
+export const repoLabel = (repo: string) => repo.replace('/', '/\u200b');
+
+// repoHealth phrases one repo's record. Exported for its tests.
+export function repoHealth(r: RepoDiscovery): string {
+  if (!r.last_attempt) return 'not swept yet';
+  if (r.failures) {
+    const retry = r.backoff_until && new Date(r.backoff_until).getTime() > Date.now()
+      ? `skipped until \`${clock(r.backoff_until)}\``
+      : 'retrying next sweep';
+    return `failing, \`${r.failures}\` in a row; ${retry}. Last error: \`${plain(answer(r.last_error || 'unknown'))}\``;
+  }
+  const ok = `ok, \`${r.listed}\` PRs listed \`${ago(r.last_success || '') || 'just now'}\``;
+  return r.degraded ? `${ok}; degraded: ${plain(r.degraded)}` : ok;
+}
+
+// answer is GitHub's reply without the command that drew it. A gh error
+// echoes its argv first (with the query document already elided to
+// <graphql>), and on a narrow page that buries the one part worth reading.
+const answer = (err: string) => {
+  const i = err.indexOf('<graphql>: ');
+  return i >= 0 ? err.slice(i + '<graphql>: '.length) : err;
+};
+
+// plain keeps machine text from opening a code span of its own.
+const plain = (s: string) => s.replaceAll('`', "'");
+
+const clock = (t: string) => {
+  const d = new Date(t);
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+};
 
 // round2 trims the float noise a division can leave (100/30 = 3.3333…).
 function round2(n: number): string {
@@ -103,6 +148,7 @@ export function settingsGroups(c: ConfigResponse | null): SettingsGroup[] {
     ['Discovery', [
       ['State (this daemon)', loopState(c.discovery_running, c.discovery.enabled)],
       ['Interval', `\`${c.discovery.interval}\``],
+      ...discoveryRows(c),
     ]],
     ['Candidate eligibility', [
       ['New PR window', `\`${c.candidates.new_max_age_days}\` days`],

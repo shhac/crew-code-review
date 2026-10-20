@@ -21,6 +21,8 @@
    its tallest rows. break-inside keeps a cluster from splitting across the
    gap, which is the one thing flow would otherwise get wrong here. */
 .settings { padding: 18px 20px; columns: 300px; column-gap: 32px; }
+/* A label too long for its column wraps rather than running into the value. */
+.settings dt { overflow-wrap: anywhere; }
 .settings .cluster { display: grid; gap: 10px; align-content: start; break-inside: avoid; margin-bottom: 22px; }
 .settings .cluster h3 {
   margin: 0 0 2px; color: var(--accent); font-size: 11px; font-weight: 800;

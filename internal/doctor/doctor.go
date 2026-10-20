@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/shhac/crew-code-review/internal/config"
+	"github.com/shhac/crew-code-review/internal/discover"
 	"github.com/shhac/crew-code-review/internal/pricing"
 	"github.com/shhac/crew-code-review/internal/review"
 	"github.com/shhac/crew-code-review/internal/store"
@@ -56,6 +57,8 @@ func Run(ctx context.Context, cfg config.Config) []Check {
 		checks = append(checks, engineChecks(ctx, engine, cfg)...)
 	}
 	checks = append(checks, pricingCheck(config.PricingCacheDir()))
+	st, ok, err := discover.ReadStatus(config.DiscoveryStatusPath())
+	checks = append(checks, discoveryCheck(st, ok, err, cfg, time.Now()))
 	// Unknown keys come from the FILE, not from cfg: cfg is exactly the parsed
 	// subset that cannot see them. Kept out of ConfigProblems, which stays a
 	// pure function of the config it is handed and so tests without a

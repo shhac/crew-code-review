@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { codeSpans, loopState, rosterView, scoringDialsShown, settingsGroups } from './configview';
+import { codeSpans, loopState, repoHealth, repoLabel, rosterView, scoringDialsShown, settingsGroups } from './configview';
 import type { AllowedAuthor, ConfigResponse } from './types';
 
 const cfg = (over: Partial<ConfigResponse> = {}) =>
@@ -254,5 +254,49 @@ describe('rosterView', () => {
         for (const [offered, n] of v.groupOptions) expect(rosterView(roster, repo, offered).visible).toHaveLength(n);
       }
     }
+  });
+});
+
+describe('discovery health', () => {
+  const minsAgo = (m: number) => new Date(Date.now() - m * 60_000).toISOString();
+  const minsAhead = (m: number) => new Date(Date.now() + m * 60_000).toISOString();
+
+  it('adds nothing until the daemon has recorded a sweep', () => {
+    const rows = settingsGroups(cfg()).find(([name]) => name === 'Discovery')![1];
+    expect(rows.map(([k]) => k)).toEqual(['State (this daemon)', 'Interval']);
+  });
+
+  it('gives every watched repo a row', () => {
+    const c = cells(settingsGroups(cfg({
+      discovery_status: {
+        written_at: minsAgo(2), current: false,
+        repos: [{ repo: 'o/a', listed: 300, last_attempt: minsAgo(2), last_success: minsAgo(2) }, { repo: 'o/new', listed: 0 }],
+      },
+    })));
+    expect(c['Last sweep']).toContain('2m ago');
+    expect(c['Last sweep']).toContain('earlier daemon');
+    expect(c[repoLabel('o/a')]).toContain('`300` PRs listed');
+    expect(c[repoLabel('o/new')]).toBe('not swept yet');
+  });
+
+  it('says which repo is being skipped, until when, and why', () => {
+    const h = repoHealth({
+      repo: 'o/sick', listed: 0, last_attempt: minsAgo(1), failures: 3,
+      backoff_until: minsAhead(7), last_error: 'gh api graphql -f q=repo:o/sick -f query=<graphql>: HTTP 502: 502 Bad Gateway',
+    });
+    expect(h).toContain('`3` in a row');
+    expect(h).toContain('skipped until');
+    // GitHub's answer, without the command line that drew it.
+    expect(h).toContain('Last error: `HTTP 502: 502 Bad Gateway`');
+  });
+
+  it('stops promising a skip once the backoff has passed', () => {
+    const h = repoHealth({ repo: 'o/sick', listed: 0, last_attempt: minsAgo(9), failures: 1, backoff_until: minsAgo(7), last_error: 'x' });
+    expect(h).toContain('retrying next sweep');
+  });
+
+  it('keeps a degraded listing visible, and machine text out of its own code span', () => {
+    const h = repoHealth({ repo: 'o/a', listed: 75, last_attempt: minsAgo(1), last_success: minsAgo(1), degraded: 'pages shrunk to `50`' });
+    expect(h).toContain("degraded: pages shrunk to '50'");
   });
 });

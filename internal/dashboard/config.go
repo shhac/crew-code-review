@@ -3,9 +3,11 @@ package dashboard
 import (
 	"context"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/shhac/crew-code-review/internal/config"
+	"github.com/shhac/crew-code-review/internal/discover"
 	"github.com/shhac/crew-code-review/internal/review"
 	"github.com/shhac/crew-code-review/internal/score"
 )
@@ -131,6 +133,50 @@ type configResp struct {
 	// daemon's clock rather than the viewer's, which is close enough for a
 	// pumpkin.
 	Theme string `json:"theme"`
+	// DiscoveryStatus is what discovery last managed for each watched repo.
+	// Absent when no sweep has been recorded.
+	DiscoveryStatus *discoveryStatusResp `json:"discovery_status,omitempty"`
+}
+
+// discoveryStatusResp is the daemon's discovery record, read from the file it
+// writes after every sweep (discover.Status). From the file rather than the
+// live Discoverer so the page and `doctor` read one thing, and so it still
+// says what happened after the daemon that wrote it has gone.
+type discoveryStatusResp struct {
+	WrittenAt time.Time `json:"written_at"`
+	// Current is whether THIS process wrote it. Otherwise it is an earlier
+	// daemon's, or a sibling's on another address: true when written, and
+	// possibly stale now.
+	Current bool                  `json:"current"`
+	Repos   []discover.RepoStatus `json:"repos"`
+	Error   string                `json:"error,omitempty"`
+}
+
+// discoveryStatusOf reads the record and lines it up with the watch list as it
+// is now: a repo added since the last sweep shows as not yet swept, and one
+// removed since is not shown.
+func discoveryStatusOf(path string, repos []string) *discoveryStatusResp {
+	if path == "" {
+		return nil
+	}
+	st, ok, err := discover.ReadStatus(path)
+	if err != nil {
+		return &discoveryStatusResp{Error: err.Error()}
+	}
+	if !ok {
+		return nil
+	}
+	byRepo := make(map[string]discover.RepoStatus, len(st.Repos))
+	for _, r := range st.Repos {
+		byRepo[r.Repo] = r
+	}
+	resp := &discoveryStatusResp{WrittenAt: st.WrittenAt, Current: st.PID == os.Getpid(), Repos: make([]discover.RepoStatus, 0, len(repos))}
+	for _, repo := range repos {
+		r := byRepo[repo]
+		r.Repo = repo
+		resp.Repos = append(resp.Repos, r)
+	}
+	return resp
 }
 
 // authorRow is one roster entry with the policy it actually resolves to. The
@@ -206,6 +252,7 @@ func (s *Server) handleConfig(w http.ResponseWriter, r *http.Request) {
 		EngineConfig:       engineConfigOf(cfg),
 		Version:            s.version,
 		WorkspaceRetention: cfg.WorkspaceRetention().String(),
+		DiscoveryStatus:    discoveryStatusOf(s.discoveryStatus, cfg.SortedRepos()),
 	})
 }
 

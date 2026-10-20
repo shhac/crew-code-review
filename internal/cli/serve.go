@@ -118,6 +118,7 @@ func runServe(ctx context.Context, opts serveOpts) error {
 		Logs:               ring,
 		Version:            opts.version,
 		TrustProxyIdentity: trustsProxyIdentity(opts.tailscaleMode),
+		DiscoveryStatus:    config.DiscoveryStatusPath(),
 	})
 	// Bind BEFORE the scheduler starts: the port doubles as the "one daemon
 	// per address" guard, and the loops fire immediately on start; an
@@ -262,7 +263,7 @@ func startScheduler(ctx context.Context, running dashboard.Running, cfg func() c
 	// Warnings fold into the daemon log so they reach stderr AND the
 	// dashboard's log ring, unlike run's structured-notice route.
 	warnf := func(notice, hint string) { sinks.warnf("%s (%s)", notice, hint) }
-	sched, err := buildScheduler(ctx, cfg, s, sinks, warnf, usageFn)
+	sched, err := buildScheduler(ctx, cfg, s, sinks, warnf, usageFn, config.DiscoveryStatusPath())
 	if err != nil {
 		return nil, err
 	}

@@ -261,6 +261,15 @@ func PricingCacheDir() string {
 	return xdg.CacheDir(appID)
 }
 
+// DiscoveryStatusPath is where the daemon records each repo's discovery
+// health after every sweep, for `doctor` and the dashboard. State, like the
+// review workspaces: it outlives the process, which is the point (a restart
+// used to discard the only evidence that a repo had been skipped), but losing
+// it costs a diagnosis, not a record.
+func DiscoveryStatusPath() string {
+	return filepath.Join(xdg.StateDir(appID), "discovery.json")
+}
+
 // ReviewWorkspaceDir is where a review's scratch workspace, and so its agent
 // transcript, is created.
 //

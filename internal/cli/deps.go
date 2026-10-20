@@ -306,8 +306,10 @@ func resolveGHUser(ctx context.Context, cfg config.Config, warnf func(notice, hi
 // runs route it to output.WriteNotice so stderr stays structured; serve folds
 // it into the daemon log (and thus the dashboard's log ring). usageFn feeds
 // the usage-floor hold; nil bypasses the floor entirely, which only
-// `run --ignore-usage-floor` asks for.
-func buildScheduler(ctx context.Context, cfgFn func() config.Config, s store.Store, logs logSinks, warnf func(notice, hint string), usageFn scheduler.UsageFn) (*scheduler.Scheduler, error) {
+// `run --ignore-usage-floor` asks for. statusPath is where each sweep records
+// its per-repo outcome; only the daemon passes one, so a one-shot run beside
+// it cannot overwrite the daemon's record.
+func buildScheduler(ctx context.Context, cfgFn func() config.Config, s store.Store, logs logSinks, warnf func(notice, hint string), usageFn scheduler.UsageFn, statusPath string) (*scheduler.Scheduler, error) {
 	cfg := cfgFn()
 	// Every engine a group or override can route to, not just the configured
 	// one: an engine is now chosen per candidate, so a typo in a rarely-used
@@ -318,7 +320,7 @@ func buildScheduler(ctx context.Context, cfgFn func() config.Config, s store.Sto
 		}
 	}
 	ghUser := resolveGHUser(ctx, cfg, warnf)
-	disc := discover.New(cfgFn, s, logs.infof).WithWarnf(logs.warnf).WithSelfLogin(ghUser)
+	disc := discover.New(cfgFn, s, logs.infof).WithWarnf(logs.warnf).WithSelfLogin(ghUser).WithStatusPath(statusPath)
 
 	// Pricing is read from the cache dir, never fetched here: `run`
 	// and the daemon both value reviews from whatever the last refresh left on
