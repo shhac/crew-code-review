@@ -23,7 +23,7 @@ from pathlib import Path
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from art import EyeScale, crop, cut, export, export_with_fur, keyed, opaque  # noqa: E402
+from art import EyeScale, crop, cut, export, keyed, opaque  # noqa: E402
 import numpy as np  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
@@ -105,8 +105,7 @@ def main() -> None:
         print(f'{name}: {gull.units((w, h))}')
     limbs = cut(keyed(HERE / 'gull-limbs-3.png'), LIMBS)
     for name, thick in [('gull-drumstick', DRUMSTICK), ('gull-tarsus', TARSUS)]:
-        w, h = export_with_fur(limbs[name], OUT, name, thick * RES / limbs[name].shape[0])
-        print(f'{name}: {gull.units((w, h))}')
+        gull.bar(name, limbs[name], OUT, thick)
     length, heel = TOES
     gull.foot('gull-toes', limbs['gull-toes'], OUT, length, heel)
     curled = limbs['gull-toes-curled']

@@ -255,14 +255,11 @@ def crow(check: Path | None) -> None:
         w, h = export(art, OUT, name, k)
         export(underside(art), OUT, f'{name}-under', k)
         print(f'{name}: {w / RES:.2f}x{h / RES:.2f} units, span up')
-    drumstick = crop(crow_keyed(HERE / 'crow-drumstick.png'))
-    w, h = export_with_fur(drumstick, OUT, 'crow-drumstick', DRUMSTICK * RES / drumstick.shape[0])
-    print(f'crow-drumstick: {w / RES:.2f}x{h / RES:.2f} units')
+    scale.bar('crow-drumstick', crop(crow_keyed(HERE / 'crow-drumstick.png')), OUT, DRUMSTICK)
     # The legs: the tarsus at its thickness, and the feet at the foot's
     # length, the curled one on the same scale as the open one.
     tarsus, foot, curled = (crop(p) for p in poses(keyed(HERE / 'crow-limbs.png'), 3))
-    w, h = export_with_fur(tarsus, OUT, 'crow-tarsus', TARSUS * RES / tarsus.shape[0])
-    print(f'crow-tarsus: {w / RES:.2f}x{h / RES:.2f} units')
+    scale.bar('crow-tarsus', tarsus, OUT, TARSUS)
     scale.foot('crow-foot', foot, OUT, FOOT, HEEL)
     w, h = export_with_fur(curled, OUT, 'crow-foot-curled', FOOT * RES / foot.shape[1])
     print(f'crow-foot-curled: {w / RES:.2f}x{h / RES:.2f} units')

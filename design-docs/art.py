@@ -309,6 +309,13 @@ class EyeScale:
         scale = self.on_eye(sheet)
         return {name: self.placed(name, art, out, scale, k, (masks or {}).get(name, mask)) for name, art in arts.items()}
 
+    def bar(self, name: str, art: np.ndarray, out: Path, thick: float) -> Size:
+        """A limb's bar thick drawing units across (its height, outline
+        included), and its fur alone."""
+        size = export_with_fur(art, out, name, thick * self.res / art.shape[0])
+        print(f'{name}: {self.units(size)}')
+        return size
+
     def foot(self, name: str, art: np.ndarray, out: Path, length: float, heel: tuple[float, float]) -> Size:
         """A foot length drawing units long, and its fur alone; prints where
         the leg comes down onto it, its heel (fractions of its box)."""

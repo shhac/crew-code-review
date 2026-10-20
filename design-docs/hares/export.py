@@ -17,7 +17,7 @@ from pathlib import Path
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from art import EyeScale, crop, cut, export, export_with_fur, keyed, opaque, place, rescaled  # noqa: E402
+from art import EyeScale, crop, cut, export, keyed, opaque, place, rescaled  # noqa: E402
 import numpy as np  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
@@ -102,11 +102,8 @@ def main() -> None:
     hare.parts({name: art for name, art in parts.items() if name != 'hare-body'}, 'hare-parts.png', OUT)
     # Each limb piece as drawn and as fur alone, its outline taken out.
     pieces = cut(keyed(HERE / 'hare-limbs.png'), LIMBS)
-    w, h = export_with_fur(pieces['hare-thigh'], OUT, 'hare-thigh', THIGH * RES / pieces['hare-thigh'].shape[0])
-    print(f'hare-thigh: {w / RES:.2f}x{h / RES:.2f}')
-    bone = symmetric(pieces['hare-leg'])
-    w, h = export_with_fur(bone, OUT, 'hare-leg', LEG * RES / bone.shape[0])
-    print(f'hare-leg: {w / RES:.2f}x{h / RES:.2f}')
+    hare.bar('hare-thigh', pieces['hare-thigh'], OUT, THIGH)
+    hare.bar('hare-leg', symmetric(pieces['hare-leg']), OUT, LEG)
     for name, (length, heel) in TOES.items():
         hare.foot(name, pieces[name], OUT, length, heel)
 

@@ -22,7 +22,7 @@ from pathlib import Path
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from art import EyeScale, by_colour, crop, cut, export, export_with_fur, feature, keyed  # noqa: E402
+from art import EyeScale, by_colour, crop, cut, export, feature, keyed  # noqa: E402
 import numpy as np  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
@@ -101,8 +101,7 @@ def main() -> None:
     pigeon.parts(cut(keyed(HERE / 'pigeon-parts.png'), PIGEON_PARTS), 'pigeon-parts.png', OUT, mask=by_colour)
     limbs = cut(keyed(HERE / 'pigeon-limbs.png'), LIMBS)
     for name, thick in THICK.items():
-        w, h = export_with_fur(limbs[name], OUT, name, thick * RES / limbs[name].shape[0])
-        print(f'{name}: {w / RES:.2f}x{h / RES:.2f}')
+        pigeon.bar(name, limbs[name], OUT, thick)
     for name, (length, heel) in FEET.items():
         pigeon.foot(name, limbs[name], OUT, length, heel)
     flight = wings('pigeon-wings.png', 'pigeon', PIGEON_HAND, [*WINGS, 'tail-fan'])
