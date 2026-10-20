@@ -65,9 +65,6 @@ func (d *Discoverer) recordAttempt(repo string, now time.Time) {
 func (d *Discoverer) updateHealth(repo string, fn func(*RepoStatus)) {
 	d.mu.Lock()
 	defer d.mu.Unlock()
-	if d.health == nil {
-		d.health = map[string]RepoStatus{}
-	}
 	h := d.health[repo]
 	h.Repo = repo
 	fn(&h)

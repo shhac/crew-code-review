@@ -55,7 +55,7 @@ func TestPRSizesBatches(t *testing.T) {
 
 // Sizes ride on the candidates, and a failed fetch costs the sweep nothing
 // but the sizes: the candidates are still enqueued.
-func TestSweepMeasuresCandidatesBestEffort(t *testing.T) {
+func TestSweepFillsCandidateSizesBestEffort(t *testing.T) {
 	pr := readyPR()
 	for _, tc := range []struct {
 		name    string
