@@ -71,24 +71,31 @@ def rows(rgba: np.ndarray, count: int) -> list[np.ndarray]:
     return [p.transpose(1, 0, 2) for p in poses(rgba.transpose(1, 0, 2), count)]
 
 
+def blob(mask: np.ndarray, seed: tuple[int, int]) -> list[tuple[int, int]]:
+    """The pixels (row, column) of mask's blob nearest seed (x, y): every one
+    joined, side by side, to the mask's pixel nearest seed, in the order a
+    flood fill from there reaches them."""
+    ys, xs = np.nonzero(mask)
+    i = int(np.argmin((ys - seed[1]) ** 2 + (xs - seed[0]) ** 2))
+    start = (int(ys[i]), int(xs[i]))
+    seen, todo, found = {start}, deque([start]), []
+    while todo:
+        y, x = todo.popleft()
+        found.append((y, x))
+        for n in ((y + 1, x), (y - 1, x), (y, x + 1), (y, x - 1)):
+            if 0 <= n[0] < mask.shape[0] and 0 <= n[1] < mask.shape[1] and mask[n] and n not in seen:
+                seen.add(n)
+                todo.append(n)
+    return found
+
+
 def feature(path: Path, seed: tuple[int, int], dark_below: int = 200) -> float:
     """The size (mean of width and height) of the dark blob nearest seed in a
     source image: an eye, the one feature every pose of an animal shares. An
     animal whose plumage is itself dark (a brown hawk) sets dark_below lower,
     so only the pupil counts."""
     rgb = np.asarray(Image.open(path).convert('RGB')).astype(int)
-    dark = rgb.sum(axis=-1) < dark_below
-    ys, xs = np.nonzero(dark)
-    start = min(zip(ys, xs), key=lambda p: (p[0] - seed[1]) ** 2 + (p[1] - seed[0]) ** 2)
-    seen, todo, blob = {start}, deque([start]), []
-    while todo:
-        y, x = todo.popleft()
-        blob.append((y, x))
-        for n in ((y + 1, x), (y - 1, x), (y, x + 1), (y, x - 1)):
-            if 0 <= n[0] < dark.shape[0] and 0 <= n[1] < dark.shape[1] and dark[n] and n not in seen:
-                seen.add(n)
-                todo.append(n)
-    by, bx = zip(*blob)
+    by, bx = zip(*blob(rgb.sum(axis=-1) < dark_below, seed))
     return ((max(bx) - min(bx) + 1) + (max(by) - min(by) + 1)) / 2
 
 

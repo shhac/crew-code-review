@@ -21,7 +21,6 @@ the blob it finds is the whole head. The golden band across the abdomen
 (T2) is measured instead, by its area, which holds whatever angle the
 abdomen is drawn at.
 """
-from collections import deque
 from pathlib import Path
 import sys
 
@@ -29,7 +28,7 @@ import numpy as np
 from PIL import Image
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from art import MARGIN, EyeScale, crop, cut, export, keyed, opaque, pale, poses  # noqa: E402
+from art import MARGIN, EyeScale, blob, crop, cut, export, keyed, opaque, pale, poses  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
 OUT = HERE.parents[1] / 'internal/dashboard/ui/src/lib/theme/bluebells'
@@ -72,17 +71,7 @@ def golden(rgba: np.ndarray) -> np.ndarray:
 
 def patch(path: Path, seed: tuple[int, int]) -> tuple[np.ndarray, np.ndarray]:
     """The golden patch nearest seed, as its pixels' rows and columns."""
-    gold = golden(np.asarray(Image.open(path).convert('RGB')))
-    ys, xs = np.nonzero(gold)
-    start = min(zip(ys, xs), key=lambda p: (p[0] - seed[1]) ** 2 + (p[1] - seed[0]) ** 2)
-    seen, todo = {start}, deque([start])
-    while todo:
-        y, x = todo.popleft()
-        for n in ((y + 1, x), (y - 1, x), (y, x + 1), (y, x - 1)):
-            if 0 <= n[0] < gold.shape[0] and 0 <= n[1] < gold.shape[1] and gold[n] and n not in seen:
-                seen.add(n)
-                todo.append(n)
-    rows, cols = zip(*seen)
+    rows, cols = zip(*blob(golden(np.asarray(Image.open(path).convert('RGB'))), seed))
     return np.array(rows), np.array(cols)
 
 
@@ -132,19 +121,11 @@ def blue(rgba: np.ndarray) -> np.ndarray:
 def blobs(mask: np.ndarray) -> list[list[tuple[int, int]]]:
     seen = np.zeros(mask.shape, bool)
     found = []
-    for start in zip(*np.nonzero(mask)):
-        if seen[start]:
+    for y, x in zip(*np.nonzero(mask)):
+        if seen[y, x]:
             continue
-        seen[start] = True
-        todo, blob = deque([start]), []
-        while todo:
-            y, x = todo.popleft()
-            blob.append((y, x))
-            for n in ((y + 1, x), (y - 1, x), (y, x + 1), (y, x - 1)):
-                if 0 <= n[0] < mask.shape[0] and 0 <= n[1] < mask.shape[1] and mask[n] and not seen[n]:
-                    seen[n] = True
-                    todo.append(n)
-        found.append(blob)
+        found.append(blob(mask, (x, y)))
+        seen[tuple(np.array(found[-1]).T)] = True
     return found
 
 
@@ -154,12 +135,12 @@ def bells(rgba: np.ndarray) -> list[tuple[float, float]]:
     outline)."""
     h, w = rgba.shape[:2]
     tops = []
-    for blob in blobs(blue(rgba)):
-        if len(blob) < SPECK * h * w:
+    for bell in blobs(blue(rgba)):
+        if len(bell) < SPECK * h * w:
             continue
-        ys, xs = zip(*blob)
+        ys, xs = zip(*bell)
         top = min(ys)
-        row = [x for y, x in blob if y <= top + max(2, (max(ys) - top) // 6)]
+        row = [x for y, x in bell if y <= top + max(2, (max(ys) - top) // 6)]
         tops.append(((min(row) + max(row)) / 2 / w, max(0, top - 0.03 * (max(ys) - top) - 1) / h))
     return sorted(tops, key=lambda t: -t[1])
 

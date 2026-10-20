@@ -21,12 +21,11 @@ reference) into wasp-parts.png, each printed with where it sat in the
 reference: its place in the rig. The open wing is cut from the hovering key
 pose (wasp-wing.png) and placed by hand at its hinge.
 """
-from collections import deque
 from pathlib import Path
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from art import EyeScale, crop, cut, export, keyed, lum, opaque, rescaled  # noqa: E402
+from art import EyeScale, blob, crop, cut, export, keyed, lum, opaque, rescaled  # noqa: E402
 import numpy as np  # noqa: E402
 from PIL import Image  # noqa: E402
 
@@ -56,16 +55,7 @@ def grey_eye(path: Path, seed: tuple[int, int]) -> tuple[float, tuple[float, flo
     area, which holds still whatever angle the eye is drawn at where its box
     would not, and its middle (source pixels)."""
     total = np.asarray(Image.open(path).convert('RGB')).astype(int).sum(axis=-1)
-    grey = (total > 90) & (total < 230)
-    start = (seed[1], seed[0])
-    seen, todo, points = {start}, deque([start]), []
-    while todo:
-        y, x = todo.popleft()
-        points.append((y, x))
-        for n in ((y + 1, x), (y - 1, x), (y, x + 1), (y, x - 1)):
-            if 0 <= n[0] < grey.shape[0] and 0 <= n[1] < grey.shape[1] and grey[n] and n not in seen:
-                seen.add(n)
-                todo.append(n)
+    points = blob((total > 90) & (total < 230), seed)
     ys, xs = zip(*points)
     return len(points) ** 0.5, (sum(xs) / len(xs), sum(ys) / len(ys))
 
