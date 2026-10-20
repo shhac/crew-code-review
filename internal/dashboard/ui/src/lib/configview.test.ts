@@ -285,7 +285,7 @@ describe('discovery health', () => {
       backoff_until: minsAhead(7), last_error: 'gh api graphql -f q=repo:o/sick -f query=<graphql>: HTTP 502: 502 Bad Gateway',
     });
     expect(h).toContain('`3` in a row');
-    expect(h).toContain('skipped until');
+    expect(h).toMatch(/skipped for `[67]m`/);
     // GitHub's answer, without the command line that drew it.
     expect(h).toContain('Last error: `HTTP 502: 502 Bad Gateway`');
   });

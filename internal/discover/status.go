@@ -132,6 +132,11 @@ func WriteStatus(path string, st Status) error {
 	if err := tmp.Close(); err != nil {
 		return err
 	}
+	// CreateTemp makes it 0600; the pricing cache, the state dir's other
+	// atomically written file, is 0644, and nothing here is secret.
+	if err := os.Chmod(tmp.Name(), 0o644); err != nil {
+		return err
+	}
 	return os.Rename(tmp.Name(), path)
 }
 

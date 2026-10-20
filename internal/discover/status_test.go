@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -111,5 +112,21 @@ func TestReadStatusWithoutARecord(t *testing.T) {
 	_, ok, err := ReadStatus(filepath.Join(t.TempDir(), "discovery.json"))
 	if ok || err != nil {
 		t.Fatalf("ReadStatus on a missing file = %v, %v; want not-ok and no error", ok, err)
+	}
+}
+
+// doctor and the dashboard are separate readers; the record is not secret,
+// so it carries the same mode as the state dir's other atomic write.
+func TestWriteStatusIsWorldReadable(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "discovery.json")
+	if err := WriteStatus(path, Status{}); err != nil {
+		t.Fatal(err)
+	}
+	info, err := os.Stat(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := info.Mode().Perm(); got != 0o644 {
+		t.Errorf("mode = %o, want 644", got)
 	}
 }

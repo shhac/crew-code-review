@@ -3,7 +3,7 @@
 // rather than only reachable by rendering the page — which is how the rest of
 // this project's route logic is already organised (lib/metrics.ts, poll.ts).
 
-import { ago } from './format';
+import { ago, untilRel } from './format';
 import type { AllowedAuthor, ConfigResponse, RepoDiscovery, ScoringMode } from './types';
 
 export type SettingsGroup = [string, [string, string][]];
@@ -56,9 +56,8 @@ export const repoLabel = (repo: string) => repo.replace('/', '/\u200b');
 export function repoHealth(r: RepoDiscovery): string {
   if (!r.last_attempt) return 'not swept yet';
   if (r.failures) {
-    const retry = r.backoff_until && new Date(r.backoff_until).getTime() > Date.now()
-      ? `skipped until \`${clock(r.backoff_until)}\``
-      : 'retrying next sweep';
+    const left = untilRel(r.backoff_until);
+    const retry = left ? `skipped for \`${left}\`` : 'retrying next sweep';
     return `failing, \`${r.failures}\` in a row; ${retry}. Last error: \`${plain(answer(r.last_error || 'unknown'))}\``;
   }
   const ok = `ok, \`${r.listed}\` PRs listed \`${ago(r.last_success || '') || 'just now'}\``;
@@ -75,11 +74,6 @@ const answer = (err: string) => {
 
 // plain keeps machine text from opening a code span of its own.
 const plain = (s: string) => s.replaceAll('`', "'");
-
-const clock = (t: string) => {
-  const d = new Date(t);
-  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-};
 
 // round2 trims the float noise a division can leave (100/30 = 3.3333…).
 function round2(n: number): string {
