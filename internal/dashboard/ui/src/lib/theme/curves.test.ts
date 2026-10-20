@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { after, cubic, halves, heading, lengthOf, parabola, quadratic, reversedCurves, samples, splitAt, straight } from './curves';
+import { after, chainAt, chainFrom, chainHeading, chainOf, cubic, halves, heading, lengthOf, parabola, quadratic, reversedCurves, samples, splitAt, straight } from './curves';
 
 describe('curves', () => {
   it('runs a cubic and an arc from end to end', () => {
@@ -61,5 +61,55 @@ describe('curves', () => {
     expect(back[0]).toEqual({ from: next.to, c1: next.c2, c2: next.c1, to: next.from });
     expect(back[1].to).toEqual(curve.from);
     expect(cubic(back[1], 0.25)).toEqual(cubic(curve, 0.75));
+  });
+
+  describe('a chain', () => {
+    const first = straight({ x: 0, y: 0 }, { x: 30, y: 0 });
+    const second = straight({ x: 30, y: 0 }, { x: 30, y: 10 });
+    const curves = [first, second];
+
+    it('measures each curve once, as finely as asked', () => {
+      const chain = chainOf(curves);
+      expect(chainOf(curves)).toBe(chain);
+      expect(chain.lengths[0]).toBeCloseTo(30, 9);
+      expect(chain.length).toBeCloseTo(40, 9);
+      const bent = [curve];
+      expect(chainOf(bent, 32).length).toBe(lengthOf((t) => cubic(curve, t), 32));
+      expect(chainOf(bent, 32).length).not.toBe(chainOf(bent).length);
+    });
+
+    it('finds a distance on the curve that reaches it, linearly within it', () => {
+      const chain = chainOf(curves);
+      expect(chainAt(chain, 15)).toMatchObject({ i: 0, curve: first, t: 0.5 });
+      const on = chainAt(chain, 35);
+      expect(on?.i).toBe(1);
+      expect(on?.t).toBeCloseTo(0.5, 9);
+      expect(on?.p.y).toBeCloseTo(5, 9);
+      expect(chainAt(chain, chain.lengths[0])?.i).toBe(0);
+      expect(chainAt(chain, -5)?.p).toEqual(first.from);
+      expect(chainAt(chain, 99)?.p).toEqual(second.to);
+      expect(chainAt(chainOf([]), 3)).toBeNull();
+    });
+
+    it('puts a curve of no length at its end', () => {
+      const still = straight({ x: 30, y: 0 }, { x: 30, y: 0 });
+      expect(chainAt(chainOf([first, still, second]), 30)).toMatchObject({ i: 0, t: 1 });
+      expect(chainAt(chainOf([still]), 0)).toMatchObject({ i: 0, t: 1 });
+    });
+
+    it('heads the way the curve it is on goes', () => {
+      const chain = chainOf(curves);
+      expect(chainHeading(chain, 10, 0.02).x).toBeCloseTo(1.2, 9);
+      expect(chainHeading(chain, 35, 0.01).y).toBeCloseTo(0.2, 9);
+      expect(chainHeading(chainOf([]), 0, 0.02)).toEqual({ x: 0, y: 0 });
+    });
+
+    it('splits off what is left from a distance on', () => {
+      const chain = chainOf(curves);
+      const rest = chainFrom(chain, 15);
+      expect(rest).toEqual([after(first, 0.5), second]);
+      expect(chainOf(rest).length).toBeCloseTo(25, 9);
+      expect(chainFrom(chainOf([]), 0)).toEqual([]);
+    });
   });
 });

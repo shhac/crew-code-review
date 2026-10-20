@@ -1,4 +1,4 @@
-import { mixPoint } from './math';
+import { clamp, mixPoint } from './math';
 import type { Point } from './pointer';
 
 // The curves things fly along: a cupid's flight, an arrow's arc, a robin's
@@ -83,7 +83,58 @@ export function samples(at: (t: number) => Point, step = 2): { t: number; p: Poi
   return Array.from({ length: count + 1 }, (_, i) => ({ t: i / count, p: at(i / count) }));
 }
 
-export function lengthOf(at: (t: number) => Point): number {
-  const fine = Array.from({ length: 65 }, (_, i) => at(i / 64));
-  return fine.slice(1).reduce((sum, p, i) => sum + Math.hypot(p.x - fine[i].x, p.y - fine[i].y), 0);
+// A curve's length, as the straight steps between `fine` + 1 points on it.
+export function lengthOf(at: (t: number) => Point, fine = 64): number {
+  const points = Array.from({ length: fine + 1 }, (_, i) => at(i / fine));
+  return points.slice(1).reduce((sum, p, i) => sum + Math.hypot(p.x - points[i].x, p.y - points[i].y), 0);
+}
+
+// A chain: curves flown end to end, each one's length measured once (on
+// `fine` steps, as finely as its month has always measured it), and a
+// distance along the chain mapped to t linearly within the curve it falls
+// on. That is not true arc length, which July's track and the robins'
+// table measure for themselves; every other month's flights are paced this
+// way, so it stays.
+export type Chain = { curves: readonly Curve[]; lengths: readonly number[]; length: number };
+const measured = new WeakMap<readonly Curve[], Map<number, Chain>>();
+export function chainOf(curves: readonly Curve[], fine = 64): Chain {
+  const held = measured.get(curves) ?? new Map<number, Chain>();
+  const known = held.get(fine);
+  if (known) return known;
+  const lengths = curves.map((c) => lengthOf((t) => cubic(c, t), fine));
+  const chain = { curves, lengths, length: lengths.reduce((sum, l) => sum + l, 0) };
+  measured.set(curves, held.set(fine, chain));
+  return chain;
+}
+
+// Where on a chain s px along it is (s held to the chain): the curve it
+// falls on (the first that reaches s), its index, the t on it and the
+// point. A curve of no length is at its end. Null for a chain of nothing.
+export type OnChain = { i: number; curve: Curve; t: number; p: Point };
+export function chainAt(chain: Chain, s: number): OnChain | null {
+  const { curves, lengths } = chain;
+  if (!curves.length) return null;
+  const goal = clamp(s, 0, chain.length);
+  const place = (i: number, before: number): OnChain => {
+    if (i < curves.length - 1 && before + lengths[i] < goal) return place(i + 1, before + lengths[i]);
+    const t = lengths[i] ? clamp((goal - before) / lengths[i], 0, 1) : 1;
+    return { i, curve: curves[i], t, p: cubic(curves[i], t) };
+  };
+  return place(0, 0);
+}
+
+// Which way a chain heads s px along it: from `dt` back to `dt` on along
+// the curve it is on (not normalised).
+export function chainHeading(chain: Chain, s: number, dt: number): Point {
+  const on = chainAt(chain, s);
+  if (!on) return { x: 0, y: 0 };
+  const ahead = cubic(on.curve, Math.min(1, on.t + dt)), behind = cubic(on.curve, Math.max(0, on.t - dt));
+  return { x: ahead.x - behind.x, y: ahead.y - behind.y };
+}
+
+// The rest of a chain from s px on: the curve it is on split there, and
+// every curve after it.
+export function chainFrom(chain: Chain, s: number): Curve[] {
+  const on = chainAt(chain, s);
+  return on ? [after(on.curve, on.t), ...chain.curves.slice(on.i + 1)] : [];
 }
