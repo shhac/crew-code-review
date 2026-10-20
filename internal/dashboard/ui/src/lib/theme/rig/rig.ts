@@ -75,6 +75,11 @@ export type Layer =
   // `scaleY`, the drawing's bounds count it.
   | { kind: 'group'; turn: Turn; scaleY?: number; opacity?: number; foreshorten?: number; layers: readonly Layer[] };
 
+// A part's picture laid in its box in the drawing; `hidden`, drawn but
+// unseen (see Layer).
+export const imageLayer = (name: string, src: string, box: { x: number; y: number; width: number; height: number }, hidden = false): Layer =>
+  ({ kind: 'image', name, src, ...box, hidden });
+
 // Guides: where its joints are, for the lab and the debug overlay to mark.
 export type Guide = { name: string; at: Point };
 export type RigPose = { width: number; height: number; anchor: Point; scale: number; layers: readonly Layer[]; guides?: readonly Guide[] };

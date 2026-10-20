@@ -1,10 +1,10 @@
 import { clamp, smooth } from '../math';
 import type { Point } from '../pointer';
-import { airLegsTo, BIRD_JOINTS, birdLegsTo, birdWalk, headBob, stepRise, type AirLegs, type BirdLeg } from '../rig/bird';
-import { restingFeet, stepping, type Limb } from '../rig/gait';
+import { airLegsTo, birdJointGuides, birdLegsTo, birdWalk, feetLine, headBob, plantedLegs, stepRise, type AirLegs, type BirdLeg } from '../rig/bird';
+import { stepping, type Limb } from '../rig/gait';
 import { gazeFrom } from '../rig/gaze';
 import { blinking, breath } from '../rig/life';
-import { legsAround, lidLayers, turnAbout, turned, type Frame, type Fur, type Layer, type LimbArt, type RigPose, type Turn } from '../rig/rig';
+import { imageLayer, legsAround, lidLayers, turnAbout, turned, type Frame, type Fur, type Layer, type LimbArt, type RigPose, type Turn } from '../rig/rig';
 import { birdWing, flaring, flapping, gliding, settling, takingOff, wingPoint, type Flap, type FlightPose, type WingArt, type WingPose } from '../rig/wings';
 import bodyArt from './crow-body.webp';
 import drumstickFurArt from './crow-drumstick-fur.webp';
@@ -91,8 +91,7 @@ const LEGS: BirdLeg[] = [
   { ...LEG, hip: { x: 20.4, y: 17.6 }, reach: -0.6, far: true },
   { ...LEG, hip: { x: 22.6, y: 17.9 }, reach: 0.9, far: false },
 ];
-// Where each leg ends: the toes' joint, as high as the toes stand.
-const FEET = GROUND - (FOOT.height - FOOT.heel.y);
+const FEET = feetLine(GROUND, FOOT);
 
 // The walk: one foot after the other, each down for 0.6 of the stride, the
 // head bobbing once a step, its thrust about 0.45 of it (0.15s of thrust to
@@ -145,20 +144,17 @@ export type RigCrow = { pose: CrowPose; walked: number; seed: number; beat: numb
 // gaze: how far its head is turned toward a cursor (degrees, nose down).
 export type CrowLook = { now: number; still: boolean; gaze: number };
 
-const image = (name: string, src: string, box: { x: number; y: number; width: number; height: number }, hidden = false): Layer =>
-  ({ kind: 'image', name, src, ...box, hidden });
-
 // The head, turned as `head` says, its third eyelid blinking.
 const headLayer = (crow: RigCrow, look: CrowLook, head: Turn): Layer => ({
   kind: 'group', turn: head,
-  layers: [image('head', headArt, HEAD), ...lidLayers(!look.still && blinking(crow.seed, look.now), EYE, 0.62, MEMBRANE)],
+  layers: [imageLayer('head', headArt, HEAD), ...lidLayers(!look.still && blinking(crow.seed, look.now), EYE, 0.62, MEMBRANE)],
 });
 
 // The tail about its root: lifted (degrees, up positive) and fanned.
 const tailLayer = (lift: number, fan: number): Layer =>
-  ({ kind: 'group', turn: turnAbout(lift, TAIL_ROOT), foreshorten: 1 + 0.4 * fan, layers: [image('tail', tailArt, TAIL)] });
+  ({ kind: 'group', turn: turnAbout(lift, TAIL_ROOT), foreshorten: 1 + 0.4 * fan, layers: [imageLayer('tail', tailArt, TAIL)] });
 
-const planted = (hips: readonly Point[]) => birdLegsTo(LEGS, hips, restingFeet(LEGS, hips, FEET));
+const planted = (hips: readonly Point[]) => plantedLegs(LEGS, hips, FEET);
 
 type Ground = { body: Turn; head: Turn; tail: number; limbs: (hips: readonly Point[]) => Limb[] };
 
@@ -224,11 +220,6 @@ function inAir(crow: RigCrow, now: number): FlightPose {
   }
 }
 
-const jointGuides = (limbs: readonly Limb[]) => limbs.flatMap((l) => [
-  { name: BIRD_JOINTS.hip, at: l.hip }, { name: BIRD_JOINTS.knee, at: l.knee },
-  { name: BIRD_JOINTS.ankle, at: l.ankle }, { name: BIRD_JOINTS.foot, at: l.foot },
-]);
-
 // How far the body tips forward from its standing slant to fly level: a
 // crow stands at about 30 degrees and flies with its body near level. It
 // tips as it leaves the ledge and rises again through the flare, so a
@@ -255,8 +246,8 @@ function flying(crow: RigCrow, look: CrowLook): RigPose {
     // Pitched up to brake, the long tail is lifted so it stays clear of the
     // ledge, fanned and pressed down a little against the air.
     tailLayer(0.75 * Math.max(0, pose.pitch - level) - 4 * pose.tail, pose.tail),
-    image('body', bodyArt, BODY),
-    image('folded wing', foldedArt, FOLDED_WING, !folded),
+    imageLayer('body', bodyArt, BODY),
+    imageLayer('folded wing', foldedArt, FOLDED_WING, !folded),
     // The head held level as the body tips forward under it.
     headLayer(crow, look, turnAbout(-0.8 * level, NECK)),
     birdWing(WING, pose.wings, NEAR_SHOULDER, false, 0, !folded),
@@ -272,7 +263,7 @@ function flying(crow: RigCrow, look: CrowLook): RigPose {
       { name: 'stands here', at: ANCHOR }, { name: 'shoulder', at: turned(body, NEAR_SHOULDER) },
       { name: 'wrist', at: turned(body, wingPoint(WING, pose.wings, NEAR_SHOULDER, WING.wrist, false)) },
       { name: 'wingtip', at: turned(body, wingPoint(WING, pose.wings, NEAR_SHOULDER, TIP, true)) },
-      { name: 'eye', at: turned(body, turned(turnAbout(-0.8 * level, NECK), EYE)) }, ...jointGuides(limbs),
+      { name: 'eye', at: turned(body, turned(turnAbout(-0.8 * level, NECK), EYE)) }, ...birdJointGuides(limbs),
     ],
   };
 }
@@ -284,12 +275,12 @@ export function crowRig(crow: RigCrow, look: CrowLook): RigPose {
   const { body, head, tail, limbs } = onGround(crow, look);
   const hips = LEGS.map((s) => turned(body, s.hip));
   const legs = limbs(hips);
-  const parts: Layer[] = [tailLayer(tail, 0), image('body', bodyArt, BODY), image('folded wing', foldedArt, FOLDED_WING), headLayer(crow, look, head)];
+  const parts: Layer[] = [tailLayer(tail, 0), imageLayer('body', bodyArt, BODY), imageLayer('folded wing', foldedArt, FOLDED_WING), headLayer(crow, look, head)];
   return {
     ...FRAME,
     // The legs start inside the body, the hips high in it.
     layers: legsAround(LEGS, legs, { kind: 'group', turn: body, layers: parts }),
-    guides: [{ name: 'stands here', at: ANCHOR }, { name: 'eye', at: turned(body, turned(head, EYE)) }, { name: 'bill', at: turned(body, turned(head, BILL)) }, ...jointGuides(legs)],
+    guides: [{ name: 'stands here', at: ANCHOR }, { name: 'eye', at: turned(body, turned(head, EYE)) }, { name: 'bill', at: turned(body, turned(head, BILL)) }, ...birdJointGuides(legs)],
   };
 }
 

@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { apart } from '../math';
 import type { Point } from '../pointer';
 import { cycleLength, rotate } from '../spidergait';
-import { airFoot, airLegsTo, BIRD_STANCE, birdLegsTo, birdWalk, curledIn, headBob, peeled, stepLength, stepPhase, stepRise, type BirdLeg } from './bird';
-import { stepping, stepsOf } from './gait';
+import { airFoot, airLegsTo, BIRD_JOINTS, BIRD_STANCE, birdJointGuides, birdLegsTo, birdWalk, curledIn, feetLine, headBob, peeled, plantedLegs, stepLength, stepPhase, stepRise, type BirdLeg } from './bird';
+import { restingFeet, stepping, stepsOf } from './gait';
 import { legImages, piecesOf, type LimbArt } from './rig';
 
 const GROUND = 20;
@@ -209,5 +209,16 @@ describe('legs in the air', () => {
     const at = Array.from({ length: 201 }, (_, i) => airLegsTo([LEG], hips, -1 + i / 100)[0]);
     const jumps = at.slice(1).map((l, i) => Math.max(apart(l.foot, at[i].foot), apart(l.ankle, at[i].ankle), apart(l.knee, at[i].knee)));
     expect(Math.max(...jumps)).toBeLessThan(0.5);
+  });
+});
+
+describe('a bird standing', () => {
+  it('stands its feet on the toes\' back, planted under its hips, its joints named', () => {
+    expect(feetLine(GROUND, foot)).toBe(GROUND - 0.7);
+    const legs = plantedLegs(LEGS, hipsOf(LEGS), feetLine(GROUND, foot));
+    expect(legs).toEqual(birdLegsTo(LEGS, hipsOf(LEGS), restingFeet(LEGS, hipsOf(LEGS), feetLine(GROUND, foot))));
+    const guides = birdJointGuides(legs);
+    expect(guides.map((g) => g.name)).toEqual([...Object.values(BIRD_JOINTS), ...Object.values(BIRD_JOINTS)]);
+    expect(guides[7].at).toEqual(legs[1].foot);
   });
 });

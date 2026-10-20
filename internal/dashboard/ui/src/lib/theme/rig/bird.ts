@@ -1,9 +1,9 @@
 import { degrees, mixPoint, rad, smooth } from '../math';
 import type { Point } from '../pointer';
 import { cycleLength, rotate } from '../spidergait';
-import { flexion, gaitPhase, type Gait, type Limb, type Step, type Toes } from './gait';
+import { flexion, gaitPhase, restingFeet, type Gait, type Limb, type Step, type Toes } from './gait';
 import { jointBeside } from './limb';
-import type { ArtLeg, Foot } from './rig';
+import type { ArtLeg, Foot, Guide } from './rig';
 
 // A bird's two legs (July's pigeons, August's gulls, September's crows). A
 // bird stands on its toes, and its leg has a mammal's hind-leg joints, most
@@ -100,6 +100,11 @@ function birdLimb(spec: BirdLeg, hip: Point, foot: Point, step?: Step, ground?: 
   return { hip, knee: kneeOf(spec, hip, ankle), ankle, foot: mtp, paw, curled: curledIn(step) };
 }
 
+// Where a bird's legs end standing, `ground` being where its toes stand: on
+// the toes' back (the metatarsophalangeal joint), as high above the ground
+// as its foot's picture stands it.
+export const feetLine = (ground: number, foot: Foot) => ground - (foot.height - foot.heel.y);
+
 // Each leg posed from its hip to its foot, as gait.ts's legsTo does for a
 // four-legged animal; `steps` (gait.ts's stepsOf, or stepping's) peel the
 // feet as they push off, fold the ankles and draw the toes together as they
@@ -107,6 +112,10 @@ function birdLimb(spec: BirdLeg, hip: Point, foot: Point, step?: Step, ground?: 
 // drawing above it.
 export const birdLegsTo = (specs: readonly BirdLeg[], hips: readonly Point[], feet: readonly Point[], steps: readonly Step[] = [], ground?: number): Limb[] =>
   specs.map((s, i) => birdLimb(s, hips[i], feet[i], steps[i], ground));
+
+// Stood (or taking off before its feet leave the ground, or settled after
+// touchdown): each foot planted under its hip, on the feet's line.
+export const plantedLegs = (specs: readonly BirdLeg[], hips: readonly Point[], feet: number): Limb[] => birdLegsTo(specs, hips, restingFeet(specs, hips, feet));
 
 // A bird's walk: two legs half a cycle apart, each foot down for more than
 // half the stride, so both are down for a moment at each change (Gatesy and
@@ -200,3 +209,7 @@ export const airLegsTo = (specs: readonly BirdLeg[], hips: readonly Point[], rea
 
 // The lab's joints view names a bird's joints by these.
 export const BIRD_JOINTS = { hip: 'hip', knee: 'knee', ankle: 'intertarsal joint (ankle)', foot: 'toes (metatarsophalangeal joint)' } as const;
+export const birdJointGuides = (limbs: readonly Limb[]): Guide[] => limbs.flatMap((l) => [
+  { name: BIRD_JOINTS.hip, at: l.hip }, { name: BIRD_JOINTS.knee, at: l.knee },
+  { name: BIRD_JOINTS.ankle, at: l.ankle }, { name: BIRD_JOINTS.foot, at: l.foot },
+]);

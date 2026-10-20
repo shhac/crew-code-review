@@ -1,5 +1,5 @@
 import { blinking } from '../rig/life';
-import { lidLayers, turnAbout, turned, type Frame, type Fur, type Layer, type RigPose } from '../rig/rig';
+import { imageLayer, lidLayers, turnAbout, turned, type Frame, type Fur, type Layer, type RigPose } from '../rig/rig';
 import { birdWing, flapping, gliding, wingPoint, type Flap, type WingArt, type WingPose } from '../rig/wings';
 import armUnderArt from './hawk-arm-under.webp';
 import armArt from './hawk-arm.webp';
@@ -58,17 +58,15 @@ export type HawkPose = 'glide' | 'flap';
 export type RigHawk = { pose: HawkPose; seed: number; beat: number; gaze: number };
 export type HawkLook = { now: number; still: boolean };
 
-const image = (name: string, src: string, box: { x: number; y: number; width: number; height: number }): Layer => ({ kind: 'image', name, src, ...box });
-
 export function hawkRig(hawk: RigHawk, look: HawkLook): RigPose {
   const wings = hawk.pose === 'flap' && !look.still ? flapping(hawk.beat, FLAP) : gliding(GLIDE, look.still ? 0 : look.now, look.still ? 0 : 1, 1600);
   const body = turnAbout(0, MIDDLE);
   const head = turnAbout(hawk.gaze, NECK);
   const layers: Layer[] = [
     birdWing(WING, wings, FAR_SHOULDER, true),
-    image('tail', tailArt, TAIL),
-    image('body', bodyArt, BODY),
-    { kind: 'group', turn: head, layers: [image('head', headArt, HEAD), ...lidLayers(!look.still && blinking(hawk.seed, look.now), EYE, 0.55, MEMBRANE)] },
+    imageLayer('tail', tailArt, TAIL),
+    imageLayer('body', bodyArt, BODY),
+    { kind: 'group', turn: head, layers: [imageLayer('head', headArt, HEAD), ...lidLayers(!look.still && blinking(hawk.seed, look.now), EYE, 0.55, MEMBRANE)] },
     birdWing(WING, wings, NEAR_SHOULDER, false),
   ];
   return {
