@@ -37,6 +37,12 @@ type RepoStatus struct {
 	LastErrorAt time.Time `json:"last_error_at,omitzero"`
 }
 
+// Skipping reports whether discovery is still holding off this repo at now.
+// Failures outlast the window they opened: once it passes, the next sweep
+// retries, and anything reading the record has to say so rather than promise
+// a skip that is already over.
+func (r RepoStatus) Skipping(now time.Time) bool { return now.Before(r.BackoffUntil) }
+
 // Status is the whole file: the sweep that wrote it, and every watched repo.
 type Status struct {
 	WrittenAt time.Time    `json:"written_at"`

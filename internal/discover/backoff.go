@@ -44,7 +44,7 @@ func (d *Discoverer) inBackoff(repo string, now time.Time) (time.Time, int, bool
 	d.mu.Lock()
 	defer d.mu.Unlock()
 	h := d.health[repo]
-	if !now.Before(h.BackoffUntil) {
+	if !h.Skipping(now) {
 		return time.Time{}, 0, false
 	}
 	return h.BackoffUntil, h.Failures, true

@@ -35,8 +35,12 @@ func discoveryCheck(st discover.Status, ok bool, readErr error, cfg config.Confi
 		case r.LastAttempt.IsZero():
 			notes = append(notes, r.Repo+": not swept yet")
 		case r.Failures > 0:
-			problems = append(problems, fmt.Sprintf("%s: %d consecutive failure(s), skipped until %s, last: %s",
-				r.Repo, r.Failures, r.BackoffUntil.Local().Format("15:04"), r.LastError))
+			next := "retrying next sweep"
+			if r.Skipping(now) {
+				next = "skipped until " + r.BackoffUntil.Local().Format("15:04")
+			}
+			problems = append(problems, fmt.Sprintf("%s: %d consecutive failure(s), %s, last: %s",
+				r.Repo, r.Failures, next, r.LastError))
 		case r.Degraded != "":
 			notes = append(notes, r.Repo+": "+r.Degraded)
 		}

@@ -73,3 +73,15 @@ func TestDiscoveryCheckWithoutARecord(t *testing.T) {
 		t.Errorf("unreadable record = %+v, want a failure", c)
 	}
 }
+
+// A window that has passed is no longer a skip: the next sweep retries, and
+// the check must not promise otherwise.
+func TestDiscoveryCheckAfterTheBackoffHasPassed(t *testing.T) {
+	st := discover.Status{WrittenAt: sweptAt, Repos: []discover.RepoStatus{
+		{Repo: "o/sick", LastAttempt: sweptAt, Failures: 1, BackoffUntil: sweptAt.Add(2 * time.Minute), LastError: "HTTP 502"},
+	}}
+	c := discoveryCheck(st, true, nil, discoveryCfg(), sweptAt.Add(3*time.Minute))
+	if strings.Contains(c.Detail, "skipped until") || !strings.Contains(c.Detail, "retrying next sweep") {
+		t.Errorf("detail = %q, want it to say the next sweep retries", c.Detail)
+	}
+}
