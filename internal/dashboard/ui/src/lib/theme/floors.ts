@@ -21,6 +21,10 @@ export type Reach = { half: number; up: number; down: number };
 // it and `down` below (a walker stands on its anchor, so none; a flier's
 // wings beat below the line it flies along).
 export type Footprint = { width: number; height: number; down?: number };
+// How far an animal may reach into a card's empty edge (standing, up into
+// the bottom of a card above; flying, wherever its month lets it), never
+// into content.
+export const CARD_REACH = 6;
 export const reachOf = (f: Footprint): Reach => ({ half: f.width / 2, up: f.height, down: f.down ?? 0 });
 const visibleBox = (r: Bounds) => r.width > 0 && r.height > 0 && finite(r);
 // Range rectangles follow rendered text (including wrapped lines), independent
@@ -184,8 +188,8 @@ export function measurePage({ obstacles = true } = {}): PageMap {
 
 // Where a creature may newly settle or head for: clear of the top bar and the
 // window's bottom edge, and wholly inside the window's width.
-const TOP_MARGIN = 70;
-const BOTTOM_MARGIN = 30;
+export const TOP_MARGIN = 70;
+export const BOTTOM_MARGIN = 30;
 export const inView = (f: Ledge, scene: PageMap) => f.y >= TOP_MARGIN && f.y <= scene.height - BOTTOM_MARGIN && f.left >= 0 && f.right <= scene.width;
 
 export const samePage = (a: PageMap, b: PageMap) => a.width === b.width && a.height === b.height

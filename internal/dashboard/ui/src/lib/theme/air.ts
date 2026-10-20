@@ -14,14 +14,16 @@ import type { Point } from './pointer';
 // somewhere must stay inside (a scroll carries it out of view and back);
 // view: the part of it in the window, where new spots, routes' ends and
 // shots are chosen; exits: the lines past which a flier is out of sight,
-// where the air asked for them (absent, a flier never leaves; see Exit).
-export type Airspace = { page: PageMap; room: Box; view: Box; exits?: Exits };
+// where the air asked for them (absent, a flier never leaves; see Exit);
+// keepOff: what a flier keeps off of each obstacle (absent, the obstacle
+// widened by GAP; see KeepOff).
+export type Airspace = { page: PageMap; room: Box; view: Box; exits?: Exits; keepOff?: KeepOff };
 // An airspace with its spots: the points in view where a hover fits, for
 // fliers that hover (the cupids).
 export type Air = Airspace & { spots: readonly Point[] };
 // What a box is checked against: a month may hand over only its page and
 // its room.
-type Bounded = Pick<Airspace, 'page' | 'room' | 'exits'>;
+type Bounded = Pick<Airspace, 'page' | 'room' | 'exits' | 'keepOff'>;
 
 // Where a flier may leave the page, or come in: past the window's right
 // edge; past its top, within main's width, wherever main reaches the top
@@ -37,6 +39,25 @@ export type Exits = { right?: number; top?: number; rail?: number };
 // Kept this far from main's edges, the window's and every obstacle.
 const EDGE = 6;
 export const GAP = 4;
+
+// What a flier keeps off of an obstacle: a box it may not meet, or null
+// where there is nothing to keep off (a card too small to have an inside).
+// By default every obstacle widened by GAP.
+export type KeepOff = (o: Obstacle) => Box | null;
+const gapped: KeepOff = (o) => grow(o, GAP);
+
+// A month whose fliers reach into cards' empty edges, as the ledge animals
+// do: from a card's own edge, `top` px down into it from above, `bottom` px
+// up into it from below and `sides` px in at either side (a negative reach
+// keeps that far off instead; by default GAP, as from anything). Content
+// (text, controls, charts) is kept `content` px off, GAP by default. A card
+// with no inside left is null.
+export type CardReach = { top?: number; bottom?: number; sides?: number; content?: number };
+export const cardReach = ({ top = -GAP, bottom = -GAP, sides = -GAP, content = GAP }: CardReach = {}): KeepOff => (o) => {
+  if (!o.block) return grow(o, content);
+  const off = { left: o.left + sides, right: o.right - sides, top: o.top + top, bottom: o.bottom - bottom };
+  return off.left < off.right && off.top < off.bottom ? off : null;
+};
 // Hover spots are sampled this far apart.
 const GRID = 16;
 const NOWHERE: Box = { left: 0, right: 0, top: 0, bottom: 0 };
@@ -77,8 +98,10 @@ export function boundsOf(page: PageMap, wanted: readonly Exit[] = []): Pick<Airs
 }
 
 // The airspace on this page: main's box, opened past the exits asked for,
-// where a flier is out of sight.
-export const airspaceOf = (page: PageMap, { exits = [] }: { exits?: readonly Exit[] } = {}): Airspace => ({ page, ...boundsOf(page, exits) });
+// where a flier is out of sight, with the month's keep-off rule if it has
+// one.
+export const airspaceOf = (page: PageMap, { exits = [], keepOff }: { exits?: readonly Exit[]; keepOff?: KeepOff } = {}): Airspace =>
+  ({ page, ...boundsOf(page, exits), ...(keepOff ? { keepOff } : {}) });
 
 // The air on this page, with every point in view where a footprint of
 // `reach` fits; the spots are in view whatever the exits.
@@ -129,16 +152,21 @@ export function pastExit(air: Pick<Airspace, 'exits'>, exit: Exit, reach: Reach,
   return { x: along, y: line - reach.down };
 }
 
-// Whether a box is wholly in air: inside the room, and clear of every
-// obstacle (widened by GAP) and of anything else given. Past an exit only
-// the part still in sight counts, and a box wholly past one is in air.
+// Whether a box is wholly in air: inside the room, and clear of what it
+// keeps off of every obstacle (each widened by GAP, unless the air says
+// otherwise) and of anything else given. Past an exit only the part still
+// in sight counts, and a box wholly past one is in air.
 export function fits(air: Bounded, whole: Box, also: readonly Box[] = [], obstacles: readonly Obstacle[] = air.page.obstacles): boolean {
   const { room } = air;
   if (!finite(whole)) return false;
   const box = inSight(air.exits, whole);
   if (!box) return true;
   if (!holds(room, box)) return false;
-  return !obstacles.some((o) => meets(box, grow(o, GAP))) && !also.some((o) => meets(box, o));
+  const keepOff = air.keepOff ?? gapped;
+  return !obstacles.some((o) => {
+    const off = keepOff(o);
+    return off !== null && meets(box, off);
+  }) && !also.some((o) => meets(box, o));
 }
 
 // Whether something taking up these boxes, one after another along a path,
@@ -153,7 +181,11 @@ export const sweptBoxes = (boxes: readonly Box[], clear: (box: Box) => boolean):
 export function sweeps(air: Bounded, boxes: readonly Box[], also: readonly Box[] = [], ignore: (o: Obstacle) => boolean = () => false): boolean {
   if (!boxes.length) return true;
   const all = boxes.reduce(union);
-  const near = air.page.obstacles.filter((o) => !ignore(o) && meets(all, grow(o, GAP + 1)));
+  const keepOff = air.keepOff ?? gapped;
+  const near = air.page.obstacles.filter((o) => {
+    const off = !ignore(o) && keepOff(o);
+    return !!off && meets(all, grow(off, 1));
+  });
   return sweptBoxes(boxes, (b) => fits(air, b, also, near));
 }
 

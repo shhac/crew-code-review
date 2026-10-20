@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { airOf, airspaceOf, around, exitsOf, fits, fitsAir, inAir, inSight, laneOf, meets, pastExit, rowsOf, sweeps, sweptBoxes, sweptPath } from './air';
-import type { Box, Reach } from './floors';
+import { airOf, airspaceOf, around, cardReach, exitsOf, fits, fitsAir, GAP, inAir, inSight, laneOf, meets, pastExit, rowsOf, sweeps, sweptBoxes, sweptPath } from './air';
+import { CARD_REACH, type Box, type Obstacle, type Reach } from './floors';
 import { airFor, board, MAIN, page, side } from './valentine/fixtures';
 import { SPOT } from './valentine/footprints';
 
@@ -33,6 +33,53 @@ describe('the air', () => {
     const air = airFor(page([{ left: 600, right: 700, top: 300, bottom: 320 }], []));
     expect(fits(air, { left: 560, right: 598, top: 300, bottom: 320 })).toBe(false);
     expect(fits(air, { left: 560, right: 595, top: 300, bottom: 320 })).toBe(true);
+  });
+
+  describe('let a month say what its fliers keep off', () => {
+    const card: Obstacle = { left: 400, right: 800, top: 300, bottom: 500, block: true };
+    const text: Obstacle = { left: 900, right: 1000, top: 370, bottom: 410 };
+    const desktop = { ...page([card, text], []), main: MAIN };
+    // A box w wide and h tall resting its bottom on y, or hanging its top from it.
+    const on = (y: number, x = 600): Box => ({ left: x - 10, right: x + 10, top: y - 20, bottom: y });
+    const under = (y: number, x = 600): Box => ({ left: x - 10, right: x + 10, top: y, bottom: y + 20 });
+    const beside = (x: number): Box => ({ left: x - 20, right: x, top: 380, bottom: 400 });
+
+    it('as July does: touching a card\'s top, reaching into its empty bottom, GAP off its sides', () => {
+      const air = airspaceOf(desktop, { keepOff: cardReach({ top: 0, bottom: CARD_REACH }) });
+      expect(fits(air, on(300))).toBe(true);
+      expect(fits(air, on(301))).toBe(false);
+      expect(fits(air, under(500 - CARD_REACH))).toBe(true);
+      expect(fits(air, under(500 - CARD_REACH - 1))).toBe(false);
+      expect(fits(air, beside(400 - GAP))).toBe(true);
+      expect(fits(air, beside(400 - GAP + 1))).toBe(false);
+      expect(fits(air, beside(900 - GAP))).toBe(true);
+      expect(fits(air, beside(900 - GAP + 1))).toBe(false);
+    });
+
+    it('as September does: into every edge of a card, a card with no inside left is nothing', () => {
+      const air = airspaceOf(desktop, { keepOff: cardReach({ top: CARD_REACH, bottom: CARD_REACH, sides: CARD_REACH }) });
+      expect(fits(air, on(300 + CARD_REACH))).toBe(true);
+      expect(fits(air, beside(400 + CARD_REACH))).toBe(true);
+      expect(fits(air, beside(400 + CARD_REACH + 1))).toBe(false);
+      const thin = { ...card, top: 300, bottom: 310 };
+      expect(cardReach({ top: CARD_REACH, bottom: CARD_REACH })(thin)).toBeNull();
+      expect(fits(airspaceOf({ ...desktop, obstacles: [thin] }, { keepOff: cardReach({ top: CARD_REACH, bottom: CARD_REACH }) }), on(310, 600))).toBe(true);
+    });
+
+    it('keeps content its own distance off, and sweeps by the same rule', () => {
+      const air = airspaceOf(desktop, { keepOff: cardReach({ content: 2 }) });
+      expect(fits(air, beside(898))).toBe(true);
+      expect(fits(air, beside(899))).toBe(false);
+      expect(sweeps(air, [on(300, 300), on(300, 600)])).toBe(false);
+      expect(sweeps(airspaceOf(desktop, { keepOff: cardReach({ top: 0 }) }), [on(300, 300), on(300, 600)])).toBe(true);
+    });
+
+    it('keeps everything GAP off without one', () => {
+      expect(airspaceOf(desktop).keepOff).toBeUndefined();
+      expect(fits(airspaceOf(desktop), on(300 - GAP))).toBe(true);
+      expect(fits(airspaceOf(desktop), on(300 - GAP + 1))).toBe(false);
+      expect(cardReach()(card)).toEqual({ left: 396, right: 804, top: 296, bottom: 504 });
+    });
   });
 
   it('sweeps a footprint along a path without missing what lies between samples', () => {
