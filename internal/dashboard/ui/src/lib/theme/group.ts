@@ -39,10 +39,15 @@ export function keepInTurn<T extends Member>(items: readonly T[], keep: Keep<T>)
 }
 
 // Those missing from the kept, placed afresh clear of them, up to the target
-// and never beyond it, so scrolling never adds animals.
-export function fillTo<T extends Member>(target: number, kept: readonly T[], place: (others: T[], id: number) => T | null): T[] {
+// and never beyond it, so scrolling never adds animals. Given a placeholder
+// (one away, which still counts toward the target, as a kept one away
+// does), every id that could not be placed has one instead, after those
+// that were, so the troupe keeps its size.
+export function fillTo<T extends Member>(target: number, kept: readonly T[], place: (others: T[], id: number) => T | null, placeholder?: (id: number) => T): T[] {
   const missing = Array.from({ length: target }, (_, id) => id).filter((id) => !kept.some((k) => k.id === id));
-  return placeIds<T>(missing, (others, id) => place([...kept, ...others], id));
+  const placed = placeIds<T>(missing, (others, id) => place([...kept, ...others], id));
+  if (!placeholder) return placed;
+  return [...placed, ...missing.filter((id) => !placed.some((p) => p.id === id)).map(placeholder)];
 }
 
 // After a layout change: each kept where it can be, then any missing placed

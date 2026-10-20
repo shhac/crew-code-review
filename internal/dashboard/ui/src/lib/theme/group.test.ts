@@ -90,4 +90,11 @@ describe('regroup', () => {
   it('places the missing clear of those kept', () => {
     expect(fillTo(3, [{ id: 1, x: 0 }], firstFree)).toEqual([{ id: 0, x: 1 }, { id: 2, x: 2 }]);
   });
+
+  it('holds the place of any it cannot place, given a placeholder, after those it can', () => {
+    const once = (others: Pup[], id: number) => (others.length < 2 ? { id, x: 5 } : null);
+    const away = (id: number): Pup => ({ id, x: -1 });
+    expect(fillTo(3, [{ id: 1, x: 0 }], once, away)).toEqual([{ id: 0, x: 5 }, { id: 2, x: -1 }]);
+    expect(fillTo(2, [{ id: 0, x: 0 }, { id: 1, x: -1 }], once, away)).toEqual([]);
+  });
 });

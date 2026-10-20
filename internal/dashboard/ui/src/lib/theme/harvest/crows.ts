@@ -1,5 +1,5 @@
 import { inView, type Box, type PageMap } from '../floors';
-import { inTurn, placeIds, troupeSize } from '../group';
+import { fillTo, inTurn, placeIds, troupeSize } from '../group';
 import { bodyOf, clampTo, lengthOf, pageOf, pointsAlong, runAt, runsOf } from '../ledges';
 import { apart } from '../math';
 import type { Cursor, Point } from '../pointer';
@@ -282,22 +282,21 @@ function keepStanding(c: Crow, others: readonly Crow[], field: Field, now: numbe
 // middle of the longest clear runs with a way out, SPOT_APART from each
 // other, as many as the family has (or as the page has room for).
 export function restingCrows(field: Field, previous: Crows | null): Crows {
-  const size = previous?.size ?? 3;
   const kept = (previous?.crows ?? []).filter((c) => {
     const f = field.page.floors.get(c.floor);
     return (grounded(c) || c.mode === 'takeoff') && !!f && !!runAt(f, field.page, WALKER, c.x);
   }).map((c) => still(c.id, c.floor, c.x, c.dir));
   const runs = [...field.page.floors].flatMap(([floor, f]) => (inView(f, field.page) ? runsOf(f, field.page, WALKER).map((r) => ({ floor, body: bodyOf(r, WALKER.half) })) : []))
     .filter((r) => r.body.hi >= r.body.lo).sort((a, b) => lengthOf(b.body) - lengthOf(a.body));
-  const ids = Array.from({ length: size }, (_, id) => id).filter((id) => !kept.some((k) => k.id === id));
-  const placed = ids.reduce<Crow[]>((all, id) => {
+  const place = (all: Crow[], id: number) => {
     const spot = runs.map((r) => ({ floor: r.floor, x: (r.body.lo + r.body.hi) / 2 }))
       .find((s) => all.every((o) => o.floor !== s.floor || Math.abs(o.x - s.x) >= SPOT_APART) && escapes(field, s, 0));
-    return spot ? [...all, still(id, spot.floor, spot.x, 1)] : all;
-  }, kept);
-  const fullSize = previous ? previous.size : troupeSize(placed);
-  const crows = Array.from({ length: fullSize }, (_, id) => placed.find((c) => c.id === id) ?? away(id, Infinity));
-  return { crows, size: fullSize, alarm: previous?.alarm ?? null, restless: Infinity, landed: -Infinity };
+    return spot ? still(id, spot.floor, spot.x, 1) : null;
+  };
+  // Placed afresh, two or three as the page has room for three.
+  const size = previous?.size ?? troupeSize(fillTo(3, kept, place));
+  const crows = [...kept, ...fillTo(size, kept, place, (id) => away(id, Infinity))].sort((a, b) => a.id - b.id);
+  return { crows, size, alarm: previous?.alarm ?? null, restless: Infinity, landed: -Infinity };
 }
 
 const still = (id: number, floor: number, x: number, dir: 1 | -1): Crow => ({ ...standing(id, floor, x, dir, 0, () => 0), until: Infinity });
