@@ -1,5 +1,5 @@
 import { expect, type Locator, type Page } from '@playwright/test';
-import { coveredContent, type Drawn } from './content';
+import { coveredContent, watchFrames, type Drawn } from './content';
 
 // The contract every seasonal set with animals keeps, whatever it draws:
 // its palette, an overlay nobody can click or hear, enough animals for the
@@ -50,6 +50,10 @@ export type SeasonalSet = {
   still: string;
   // How long the page must stay still before its animals are all out.
   settle: number;
+  // A test-only cue (`?theme-cue=`) that starts a flight by itself, and a
+  // selector, in the animals' home, for something only drawn while it is
+  // under way. The seaside's swoop waits for a still cursor, so it has none.
+  cue?: { name: string; flying: string };
 };
 
 export const SETS: readonly SeasonalSet[] = [
@@ -91,7 +95,7 @@ export const SETS: readonly SeasonalSet[] = [
     theme: 'bluebells', overlay: '[data-bluebells]', shelf: '.bluebells-shelf', accent: 'rgb(155, 156, 244)',
     animal: 'bee', drawn: 'image, [data-stroke]', decoration: '[data-moss]',
     parts: [['[data-moss]', 'path'], ['[data-clump]', 'image'], ['[data-cushion]', 'image']],
-    min: { 1440: 2, 1024: 2, 390: 1 }, still: 'perch', settle: 400,
+    min: { 1440: 2, 1024: 2, 390: 1 }, still: 'perch', settle: 400, cue: { name: 'bonk', flying: '[data-bee="bonk"]' },
   },
   {
     // The wasps circle the cake in the rail's air, so they are the shelf's,
@@ -99,7 +103,7 @@ export const SETS: readonly SeasonalSet[] = [
     // is the overlay's, hung in the gaps between ledges.
     theme: 'fete', overlay: '[data-fete]', shelf: '.fete-shelf', home: '.fete-shelf', accent: 'rgb(232, 112, 159)',
     animal: 'wasp', drawn: 'image, [data-stroke]', decoration: '[data-bunting]', parts: [['[data-bunting] path', 'path']],
-    min: { 1440: 2, 1024: 2, 390: 0 }, none: [390], still: 'rest', settle: 400,
+    min: { 1440: 2, 1024: 2, 390: 0 }, none: [390], still: 'rest', settle: 400, cue: { name: 'land', flying: '[data-wasp="inspect"]' },
   },
   {
     // The pigeons stand only where they could fly away from (the first row
@@ -108,7 +112,7 @@ export const SETS: readonly SeasonalSet[] = [
     theme: 'wimbledon', overlay: '[data-wimbledon]', shelf: '.wimbledon-shelf', accent: 'rgb(221, 232, 90)',
     animal: 'pigeon', drawn: 'image', decoration: '[data-lines]',
     parts: [['[data-hawk]', 'image'], ['[data-ball]', 'circle'], ['[data-chalk]', 'circle']],
-    min: { 1440: 2, 1024: 2, 390: 2 }, still: 'stand', settle: 400,
+    min: { 1440: 2, 1024: 2, 390: 2 }, still: 'stand', settle: 400, cue: { name: 'sweep', flying: '[data-hawk]' },
   },
   {
     theme: 'seaside', overlay: '[data-seaside]', shelf: '.seaside-shelf', accent: 'rgb(79, 143, 232)',
@@ -117,7 +121,10 @@ export const SETS: readonly SeasonalSet[] = [
   },
   {
     // The crows feed where they can get away; drawn is every picture still
-    // seen (a wing's hidden side lies under its seen one).
+    // seen (a wing's hidden side lies under its seen one). No cue: resized
+    // mid-scatter, they come back at their own pace, one in about half a
+    // minute, not the cue's few seconds, so the contract would wait a minute
+    // or more to see them all back.
     theme: 'harvest', overlay: '[data-harvest]', shelf: '.harvest-shelf', accent: 'rgb(195, 155, 224)',
     animal: 'crow', drawn: 'image:not([visibility="hidden"])', decoration: '[data-chaff]', parts: [['[data-chaff]', 'path']],
     min: { 1440: 2, 1024: 2, 390: 1 }, still: 'scan', settle: 400,
@@ -153,6 +160,8 @@ export async function seedRandom(page: Page) {
 export const ROOMY = ['/', '/history', '/metrics'];
 
 export const animals = (page: Page, set: SeasonalSet) => page.locator(`${set.home ?? set.overlay} [data-${set.animal}]`);
+// Those on the page rather than away from it.
+export const present = (page: Page, set: SeasonalSet) => page.locator(`${set.home ?? set.overlay} [data-${set.animal}]:not([data-${set.animal}="away"])`);
 
 // Waits for the page's nav to finish arriving (the config adds a link, which
 // moves the rail and so the ledges), then for the animals to be placed.
@@ -170,13 +179,16 @@ const SLACK = 1;
 // arrows), cover right now; both at once in one look at the page.
 export type Covers = 'animals' | 'parts';
 export const coversOf = (set: SeasonalSet): Covers[] => (set.parts.length ? ['animals', 'parts'] : ['animals']);
-export function coveredBy(page: Page, set: SeasonalSet, what: readonly Covers[]) {
+const drawnBy = (set: SeasonalSet, what: readonly Covers[]): Drawn[] => {
   const drawn: Record<Covers, readonly Drawn[]> = {
     animals: [[`${set.home ?? set.overlay} [data-${set.animal}]`, set.drawn]],
     parts: set.parts.map(([els, of]) => [`${set.overlay} ${els}`, of] as const),
   };
-  return coveredContent(page, what.flatMap((w) => drawn[w]), SLACK);
-}
+  return what.flatMap((w) => drawn[w]);
+};
+export const coveredBy = (page: Page, set: SeasonalSet, what: readonly Covers[]) => coveredContent(page, drawnBy(set, what), SLACK);
+// The same, every frame for `ms`.
+export const framesCoveredBy = (page: Page, set: SeasonalSet, what: readonly Covers[], ms: number) => watchFrames(page, drawnBy(set, what), { ms, slack: SLACK });
 
 // How long the ledges take to catch up with the page once it has settled.
 // On a phone the rail stacks above main and grows as the config and the feed

@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import {
-  CATCH_UP, ROOMY, ROUTES, SETS, WIDTHS, accentOf, animals, catching, coveredBy, coversOf, knownAt, landsOnDecoration, modesOf,
-  sceneOf, seedRandom, serveTheme, settled, watchCovered, type Width,
+  CATCH_UP, ROOMY, ROUTES, SETS, WIDTHS, accentOf, animals, catching, coveredBy, coversOf, framesCoveredBy, knownAt, landsOnDecoration,
+  modesOf, present, sceneOf, seedRandom, serveTheme, settled, watchCovered, type Width,
 } from './seasonal';
 
 // The overlay contract, run for every seasonal set with animals (see
@@ -109,7 +109,7 @@ for (const set of SETS) {
       expect(await sceneOf(page, set)).toEqual(before);
     });
 
-    test('client-side navigation and a resize mid-run leave the content clear', async ({ page }) => {
+    test('client-side navigation and a resize mid-run leave the content clear, with the fewest animals each page gets', async ({ page }) => {
       test.setTimeout(120_000);
       await seedRandom(page);
       await page.setViewportSize({ width: 1440, height: 900 });
@@ -123,13 +123,30 @@ for (const set of SETS) {
         { name: 'to a phone', go: () => page.setViewportSize({ width: 390, height: 900 }), width: 390, route: '/metrics' },
         { name: 'back to the queue', go: () => page.getByRole('link', { name: 'Queue', exact: true }).click(), width: 390, route: '/' },
       ];
+      // Every page in the visit is a roomy one.
       for (const step of steps) {
         await step.go();
+        await expect.poll(() => animals(page, set).count(), { message: step.name, timeout: 20_000 }).toBeGreaterThanOrEqual(set.min[step.width]);
         await page.waitForTimeout(Math.max(set.settle, CATCH_UP));
+        if (set.none?.includes(step.width)) expect(await animals(page, set).count(), `${step.name}: none at ${step.width}px`).toBe(0);
         const looks = coversOf(set).filter((what) => !knownAt(set.theme, step.width, what).some((k) => k.route === step.route));
         const look = () => coveredBy(page, set, looks);
         expect(await watchCovered(page, look), step.name).toEqual([]);
       }
     });
+
+    const { cue } = set;
+    if (cue) {
+      test('a resize to 1024px mid-flight keeps the content clear every frame, and the animals come back', async ({ page }) => {
+        test.setTimeout(90_000);
+        await page.setViewportSize({ width: 1440, height: 900 });
+        await page.goto(`/?theme=${set.theme}&theme-cue=${cue.name}`);
+        await expect(page.locator(`${set.home ?? set.overlay} ${cue.flying}`).first()).toBeAttached({ timeout: 20_000 });
+        await page.setViewportSize({ width: 1024, height: 800 });
+        const looks = coversOf(set).filter((what) => !knownAt(set.theme, 1024, what).some((k) => k.route === '/'));
+        expect((await framesCoveredBy(page, set, looks, 4000)).covered).toEqual([]);
+        await expect.poll(() => present(page, set).count(), { timeout: 30_000 }).toBeGreaterThanOrEqual(set.min[1024]);
+      });
+    }
   });
 }
