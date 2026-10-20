@@ -1,3 +1,4 @@
+import { cardReach } from '../air';
 import { clip, meets, type Box } from '../box';
 import type { Curve } from '../curves';
 import { BOTTOM_MARGIN, CARD_REACH, TOP_MARGIN, type Obstacle, type PageMap } from '../floors';
@@ -80,11 +81,9 @@ function near(page: PageMap, box: Box): Obstacle[] {
   return Array.from({ length: last - first + 1 }, (_, i) => bands.get(first + i) ?? []).flat();
 }
 
-// What a box may not meet of an obstacle: content and a margin round it;
-// a card's box, less its empty bottom edge.
-export const keepOff = (o: Obstacle): Box => (o.block
-  ? { left: o.left, right: o.right, top: o.top, bottom: o.bottom - CARD_REACH }
-  : { left: o.left - MARGIN, right: o.right + MARGIN, top: o.top - MARGIN, bottom: o.bottom + MARGIN });
+// What a box may not meet of an obstacle (the kit's card reach): content
+// and a margin round it; a card's box, less its empty bottom edge.
+export const keepOff = cardReach({ top: 0, bottom: CARD_REACH, sides: 0, content: MARGIN });
 
 export type Clear = {
   // Boxes it must also keep off (other bees, a cursor at rest).

@@ -93,7 +93,10 @@ export function roomAt(air: BeeAir, f: Flower): number {
   const p = onPage(air.page, hoverSpot(f, 0));
   if (!p) return 0;
   const gap = (b: Box) => Math.hypot(Math.max(0, b.left - p.x, p.x - b.right), Math.max(0, b.top - p.y, p.y - b.bottom));
-  return Math.min(120, ...air.page.obstacles.map((o) => gap(keepOff(o))));
+  return Math.min(120, ...air.page.obstacles.flatMap((o) => {
+    const off = keepOff(o);
+    return off ? [gap(off)] : [];
+  }));
 }
 
 // What holds a bee hovering free of any flower at p: the rail inside its

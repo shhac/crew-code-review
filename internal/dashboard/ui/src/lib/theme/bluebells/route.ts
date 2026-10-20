@@ -95,7 +95,10 @@ export function gridOf(air: BeeAir): Grid {
       grid.open[r * cols + c] = spans.some((s) => s.left <= x + reach.left && s.right >= x + reach.right) ? 1 : 0;
     }
   }
-  for (const o of air.page.obstacles) closeAround(grid, keepOff(o), reach);
+  for (const o of air.page.obstacles) {
+    const off = keepOff(o);
+    if (off) closeAround(grid, off, reach);
+  }
   grids.set(air, grid);
   return grid;
 }
