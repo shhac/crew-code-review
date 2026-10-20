@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { coveredContent } from './content';
+import { watchFrames } from './content';
 import { SETS } from './seasonal';
 
 // The harvest: a scarecrow on the rail's shelf, straw and grain on the
@@ -15,29 +15,13 @@ const crows = (page: Page) => page.locator('[data-harvest] [data-crow]');
 const count = (page: Page) => crows(page).count();
 const arm = (page: Page) => page.locator('.harvest-shelf .arm.left').evaluate((el) => (el instanceof HTMLElement ? Math.abs(parseFloat(el.style.rotate || '0')) : NaN));
 
-// Every crow picture drawn over the rail (the nav, the sky, the shelf),
-// which crows never fly over: they leave away from the scarecrow.
-const overRail = (page: Page) => crows(page).evaluateAll((els, drawn) => {
-  const rail = document.querySelector('.rail')?.getBoundingClientRect();
-  if (!rail) return [];
-  return els.flatMap((el) => Array.from(el.querySelectorAll(drawn)).map((i) => i.getBoundingClientRect())
-    .filter((r) => r.width > 0 && r.left < rail.right && rail.left < r.right && r.top < rail.bottom && rail.top < r.bottom)
-    .map(() => `${el.getAttribute('data-id')} over the rail`));
-}, SET.drawn);
-
-// Looks at the crows every 80ms until done says stop or time runs out,
-// returning every overlap seen and every mode.
-async function watch(page: Page, ms: number, done: () => Promise<boolean>) {
-  const seen = { covered: new Set<string>(), modes: new Set<string>() };
-  for (const end = Date.now() + ms; Date.now() < end;) {
-    for (const c of await coveredContent(page, [['[data-harvest] [data-crow]', SET.drawn]], 1)) seen.covered.add(c);
-    for (const c of await overRail(page)) seen.covered.add(c);
-    for (const m of await crows(page).evaluateAll((els) => els.map((el) => el.getAttribute('data-crow') ?? ''))) seen.modes.add(m);
-    if (await done()) break;
-    await page.waitForTimeout(80);
-  }
-  return { covered: [...seen.covered], modes: [...seen.modes] };
-}
+// Every frame for `ms` or until `until` is met: what the crows cover, the
+// rail included (the nav, the sky, the shelf), which crows never fly over:
+// they leave away from the scarecrow.
+const watch = (page: Page, ms: number, until: string) => watchFrames(page, [['[data-harvest] [data-crow]', SET.drawn]], {
+  ms, until: [until], keepOut: [{ name: 'the rail', boxes: '.rail' }],
+});
+const NONE_LEFT = '[data-harvest]:not(:has([data-crow]))';
 
 // A short stroke past the scarecrow, 10px off its right side.
 async function stir(page: Page) {
@@ -54,9 +38,9 @@ test('a stroke past the scarecrow flaps its arms and sends every crow off the pa
   await page.waitForTimeout(600);
   await stir(page);
   await expect.poll(() => arm(page)).toBeGreaterThan(10);
-  const seen = await watch(page, 15_000, async () => (await count(page)) === 0);
-  expect(await count(page)).toBe(0);
-  expect(seen.modes).toContain('depart');
+  const seen = await watch(page, 15_000, NONE_LEFT);
+  expect(seen.done).toBe(true);
+  expect(seen.seen).toContain('crow depart');
   expect(seen.covered).toEqual([]);
 });
 
@@ -65,11 +49,12 @@ test('scattered by the cue, the crows leave and come back one at a time, clear a
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/?theme=harvest&theme-cue=scatter');
   await expect.poll(() => crows(page).evaluateAll((els) => els.filter((el) => el.getAttribute('data-crow') === 'depart').length), { timeout: 20_000 }).toBeGreaterThan(0);
-  const gone = await watch(page, 10_000, async () => (await count(page)) === 0);
-  expect(await count(page)).toBe(0);
+  const gone = await watch(page, 10_000, NONE_LEFT);
+  expect(gone.done).toBe(true);
   // Back within the cue's few seconds, one coming in at a time.
-  const back = await watch(page, 25_000, async () => (await crows(page).evaluateAll((els) => els.filter((el) => el.getAttribute('data-crow') === 'scan' || el.getAttribute('data-crow') === 'peck' || el.getAttribute('data-crow') === 'walk').length)) >= 1);
-  expect(back.modes).toContain('arrive');
+  const back = await watch(page, 25_000, '[data-harvest] :is([data-crow="scan"], [data-crow="peck"], [data-crow="walk"])');
+  expect(back.done).toBe(true);
+  expect(back.seen).toContain('crow arrive');
   expect(await crows(page).evaluateAll((els) => els.filter((el) => el.getAttribute('data-crow') === 'arrive').length)).toBeLessThanOrEqual(1);
   expect([...gone.covered, ...back.covered]).toEqual([]);
 });

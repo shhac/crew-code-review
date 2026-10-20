@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { watchFrames } from './content';
 import { seedRandom } from './seasonal';
 
 // The seaside: chips, a bucket and spade and a 99 on the shelf, drifts of
@@ -11,43 +12,6 @@ import { seedRandom } from './seasonal';
 
 const gulls = (page: Page) => page.locator('[data-seaside] [data-gull]');
 const modes = (page: Page) => gulls(page).evaluateAll((els) => els.map((el) => el.getAttribute('data-gull')));
-
-// Watches the gulls every frame until one has swooped and is calling (or
-// the time is up), noting each mode seen and anything a gull's drawing
-// covers: text, controls and charts, as e2e/content.ts counts them, with
-// its 1px slack.
-function watchSwoop(page: Page, ms: number) {
-  return page.evaluate((ms) => new Promise<{ seen: string[]; covered: string[] }>((resolve) => {
-    const main = document.querySelector('main')!;
-    const content: { name: string; r: DOMRect }[] = [];
-    const walker = document.createTreeWalker(main, NodeFilter.SHOW_TEXT);
-    const range = document.createRange();
-    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
-      if (!node.textContent?.trim()) continue;
-      range.selectNodeContents(node);
-      for (const r of Array.from(range.getClientRects())) content.push({ name: `text "${node.textContent.trim().slice(0, 20)}"`, r });
-    }
-    main.querySelectorAll('svg, canvas, button, input, textarea, select').forEach((el) => content.push({ name: el.tagName.toLowerCase(), r: el.getBoundingClientRect() }));
-    const slack = 1;
-    const overlap = (a: DOMRect, b: DOMRect) => a.left < b.right - slack && b.left < a.right - slack && a.top < b.bottom - slack && b.top < a.bottom - slack && b.width > 0 && b.height > 0;
-    const seen = new Set<string>(), covered = new Set<string>();
-    const start = performance.now();
-    let swooped = false;
-    const frame = () => {
-      for (const el of Array.from(document.querySelectorAll('[data-seaside] [data-gull]'))) {
-        const mode = el.getAttribute('data-gull')!;
-        seen.add(mode);
-        if (mode === 'dive') swooped = true;
-        const pictures = Array.from(el.querySelectorAll('image')).filter((i) => getComputedStyle(i).visibility !== 'hidden').map((i) => i.getBoundingClientRect());
-        for (const c of content) if (pictures.some((p) => overlap(p, c.r))) covered.add(`${el.getAttribute('data-id')} (${mode}) over ${c.name}`);
-      }
-      const calling = swooped && Array.from(document.querySelectorAll('[data-seaside] [data-gull="call"]')).length > 0;
-      if (calling || performance.now() - start > ms) resolve({ seen: [...seen], covered: [...covered] });
-      else requestAnimationFrame(frame);
-    };
-    requestAnimationFrame(frame);
-  }), ms);
-}
 
 test('the gulls stand about the ledges, sand drifted along them with shells', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
@@ -83,11 +47,14 @@ test('a cursor left still in clear air is swooped at by one gull, through clear 
   // box to queue a pull request.
   await page.mouse.move(700, 80);
   await page.mouse.move(740, 60, { steps: 4 });
-  const { seen, covered } = await watchSwoop(page, 15_000);
-  expect(seen).toEqual(expect.arrayContaining(['run', 'climb', 'dive', 'pullup', 'flare', 'touchdown', 'call']));
+  // Every frame until one has swooped and is calling.
+  const { seen, covered } = await watchFrames(page, [['[data-seaside] [data-gull]', 'image']], {
+    ms: 15_000, until: ['[data-seaside] [data-gull="dive"]', '[data-seaside] [data-gull="call"]'],
+  });
+  expect(seen).toEqual(expect.arrayContaining(['run', 'climb', 'dive', 'pullup', 'flare', 'touchdown', 'call'].map((m) => `gull ${m}`)));
   expect(covered).toEqual([]);
   // Only one went, and the others watched it.
-  expect(seen).toContain('eye');
+  expect(seen).toContain('gull eye');
 });
 
 test('reduced motion stands every gull still, and no swoop comes', async ({ page }) => {
