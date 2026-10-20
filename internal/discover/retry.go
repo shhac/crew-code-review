@@ -32,7 +32,10 @@ func transient(msg string) bool {
 	if transientHTTP.MatchString(msg) {
 		return true
 	}
-	for _, s := range []string{"Bad Gateway", "Service Unavailable", "Gateway Timeout", "connection reset by peer", "unexpected EOF", "TLS handshake timeout"} {
+	// "Something went wrong while executing your query" is GitHub's other
+	// way of saying a GraphQL query ran out of time, and a timed-out call of
+	// ours is the same failure seen from this side.
+	for _, s := range []string{"Bad Gateway", "Service Unavailable", "Gateway Timeout", "connection reset by peer", "unexpected EOF", "TLS handshake timeout", "Something went wrong while executing your query", "timed out after"} {
 		if strings.Contains(msg, s) {
 			return true
 		}
@@ -75,11 +78,21 @@ func sleepOrCancel(ctx context.Context, d time.Duration) error {
 	}
 }
 
+// ghCallTimeout bounds one gh execution. Nothing else did: a gh call that
+// never returned (a stalled connection, a credential prompt) held its sweep
+// open forever, and every later tick skipped as "previous sweep still
+// running" until somebody restarted the daemon. GitHub itself gives up on a
+// GraphQL query after ~10s, so a call still running at a minute is not going
+// to answer.
+var ghCallTimeout = time.Minute
+
 // runGHOnce is one execution of the gh CLI, with no retry policy of its own.
 // A var so tests can drive the retry and page-size ladders without a stub
 // binary on PATH.
 var runGHOnce = func(ctx context.Context, args ...string) ([]byte, error) {
-	cmd := exec.CommandContext(ctx, "gh", args...)
+	callCtx, cancel := context.WithTimeout(ctx, ghCallTimeout)
+	defer cancel()
+	cmd := exec.CommandContext(callCtx, "gh", args...)
 	var stderr strings.Builder
 	cmd.Stderr = &stderr
 	out, err := cmd.Output()
@@ -87,6 +100,12 @@ var runGHOnce = func(ctx context.Context, args ...string) ([]byte, error) {
 		msg := strings.TrimSpace(stderr.String())
 		if msg == "" {
 			msg = err.Error()
+		}
+		// Named, because the kill reads as "signal: killed", which says
+		// nothing about why. Only our own timeout: a cancelled parent is a
+		// shutdown, not a slow GitHub.
+		if callCtx.Err() == context.DeadlineExceeded && ctx.Err() == nil {
+			msg = fmt.Sprintf("timed out after %s", ghCallTimeout)
 		}
 		return nil, fmt.Errorf("gh %s: %s", strings.Join(elideQuery(args), " "), msg)
 	}

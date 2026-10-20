@@ -461,6 +461,8 @@ func TestTransientClassification(t *testing.T) {
 		"gh pr list: HTTP 504: Gateway Timeout",
 		"gh api: read tcp: connection reset by peer",
 		"gh api: net/http: TLS handshake timeout",
+		"gh api graphql: GraphQL: Something went wrong while executing your query. Please include `ABCD:1234` when reporting this issue.",
+		"gh api graphql: timed out after 1m0s",
 	}
 	for _, msg := range retry {
 		if !transient(msg) {
@@ -519,6 +521,31 @@ func TestRunGHDoesNotRetryPermanentFailure(t *testing.T) {
 	}
 	if got := attempts(t); got != 1 {
 		t.Fatalf("gh invoked %d times on a 404, want 1 (no retries)", got)
+	}
+}
+
+// A gh that never answers must not hold its caller forever: that is how one
+// stalled call stops discovery until somebody restarts the daemon.
+func TestRunGHOnceTimesOutAHungCall(t *testing.T) {
+	restore := fakeGH(t, `exec sleep 10`)
+	defer restore()
+	old := ghCallTimeout
+	ghCallTimeout = 100 * time.Millisecond
+	defer func() { ghCallTimeout = old }()
+
+	start := time.Now()
+	_, err := runGHOnce(context.Background(), "api", "graphql")
+	if err == nil {
+		t.Fatal("runGHOnce on a hung gh = nil, want a timeout")
+	}
+	if !strings.Contains(err.Error(), "timed out after 100ms") {
+		t.Errorf("error = %q, want it to say the call timed out", err)
+	}
+	if !transient(err.Error()) {
+		t.Errorf("a timed-out call must read as transient, so the listing shrinks its page")
+	}
+	if elapsed := time.Since(start); elapsed > 5*time.Second {
+		t.Errorf("runGHOnce took %s, want it cut off near the timeout", elapsed)
 	}
 }
 
