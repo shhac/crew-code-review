@@ -1,5 +1,5 @@
 import { inView, type Box, type PageMap } from '../floors';
-import { fillTo, inTurn, placeIds, troupeSize } from '../group';
+import { fillTo, keepInTurn, placeIds, troupeSize } from '../group';
 import { bodyOf, clampTo, lengthOf, pageOf, pointsAlong, runAt, runsOf } from '../ledges';
 import { apart } from '../math';
 import type { Cursor, Point } from '../pointer';
@@ -226,7 +226,7 @@ export function stepCrows(g: Crows, field: Field, now: number, dt: number, rand:
 // otherwise finds a new way out from where it is, an arriving one a new way
 // down to its spot, or turns back; with no way it is taken away.
 export function reconcileCrows(g: Crows, field: Field, now: number, rand: Rand): Crows {
-  return { ...g, crows: inTurn(g.crows, (c, others) => keep(c, others, field, now, rand)) };
+  return { ...g, crows: keepInTurn(g.crows, (c, _, others) => keep(c, others, field, now, rand)) };
 }
 
 // A crow that has never been out (the page had no spot for it when the
