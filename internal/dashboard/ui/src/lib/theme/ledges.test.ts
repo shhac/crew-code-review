@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Ledge } from './floors';
-import { arriving, clearOf, entries, exitEnd, freeOf, ledgeEnds, pointClaim, roomiest, noticing, runUnder, spare, staysPut, stillOpen, towardTarget, type Walker } from './ledges';
+import { arriving, clearOf, entries, exitEnd, freeOf, ledgeEnds, nearLedgeClaims, pageOf, pointClaim, pointsAlong, roomiest, noticing, runUnder, spare, staysPut, stillOpen, stretchAmong, towardTarget, type Walker } from './ledges';
 import { scene } from './test-scene';
 
 const ledge = (left: number, right: number, y: number): Ledge => ({ left, right, y, base: y + 100, room: Infinity, headroom: Infinity });
@@ -104,5 +104,33 @@ describe('keeping walkers apart', () => {
     expect(staysPut({ floor: 1, x: 200 }, page, WALKER, [])).toBe(true);
     expect(staysPut({ floor: 1, x: 20 }, page, WALKER, [])).toBe(false);
     expect(staysPut({ floor: 1, x: 200 }, page, WALKER, [pointClaim(1, 250)])).toBe(false);
+  });
+
+  it('stretches a walker between its neighbours, by its month\'s rule for one level with it', () => {
+    const room = { lo: 0, hi: 400 };
+    const taken = [{ floor: 1, lo: 50, hi: 80 }, pointClaim(1, 300), pointClaim(2, 200)];
+    expect(stretchAmong(room, taken, 1, 200, 60)).toEqual({ lo: 140, hi: 240 });
+    // Hemmed in, the stretch still holds where it stands, unless asked not to.
+    expect(stretchAmong(room, taken, 1, 100, 60)).toEqual({ lo: 100, hi: 240 });
+    expect(stretchAmong(room, taken, 1, 100, 60, { edge: 'behind' })).toEqual({ lo: 140, hi: 240 });
+    // One exactly where it stands is behind it, or passed over.
+    const level = [pointClaim(1, 200)];
+    expect(stretchAmong(room, level, 1, 200, 60)).toEqual({ lo: 200, hi: 400 });
+    expect(stretchAmong(room, level, 1, 200, 60, { edge: 'behind' })).toEqual({ lo: 260, hi: 400 });
+    expect(stretchAmong(room, level, 1, 200, 60, { edge: 'past' })).toEqual(room);
+  });
+
+  it('samples spots along their rooms, and places a spot on the page', () => {
+    expect(pointsAlong([{ floor: 1, room: { lo: 10, hi: 30 } }, { floor: 2, room: { lo: 5, hi: 4 } }, { floor: 3, room: { lo: 7, hi: 7 } }], 8))
+      .toEqual([{ floor: 1, x: 10 }, { floor: 1, x: 18 }, { floor: 1, x: 26 }, { floor: 3, x: 7 }]);
+    const page = scene([[1, ledge(100, 500, 300)]]);
+    expect(pageOf(page, { floor: 1, x: 20 })).toEqual({ x: 120, y: 300 });
+    expect(pageOf(page, { floor: 1, x: 20 }, 13)).toEqual({ x: 120, y: 287 });
+    expect(pageOf(page, { floor: 9, x: 20 })).toBeNull();
+  });
+
+  it('copies each claim onto the ledges close above and below its own', () => {
+    const page = scene([[1, ledge(100, 500, 300)], [2, ledge(150, 450, 330)], [3, ledge(100, 500, 400)]]);
+    expect(nearLedgeClaims([pointClaim(1, 60), pointClaim(9, 5)], page, 40)).toEqual([pointClaim(1, 60), pointClaim(2, 10), pointClaim(9, 5)]);
   });
 });

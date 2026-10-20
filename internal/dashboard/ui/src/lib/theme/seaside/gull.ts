@@ -2,7 +2,7 @@ import type { Air } from '../air';
 import { anchor, placed, type Anchored } from '../anchored';
 import type { Box, Ledge, PageMap, Run } from '../floors';
 import {
-  bodyOf, clampTo, lengthOf, pageAt, pointClaim, roomiest, runUnder, spots, staysPut, towardTarget,
+  bodyOf, clampTo, lengthOf, nearLedgeClaims, pageAt, pageOf, pointClaim, pointsAlong, roomiest, runUnder, spots, staysPut, stretchAmong, towardTarget,
   type Claim,
 } from '../ledges';
 import { apart, clamp01, mix, sign, smooth } from '../math';
@@ -104,8 +104,7 @@ export const claims = (others: readonly Gull[]): Claim[] => others.flatMap((o) =
 export function anchorOf(g: Gull, page: PageMap, now: number): Point | null {
   if (g.mode === 'away') return null;
   if (g.flight) return inFlight(page, g.flight, now)?.at ?? null;
-  const f = page.floors.get(g.floor);
-  return f ? pageAt(f, g.x) : null;
+  return pageOf(page, g);
 }
 
 // Ledges this near one above the other are one place to keep apart on: a
@@ -115,14 +114,7 @@ const NEAR_LEDGE = 40;
 
 // The others' claims, and each again on every ledge near enough above or
 // below its own to share its space.
-export function claimsIn(others: readonly Gull[], scene: PageMap): Claim[] {
-  return claims(others).flatMap((c) => {
-    const f = scene.floors.get(c.floor);
-    if (!f) return [c];
-    const near = [...scene.floors].filter(([id, g]) => id !== c.floor && Math.abs(g.y - f.y) < NEAR_LEDGE);
-    return [c, ...near.map(([id, g]) => ({ floor: id, lo: c.lo + f.left - g.left, hi: c.hi + f.left - g.left }))];
-  });
-}
+export const claimsIn = (others: readonly Gull[], scene: PageMap): Claim[] => nearLedgeClaims(claims(others), scene, NEAR_LEDGE);
 
 // The body's middle: what a cursor is near to or far from.
 export function middleOf(g: Gull, page: PageMap, now: number): Point | null {
@@ -139,10 +131,7 @@ export function createGull(scene: PageMap, now: number, rand: Rand, others: read
   const idleFor = () => now + between(rand, ...IDLE);
   const facing = (): 1 | -1 => (rand() < 0.5 ? -1 : 1);
   const launcher = others.some((o) => !o.flight && o.mode !== 'away' && roomToTakeOff(scene, o.floor, o.x));
-  const launches = launcher ? [] : spots(scene, taken, GULL, MIN_SPOT).flatMap((s) => {
-    const count = Math.floor((s.room.hi - s.room.lo) / 8) + 1;
-    return Array.from({ length: count }, (_, i) => s.room.lo + i * 8).filter((x) => roomToTakeOff(scene, s.floor, x)).map((x) => ({ floor: s.floor, x }));
-  });
+  const launches = launcher ? [] : pointsAlong(spots(scene, taken, GULL, MIN_SPOT), 8).filter((at) => roomToTakeOff(scene, at.floor, at.x));
   if (launches.length) {
     const at = pick(rand, launches);
     return standingAt(self, at.floor, at.x, now, idleFor(), facing());
@@ -203,12 +192,7 @@ function fadeOut(g: Gull, scene: PageMap, now: number, rand: Rand, here: Point |
 function lane(g: Gull, f: Ledge, scene: PageMap, taken: readonly Claim[]): Run | null {
   const run = runUnder(f, scene, GULL, g.x);
   if (!run) return null;
-  const room = bodyOf(run, GULL.half);
-  const xs = taken.filter((c) => c.floor === g.floor).map((c) => c.lo);
-  return {
-    lo: Math.max(room.lo, ...xs.filter((x) => x <= g.x).map((x) => x + GULL.spacing)),
-    hi: Math.min(room.hi, ...xs.filter((x) => x > g.x).map((x) => x - GULL.spacing)),
-  };
+  return stretchAmong(bodyOf(run, GULL.half), taken, g.floor, g.x, GULL.spacing, { edge: 'behind' });
 }
 
 const moving = (cursor: Cursor | null, now: number): cursor is Cursor => !!cursor && now - cursor.at < MOVING;

@@ -1,7 +1,7 @@
 import type { Ledge, PageMap, Run } from '../floors';
 import {
   arriving, bodyOf, clampTo, clearOf, entries, exitEnd, ledgeEnds, lengthOf, noticing, pageAt, pointClaim, roomiest, runAt, runUnder, spare, staysPut,
-  towardTarget, within,
+  stretchAmong, towardTarget, within,
   type Claim, type Entry, type Trip, type Walker,
 } from '../ledges';
 import { apart, clamp01, sign } from '../math';
@@ -231,12 +231,7 @@ function depart(fox: Fox, scene: PageMap, now: number, rand: Rand, cursor: Curso
   const way = exit === undefined ? undefined : choose(waysOn(fox, scene, rand, taken), (e, from) => apart(e.at, from));
   if (exit !== undefined && way) return { ...fox, mode: 'exit', target: exit, dir: sign(exit - fox.x), trip: way.trip };
   // Along its own run, stopping SPACING short of the nearest fox each way.
-  const room = body(run);
-  const xs = taken.filter((c) => c.floor === fox.floor).map((c) => c.lo);
-  const lane = {
-    lo: Math.max(room.lo, ...xs.filter((x) => x < fox.x).map((x) => x + SPACING)),
-    hi: Math.min(room.hi, ...xs.filter((x) => x > fox.x).map((x) => x - SPACING)),
-  };
+  const lane = stretchAmong(body(run), taken, fox.floor, fox.x, SPACING, { edge: 'past' });
   const reachTo = (d: -1 | 1) => (d < 0 ? fox.x - lane.lo : lane.hi - fox.x);
   const sides = ([-1, 1] as const).filter((d) => reachTo(d) >= MIN_MOVE);
   const side = choose(sides, (d, from) => Math.abs(f.left + fox.x + d * MIN_MOVE - from.x));

@@ -1,5 +1,5 @@
 import type { Ledge, PageMap, Run } from '../floors';
-import { bodyOf, clampTo, roomiest, roomOver, runAt, staysPut, towardTarget, type Claim, type Walker } from '../ledges';
+import { bodyOf, clampTo, roomiest, roomOver, runAt, staysPut, stretchAmong, towardTarget, type Claim, type Walker } from '../ledges';
 import { sign } from '../math';
 import { between, pick, type Rand } from '../seed';
 import type { HarePose } from './hare-rig';
@@ -125,11 +125,7 @@ export const holds = (hare: Hare, scene: PageMap, others: readonly Hare[], partn
 function lane(hare: Hare, f: Ledge, scene: PageMap, others: readonly Hare[], trails: readonly Claim[]): Run | null {
   const run = runAt(f, scene, HARE, hare.x);
   if (!run) return null;
-  const room = bodyOf(run, HALF);
-  const near = [...claimsOfHares(others), ...trails].filter((c) => c.floor === hare.floor);
-  const lo = Math.max(room.lo, ...near.filter((c) => c.hi <= hare.x).map((c) => c.hi + SPACING));
-  const hi = Math.min(room.hi, ...near.filter((c) => c.lo > hare.x).map((c) => c.lo - SPACING));
-  return { lo: Math.min(lo, hare.x), hi: Math.max(hi, hare.x) };
+  return stretchAmong(bodyOf(run, HALF), [...claimsOfHares(others), ...trails], hare.floor, hare.x, SPACING);
 }
 
 const graze = (hare: Hare, now: number, rand: Rand): Hare => ({ ...hare, mode: 'graze', until: now + between(rand, 2000, 6000), target: hare.x });

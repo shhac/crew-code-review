@@ -1,7 +1,8 @@
 import type { PageMap } from '../floors';
 import { inTurn, placeIds, regroup, troupeSize } from '../group';
+import { pageOf } from '../ledges';
 import { apart } from '../math';
-import type { Cursor, Point } from '../pointer';
+import type { Cursor } from '../pointer';
 import { between, type Rand } from '../seed';
 import { createFox, fresh, reconcileFox, restingFox, stepFox, type Fox } from './fox';
 
@@ -36,19 +37,14 @@ export function restingFoxes(scene: PageMap, previous: Foxes | null): Foxes {
   return { ...group, foxes };
 }
 
-const foxPoint = (fox: Fox, scene: PageMap): Point | null => {
-  const f = scene.floors.get(fox.floor);
-  return f ? { x: f.left + fox.x, y: f.y } : null;
-};
-
 // One step for all of them, each in turn seeing the others as they now are.
 // One startled awake makes the others asleep within LOOK_REACH look up.
 export function stepFoxes(group: Foxes, scene: PageMap, now: number, dt: number, rand: Rand, cursor: Cursor | null): Foxes {
   const step = (fox: Fox, others: Fox[]) => stepFox(fox, scene, now, dt, rand, cursor, others);
   const lookUp = (before: Fox, after: Fox, other: Fox) => {
     const roused = before.mode === 'asleep' && after.mode === 'waking' && after.startled;
-    const at = roused ? foxPoint(after, scene) : null;
-    const there = at && other.mode === 'asleep' ? foxPoint(other, scene) : null;
+    const at = roused ? pageOf(scene, after) : null;
+    const there = at && other.mode === 'asleep' ? pageOf(scene, other) : null;
     return at && there && apart(at, there) <= LOOK_REACH ? { ...other, look: now + between(rand, 1200, 2000) } : other;
   };
   return { ...group, foxes: inTurn(group.foxes, step, lookUp) };

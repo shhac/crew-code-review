@@ -1,6 +1,6 @@
 import { inView, type PageMap } from '../floors';
 import { inTurn, placeIds, regroup, troupeSize } from '../group';
-import { clearOf, spots, type Claim, type Walker } from '../ledges';
+import { clearOf, pageOf, spots, type Claim, type Walker } from '../ledges';
 import type { Point } from '../pointer';
 import { between, type Rand } from '../seed';
 import { corridor, escape, escapeFrom, routeClear, routeIn, type Route, type Sky, type Stretch, type Way } from './flight';
@@ -35,10 +35,6 @@ const TRIES = 16;
 
 export type Flock = { target: number; pigeons: Pigeon[]; lastFlush: number; hawk: Hawk };
 
-const pageOf = (scene: PageMap, floor: number, x: number): Point | null => {
-  const f = scene.floors.get(floor);
-  return f ? { x: f.left + x, y: f.y } : null;
-};
 
 // Where a bird could stand: on a card's top in view, its walking body on a
 // clear run, APART from the others and where they are heading (and any
@@ -72,7 +68,7 @@ function nearest(all: readonly { floor: number; x: number }[], scene: PageMap, n
 const fewPerLedge = <T extends { floor: number }>(order: readonly T[]): T[] =>
   order.filter((c, i) => order.slice(0, i).filter((b) => b.floor === c.floor).length < PER_LEDGE);
 const distanceTo = (scene: PageMap, c: { floor: number; x: number }, p: Point) => {
-  const at = pageOf(scene, c.floor, c.x);
+  const at = pageOf(scene, c);
   return at ? Math.hypot(at.x - p.x, at.y - p.y) : Infinity;
 };
 
@@ -147,8 +143,8 @@ export function stepFlock(flock: Flock, scene: PageMap, sky: Sky, now: number, d
     return stepPigeon(p, scene, now, dt, rand, claims, pass?.cursor ?? null);
   };
   const lookUp = (before: Pigeon, after: Pigeon, other: Pigeon): Pigeon => {
-    const at = grounded(before) && flushedNow(after) ? pageOf(scene, before.floor, before.x) : null;
-    const there = at && grounded(other) ? pageOf(scene, other.floor, other.x) : null;
+    const at = grounded(before) && flushedNow(after) ? pageOf(scene, before) : null;
+    const there = at && grounded(other) ? pageOf(scene, other) : null;
     return at && there && Math.hypot(at.x - there.x, at.y - there.y) <= LOOK ? alert(other, now, rand) : other;
   };
   const pigeons = inTurn(swept, step, lookUp);
@@ -156,7 +152,7 @@ export function stepFlock(flock: Flock, scene: PageMap, sky: Sky, now: number, d
 }
 
 const closeTo = (p: Pigeon, scene: PageMap, cursor: Point) => {
-  const at = pageOf(scene, p.floor, p.x);
+  const at = pageOf(scene, p);
   return !!at && Math.hypot(at.x - cursor.x, at.y - 12 - cursor.y) < FLUSH_REACH;
 };
 
@@ -185,10 +181,10 @@ const WAIT = 500;
 // route's corridor is checked after; this only saves planning routes that
 // cannot do.)
 function openApproach(c: { floor: number; x: number }, way: Way, others: readonly Pigeon[], scene: PageMap): boolean {
-  const at = pageOf(scene, c.floor, c.x);
+  const at = pageOf(scene, c);
   if (!at || way === 'top') return !!at;
   return !others.filter(grounded).some((o) => {
-    const there = pageOf(scene, o.floor, o.x);
+    const there = pageOf(scene, o);
     if (!there || Math.abs(there.y - at.y) > SAME_ROW) return false;
     return way === 'right' ? there.x > at.x : there.x < at.x;
   });
@@ -196,7 +192,7 @@ function openApproach(c: { floor: number; x: number }, way: Way, others: readonl
 const SAME_ROW = 2;
 function comeBack(p: Pigeon, others: readonly Pigeon[], scene: PageMap, sky: Sky, taken: readonly Claim[], now: number, rand: Rand): Pigeon {
   if (airborne(others)) return { ...p, back: now + WAIT };
-  const home = p.home && pageOf(scene, p.home.floor, p.home.x);
+  const home = p.home && pageOf(scene, p.home);
   const way = p.way ?? 'right';
   const spots = standingSpots(scene, sky, taken, home ?? null, rand, (c) => openApproach(c, way, others, scene));
   const found = spots.reduce<{ route: Route; over: Stretch[] } | null>((done, c) => {

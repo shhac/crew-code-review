@@ -1,6 +1,6 @@
 import type { Ledge, PageMap, Reach, Run } from '../floors';
 import { BEATS, FOOTPRINTS, type Footprint, type RigPigeon } from './pigeon-rig';
-import { bodyOf, clampTo, clearOf, runAt, towardTarget, type Claim, type Walker } from '../ledges';
+import { bodyOf, clampTo, clearOf, runAt, stretchAmong, towardTarget, type Claim, type Walker } from '../ledges';
 import { clamp01, sign } from '../math';
 import type { Point } from '../pointer';
 import { between, type Rand } from '../seed';
@@ -95,11 +95,7 @@ export const claimsOf = (others: readonly Pigeon[]): Claim[] => others.filter(gr
 export function stretchOf(p: Pigeon, f: Ledge, scene: PageMap, taken: readonly Claim[]): Run | null {
   const run = runAt(f, scene, PIGEON, p.x);
   if (!run) return null;
-  const room = bodyOf(run, HALF);
-  const near = taken.filter((c) => c.floor === p.floor);
-  const lo = Math.max(room.lo, ...near.filter((c) => c.hi <= p.x).map((c) => c.hi + PIGEON.spacing));
-  const hi = Math.min(room.hi, ...near.filter((c) => c.lo > p.x).map((c) => c.lo - PIGEON.spacing));
-  return { lo: Math.min(lo, p.x), hi: Math.max(hi, p.x) };
+  return stretchAmong(bodyOf(run, HALF), taken, p.floor, p.x, PIGEON.spacing);
 }
 
 const stand = (p: Pigeon, now: number, rand: Rand): Pigeon => ({ ...p, mode: 'stand', until: now + between(rand, STAND[0], STAND[1]), target: p.x });

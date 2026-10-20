@@ -2,7 +2,7 @@ import { around, fitsAir, GAP, sweeps, sweptPath, type Air } from '../air';
 import { fromLedge } from '../anchored';
 import type { Curve } from '../curves';
 import { inView, type Box, type Ledge, type Obstacle, type PageMap, type Run } from '../floors';
-import { clearOf, pageAt, roomOver, runsOf, spare, staysPut, type Claim } from '../ledges';
+import { bodyOf, clearOf, pageAt, pointsAlong, roomOver, runsOf, spare, staysPut, type Claim } from '../ledges';
 import { apart, degrees, sign } from '../math';
 import type { Point } from '../pointer';
 import {
@@ -146,11 +146,8 @@ type StandSpot = { floor: number; x: number; at: Point };
 function standSpots(page: PageMap, runs: (floor: number) => readonly Run[], taken: readonly Claim[]): StandSpot[] {
   return [...page.floors].flatMap(([floor, f]) => {
     if (!inView(f, page)) return [];
-    return runs(floor).flatMap((r) => {
-      const lo = r.lo + GULL.half, hi = r.hi - GULL.half;
-      const count = Math.max(0, Math.floor((hi - lo) / 24) + 1);
-      return Array.from({ length: count }, (_, i) => ({ floor, x: lo + i * 24, at: pageAt(f, lo + i * 24) })).filter((s) => clearOf(taken, floor, s.x, s.x, GULL.spacing));
-    });
+    return pointsAlong(runs(floor).map((r) => ({ floor, room: bodyOf(r, GULL.half) })), 24)
+      .filter((s) => clearOf(taken, floor, s.x, s.x, GULL.spacing)).map((s) => ({ ...s, at: pageAt(f, s.x) }));
   });
 }
 

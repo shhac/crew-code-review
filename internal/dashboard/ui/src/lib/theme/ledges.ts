@@ -36,6 +36,12 @@ export function ledgeEnds(f: Ledge, r: Run): number[] {
   return [...(first ? [r.lo] : []), ...(last ? [r.hi] : [])];
 }
 export const pageAt = (f: Ledge, x: number, lift = 0): Point => ({ x: f.left + x, y: f.y - lift });
+// Where a spot on a ledge is on the page, `lift` px above it; null with its
+// ledge gone.
+export function pageOf(page: PageMap, at: { floor: number; x: number }, lift = 0): Point | null {
+  const f = page.floors.get(at.floor);
+  return f ? pageAt(f, at.x, lift) : null;
+}
 
 // How tall something can stand over lo..hi of f, counting the walker's reach.
 export const roomOver = (f: Ledge, scene: PageMap, w: Pick<Walker, 'reach'>, lo: number, hi: number) => clearance(f, scene.obstacles, lo, hi, w.reach);
@@ -61,6 +67,40 @@ export function freeOf(r: Run, claims: readonly Claim[], spacing: number): Run[]
     { lo: p.lo, hi: Math.min(p.hi, c.lo - spacing) },
     { lo: Math.max(p.lo, c.hi + spacing), hi: p.hi },
   ].filter((q) => q.hi >= q.lo)), [r]);
+}
+
+// The stretch of `room` (a run's body) a walker at x may use: short by
+// spacing of the nearest claim either way on its ledge, measured from the
+// claim's near end. A claim exactly at x is behind it, and the stretch
+// always holds x itself ('held', the pigeons' and the hares' rule); or it is
+// behind it and the stretch may not hold x ('behind', the gulls'); or it is
+// passed over ('past', the foxes' and the rabbits').
+export type Edge = 'held' | 'behind' | 'past';
+export function stretchAmong(room: Run, taken: readonly Claim[], floor: number, x: number, spacing: number, { edge = 'held' }: { edge?: Edge } = {}): Run {
+  const near = taken.filter((c) => c.floor === floor);
+  const behind = (c: Claim) => (edge === 'past' ? c.hi < x : c.hi <= x);
+  const lo = Math.max(room.lo, ...near.filter(behind).map((c) => c.hi + spacing));
+  const hi = Math.min(room.hi, ...near.filter((c) => c.lo > x).map((c) => c.lo - spacing));
+  return edge === 'held' ? { lo: Math.min(lo, x), hi: Math.max(hi, x) } : { lo, hi };
+}
+
+// Points `step` px apart along each spot's room, from its low end: where a
+// walker might stand. None for a room with no length left.
+export const pointsAlong = (spots: readonly Spot[], step: number): { floor: number; x: number }[] => spots.flatMap(({ floor, room }) => {
+  const count = room.hi < room.lo ? 0 : Math.floor((room.hi - room.lo) / step) + 1;
+  return Array.from({ length: count }, (_, i) => ({ floor, x: room.lo + i * step }));
+});
+
+// The claims again on every ledge within `near` px above or below each
+// one's own, in that ledge's x: ledges that close are one place to keep
+// apart on.
+export function nearLedgeClaims(taken: readonly Claim[], scene: PageMap, near: number): Claim[] {
+  return taken.flatMap((c) => {
+    const f = scene.floors.get(c.floor);
+    if (!f) return [c];
+    const close = [...scene.floors].filter(([id, g]) => id !== c.floor && Math.abs(g.y - f.y) < near);
+    return [c, ...close.map(([id, g]) => ({ floor: id, lo: c.lo + f.left - g.left, hi: c.hi + f.left - g.left }))];
+  });
 }
 
 // Where a walker could settle: every clear run in view at least minSpot

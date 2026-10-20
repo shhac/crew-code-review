@@ -1,6 +1,6 @@
 import { inView, type Box, type PageMap } from '../floors';
 import { inTurn, placeIds, troupeSize } from '../group';
-import { bodyOf, clampTo, lengthOf, pageAt, runAt, runsOf } from '../ledges';
+import { bodyOf, clampTo, lengthOf, pageOf, pointsAlong, runAt, runsOf } from '../ledges';
 import { apart } from '../math';
 import type { Cursor, Point } from '../pointer';
 import { between, type Rand } from '../seed';
@@ -54,8 +54,7 @@ const NUDGE = 20;
 export function pointOf(c: Crow, page: PageMap, now: number): Point | null {
   if (c.mode === 'away') return null;
   if ((c.mode === 'depart' || c.mode === 'arrive') && c.flight) return flightAt(c.flight, now).at;
-  const f = page.floors.get(c.floor);
-  return f ? pageAt(f, c.x) : null;
+  return pageOf(page, c);
 }
 
 // The box a crow standing at its feet p stays inside.
@@ -73,19 +72,12 @@ export function feedingSpots(field: Field, taken: readonly Spot[]): Spot[] {
   const { page, chaff } = field;
   return [...page.floors].flatMap(([floor, f]) => {
     if (!inView(f, page)) return [];
-    return runsOf(f, page, WALKER).flatMap((r) => {
-      const body = bodyOf(r, WALKER.half);
-      const count = body.hi < body.lo ? 0 : Math.floor((body.hi - body.lo) / SPOT_STEP) + 1;
-      return Array.from({ length: count }, (_, i) => body.lo + i * SPOT_STEP);
-    }).filter((x) => grainNear(chaff, floor, x, SPOT_GRAIN) && taken.every((t) => t.floor !== floor || Math.abs(t.x - x) >= SPOT_APART))
-      .map((x) => ({ floor, x }));
+    return pointsAlong(runsOf(f, page, WALKER).map((r) => ({ floor, room: bodyOf(r, WALKER.half) })), SPOT_STEP)
+      .filter((s) => grainNear(chaff, floor, s.x, SPOT_GRAIN) && taken.every((t) => t.floor !== floor || Math.abs(t.x - s.x) >= SPOT_APART));
   });
 }
 
-const feetAt = (field: Field, s: Spot): Point | null => {
-  const f = field.page.floors.get(s.floor);
-  return f ? pageAt(f, s.x) : null;
-};
+const feetAt = (field: Field, s: Spot): Point | null => pageOf(field.page, s);
 const speedOf = (rand: Rand) => between(rand, SPEED.lo, SPEED.hi);
 const escapes = (field: Field, s: Spot, now: number) => {
   const p = feetAt(field, s);

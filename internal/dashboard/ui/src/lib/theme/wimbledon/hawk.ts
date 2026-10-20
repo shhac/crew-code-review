@@ -1,6 +1,7 @@
 import { around, laneOf, meets, rowsOf, type Lane, type Row } from '../air';
 import type { Box, Ledge, PageMap, Reach } from '../floors';
 import { inView } from '../floors';
+import { pageOf } from '../ledges';
 import { between, type Rand } from '../seed';
 import { durationOf, escape, flying, lengthOfTrack, reachAt, trackOf, type Route, type Sky, type Track } from './flight';
 import { FOOTPRINTS as HAWK_FOOTPRINTS } from './hawk-rig';
@@ -86,10 +87,6 @@ export function hawkAt(plan: Plan, now: number): { x: number; y: number } | null
 // When it is wholly past the far exit.
 const endOf = (from: number, to: number, start: number) => start + (1000 * Math.abs(to - from)) / SPEED;
 
-const feetOf = (p: Pigeon, page: PageMap) => {
-  const f = page.floors.get(p.floor);
-  return f ? { x: f.left + p.x, y: f.y } : null;
-};
 
 // Every box drawn at now: the hawk's and each pigeon's, standing (alert) or
 // along its flight, on the page; none for a bird out past its exit.
@@ -101,7 +98,7 @@ function drawnAt(plan: Plan, pigeons: readonly Pigeon[], page: PageMap, now: num
   const hawkBox = hawk && glideBox(row, plan.y, hawk.x);
   const birds = pigeons.flatMap((p): Drawn[] => {
     const off = plan.takeoffs.find((t) => t.id === p.id);
-    const feet = feetOf(p, page);
+    const feet = pageOf(page, p);
     if (!feet) return [];
     if (!off || now < off.at) return [{ id: p.id, box: around(feet, { half: POSES.alert.width / 2, up: POSES.alert.height, down: 0 }) }];
     const f = page.floors.get(off.route.floor);

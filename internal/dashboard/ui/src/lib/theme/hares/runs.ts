@@ -1,6 +1,6 @@
 import { around } from '../air';
 import { reachOf, type PageMap } from '../floors';
-import { pageAt, runAt } from '../ledges';
+import { pageAt, pageOf, runAt } from '../ledges';
 import type { Point } from '../pointer';
 import type { Rand } from '../seed';
 import { claimsOfHares, HARE, POSES, SPACING, type Hare } from './hare';
@@ -35,8 +35,7 @@ export function placeOf(group: Troupe, hare: Hare): Place {
 export function pagePoint(place: Place, scene: PageMap): Point | null {
   if (place.kind === 'away') return null;
   if (place.kind === 'leap') return arcPoint(place.segment, scene, place.t);
-  const f = scene.floors.get(place.floor);
-  return f ? pageAt(f, place.x) : null;
+  return pageOf(scene, place);
 }
 
 // Whether a hare is standing on a ledge (not in the air or away).

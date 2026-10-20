@@ -1,5 +1,5 @@
 import type { PageMap, Run } from '../floors';
-import { bodyOf, clampTo, pageAt, runAt, type Walker } from '../ledges';
+import { bodyOf, clampTo, pageOf, runAt, type Walker } from '../ledges';
 import { apart, sign } from '../math';
 import type { Cursor, Point } from '../pointer';
 import { between, type Rand } from '../seed';
@@ -131,8 +131,7 @@ const peckBout = (c: Crow, now: number, rand: Rand): Crow => {
 
 // Its middle on the page, where the cursor is measured from.
 export const middleOf = (c: Crow, scene: PageMap): Point | null => {
-  const f = scene.floors.get(c.floor);
-  return f ? pageAt(f, c.x, 13) : null;
+  return pageOf(scene, c, 13);
 };
 
 // What the cursor is to a crow on the ground: how far, whether it counts

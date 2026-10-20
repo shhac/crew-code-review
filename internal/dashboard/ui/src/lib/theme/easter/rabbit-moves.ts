@@ -1,5 +1,5 @@
 import type { Ledge, PageMap, Run } from '../floors';
-import { entries, exitEnd, ledgeEnds, lengthOf, runAt, widthOf, within, type Claim, type Entry, type Trip } from '../ledges';
+import { entries, exitEnd, ledgeEnds, lengthOf, runAt, stretchAmong, widthOf, within, type Claim, type Entry, type Trip } from '../ledges';
 import { apart, sign } from '../math';
 import type { Point } from '../pointer';
 import { between, maxBy, pick, type Rand } from '../seed';
@@ -44,12 +44,7 @@ export function moveOn(r: Rabbit, scene: PageMap, now: number, rand: Rand, taken
 // sits on (bolting, on alert).
 type Along = { away: Point | null; bolt: boolean };
 export function along(r: Rabbit, f: Ledge, run: Run, scene: PageMap, now: number, rand: Rand, taken: readonly Claim[], { away, bolt }: Along = { away: null, bolt: false }): Rabbit {
-  const room = body(run);
-  const xs = taken.filter((c) => c.floor === r.floor).map((c) => c.lo);
-  const lane = {
-    lo: Math.max(room.lo, ...xs.filter((x) => x < r.x).map((x) => x + SPACING)),
-    hi: Math.min(room.hi, ...xs.filter((x) => x > r.x).map((x) => x - SPACING)),
-  };
+  const lane = stretchAmong(body(run), taken, r.floor, r.x, SPACING, { edge: 'past' });
   const reach = (d: -1 | 1) => (d < 0 ? r.x - lane.lo : lane.hi - r.x);
   const sides = ([-1, 1] as const).filter((d) => reach(d) >= MIN_MOVE);
   const side = away ? maxBy(sides, (d) => Math.abs(f.left + r.x + d * MIN_MOVE - away.x)) : maxBy(sides, reach);
