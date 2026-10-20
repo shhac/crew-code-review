@@ -30,7 +30,7 @@ from PIL import Image
 from scipy import ndimage
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from art import EyeScale, crop, crop_origin, cut, export, export_with_fur, keyed, lum, opaque, place, poses, rescaled, rows  # noqa: E402
+from art import EyeScale, crop, cut, export, export_with_fur, keyed, lum, opaque, place, poses, rescaled, rows  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
 OUT = HERE.parents[1] / 'internal/dashboard/ui/src/lib/theme/harvest'
@@ -85,16 +85,12 @@ def iris(path: Path, seed: tuple[int, int]) -> float:
     return float(max(xs.max() - xs.min() + 1, ys.max() - ys.min() + 1))
 
 
-def eye_at(path: Path, seed: tuple[int, int]) -> tuple[float, float]:
-    """The middle of the eye in a cropped, exported picture, in its drawing
-    units: where the lab lines a key pose up with the rig's eye."""
-    rgba = keyed(path)
-    ys, xs = np.nonzero(brown(rgba))
+def iris_middle(path: Path, seed: tuple[int, int]) -> tuple[float, float]:
+    """The middle of the brown iris's extents within 60px of seed, keyed as
+    the picture is exported."""
+    ys, xs = np.nonzero(brown(keyed(path)))
     near = (xs - seed[0]) ** 2 + (ys - seed[1]) ** 2 < 60 ** 2
-    cx, cy = (xs[near].min() + xs[near].max()) / 2, (ys[near].min() + ys[near].max()) / 2
-    left, top = crop_origin(rgba)
-    per_unit = iris(path, seed) / EYE
-    return (cx - left) / per_unit, (cy - top) / per_unit
+    return (xs[near].min() + xs[near].max()) / 2, (ys[near].min() + ys[near].max()) / 2
 
 
 def bill_and_eye(rgba: np.ndarray) -> np.ndarray:
@@ -232,14 +228,9 @@ def overlay(whole: np.ndarray, parts: list[tuple[int, int, np.ndarray]], out: Pa
 
 
 def crow(check: Path | None) -> None:
-    scale = EyeScale(HERE, EYES, EYE, RES, measure=iris)
+    scale = EyeScale(HERE, EYES, EYE, RES, measure=iris, middle=iris_middle)
     scale.reference('crow-standing.png', LAB, 'crow-reference')
     scale.key_poses('crow-pose-', KEY_POSES, LAB)
-    ex, ey = eye_at(HERE / 'crow-standing.png', EYES['crow-standing.png'])
-    print(f'crow-reference: eye at {ex + scale.margin:.2f}, {ey + scale.margin:.2f}')
-    for pose, seed in KEY_POSES.items():
-        ex, ey = eye_at(HERE / f'crow-pose-{pose}.png', seed)
-        print(f'crow-pose-{pose}: eye at {ex:.2f}, {ey:.2f}')
     sheet = crow_keyed(HERE / 'crow-parts.png')
     parts = {name: art for row, names in zip(rows(sheet, 2), CROW_ROWS) for name, art in cut(row, names).items()}
     masks = {'crow-head': bill_and_eye, 'crow-body': ink, 'crow-wing-folded': ink, 'crow-tail': None}

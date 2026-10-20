@@ -64,25 +64,11 @@ def iris(path: Path, seed: tuple[int, int]) -> float:
     return grey_eye(path, seed)[0]
 
 
+def iris_middle(path: Path, seed: tuple[int, int]) -> tuple[float, float]:
+    return grey_eye(path, seed)[1]
+
+
 class IrisScale(EyeScale):
-    def key_poses(self, prefix: str, seeds: dict[str, tuple[int, int]], out: Path, key=keyed) -> None:
-        """Each key pose, and the middle of its eye in its own drawing units:
-        where the lab lines it up with the rig's eye."""
-        for pose, seed in seeds.items():
-            name = f'{prefix}{pose}'
-            path = self.here / f'{name}.png'
-            eye, (ex, ey) = grey_eye(path, seed)
-            k = self.eye / eye * self.res
-            size = export(crop(key(path)), out, name, k)
-            left, top = crop_origin(keyed(path))
-            print(f'{name}: eye {eye:.1f}px; drawing units {self.units(size)}; eye at {(ex - left) * k / self.res:.2f}, {(ey - top) * k / self.res:.2f}')
-
-    def reference_eye(self, sheet: str) -> None:
-        """The middle of the reference's eye, in the rig's drawing units."""
-        _, (ex, ey) = grey_eye(self.here / sheet, self.eyes[sheet])
-        left, top = crop_origin(keyed(self.here / sheet))
-        print(f'eye: {(ex - left) / self.per_unit() + self.margin:.2f}, {(ey - top) / self.per_unit() + self.margin:.2f}')
-
     def placed(self, name: str, art: np.ndarray, out: Path, scale: float, k: float, mask=None) -> tuple[int, int]:
         size = export(art, out, name, scale)
         per_unit = self.per_unit()
@@ -144,9 +130,8 @@ def table() -> None:
 
 
 def wasp() -> None:
-    scale = IrisScale(HERE, EYES, EYE, RES, measure=iris)
+    scale = IrisScale(HERE, EYES, EYE, RES, measure=iris, middle=iris_middle)
     units = {'wasp-reference': scale.reference('wasp-standing.png', LAB, 'wasp-reference')}
-    scale.reference_eye('wasp-standing.png')
     scale.key_poses('wasp-pose-', KEY_POSES, LAB)
     parts = cut(keyed(HERE / 'wasp-parts.png'), PARTS)
     units.update(scale.parts(parts, 'wasp-parts.png', OUT))

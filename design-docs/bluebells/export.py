@@ -28,7 +28,7 @@ import numpy as np
 from PIL import Image
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from art import EyeScale, blob, crop, crop_origin, cut, export, keyed, opaque, pale, poses  # noqa: E402
+from art import EyeScale, blob, crop, cut, export, keyed, opaque, pale, poses  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
 OUT = HERE.parents[1] / 'internal/dashboard/ui/src/lib/theme/bluebells'
@@ -81,14 +81,11 @@ def band(path: Path, seed: tuple[int, int]) -> float:
     return len(patch(path, seed)[0]) ** 0.5
 
 
-def collar(name: str, band_seed: tuple[int, int], seed: tuple[int, int]) -> tuple[float, float]:
+def collar(scale: EyeScale, name: str, band_seed: tuple[int, int], seed: tuple[int, int]) -> tuple[float, float]:
     """The middle of the collar in a cropped, exported picture, in drawing
     units: where the lab lines a key pose up with the rig."""
-    path = HERE / f'{name}.png'
-    rows, cols = patch(path, seed)
-    left, top = crop_origin(keyed(path))
-    per_unit = band(path, band_seed) / BAND
-    return (cols.mean() - left) / per_unit, (rows.mean() - top) / per_unit
+    rows, cols = patch(HERE / f'{name}.png', seed)
+    return scale.spot(f'{name}.png', band_seed, (cols.mean(), rows.mean()))
 
 
 def eye(rgba: np.ndarray) -> np.ndarray:
@@ -165,11 +162,11 @@ def flowers() -> None:
 def bee() -> None:
     scale = EyeScale(HERE, BANDS, BAND, RES, measure=band)
     scale.reference('bee-standing.png', LAB, 'bee-reference')
-    x, y = collar('bee-standing', BANDS['bee-standing.png'], STANDING_COLLAR)
-    print(f'bee-reference: collar at {x + scale.margin:.2f}, {y + scale.margin:.2f}')
+    x, y = collar(scale, 'bee-standing', BANDS['bee-standing.png'], STANDING_COLLAR)
+    print(f'bee-reference: collar at {x:.2f}, {y:.2f}')
     scale.key_poses('bee-pose-', {pose: seeds[0] for pose, seeds in KEY_POSES.items()}, LAB)
     for pose, (band_seed, collar_seed) in KEY_POSES.items():
-        x, y = collar(f'bee-pose-{pose}', band_seed, collar_seed)
+        x, y = collar(scale, f'bee-pose-{pose}', band_seed, collar_seed)
         print(f'bee-pose-{pose}: collar at {x:.2f}, {y:.2f}')
     scale.parts(cut(keyed(HERE / 'bee-parts.png'), PARTS), 'bee-parts.png', OUT, masks=MASKS)
 

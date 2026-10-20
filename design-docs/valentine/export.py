@@ -19,7 +19,7 @@ import numpy as np
 from PIL import Image
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from art import EyeScale, crop, crop_origin, cut, export, export_with_fur, feature, opaque, pale  # noqa: E402
+from art import EyeScale, crop, cut, export, export_with_fur, opaque, pale  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
 OUT = HERE.parents[1] / 'internal/dashboard/ui/src/lib/theme/valentine'
@@ -85,32 +85,23 @@ def cupid(name: str) -> np.ndarray:
     return on_green(HERE / f'{name}.png')
 
 
-def eye_in(name: str, seed: tuple[int, int]) -> tuple[float, float]:
-    """The middle of the eye in a cropped, exported picture, in drawing
-    units: where the lab lines a key pose up with the rig's eye."""
-    rgb = np.asarray(Image.open(HERE / f'{name}.png').convert('RGB')).astype(int)
+def eye_middle(path: Path, seed: tuple[int, int]) -> tuple[float, float]:
+    """The middle of the dark within 40px of seed."""
+    rgb = np.asarray(Image.open(path).convert('RGB')).astype(int)
     dark = rgb.sum(axis=-1) < 200
     sx, sy = seed
     ys, xs = np.nonzero(dark[sy - 60:sy + 60, sx - 60:sx + 60])
     near = (ys - 60) ** 2 + (xs - 60) ** 2 < 40 ** 2
-    cy, cx = ys[near].mean() + sy - 60, xs[near].mean() + sx - 60
-    left, top = crop_origin(cupid(name))
-    per_unit = feature(HERE / f'{name}.png', seed) / EYE
-    return (cx - left) / per_unit, (cy - top) / per_unit
+    return xs[near].mean() + sx - 60, ys[near].mean() + sy - 60
 
 
 def main() -> None:
     kit = crop(keyed_on(HERE / 'valentine-kit.png', BLUE))
     size = export(kit, OUT, 'valentine-kit', 2 * KIT_HEIGHT / kit.shape[0])
     print(f'valentine-kit: display {size[0] / 2:g}x{size[1] / 2:g}')
-    scale = EyeScale(HERE, EYES, EYE, RES)
+    scale = EyeScale(HERE, EYES, EYE, RES, middle=eye_middle)
     scale.reference('cupid-reference.png', LAB, 'cupid-reference', key=on_green)
-    ex, ey = eye_in('cupid-reference', EYES['cupid-reference.png'])
-    print(f'cupid-reference: eye at {ex + scale.margin:.2f}, {ey + scale.margin:.2f}')
     scale.key_poses('cupid-pose-', KEY_POSES, LAB, key=on_green)
-    for pose, seed in KEY_POSES.items():
-        ex, ey = eye_in(f'cupid-pose-{pose}', seed)
-        print(f'cupid-pose-{pose}: eye at {ex:.2f}, {ey:.2f}')
     scale.parts(cut(cupid('cupid-parts'), PARTS), 'cupid-parts.png', OUT, masks=MASKS)
     # The limb pieces, each sized to the reference's limbs: across, in
     # drawing units, outline included.

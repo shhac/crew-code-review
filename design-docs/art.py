@@ -214,11 +214,15 @@ class EyeScale:
     says how big the feature is in a sheet, given where it is: feature (a
     dark blob) by default, or another where an eye cannot be told from the
     fur round it (a bumblebee's, in its black head) or than which only a
-    darker blob counts (a brown hawk's: feature with a lower dark_below)."""
+    darker blob counts (a brown hawk's: feature with a lower dark_below).
+    Given middle (where the feature's middle is in a sheet, source pixels,
+    given its seed), the reference and each key pose also print where
+    their eye is, which the lab lines up with the rig's."""
 
     def __init__(self, here: Path, eyes: dict[str, tuple[int, int]], eye: float, res: int, margin: int = 1,
-                 measure: Callable[[Path, tuple[int, int]], float] = feature):
-        self.here, self.eyes, self.eye, self.res, self.margin, self.measure = here, eyes, eye, res, margin, measure
+                 measure: Callable[[Path, tuple[int, int]], float] = feature,
+                 middle: Callable[[Path, tuple[int, int]], tuple[float, float]] | None = None):
+        self.here, self.eyes, self.eye, self.res, self.margin, self.measure, self.middle = here, eyes, eye, res, margin, measure, middle
         self.standing = np.zeros((0, 0, 4), np.uint8)
         self.standing_sheet = ''
 
@@ -237,13 +241,29 @@ class EyeScale:
     def units(self, size: Size) -> str:
         return f'{size[0] / self.res:.2f}x{size[1] / self.res:.2f}'
 
+    def spot(self, sheet: str, seed: tuple[int, int], at: tuple[float, float], key: Callable[[Path], np.ndarray] = keyed) -> tuple[float, float]:
+        """Where a point of a sheet (source pixels) is in its exported
+        picture, in its drawing units, given where its eye is: the
+        reference's are the rig's, moved by margin."""
+        path = self.here / sheet
+        left, top = crop_origin(key(path))
+        per_unit = self.measure(path, seed) / self.eye
+        lift = self.margin if sheet == self.standing_sheet else 0
+        return (at[0] - left) / per_unit + lift, (at[1] - top) / per_unit + lift
+
+    def eye_at(self, sheet: str, seed: tuple[int, int], key: Callable[[Path], np.ndarray]) -> str:
+        if self.middle is None:
+            return ''
+        x, y = self.spot(sheet, seed, self.middle(self.here / sheet, seed), key)
+        return f'; eye at {x:.2f}, {y:.2f}'
+
     def reference(self, sheet: str, out: Path, name: str, key: Callable[[Path], np.ndarray] = keyed) -> Size:
         """The whole animal standing square, its anatomy reference: written
         for the lab to lay over the rig, and kept to place the parts by."""
         self.standing = crop(key(self.here / sheet))
         self.standing_sheet = sheet
         size = export(self.standing, out, name, self.on_eye(sheet))
-        print(f'{name}: {self.units(size)} at {self.margin}, {self.margin}; ground {ground(self.standing) / self.per_unit() + self.margin:.2f}')
+        print(f'{name}: {self.units(size)} at {self.margin}, {self.margin}; ground {ground(self.standing) / self.per_unit() + self.margin:.2f}{self.eye_at(sheet, self.eyes[sheet], key)}')
         return size
 
     def key_poses(self, prefix: str, seeds: dict[str, tuple[int, int]], out: Path, key: Callable[[Path], np.ndarray] = keyed) -> None:
@@ -255,7 +275,7 @@ class EyeScale:
             path = self.here / f'{name}.png'
             eye = self.measure(path, seed)
             size = export(crop(key(path)), out, name, self.eye / eye * self.res)
-            print(f'{name}: eye {eye:.1f}px; drawing units {self.units(size)}')
+            print(f'{name}: eye {eye:.1f}px; drawing units {self.units(size)}{self.eye_at(f"{name}.png", seed, key)}')
 
     def placed(self, name: str, art: np.ndarray, out: Path, scale: float, k: float, mask: Mask | Placer | None = opaque) -> Size:
         """Writes a part at scale and prints where it sat in the reference,
