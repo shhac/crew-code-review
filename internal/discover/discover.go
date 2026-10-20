@@ -149,23 +149,11 @@ func (d *Discoverer) Discover(ctx context.Context) ([]store.Candidate, error) {
 		if fails := d.noteSuccess(repo, d.now(), len(prs), degraded); fails > 0 {
 			d.logf("discover %s: recovered after %d consecutive failure(s)", repo, fails)
 		}
-		var cands []store.Candidate
-		for _, pr := range prs {
-			cand, ok, err := d.classify(ctx, cfg, repo, pr)
-			if err != nil {
-				return nil, err
-			}
-			if ok {
-				cands = append(cands, cand)
-			}
+		cands, err := d.enqueueRepo(ctx, cfg, repo, prs)
+		if err != nil {
+			return nil, err
 		}
-		d.fillSizes(ctx, repo, cands)
-		for _, cand := range cands {
-			if err := d.store.Enqueue(ctx, cand); err != nil {
-				return nil, err
-			}
-			found = append(found, cand)
-		}
+		found = append(found, cands...)
 	}
 	// An error means "gh itself is broken", so it needs every repo to be
 	// unusable AND at least one of them to have proved it this cycle. Repos
@@ -176,6 +164,29 @@ func (d *Discoverer) Discover(ctx context.Context) ([]store.Candidate, error) {
 		return nil, fmt.Errorf("discovery failed for all %d repos: %w", len(cfg.Repos), lastErr)
 	}
 	return found, nil
+}
+
+// enqueueRepo turns one repo's listing into queued candidates: classify, fill
+// in their sizes, enqueue. Its errors are the store's, and they end the sweep;
+// everything that only skips a repo is the caller's business.
+func (d *Discoverer) enqueueRepo(ctx context.Context, cfg config.Config, repo string, prs []ghPR) ([]store.Candidate, error) {
+	var cands []store.Candidate
+	for _, pr := range prs {
+		cand, ok, err := d.classify(ctx, cfg, repo, pr)
+		if err != nil {
+			return nil, err
+		}
+		if ok {
+			cands = append(cands, cand)
+		}
+	}
+	d.fillSizes(ctx, repo, cands)
+	for _, cand := range cands {
+		if err := d.store.Enqueue(ctx, cand); err != nil {
+			return nil, err
+		}
+	}
+	return cands, nil
 }
 
 // rotate returns the watch list starting at the repo a budget-truncated sweep
