@@ -1,5 +1,5 @@
 import { inView, type Box, type PageMap } from '../floors';
-import { fillTo, keepInTurn, placeIds, troupeSize } from '../group';
+import { fillTo, inTurn, keepInTurn, placeIds, troupeSize } from '../group';
 import { bodyOf, clampTo, lengthOf, pageOf, pointsAlong, runAt, runsOf } from '../ledges';
 import { apart } from '../math';
 import type { Cursor, Point } from '../pointer';
@@ -210,13 +210,11 @@ function comeBack(g: Crows, field: Field, now: number, rand: Rand): Crows {
 // Returns the bites the pecks made, for the grain.
 export function stepCrows(g: Crows, field: Field, now: number, dt: number, rand: Rand, cursor: Cursor | null, alarm: Alarm | null): { group: Crows; bites: Bite[] } {
   const ready = comeBack(restless(launch(hear(g, field, alarm, now, rand), field, now, rand), now, rand), field, now, rand);
-  const stepped = ready.crows.reduce<{ crows: Crow[]; bites: Bite[] }>((acc, _, i) => {
-    const others = acc.crows.filter((__, j) => j !== i);
-    const { crow, bite } = stepCrow(acc.crows[i], { scene: field.page, chaff: field.chaff, now, dt, rand, cursor, others });
-    return { crows: acc.crows.map((o, j) => (j === i ? crow : o)), bites: bite ? [...acc.bites, bite] : acc.bites };
-  }, { crows: ready.crows, bites: [] });
-  const landedNow = stepped.crows.some((c, i) => c.mode === 'settle' && ready.crows[i].mode === 'arrive');
-  return { group: { ...ready, crows: stepped.crows, landed: landedNow ? now + between(rand, RETURN_GAP.lo, RETURN_GAP.hi) : ready.landed }, bites: stepped.bites };
+  const ground = { scene: field.page, chaff: field.chaff, now, dt, rand, cursor };
+  const stepped = inTurn<ReturnType<typeof stepCrow>>(ready.crows.map((crow) => ({ crow, bite: null })), ({ crow }, others) => stepCrow(crow, { ...ground, others: others.map((o) => o.crow) }));
+  const crows = stepped.map((s) => s.crow);
+  const landedNow = crows.some((c, i) => c.mode === 'settle' && ready.crows[i].mode === 'arrive');
+  return { group: { ...ready, crows, landed: landedNow ? now + between(rand, RETURN_GAP.lo, RETURN_GAP.hi) : ready.landed }, bites: stepped.flatMap((s) => (s.bite ? [s.bite] : [])) };
 }
 
 // After a layout change. A standing crow keeps its place while its run is
