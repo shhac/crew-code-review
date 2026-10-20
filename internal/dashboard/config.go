@@ -166,17 +166,7 @@ func discoveryStatusOf(path string, repos []string) *discoveryStatusResp {
 	if !ok {
 		return nil
 	}
-	byRepo := make(map[string]discover.RepoStatus, len(st.Repos))
-	for _, r := range st.Repos {
-		byRepo[r.Repo] = r
-	}
-	resp := &discoveryStatusResp{WrittenAt: st.WrittenAt, Current: st.PID == os.Getpid(), Repos: make([]discover.RepoStatus, 0, len(repos))}
-	for _, repo := range repos {
-		r := byRepo[repo]
-		r.Repo = repo
-		resp.Repos = append(resp.Repos, r)
-	}
-	return resp
+	return &discoveryStatusResp{WrittenAt: st.WrittenAt, Current: st.PID == os.Getpid(), Repos: st.For(repos)}
 }
 
 // authorRow is one roster entry with the policy it actually resolves to. The

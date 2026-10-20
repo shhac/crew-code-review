@@ -68,19 +68,34 @@ func (d *Discoverer) updateHealth(repo string, fn func(*RepoStatus)) {
 	d.health[repo] = h
 }
 
-// Status snapshots the health of repos, in the order given. A repo no sweep
-// has reached yet still appears, empty, so a watched repo is never missing
-// from the record; one that has left the watch list is dropped.
+// Status snapshots the health of the watched repos.
 func (d *Discoverer) Status(repos []string, now time.Time) Status {
 	d.mu.Lock()
 	defer d.mu.Unlock()
-	st := Status{WrittenAt: now, PID: os.Getpid(), Repos: make([]RepoStatus, 0, len(repos))}
-	for _, repo := range repos {
-		h := d.health[repo]
-		h.Repo = repo
-		st.Repos = append(st.Repos, h)
+	all := make([]RepoStatus, 0, len(d.health))
+	for _, h := range d.health {
+		all = append(all, h)
 	}
-	return st
+	return Status{WrittenAt: now, PID: os.Getpid(), Repos: Status{Repos: all}.For(repos)}
+}
+
+// For lines the record up with a watch list, in the list's order. A repo no
+// sweep has reached yet still appears, empty, so a watched repo is never
+// missing from the record; one that has left the watch list is dropped. The
+// one rule every reader of the record (the sweep, the dashboard, doctor)
+// shares, since the watch list can change after the record was written.
+func (s Status) For(repos []string) []RepoStatus {
+	byRepo := make(map[string]RepoStatus, len(s.Repos))
+	for _, r := range s.Repos {
+		byRepo[r.Repo] = r
+	}
+	out := make([]RepoStatus, 0, len(repos))
+	for _, repo := range repos {
+		r := byRepo[repo]
+		r.Repo = repo
+		out = append(out, r)
+	}
+	return out
 }
 
 // writeStatus records the sweep's outcome. Never fatal: losing the record

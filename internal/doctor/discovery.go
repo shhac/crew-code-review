@@ -29,21 +29,16 @@ func discoveryCheck(st discover.Status, ok bool, readErr error, cfg config.Confi
 	// two is a daemon that is not running or a sweep that is not finishing.
 	stale := age > 3*cfg.DiscoverInterval()
 
-	recorded := map[string]discover.RepoStatus{}
-	for _, r := range st.Repos {
-		recorded[r.Repo] = r
-	}
 	var problems, notes []string
-	for _, repo := range cfg.SortedRepos() {
-		r, seen := recorded[repo]
+	for _, r := range st.For(cfg.SortedRepos()) {
 		switch {
-		case !seen || r.LastAttempt.IsZero():
-			notes = append(notes, repo+": not swept yet")
+		case r.LastAttempt.IsZero():
+			notes = append(notes, r.Repo+": not swept yet")
 		case r.Failures > 0:
 			problems = append(problems, fmt.Sprintf("%s: %d consecutive failure(s), skipped until %s, last: %s",
-				repo, r.Failures, r.BackoffUntil.Local().Format("15:04"), r.LastError))
+				r.Repo, r.Failures, r.BackoffUntil.Local().Format("15:04"), r.LastError))
 		case r.Degraded != "":
-			notes = append(notes, repo+": "+r.Degraded)
+			notes = append(notes, r.Repo+": "+r.Degraded)
 		}
 	}
 
