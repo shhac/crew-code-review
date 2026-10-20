@@ -6,7 +6,7 @@ import type { Cursor, Point } from '../pointer';
 import { between, maxBy, type Rand } from '../seed';
 import {
   airborne, anchorOf, call, claimsIn, createGull, fresh, idle, middleOf, reconcileGull, restingGull, stepGull, takeOff, MOVING,
-  type Airspace, type Gull,
+  type FlightSpace, type Gull,
 } from './gull';
 import { AIR } from './gull-poses';
 import { FOOTPRINTS } from './gull-rig';
@@ -78,7 +78,7 @@ function berthsOf(others: readonly Gull[], page: PageMap, now: number): Box[] {
   }));
 }
 
-const spaceFor = (others: readonly Gull[], page: PageMap, now: number): Airspace => {
+const spaceFor = (others: readonly Gull[], page: PageMap, now: number): FlightSpace => {
   const air = airspace(page);
   return { air: () => air, berths: berthsOf(others, page, now) };
 };

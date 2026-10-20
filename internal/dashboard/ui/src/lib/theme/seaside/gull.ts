@@ -152,8 +152,9 @@ export function restingGull(scene: PageMap, previous: Gull | null, others: reado
   return spot ? standingAt(self, spot.floor, (spot.room.lo + spot.room.hi) / 2, 0, Infinity) : null;
 }
 
-// What a flight keeps clear of: the other gulls (gulls.ts works it out).
-export type Airspace = { air: () => { room: Pick<Air, 'page' | 'room'>; view: Pick<Air, 'page' | 'room'> }; berths: readonly Box[] };
+// The air a flight re-plans in after a layout change, and what it keeps
+// clear of there: the other gulls (gulls.ts works it out).
+export type FlightSpace = { air: () => { room: Pick<Air, 'page' | 'room'>; view: Pick<Air, 'page' | 'room'> }; berths: readonly Box[] };
 
 // After a layout change. In flight, it flies on while the rest of its route
 // is clear and its landing still there; else it re-plans from where it is to
@@ -162,7 +163,7 @@ export type Airspace = { air: () => { room: Pick<Air, 'page' | 'room'>; view: Pi
 // ledge and mode while the run under it holds it and no other gull is too
 // close, pulled back inside the run if that shrank; if not, it is placed
 // standing somewhere new, clear of `avoid`, without animation.
-export function reconcileGull(g: Gull, scene: PageMap, now: number, rand: Rand, others: readonly Gull[], avoid: readonly Gull[], space: Airspace, cursor: Point | null = null): Gull | null {
+export function reconcileGull(g: Gull, scene: PageMap, now: number, rand: Rand, others: readonly Gull[], avoid: readonly Gull[], space: FlightSpace, cursor: Point | null = null): Gull | null {
   if (g.mode === 'away') return g;
   const taken = claimsIn(others, scene);
   if (g.flight) {
