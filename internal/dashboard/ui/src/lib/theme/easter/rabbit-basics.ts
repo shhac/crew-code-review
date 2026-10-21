@@ -35,7 +35,7 @@ export const SPACING = 60;
 const ALERT = { lo: 1200, hi: 2000 };
 export const RESTLESS = { lo: 3000, hi: 8000 };
 
-export type Mode = 'sit' | 'alert' | 'groom' | 'hop' | 'nudge' | 'thump' | 'bolt' | 'exit' | 'away' | 'enter';
+type Mode = 'sit' | 'alert' | 'groom' | 'hop' | 'nudge' | 'thump' | 'bolt' | 'exit' | 'away' | 'enter';
 export type Rabbit = {
   id: number;
   seed: number;

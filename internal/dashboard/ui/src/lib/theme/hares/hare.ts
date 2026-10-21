@@ -91,7 +91,7 @@ export type Hare = {
 };
 
 // Who a hare is, kept across every change of place.
-export type Self = Pick<Hare, 'id' | 'seed' | 'walked'>;
+type Self = Pick<Hare, 'id' | 'seed' | 'walked'>;
 export const fresh = (id: number): Self => ({ id, seed: id + 1, walked: 0 });
 
 // Whether the stretch round x has room to sit up tall (or box) there.

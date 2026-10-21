@@ -23,7 +23,7 @@ export type CourtPair = { left: number; right: number };
 // leaves from the top of its hop, HOP up.
 export const BALL = 6;
 const R = BALL / 2;
-export const HOP = 6;
+const HOP = 6;
 // The highest a shot rises (its bottom, above the ledges) is between these;
 // a court with less room than MIN_APEX has no rally.
 export const MIN_APEX = 12;
@@ -40,26 +40,26 @@ export const SPOT_NEAR = 40;
 export const SPOT_FAR = 140;
 const CORNER = 12;
 // Across the court at SPEED px/s; a volley 1.4 times as fast and flat.
-export const SPEED = 320;
-export const VOLLEY = 1.4;
+const SPEED = 320;
+const VOLLEY = 1.4;
 const VOLLEY_RISE = 2;
 // The bounce: squashed two frames, then a low hop on HOP_ON px, HOP high,
 // to the top of which the next shot is struck.
-export const SQUASH = 33;
-export const HOP_MS = 120;
-export const HOP_ON = 10;
+const SQUASH = 33;
+const HOP_MS = 120;
+const HOP_ON = 10;
 // A rally is this many shots, and ends out or in the net about evenly.
 export const SHOTS = [4, 9] as const;
 // When one starts: first after 15 to 30s, then 40 to 90s apart.
 export const FIRST = [15000, 30000] as const;
 export const AGAIN = [40000, 90000] as const;
 // The serve fades in; the end fades out.
-export const FADE_IN = 150;
-export const FADE_OUT = 500;
+const FADE_IN = 150;
+const FADE_OUT = 500;
 // Into the net: down this far below the ledges.
-export const NET_DROP = 10;
+const NET_DROP = 10;
 // A cursor this close to the ball's middle (its radius and 6px) volleys it.
-export const VOLLEY_REACH = R + 6;
+const VOLLEY_REACH = R + 6;
 // Out: two lower bounces and a roll, which the deep spot leaves room for.
 const OUT_HOPS = [{ on: 14, high: 4, ms: 200 }, { on: 8, high: 2, ms: 140 }] as const;
 const ROLL = 12;
@@ -70,7 +70,7 @@ const TRIES = 8;
 // A piece of the ball's way, its bottom point going from `from` to `to`
 // over ms from start, lifted by a parabola peaking `rise` above the
 // straight line; `fade` 1 fades it in, -1 out.
-export type Seg = {
+type Seg = {
   kind: 'shot' | 'squash' | 'hop' | 'fall' | 'roll' | 'drop';
   from: Point; to: Point; rise: number; start: number; ms: number;
   fade?: 1 | -1;
@@ -93,12 +93,12 @@ export type Rally = { next: number; play: Play | null };
 
 // What the ball shows at a moment, on the page: its middle, how far it has
 // spun (degrees), how squashed it is (1 round), and how faded.
-export type Ball = { x: number; y: number; spin: number; squash: number; opacity: number };
+type Ball = { x: number; y: number; spin: number; squash: number; opacity: number };
 
 // The court as measured now: where its left card's top left is on the page,
 // the right card's offset from it, the net between, and where bounce spots
 // may go on each side (court-local).
-export type Table = { origin: Point; right: number; dy: number; net: Run; sides: readonly [Run, Run]; ends: readonly [number, number] };
+type Table = { origin: Point; right: number; dy: number; net: Run; sides: readonly [Run, Run]; ends: readonly [number, number] };
 
 export function tableOf(court: CourtPair, page: PageMap): Table | null {
   const a = page.floors.get(court.left), b = page.floors.get(court.right);
@@ -128,7 +128,7 @@ const ledgesOf = (court: CourtPair, page: PageMap): [Ledge, Ledge] | null => {
 // The tallest a shot over x0..x1 (court-local) may rise, its bottom above
 // the ledges: what is clear over the span on both cards, less the ball and
 // a little spare.
-export function roomOver(court: CourtPair, page: PageMap, x0: number, x1: number): number {
+function roomOver(court: CourtPair, page: PageMap, x0: number, x1: number): number {
   const both = ledgesOf(court, page);
   if (!both) return -Infinity;
   const [a, b] = both;
@@ -163,7 +163,7 @@ const onPage = (b: Box, o: Point): Box => ({ left: b.left + o.x, right: b.right 
 // Whether the ball's box at each of these bottom points, and between each
 // pair, stays in air: in view, clear of text, controls and charts by
 // SPARE, and of a card above it except its empty bottom edge.
-export function clearAlong(points: readonly Point[], t: Table, page: PageMap, squash = 1): boolean {
+function clearAlong(points: readonly Point[], t: Table, page: PageMap, squash = 1): boolean {
   const boxes = points.map((p) => onPage(ballBox(p, squash), t.origin));
   const all = boxes.reduce(union);
   if (all.left < 0 || all.right > page.width || all.top < 0 || all.bottom > page.height) return false;
@@ -240,7 +240,7 @@ export function serve(court: CourtPair, page: PageMap, now: number, rand: Rand):
 }
 
 // The courts that could host a rally, nearest the top of the window first.
-export function courtsInView(courts: readonly CourtPair[], page: PageMap): CourtPair[] {
+function courtsInView(courts: readonly CourtPair[], page: PageMap): CourtPair[] {
   const y = (c: CourtPair) => page.floors.get(c.left)?.y ?? Infinity;
   return courts.filter((c) => {
     const a = page.floors.get(c.left), b = page.floors.get(c.right);
@@ -336,7 +336,7 @@ export type Touch = { cursor: Point | null; stroke: Segment | null };
 // Whether the cursor meets the ball this frame: hovering within
 // VOLLEY_REACH of its middle, or its stroke crossing the ball's path since
 // the last frame.
-export function meetsBall(middle: Point, before: Point, touch: Touch): boolean {
+function meetsBall(middle: Point, before: Point, touch: Touch): boolean {
   if (touch.cursor && Math.hypot(touch.cursor.x - middle.x, touch.cursor.y - middle.y) < VOLLEY_REACH) return true;
   return !!touch.stroke && segmentsApart(touch.stroke.from, touch.stroke.to, before, middle) < VOLLEY_REACH;
 }

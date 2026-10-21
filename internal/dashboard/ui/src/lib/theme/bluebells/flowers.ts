@@ -19,7 +19,7 @@ export type Spot = { frame: Frame; x: number; y: number };
 
 // How far above its perch a bee hovers before it lands, and how far beside
 // the hover a bee comes in from or leaves to.
-export const ABOVE = 8;
+const ABOVE = 8;
 const BESIDE = [22, 34] as const;
 // Level with that hover or a little lower, where the room above a card is
 // short.

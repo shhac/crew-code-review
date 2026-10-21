@@ -22,11 +22,11 @@ export const BEYOND = 64;
 // A skim keeps this far above its ledge: low, so that its envelope (28.5px
 // up from its line) stays under the heading text above a first row of
 // cards.
-export const SKIM = 8;
+const SKIM = 8;
 // Skims are tried breaking into a climb every this far along the band.
 const SKIM_STEP = 40;
 // Separation between two crows' envelopes in the air, sampled this often.
-export const SEPARATION = 8;
+const SEPARATION = 8;
 const SAMPLE = 50;
 
 export type Leg = 'depart' | 'arrive';

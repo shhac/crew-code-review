@@ -26,7 +26,7 @@ export const MAX_STUCK = 3;
 // Where a spent arrow or its hearts stand needs this much clear above the
 // ledge, counting the walkers' reach into the empty edge of a card above.
 export const LANDING_CLEAR = 24;
-export const LANDING_REACH = 6;
+const LANDING_REACH = 6;
 export const HEART_SPREAD = 17;
 
 // One spent arrow: where its tip is in the ledge, the way its shaft leans
@@ -87,9 +87,9 @@ export function reconcileStuck(arrows: readonly Stuck[], floors: ReadonlyMap<num
 // stop as they grow from half size and fade, over 0.9s.
 export const BURST = 900;
 const HEARTS = 4;
-export const HEART_COLOURS = ['#e8436b', '#ff8fb3'] as const;
+const HEART_COLOURS = ['#e8436b', '#ff8fb3'] as const;
 export type Burst = { key: string; floor: number; x: number; at: number; seed: number };
-export type Heart = { dx: number; dy: number; scale: number; opacity: number; fill: string };
+type Heart = { dx: number; dy: number; scale: number; opacity: number; fill: string };
 
 export function hearts(b: Burst, now: number): Heart[] {
   const t = (now - b.at) / BURST;

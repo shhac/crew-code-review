@@ -8,7 +8,7 @@ import type { Places } from './table';
 // above it, each an ellipse that drifts a little off true and bobs, and the
 // band of air each keeps to while circling.
 
-export type Orbit = { c: Point; rx: number; ry: number };
+type Orbit = { c: Point; rx: number; ry: number };
 
 // Each orbit drifts a little off true and bobs, so no two laps match.
 const DRIFT_X = 3;
@@ -53,7 +53,7 @@ export function orbitPoint(o: Orbit, theta: number, now: number, seed: number): 
 }
 export const trueOrbitPoint = (o: Orbit, theta: number): Point => ({ x: o.c.x + o.rx * Math.cos(theta), y: o.c.y + o.ry * Math.sin(theta) });
 // Circling: its angle at `since`, which way round it goes, and a lap's time.
-export type Lapping = { angle: number; spin: 1 | -1; lap: number; since: number };
+type Lapping = { angle: number; spin: 1 | -1; lap: number; since: number };
 export const thetaAt = (w: Lapping, now: number) => w.angle + (w.spin * 2 * Math.PI * Math.max(0, now - w.since)) / w.lap;
 // The angle on an orbit nearest a point.
 export const nearestTheta = (o: Orbit, p: Point) => Math.atan2((p.y - o.c.y) / o.ry, (p.x - o.c.x) / o.rx);

@@ -23,7 +23,7 @@ export type Field = { page: PageMap; chaff: ReadonlyMap<number, Chaff>; clear: C
 // alarm: the last alarm heard. restless: when one may next leave on its
 // own. landed: when the next may come back (the last to land, and a wait).
 export type Crows = { crows: Crow[]; size: 2 | 3; alarm: Alarm | null; restless: number; landed: number };
-export type Spot = { floor: number; x: number };
+type Spot = { floor: number; x: number };
 
 // Feeding spots are this far apart, and need grain this near.
 export const SPOT_APART = 90;
@@ -41,8 +41,8 @@ export const RETURN_GAP = { lo: 2000, hi: 6000 };
 export const LOOK_AGAIN = 5000;
 // One leaves on its own this often (first within FIRST_RESTLESS of being
 // placed), and is away this long.
-export const RESTLESS = { lo: 60000, hi: 120000 };
-export const FIRST_RESTLESS = { lo: 20000, hi: 60000 };
+const RESTLESS = { lo: 60000, hi: 120000 };
+const FIRST_RESTLESS = { lo: 20000, hi: 60000 };
 export const RESTLESS_AWAY = { lo: 8000, hi: 15000 };
 // A crow with no clear way off tries again this often; after STUCK it
 // walks NUDGE px along its run and tries from there.

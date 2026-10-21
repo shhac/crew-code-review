@@ -10,7 +10,7 @@ export type WallSide = { floor: number; x: number; side: -1 | 1; top: number; ru
 
 // How far a bonk knocks the bee back off the wall.
 export const KNOCK_BACK = 8;
-export const BONK_DEPTH = FOOTPRINTS.bonk.ahead + FOOTPRINTS.bonk.behind + KNOCK_BACK;
+const BONK_DEPTH = FOOTPRINTS.bonk.ahead + FOOTPRINTS.bonk.behind + KNOCK_BACK;
 // Kept this far from a card's top and bottom, past its rounded corners.
 const CORNER = 16;
 

@@ -22,10 +22,10 @@ import { ENVELOPES, grounded, POSES, type Pigeon } from './pigeon';
 export const GLIDE: Reach = { half: HAWK_FOOTPRINTS.glide.width / 2, up: HAWK_FOOTPRINTS.glide.height, down: HAWK_FOOTPRINTS.glide.down ?? 0 };
 // It glides this far above the row's ledges, at SPEED px/s, rising and
 // falling BOB px over each BOB_MS.
-export const ABOVE = 4;
+const ABOVE = 4;
 export const SPEED = 360;
-export const BOB = 1;
-export const BOB_MS = 800;
+const BOB = 1;
+const BOB_MS = 800;
 // First 30 to 60s after the pigeons settle, then 70 to 140s apart; when no
 // sweep can be planned, it tries again 10s later.
 export const FIRST = [30000, 60000] as const;
@@ -34,9 +34,9 @@ export const RETRY = 10000;
 // The pigeons on its row go 0.15s after they see it, 0.1s apart, the one
 // farthest from it first; those on other rows that can keep clear of it
 // follow 0.3 to 0.6s later.
-export const FIRST_OFF = 150;
+const FIRST_OFF = 150;
 export const OFF_APART = 100;
-export const FOLLOW = [300, 600] as const;
+const FOLLOW = [300, 600] as const;
 // They come back 5 to 10s after it has gone, one at a time 1.5 to 3s apart.
 export const RETURN = [5000, 10000] as const;
 export const RETURN_APART = [1500, 3000] as const;
@@ -49,7 +49,7 @@ const FRAME = 1000 / 60;
 // to `to` with its belly line `y` above the ledge, going dir, starting at
 // start; the pigeons' take-offs and routes, those that only look up, and
 // when each comes back.
-export type Takeoff = { id: number; at: number; route: Route; track: Track };
+type Takeoff = { id: number; at: number; route: Route; track: Track };
 export type Plan = {
   row: number; y: number; dir: 1 | -1; start: number; from: number; to: number; end: number;
   takeoffs: readonly Takeoff[]; alerts: readonly number[]; returns: readonly { id: number; at: number }[];
@@ -136,7 +136,7 @@ export function simulate(plan: Plan, pigeons: readonly Pigeon[], page: PageMap, 
 // A sweep along this row going dir, starting at start, with every pigeon's
 // reaction; null when a pigeon on the row has no way out ahead of it, or
 // the simulation finds any box out of air or two birds too close.
-export function planOn(row: Row, dir: 1 | -1, pigeons: readonly Pigeon[], page: PageMap, sky: Airspace, start: number, rand: Rand): Plan | null {
+function planOn(row: Row, dir: 1 | -1, pigeons: readonly Pigeon[], page: PageMap, sky: Airspace, start: number, rand: Rand): Plan | null {
   const first = page.floors.get(row.id);
   const lane = laneFor(row, sky);
   if (!first || !lane) return null;

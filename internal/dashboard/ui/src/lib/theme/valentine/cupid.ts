@@ -18,11 +18,11 @@ import { FOOTPRINTS, SPOT, type Footprint } from './footprints';
 // design-docs/valentine/README.md has the state table and the airspace
 // contract.
 
-export type Mode = 'hover' | 'flit' | 'dodge' | 'enter' | 'turn' | 'draw' | 'aim' | 'loose';
-export type Flight = { floor: number; curve: Curve; start: number; duration: number };
+type Mode = 'hover' | 'flit' | 'dodge' | 'enter' | 'turn' | 'draw' | 'aim' | 'loose';
+type Flight = { floor: number; curve: Curve; start: number; duration: number };
 // Where a cupid is shooting: the landing point on a ledge, and the angle it
 // aims at, below straight ahead.
-export type Target = { floor: number; x: number; aim: number };
+type Target = { floor: number; x: number; aim: number };
 export type Cupid = {
   id: number;
   // Its own blinks, bob and timings, so no two keep time.
@@ -58,7 +58,7 @@ export const poseFootprint = (pose: CupidPose): Footprint => {
 };
 
 // Centres at least this far apart, at every moment.
-export const SPACING = 64;
+const SPACING = 64;
 const FLIT_SPEED = 150;
 const DODGE_SPEED = 320;
 const MIN_FLIGHT = 600;
@@ -69,8 +69,8 @@ const RESTLESS = [6000, 14000] as const;
 const FIRST = [3000, 8000] as const;
 const ENTER = 300;
 export const TURN = 250;
-export const DRAW = 600;
-export const AIM = 450;
+const DRAW = 600;
+const AIM = 450;
 export const LOOSE = 450;
 const CALM = 1200;
 const GAZE_REACH = 160;
@@ -88,7 +88,7 @@ export function where(c: Pick<Cupid, 'spot' | 'flight'>, page: PageMap, now: num
 // What the drawing needs: its pose, how far through a draw or a loose,
 // its speed ahead and how that is changing (eased in and out along the
 // curve), and how visible it is.
-export type CupidView = Point & { dir: 1 | -1; pose: CupidPose; progress: number; speed: number; accel: number; opacity: number };
+type CupidView = Point & { dir: 1 | -1; pose: CupidPose; progress: number; speed: number; accel: number; opacity: number };
 export function cupidView(c: Cupid, page: PageMap, now: number): CupidView | null {
   const at = where(c, page, now);
   if (!at) return null;
@@ -123,7 +123,7 @@ export function hoverAt(self: Self, spot: Anchored, now: number, restless: numbe
 
 // Where the others are, or will be: each one's place now and its spot, and
 // every point of the way still to go on a flight.
-export function claims(others: readonly Cupid[], page: PageMap, now: number): Point[] {
+function claims(others: readonly Cupid[], page: PageMap, now: number): Point[] {
   const ahead = (o: Cupid): Point[] => {
     const f = o.flight;
     const curve = f && flightCurve(page, f);
@@ -141,7 +141,7 @@ const spaced = (p: Point, taken: readonly Point[], by = SPACING) => taken.every(
 
 // Whether a cupid can hover at p: its whole footprint, whatever it does
 // there, in the air, and no other cupid too close.
-export const canHover = (air: Pick<Air, 'page' | 'room'>, p: Point, taken: readonly Point[]) => fits(air, around(p, SPOT), linesOf(air.page)) && spaced(p, taken);
+const canHover = (air: Pick<Air, 'page' | 'room'>, p: Point, taken: readonly Point[]) => fits(air, around(p, SPOT), linesOf(air.page)) && spaced(p, taken);
 
 // The curves tried for a flight from a to b: arched over, dipped under,
 // straight, and arched higher; each leaves and arrives along its bow.
@@ -173,7 +173,7 @@ function flightTo(page: PageMap, to: Point, curve: Curve, now: number, speed: nu
 }
 
 // The first clear flight to any of these spots, tried in order.
-export function flyTo(air: Air, from: Point, spots: readonly Point[], taken: readonly Point[], now: number, speed: number): { spot: Anchored; flight: Flight } | null {
+function flyTo(air: Air, from: Point, spots: readonly Point[], taken: readonly Point[], now: number, speed: number): { spot: Anchored; flight: Flight } | null {
   for (const to of spots) {
     if (!canHover(air, to, taken)) continue;
     const curve = routes(from, to).find((r) => clearRoute(air, r, taken));
@@ -219,7 +219,7 @@ function flit(c: Cupid, air: Air, here: Point, now: number, rand: Rand, taken: r
 // moving cursor lowers again. Shooting counts the loose after it too.
 export const bowRaised = (c: Pick<Cupid, 'mode'>) => c.mode === 'turn' || c.mode === 'draw' || c.mode === 'aim';
 export const shooting = (c: Pick<Cupid, 'mode'>) => bowRaised(c) || c.mode === 'loose';
-export const flying = (c: Pick<Cupid, 'flight'>) => c.flight !== null;
+const flying = (c: Pick<Cupid, 'flight'>) => c.flight !== null;
 
 // One step of a cupid's own: its wings, a flight flown on, a flit when it is
 // restless (unless another is flying or shooting), the timed shooting modes
@@ -253,7 +253,7 @@ export function stepCupid(c: Cupid, air: Air, now: number, dt: number, rand: Ran
 // now, reachable without passing another cupid; with none, it flutters in
 // place. A drawn bow is lowered either way.
 export const DASH = 900;
-export const DASH_REACH = 70;
+const DASH_REACH = 70;
 export function dodge(c: Cupid, air: Air, now: number, from: Point, to: Point, others: readonly Cupid[]): Cupid {
   const here = where(c, air.page, now);
   if (!here || now < c.calm) return c;
@@ -269,7 +269,7 @@ export function dodge(c: Cupid, air: Air, now: number, from: Point, to: Point, o
 // Where cupids may first hover, or settle afresh: the best spot in view
 // clear of the others, spread out (the farthest from them, up to 300px),
 // and near a ledge below, where its arrows can land.
-export function bestSpot(air: Air, taken: readonly Point[], rand: Rand, spacing = SPACING): Point | null {
+function bestSpot(air: Air, taken: readonly Point[], rand: Rand, spacing = SPACING): Point | null {
   const ledgeGap = (p: Point) => Math.min(400, ...[...air.page.floors.values()].filter((f) => f.left <= p.x && p.x <= f.right && f.y > p.y).map((f) => f.y - p.y));
   const score = (p: Point) => Math.min(300, ...taken.map((q) => apart(p, q))) - 0.5 * Math.abs(ledgeGap(p) - 50) + 20 * rand();
   return air.spots.filter((p) => spaced(p, taken, spacing) && canHover(air, p, taken)).reduce<Point | null>((best, p) => (best && score(best) >= score(p) ? best : p), null);

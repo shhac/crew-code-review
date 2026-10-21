@@ -30,7 +30,7 @@ const FRAME = { width: 24, height: 16, anchor: ANCHOR, scale: SCALE };
 export const REFERENCE = { x: 1, y: 1, width: 21.67, height: 13.67 };
 // The golden collar at the front of her thorax, where the lab lines each key
 // pose up with the rig (export.py's printed collar).
-export const COLLAR = { x: 14.73, y: 5.96 };
+const COLLAR = { x: 14.73, y: 5.96 };
 const ABDOMEN = { x: 1, y: 4.45, width: 8.42, height: 6.67 };
 const THORAX = { x: 8.72, y: 2.9, width: 8, height: 6.58 };
 const HEAD = { x: 14.78, y: 4.33, width: 4.83, height: 5.83 };
@@ -98,7 +98,7 @@ const KNOCK_SETTLE = 0.3;
 // drawn this much further back, so the head meets the wall, not the blur.
 const KNOCKED_STROKE = -40;
 // Nose up hovering, nearly level at her cruising speed (page px/s).
-export const PITCHING: Pitching = { hover: -38, cruise: -8, speed: 70 };
+const PITCHING: Pitching = { hover: -38, cruise: -8, speed: 70 };
 
 // Walking on a flower: a slow tetrapod crawl (four feet down, diagonal
 // pairs stepping in turn), and a quicker tripod scurry.
@@ -123,7 +123,7 @@ export type RigBee = {
   // and settles.
   knocked?: number;
 };
-export type BeeLook = { now: number; still: boolean };
+type BeeLook = { now: number; still: boolean };
 
 type Hold = { pitch: number; bob: number; abdomen: number; head: number; legs: (hips: readonly Point[]) => Limb[] };
 

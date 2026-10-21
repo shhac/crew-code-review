@@ -19,7 +19,7 @@ const LEFT = 500;
 // Where an egg is drawn on the page: its bottom centre (x, y); how far it is
 // sunk below the ledge's line (drawn clipped at the line); its tilt; and a
 // glint's strength, 0 to 1.
-export type EggView = { x: number; y: number; ledge: number; sunk: number; tilt: number; glint: number };
+type EggView = { x: number; y: number; ledge: number; sunk: number; tilt: number; glint: number };
 
 const smooth = (t: number) => {
   const c = Math.max(0, Math.min(1, t));

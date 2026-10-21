@@ -7,7 +7,7 @@ export type Scene = PageMap;
 type Action = { from: Point; to: Point; target: Perch; start: number; duration: number; rise: number; kind: 'hop' | 'flight'; route?: FlightCurve[] };
 export type Bird = { perch: Perch | null; action: Action | null; restUntil: number; flightAt: number; cooldown: number; nearAt: number; alert: boolean; escapeHops: number };
 export const position = (p: Perch, scene: Scene): Point => ({ x: scene.floors.get(p.floor)!.left + p.x, y: scene.floors.get(p.floor)!.y });
-export function perchCandidates(s: Scene): Perch[] {
+function perchCandidates(s: Scene): Perch[] {
   const candidates: Perch[] = [];
   for (const [floor, f] of s.floors) {
     if (![f.left, f.right].every(Number.isFinite)) continue;

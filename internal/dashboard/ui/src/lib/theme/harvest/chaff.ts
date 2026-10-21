@@ -20,7 +20,7 @@ const GRAIN_SLOT = 24;
 export const MAX_STALKS = 220;
 export const MAX_GRAINS = 160;
 // A wheat grain's size, lying on its side.
-export const GRAIN = { length: 1.6, depth: 1.1 };
+const GRAIN = { length: 1.6, depth: 1.1 };
 // A peck takes the grain nearest the bill within BITE; an eaten grain comes
 // back over FADE once no crow has been within QUIET_REACH of it for QUIET.
 export const BITE = 6;
@@ -31,7 +31,7 @@ export const FADE = 2000;
 // A stalk of straw lying from x along its tilt (degrees, up to the right
 // when positive), its width, which of the two straw tones it is, and where
 // along it a darker node sits (a fraction of its length), if anywhere.
-export type Stalk = { x: number; length: number; tilt: number; width: number; tone: 0 | 1; node: number | null };
+type Stalk = { x: number; length: number; tilt: number; width: number; tone: 0 | 1; node: number | null };
 // A grain at x, turned by tilt. eaten: when it was eaten (null while it
 // lies there); quiet: since when no crow has been near it; back: when it
 // came back, from which it fades in.

@@ -90,7 +90,7 @@ const LEGS: ArtLeg[] = [
 // one after the other, the near first, and it gathers its hind feet under it
 // for the next. Each hop is one cycle; the rabbit rests between hops where
 // the cycle starts, all four feet down.
-export const HOP: Gait = {
+const HOP: Gait = {
   stride: 6.4, lift: 1.6, stance: 0.45,
   beats: beatsFor(LEGS, { hind: { near: 0, far: 0 }, fore: { near: 0.6, far: 0.66 } }),
 };

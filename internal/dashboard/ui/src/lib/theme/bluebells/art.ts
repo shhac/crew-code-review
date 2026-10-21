@@ -4,7 +4,7 @@
 // perches on top of a bell.
 
 export type Bell = { x: number; y: number };
-export type Art = { width: number; height: number; bells: readonly Bell[] };
+type Art = { width: number; height: number; bells: readonly Bell[] };
 
 const bell = (x: number, y: number): Bell => ({ x, y });
 

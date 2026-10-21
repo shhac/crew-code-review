@@ -14,9 +14,9 @@ import { eitherWay, FOOTPRINTS } from './footprints';
 // fails is not flown. Gaps narrower than the footprint are closed by
 // construction, as a bumblebee judges a gap against its own wingspan.
 
-export const CELL = 12;
+const CELL = 12;
 // The bumbling's bound across the route (bee.ts), and a margin.
-export const WOBBLE = 3.5;
+const WOBBLE = 3.5;
 const SPARE = 2;
 // The grid reaches this far past the window's top and bottom, so a bee can
 // fly in from beyond it or out.
@@ -75,7 +75,7 @@ const grids = new WeakMap<BeeAir, Grid>();
 // footprint is inside the rooms, then every cell whose grown footprint would
 // meet an obstacle closed, obstacle by obstacle, which is far quicker than
 // testing each cell against them.
-export function gridOf(air: BeeAir): Grid {
+function gridOf(air: BeeAir): Grid {
   const held = grids.get(air);
   if (held) return held;
   const near = air.rooms.flatMap((r) => {
@@ -218,7 +218,7 @@ class Heap {
 
 // Smooth curves through these points (Catmull-Rom, as cubics), leaving the
 // first along `out` when given and arriving at the last along `into`.
-export function smoothThrough(pts: readonly Point[], out?: Point, into?: Point): Curve[] {
+function smoothThrough(pts: readonly Point[], out?: Point, into?: Point): Curve[] {
   const at = (i: number) => pts[Math.max(0, Math.min(pts.length - 1, i))];
   const tangent = (i: number): Point => {
     if (i === 0 && out) return out;
@@ -237,7 +237,7 @@ export function smoothThrough(pts: readonly Point[], out?: Point, into?: Point):
 // cell's centre. Each curve stays in the triangle of those three points,
 // which the open cells' grown boxes hold, so this way is clear wherever the
 // cells are (only its two ends, off the grid, need checking).
-export function cornered(pts: readonly Point[]): Curve[] {
+function cornered(pts: readonly Point[]): Curve[] {
   const mid = (i: number) => ({ x: (pts[i].x + pts[i + 1].x) / 2, y: (pts[i].y + pts[i + 1].y) / 2 });
   const line = (a: Point, b: Point): Curve => ({ from: a, c1: { x: a.x + (b.x - a.x) / 3, y: a.y + (b.y - a.y) / 3 }, c2: { x: a.x + (2 * (b.x - a.x)) / 3, y: a.y + (2 * (b.y - a.y)) / 3 }, to: b });
   if (pts.length < 3) return pts.length === 2 ? [line(pts[0], pts[1])] : [];

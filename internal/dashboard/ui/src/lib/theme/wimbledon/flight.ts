@@ -1,7 +1,7 @@
 import { around, fitsAir, pastExit, sweptBoxes, type Airspace } from '../air';
 import { cubic, reversedCurves, samples, straight, type Curve } from '../curves';
 import type { Box, Ledge, Reach } from '../floors';
-import { apart, clamp01, mix, smooth } from '../math';
+import { apart, clamp01, mix } from '../math';
 import type { Point } from '../pointer';
 
 // The pigeons' flights: away from a ledge and out of the window, and back
@@ -36,8 +36,8 @@ export type Envelopes = { takeoff: Reach; fly: Reach; land: Reach };
 // speeding up evenly to SPEED.
 export const SPEED = 480;
 export const TAKEOFF = 300;
-export const PREP = 110;
-export const CLIMB = 8;
+const PREP = 110;
+const CLIMB = 8;
 export const LAND = 350;
 // Slowing evenly from SPEED to nothing over LAND covers this far, and
 // speeding up evenly from the feet leaving as far.
@@ -62,7 +62,7 @@ function exitX(f: Ledge, way: 'left' | 'right', sky: Pick<Airspace, 'exits'>, re
 }
 
 // Out along the band: a climb to h above the ledge, then level to the exit.
-export function bandRoute(floor: number, f: Ledge, x: number, way: 'left' | 'right', h: number, sky: Pick<Airspace, 'exits'>, reach: Reach, run = RISE_RUN): Route | null {
+function bandRoute(floor: number, f: Ledge, x: number, way: 'left' | 'right', h: number, sky: Pick<Airspace, 'exits'>, reach: Reach, run = RISE_RUN): Route | null {
   const end = exitX(f, way, sky, reach);
   if (end === null) return null;
   const dir = way === 'right' ? 1 : -1;
@@ -73,7 +73,7 @@ export function bandRoute(floor: number, f: Ledge, x: number, way: 'left' | 'rig
 
 // Up and out of the top of the window, ahead in dir: a climb that steepens
 // and leaves the window above its top edge.
-export function topRoute(floor: number, f: Ledge, x: number, dir: 1 | -1, reach: Reach): Route {
+function topRoute(floor: number, f: Ledge, x: number, dir: 1 | -1, reach: Reach): Route {
   const out = -(f.y + reach.down + 1);
   const rise: Curve = { from: { x, y: 0 }, c1: { x: x + dir * 6, y: -CLIMB * 2 }, c2: { x: x + dir * TOP_RUN * 0.5, y: out * 0.35 }, to: { x: x + dir * TOP_RUN, y: out } };
   return { floor, way: 'top', curves: [rise] };
@@ -106,7 +106,7 @@ const onPage = (f: Ledge, p: Point): Point => ({ x: f.left + p.x, y: f.y + p.y }
 // The envelope a flight has s along a track total long: from the clap at
 // lift-off into the flap over its takeoff, and from the flap into the
 // braking pose over its landing, as the wings swing.
-export function envelopeAt(env: Envelopes, s: number, total: number, lands: boolean): Reach {
+function envelopeAt(env: Envelopes, s: number, total: number, lands: boolean): Reach {
   if (!lands && s < LIFT_RUN) return blend(env.takeoff, env.fly, s / LIFT_RUN);
   return lands && total - s < LAND_RUN ? blend(env.land, env.fly, ((total - s) / LAND_RUN) ** 2.5) : env.fly;
 }
@@ -119,7 +119,7 @@ export function routeClear(route: Route, f: Ledge, env: Envelopes, sky: Airspace
   return sweptBoxes(routeBoxes(route, f, env, lands), fitsAir(sky));
 }
 // The envelope's box at each point of a route, on the page.
-export function routeBoxes(route: Route, f: Ledge, env: Envelopes, lands: boolean): Box[] {
+function routeBoxes(route: Route, f: Ledge, env: Envelopes, lands: boolean): Box[] {
   const track = trackOf(route);
   const total = lengthOfTrack(track);
   return track.map((q) => around(onPage(f, q.at), reachAt(env, q.at, q.s, total, lands)));
@@ -177,7 +177,7 @@ export function routeIn(floor: number, f: Ledge, x: number, way: Way, env: Envel
   return back ?? null;
 }
 
-export const reversed = (r: Route): Route => ({ ...r, curves: reversedCurves(r.curves) });
+const reversed = (r: Route): Route => ({ ...r, curves: reversedCurves(r.curves) });
 
 // Where a flight is at `ms` after it began: its feet's point (ledge-local),
 // its pose, how far along it is, and whether it is over. Out: a TAKEOFF ms
@@ -186,7 +186,7 @@ export const reversed = (r: Route): Route => ({ ...r, curves: reversedCurves(r.c
 export type Phase = 'takeoff' | 'fly' | 'land';
 // `t` is how far through its take-off or landing it is (0 to 1), and `ms`
 // how long it has been flying.
-export type InFlight = { at: Point; pose: Phase; s: number; done: boolean; t: number; ms: number };
+type InFlight = { at: Point; pose: Phase; s: number; done: boolean; t: number; ms: number };
 export function flying(track: Track, ms: number, lands: boolean): InFlight {
   const total = lengthOfTrack(track);
   if (!lands) {
@@ -208,4 +208,3 @@ export function durationOf(track: Track, lands: boolean): number {
 }
 // The wings fold over this long once it has landed.
 export const FOLD = 300;
-export const folded = (since: number) => smooth(since / FOLD);

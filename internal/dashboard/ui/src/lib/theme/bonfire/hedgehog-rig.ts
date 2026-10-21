@@ -24,7 +24,7 @@ import legArt from './hedgehog-leg.webp';
 // curled up.
 
 // Page pixels per drawing unit, for every pose.
-export const SCALE = 1.52;
+const SCALE = 1.52;
 const GROUND = 17.43;
 const ANCHOR = { x: 14.9, y: GROUND };
 const FRAME: Frame = { width: 28, height: 17.6, anchor: ANCHOR, scale: SCALE };

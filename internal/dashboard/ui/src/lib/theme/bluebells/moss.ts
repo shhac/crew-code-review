@@ -43,8 +43,8 @@ export const MAX_CUSHIONS = 6;
 
 // A clump of bluebells: which of the three it is, where it stands (its
 // middle, ledge-local), and whether it is drawn mirrored.
-export type Clump = { key: string; x: number; art: number; flip: boolean };
-export type Cushion = { key: string; x: number; art: number; flip: boolean };
+type Clump = { key: string; x: number; art: number; flip: boolean };
+type Cushion = { key: string; x: number; art: number; flip: boolean };
 // One ledge's wood: the moss as one outlined path and its lighter tops,
 // and what grows on it.
 export type Moss = { d: string; tops: string; clumps: Clump[]; cushions: Cushion[] };

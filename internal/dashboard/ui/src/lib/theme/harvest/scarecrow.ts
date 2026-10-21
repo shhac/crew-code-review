@@ -64,7 +64,7 @@ export function stir(s: Scarecrow, stroke: Segment, box: Box): { scarecrow: Scar
 
 // The arms' stir on their own, degrees, each arm on its own breath (4 to 6s).
 const breath = (now: number, period: number, phase: number) => STIR * Math.sin((2 * Math.PI * now) / period + phase);
-export const ARMS = { left: { period: 4700, phase: 0 }, right: { period: 5600, phase: 1.9 } } as const;
+const ARMS = { left: { period: 4700, phase: 0 }, right: { period: 5600, phase: 1.9 } } as const;
 
 // How far an arm is raised above horizontal at now, degrees: its stir, and
 // over an episode the flap, eased in and out of it so it never jumps.

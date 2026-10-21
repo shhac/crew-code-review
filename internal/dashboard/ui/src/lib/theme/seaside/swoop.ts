@@ -43,7 +43,7 @@ const AIMED = 35;
 const DIVES = [{ back: 100, up: 65 }, { back: 70, up: 45 }, { back: 135, up: 88 }, { back: 40, up: 80 }];
 const PULLS = [{ on: 80, up: 40 }, { on: 90, up: 30 }];
 // A walk to a take-off spot is at most this long, tried in these steps.
-export const MAX_WALK = 60;
+const MAX_WALK = 60;
 const WALK_STEP = 15;
 // Taking off or landing needs this much ledge clear to the height of its
 // wings raised to beat (or to brake), and the gap air keeps round them.
@@ -71,7 +71,7 @@ function after(c: Curve, t: number): Curve {
 // against a page where that one card's box starts DIP px lower.
 const DIP = Math.max(AIR.takeoff.down, AIR.flare.down, AIR.flap.down) + GAP + 2;
 const ownCard = (f: Ledge, o: Obstacle) => !!o.block && Math.abs(o.top - f.y) <= 1 && o.left <= f.left + 1 && o.right >= f.right - 1;
-export function touching(air: Pick<Air, 'page' | 'room'>, f: Ledge): Pick<Air, 'page' | 'room'> {
+function touching(air: Pick<Air, 'page' | 'room'>, f: Ledge): Pick<Air, 'page' | 'room'> {
   const obstacles = air.page.obstacles.map((o) => (ownCard(f, o) ? { ...o, top: o.top + DIP } : o));
   return { ...air, page: { ...air.page, obstacles } };
 }
@@ -81,7 +81,7 @@ export function touching(air: Pick<Air, 'page' | 'room'>, f: Ledge): Pick<Air, '
 // were found clear by, for the debug overlay.
 export const swept = (air: Pick<Air, 'page' | 'room'>, legs: readonly Pick<Leg, 'pose' | 'curve'>[], also: readonly Box[] = []) =>
   sweptPath(legs.map((l) => ({ curve: l.curve, reach: AIR[l.pose] })), fitsAir(air, also));
-export const legClear = (air: Pick<Air, 'page' | 'room'>, l: Pick<Leg, 'pose' | 'curve'>, also: readonly Box[] = []): boolean => swept(air, [l], also).clear;
+const legClear = (air: Pick<Air, 'page' | 'room'>, l: Pick<Leg, 'pose' | 'curve'>, also: readonly Box[] = []): boolean => swept(air, [l], also).clear;
 
 // Every pass point for a cursor, nearest first: the swoop's box wholly in
 // air and never over the cursor, 12 to 160px from it, on an 8px grid.

@@ -25,7 +25,7 @@ export const MAX_GLINTS = 40;
 const ICE: Rgb = [232, 246, 255];
 const TINT = 0.35;
 
-export type Glint = { key: string; x: number; size: number; phase: number; period: number; at: number };
+type Glint = { key: string; x: number; size: number; phase: number; period: number; at: number };
 // One ledge's frost: a single stroked path for the rim and its crystals, and
 // its glints.
 export type Rime = { d: string; glints: Glint[] };

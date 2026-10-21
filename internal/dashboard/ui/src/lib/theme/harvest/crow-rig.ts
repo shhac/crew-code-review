@@ -115,8 +115,8 @@ const NEAR_SHOULDER = { x: 25.2, y: 10.6 };
 const FAR_SHOULDER = { x: 26.6, y: 10 };
 // A crow's stroke: full strokes 50 degrees above level to 40 below; skim
 // strokes 15 either way (the note), the downstroke 55% of the beat.
-export const FLAP: Flap = { top: 50, bottom: -40, down: 0.55, fold: 70, sweep: 20 };
-export const SKIM: Flap = { top: 15, bottom: -15, down: 0.55, fold: 30, sweep: 10 };
+const FLAP: Flap = { top: 50, bottom: -40, down: 0.55, fold: 70, sweep: 20 };
+const SKIM: Flap = { top: 15, bottom: -15, down: 0.55, fold: 30, sweep: 10 };
 // A stroke between a skim's and a full one.
 const strokes = (depth: number): Flap => {
   const mixed = (k: keyof Flap) => SKIM[k] + (FLAP[k] - SKIM[k]) * depth;
@@ -134,7 +134,7 @@ const CROW_AIR: AirLegs = {
 };
 
 export type CrowPose = 'stand' | 'walk' | 'sidle' | 'peck' | 'alert' | 'takeoff' | 'flap' | 'skim' | 'glide' | 'flare' | 'settle';
-export const GROUND_POSES: readonly CrowPose[] = ['stand', 'walk', 'sidle', 'peck', 'alert'];
+const GROUND_POSES: readonly CrowPose[] = ['stand', 'walk', 'sidle', 'peck', 'alert'];
 // What the drawing reads of a crow: its pose, how far it has walked, its
 // wingbeats so far (`beat`), and how far through a peck, a flare or a
 // settle it is (`t`, 0 to 1). `depth` sets its strokes from a skim's (0)
@@ -142,7 +142,7 @@ export const GROUND_POSES: readonly CrowPose[] = ['stand', 'walk', 'sidle', 'pec
 // body with the route's slope (degrees, nose up).
 export type RigCrow = { pose: CrowPose; walked: number; seed: number; beat: number; t: number; depth?: number; climb?: number };
 // gaze: how far its head is turned toward a cursor (degrees, nose down).
-export type CrowLook = { now: number; still: boolean; gaze: number };
+type CrowLook = { now: number; still: boolean; gaze: number };
 
 // The head, turned as `head` says, its third eyelid blinking.
 const headLayer = (crow: RigCrow, look: CrowLook, head: Turn): Layer => ({

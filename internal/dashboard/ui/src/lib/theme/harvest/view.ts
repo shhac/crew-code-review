@@ -13,7 +13,7 @@ import { flightAt, type Piece } from './flight';
 
 // Each crow beats its wings at its own rate, 3.6 to 4 a second (the note,
 // after Pennycuick's hooded crow at 3.84).
-export const beatRate = (id: number) => 3.6 + 0.4 * hash(id * 13 + 5);
+const beatRate = (id: number) => 3.6 + 0.4 * hash(id * 13 + 5);
 // Taking off, the kit's take-off pose runs this many beats before the
 // plain flap.
 const TAKEOFF_BEATS = 2;
@@ -23,7 +23,7 @@ const FLARE = 600;
 // How fast a crow's strokes deepen or shallow: over 0.25s (the note).
 const DEPTH_EASE = 250;
 
-export type CrowView = { at: Point; dir: 1 | -1; rig: RigCrow; flying: boolean };
+type CrowView = { at: Point; dir: 1 | -1; rig: RigCrow; flying: boolean };
 // What the layer remembers of a crow: how far it has walked (its stride
 // follows the distance) and how deep its strokes are, eased.
 export type Memory = { walked: number; depth: number };

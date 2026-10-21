@@ -21,7 +21,7 @@ import tailArt from './hawk-tail.webp';
 // size it should be beside them: export.py prints where each part sat.
 
 // The pigeon's page scale: one for both birds.
-export const SCALE = 1.4;
+const SCALE = 1.4;
 
 const BELLY = 8.59;
 const ANCHOR = { x: 17, y: BELLY };
@@ -48,15 +48,15 @@ const NEAR_SHOULDER = { x: 23.4, y: 3.4 };
 const FAR_SHOULDER = { x: 24.2, y: 3 };
 // Gliding low and fast over the ground, its wings held out just above level,
 // a little swept, rocking a degree as the air moves them.
-export const GLIDE: WingPose = { lift: 14, sweep: 25, fold: 20 };
+const GLIDE: WingPose = { lift: 14, sweep: 25, fold: 20 };
 // Its wingbeat: about 4.5 a second (a motion-capture study), the stroke
 // broad and a little shallower than a pigeon's.
-export const FLAP: Flap = { top: 45, bottom: -40, down: 0.55, fold: 60, sweep: 20 };
+const FLAP: Flap = { top: 45, bottom: -40, down: 0.55, fold: 60, sweep: 20 };
 export const BEATS = 4.5;
 
 export type HawkPose = 'glide' | 'flap';
 export type RigHawk = { pose: HawkPose; seed: number; beat: number; gaze: number };
-export type HawkLook = { now: number; still: boolean };
+type HawkLook = { now: number; still: boolean };
 
 export function hawkRig(hawk: RigHawk, look: HawkLook): RigPose {
   const wings = hawk.pose === 'flap' && !look.still ? flapping(hawk.beat, FLAP) : gliding(GLIDE, look.still ? 0 : look.now, look.still ? 0 : 1, 1600);
@@ -82,7 +82,7 @@ export function hawkRig(hawk: RigHawk, look: HawkLook): RigPose {
 
 // The box each pose's drawing stays inside through its whole motion (page
 // px, from its belly line; `down` below it), as hawk-rig.test.ts measures.
-export type Footprint = { width: number; height: number; down?: number };
+type Footprint = { width: number; height: number; down?: number };
 export const FOOTPRINTS: Record<HawkPose, Footprint> = {
   glide: { width: 46, height: 16.5, down: 0.5 },
   flap: { width: 46, height: 33.5, down: 16 },

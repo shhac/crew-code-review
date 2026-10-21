@@ -21,7 +21,7 @@ import {
 // Pigeons are placed this far apart, centre to centre, on spots they could
 // fly away from again, and land this far from the others too.
 export const APART = 70;
-export const PLACED: Walker = { ...PIGEON, spacing: APART };
+const PLACED: Walker = { ...PIGEON, spacing: APART };
 // At most one flush for the cursor in this long; the others within LOOK of
 // one flushing look up for a moment.
 export const FLUSH_EVERY = 8000;
@@ -44,7 +44,7 @@ export type Flock = { target: number; pigeons: Pigeon[]; lastFlush: number; hawk
 // along, so a bird standing there would be in their way. Placed afresh, ledges
 // with no bird come first, in no order; coming back, nearest `near` first,
 // on any ledge.
-export function standingSpots(scene: PageMap, sky: Airspace, taken: readonly Claim[], near: Point | null, rand: Rand, keep: (c: { floor: number; x: number }) => boolean = () => true): { floor: number; x: number }[] {
+function standingSpots(scene: PageMap, sky: Airspace, taken: readonly Claim[], near: Point | null, rand: Rand, keep: (c: { floor: number; x: number }) => boolean = () => true): { floor: number; x: number }[] {
   const all = spots(scene, [], PLACED, 2 * PLACED.half).flatMap((s) => {
     const count = Math.max(1, Math.floor((s.room.hi - s.room.lo) / SAMPLE) + 1);
     return Array.from({ length: count }, (_, i) => ({ floor: s.floor, x: count === 1 ? (s.room.lo + s.room.hi) / 2 : s.room.lo + ((s.room.hi - s.room.lo) * i) / (count - 1) }));
@@ -74,14 +74,14 @@ const distanceTo = (scene: PageMap, c: { floor: number; x: number }, p: Point) =
 };
 
 // A pigeon placed on a spot it could fly away from, standing.
-export function placePigeon(scene: PageMap, sky: Airspace, others: readonly Pigeon[], self: Self, now: number, rand: Rand, extra: readonly Claim[] = []): Pigeon | null {
+function placePigeon(scene: PageMap, sky: Airspace, others: readonly Pigeon[], self: Self, now: number, rand: Rand, extra: readonly Claim[] = []): Pigeon | null {
   const spot = standingSpots(scene, sky, [...landingClaims(others), ...extra], null, rand)[0];
   return spot ? standing(self, spot.floor, spot.x, rand() < 0.5 ? -1 : 1, now, rand) : null;
 }
 
 // Where the others stand, are heading and will land, and the stretches the
 // ones in the air are passing low over.
-export const landingClaims = (others: readonly Pigeon[]): Claim[] => [
+const landingClaims = (others: readonly Pigeon[]): Claim[] => [
   ...claimsOf(others),
   ...others.filter((o) => o.flight?.lands).map((o) => ({ floor: o.floor, lo: o.x, hi: o.x })),
   ...others.flatMap((o) => o.flight?.over ?? []),

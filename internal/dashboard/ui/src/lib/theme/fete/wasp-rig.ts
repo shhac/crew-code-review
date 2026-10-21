@@ -59,7 +59,7 @@ const INK = '#111111';
 // fore legs reaching forward with their knees forward, the hind legs
 // sprawled back with their knees back, the far side's shorter and tucked a
 // little behind the near so each shows past the other.
-export const LEGS: readonly InsectLeg[] = [
+const LEGS: readonly InsectLeg[] = [
   { pair: 'fore', far: false, hip: { x: 19.6, y: 7.4 }, femur: 3, tibia: 3.6, tarsus: 2, reach: 5.9, bend: 1, lean: 40, curl: 25 },
   { pair: 'fore', far: true, hip: { x: 17, y: 8 }, femur: 2.8, tibia: 3.2, tarsus: 1.8, reach: 3.2, bend: 1, lean: 30, curl: 25 },
   { pair: 'mid', far: false, hip: { x: 14, y: 8 }, femur: 2.8, tibia: 3.4, tarsus: 1.9, reach: -2.4, bend: -1, lean: -25, curl: 20 },
@@ -87,7 +87,7 @@ const FAR_BEAT: WingBeat = { ...BEAT, front: BEAT.front + FAR_TILT, back: BEAT.b
 // Flying fast, the stroke sweeps further back, over her gaster.
 const SWEPT = 70;
 // About 35 degrees nose up hovering, 10 at her cruising speed (page px/s).
-export const PITCHING: Pitching = { hover: -30, cruise: -10, speed: 160 };
+const PITCHING: Pitching = { hover: -30, cruise: -10, speed: 160 };
 export const CRUISE = 200;
 
 // Shuffling on the cake: a slow tripod.
@@ -106,7 +106,7 @@ export type RigWasp = {
   // Her wings, 0 folded to 1 beating: lifting off, the blur fades in.
   wings: number;
 };
-export type WaspLook = { now: number; still: boolean };
+type WaspLook = { now: number; still: boolean };
 
 type Hold = { swept: number; pitch: number; bob: number; gaster: number; head: number; legs: (hips: readonly Point[]) => Limb[]; taps: [number, number] };
 

@@ -16,7 +16,7 @@ import { FOOTPRINTS } from './footprints';
 // only one may draw at a time and the page has one cursor to aim near.
 
 // An arrow in the air, held relative to the ledge it will land in.
-export type Flying = { key: string; by: number; floor: number; arc: Arc; start: number; duration: number; seed: number };
+type Flying = { key: string; by: number; floor: number; arc: Arc; start: number; duration: number; seed: number };
 export type Cupids = {
   // How many to keep: two, or three where the page had room when they were
   // placed.

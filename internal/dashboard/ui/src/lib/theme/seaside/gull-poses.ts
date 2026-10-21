@@ -1,6 +1,6 @@
 import { reachOf, type Reach } from '../floors';
 import type { Walker } from '../ledges';
-import { FOOTPRINTS, type GullPose } from './gull-rig';
+import { FOOTPRINTS } from './gull-rig';
 
 // The space each of the gull's poses takes on the page, from gull-rig.ts's
 // footprints (its test measures them over every motion). A gull is placed
@@ -8,11 +8,9 @@ import { FOOTPRINTS, type GullPose } from './gull-rig';
 // ledge: a route is the anchor's path, and each footprint stands on it,
 // `down` reaching below.
 
-export type GroundPose = 'stand' | 'strut' | 'eye' | 'call';
 // The poses a route is flown in: the run and lift-off, flapping flight, the
 // dive and the flare.
 export type AirPose = 'takeoff' | 'flap' | 'stoop' | 'flare';
-export type Pose = Extract<GullPose, GroundPose | AirPose | 'settle'>;
 
 // How far each pose flown in reaches from the anchor.
 export const AIR: Record<AirPose, Reach> = {

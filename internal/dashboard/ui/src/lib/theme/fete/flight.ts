@@ -37,7 +37,7 @@ export function sweptFrom(f: Flight, reach: Reach, now: number): Box[] {
   return samples((u) => along(f.route, done + u * (1 - done)), 3).map((s) => around(s.p, reach));
 }
 
-export const routeLength = (route: Route) => chainOf(route).length;
+const routeLength = (route: Route) => chainOf(route).length;
 
 // The point p of the way along a route, by distance.
 export function along(route: Route, p: number): Point {

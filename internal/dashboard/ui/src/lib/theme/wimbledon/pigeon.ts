@@ -13,8 +13,8 @@ import { durationOf, flying, FOLD, LAND, trackOf, type Envelopes, type Phase, ty
 // (hawk.ts) when they all go. design-docs/wimbledon/README.md has the
 // mode table.
 
-export type Mode = 'stand' | 'walk' | 'peck' | 'shy' | 'alert' | 'takeoff' | 'fly' | 'away' | 'land';
-export type Pose = 'stand' | 'walk' | 'peck' | 'alert' | 'settle' | Phase;
+type Mode = 'stand' | 'walk' | 'peck' | 'shy' | 'alert' | 'takeoff' | 'fly' | 'away' | 'land';
+type Pose = 'stand' | 'walk' | 'peck' | 'alert' | 'settle' | Phase;
 
 // The space each grounded pose takes, anchored at its feet on the ledge,
 // and each envelope in the air, anchored at its feet under its hip: the
@@ -28,7 +28,7 @@ export const ENVELOPES: Envelopes = { takeoff: reachOf(FOOTPRINTS.takeoff), fly:
 // anywhere a pigeon stands, counting the 6px reach into the empty bottom
 // edge of a card or rule above; its whole walking body keeps on the run,
 // 6px clear of another's.
-export const REACH = 6;
+const REACH = 6;
 export const HALF = Math.max(...Object.values(POSES).map((p) => p.width)) / 2;
 export const PIGEON: Walker = { clear: POSES.alert.height, reach: REACH, half: HALF, spacing: 2 * HALF + 6 };
 
@@ -37,10 +37,10 @@ export const STAND = [1500, 5000] as const;
 export const WALK_SPEED = 18;
 export const WALK_RUN = [30, 120] as const;
 export const PECK = 450;
-export const PECKS = [2, 5] as const;
+const PECKS = [2, 5] as const;
 export const SHY_SPEED = 35;
-export const SHY_RUN = [40, 80] as const;
-export const ALERT = [1000, 1500] as const;
+const SHY_RUN = [40, 80] as const;
+const ALERT = [1000, 1500] as const;
 // A cursor moving within NEAR makes a pigeon shy away; one passing within
 // FLUSH_REACH faster than FLUSH_SPEED px/s makes it fly.
 export const NEAR = 70;
@@ -50,7 +50,7 @@ export const FLUSH_SPEED = 1500;
 // Where a flight is: its route, its points, when it began, whether it ends
 // on a ledge (coming in) or past an exit (going out), and the stretches of
 // ledge it passes low over, which the others keep out of while it flies.
-export type Flight = { route: Route; track: Track; start: number; lands: boolean; over: readonly Stretch[] };
+type Flight = { route: Route; track: Track; start: number; lands: boolean; over: readonly Stretch[] };
 
 export type Pigeon = {
   id: number;
@@ -92,7 +92,7 @@ export const flyingNow = (p: Pigeon) => p.mode === 'takeoff' || p.mode === 'fly'
 export const claimsOf = (others: readonly Pigeon[]): Claim[] => others.filter(grounded).map((o) => ({ floor: o.floor, lo: Math.min(o.x, o.target), hi: Math.max(o.x, o.target) }));
 
 // The stretch a pigeon may walk: its run, short of its neighbours.
-export function stretchOf(p: Pigeon, f: Ledge, scene: PageMap, taken: readonly Claim[]): Run | null {
+function stretchOf(p: Pigeon, f: Ledge, scene: PageMap, taken: readonly Claim[]): Run | null {
   const run = runAt(f, scene, PIGEON, p.x);
   if (!run) return null;
   return stretchAmong(bodyOf(run, HALF), taken, p.floor, p.x, PIGEON.spacing);
@@ -117,7 +117,7 @@ function walk(p: Pigeon, f: Ledge, scene: PageMap, taken: readonly Claim[], now:
 
 // Shying away from a point (page x) along its stretch, briskly: 40 to 80px
 // that way, as far as there is room; alert where there is none.
-export function shy(p: Pigeon, f: Ledge, scene: PageMap, taken: readonly Claim[], from: number, now: number, rand: Rand): Pigeon {
+function shy(p: Pigeon, f: Ledge, scene: PageMap, taken: readonly Claim[], from: number, now: number, rand: Rand): Pigeon {
   const room = stretchOf(p, f, scene, taken);
   const away = sign(f.left + p.x - from);
   const far = room ? (away < 0 ? p.x - room.lo : room.hi - p.x) : 0;
@@ -187,7 +187,7 @@ export const flightEnds = (fl: Flight) => fl.start + durationOf(fl.track, fl.lan
 
 // Where a pigeon is drawn: its feet's page point, facing, pose; null while
 // away or when its ledge is gone.
-export type View = { pigeon: Pigeon; x: number; y: number; dir: 1 | -1; pose: Pose };
+type View = { pigeon: Pigeon; x: number; y: number; dir: 1 | -1; pose: Pose };
 export function viewOf(p: Pigeon, scene: PageMap, now: number): View | null {
   if (p.mode === 'away') return null;
   const floor = p.flight ? p.flight.route.floor : p.floor;
@@ -226,14 +226,6 @@ export function rigPigeon(view: View, now: number): RigPigeon {
   if (view.pose === 'settle') return { ...base, t: clamp01((now - p.landed) / FOLD) };
   if (view.pose === 'peck') return { ...base, t: (((now - (p.until - p.pecks * PECK)) % PECK) + PECK) % PECK / PECK };
   return base;
-}
-
-// Whether a pigeon on the ground can stay where it is: its body on a clear
-// run, clear of the others.
-export function holds(p: Pigeon, scene: PageMap, taken: readonly Claim[]): boolean {
-  const f = scene.floors.get(p.floor);
-  const run = f && runAt(f, scene, PIGEON, p.x);
-  return !!run && p.x >= run.lo + HALF - 1e-9 && p.x <= run.hi - HALF + 1e-9 && clearOf(taken, p.floor, p.x, p.target, PIGEON.spacing);
 }
 
 // Kept where it is on a layout change, pulled back inside its stretch if

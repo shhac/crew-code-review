@@ -52,7 +52,7 @@ export function beeAirOf(page: PageMap, rail: Box | null = null): BeeAir {
 
 // Whether a box lies inside the union of some boxes: each vertical slab of
 // it between their edges covered top to bottom by those spanning the slab.
-export function inside(box: Box, rooms: readonly Box[]): boolean {
+function inside(box: Box, rooms: readonly Box[]): boolean {
   if (rooms.some((r) => r.left <= box.left && r.right >= box.right && r.top <= box.top && r.bottom >= box.bottom)) return true;
   const cuts = rooms.flatMap((r) => [r.left, r.right]).filter((x) => x > box.left && x < box.right);
   const xs = [box.left, ...cuts, box.right].sort((a, b) => a - b);

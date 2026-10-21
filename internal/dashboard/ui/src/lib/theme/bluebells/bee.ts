@@ -17,7 +17,7 @@ import { along, flyReach, holdRoute, originOf, placeRoute, plan, routeOf, type F
 // apart. design-docs/bluebells/README.md has the state table and the
 // airspace contract.
 
-export type Mode = 'perch' | 'crawl' | 'shiver' | 'takeoff' | 'hover' | 'fly' | 'approach' | 'land' | 'dodge' | 'bonk' | 'bounce' | 'leave' | 'away';
+type Mode = 'perch' | 'crawl' | 'shiver' | 'takeoff' | 'hover' | 'fly' | 'approach' | 'land' | 'dodge' | 'bonk' | 'bounce' | 'leave' | 'away';
 // On its bell, wings folded; and on or coming down onto its flower.
 export const ON_BELL: ReadonlySet<Mode> = new Set(['perch', 'shiver', 'crawl']);
 export const AT_FLOWER: ReadonlySet<Mode> = new Set([...ON_BELL, 'land', 'approach']);
@@ -25,10 +25,10 @@ export const AT_FLOWER: ReadonlySet<Mode> = new Set([...ON_BELL, 'land', 'approa
 const FLYING: ReadonlySet<Mode> = new Set(['fly', 'dodge', 'leave']);
 
 // Why it is flying.
-export type Purpose = 'visit' | 'dodge' | 'bonk' | 'leave' | 'enter';
+type Purpose = 'visit' | 'dodge' | 'bonk' | 'leave' | 'enter';
 // What each flight is drawn as.
 const MODE_OF: Record<Purpose, Mode> = { visit: 'fly', dodge: 'dodge', bonk: 'fly', leave: 'leave', enter: 'fly' };
-export type Flight = {
+type Flight = {
   frame: Frame;
   // Held by the frame.
   route: Route;
@@ -40,7 +40,7 @@ export type Flight = {
 };
 // A wall it is flying at: where its head will touch (held by the wall's
 // card) and which way it faces.
-export type Bonk = { contact: Spot; dir: 1 | -1 };
+type Bonk = { contact: Spot; dir: 1 | -1 };
 
 export type Bee = {
   id: number;
@@ -100,11 +100,11 @@ const SETTLE = [200, 500] as const;
 const LAND = 70;
 const DODGE_SPEED = 140;
 const DODGE_ACCEL = 700;
-export const DODGE_REACH = 56;
-export const STARTLE = 40;
+const DODGE_REACH = 56;
+const STARTLE = 40;
 const DART = [30, 40] as const;
 const CALM = 800;
-export const MOVING = 120;
+const MOVING = 120;
 // The last stretch at a wall is flown level and straight, as long as there
 // is room for: 30px, or less where the air beside the wall is narrower.
 const LEADS = [30, 24, 18, 12] as const;
@@ -155,7 +155,7 @@ export type Context = {
 export type Cue = 'bonk' | 'shelf' | null;
 
 // What a mode looks like, for its footprint.
-export function poseOf(b: Bee, now: number, page?: PageMap): Pose {
+function poseOf(b: Bee, now: number, page?: PageMap): Pose {
   switch (b.mode) {
     case 'perch': case 'shiver': return 'perch';
     case 'crawl': return 'crawl';
@@ -175,7 +175,7 @@ function headGap(b: Bee, page: PageMap, now: number): number {
 
 // The bumbling across a route: seeded, bounded by 3.2px, faded in and out
 // over its first and last 24px so a route starts and ends where it says.
-export function wobble(seed: number, t: number): number {
+function wobble(seed: number, t: number): number {
   const a = seed * 1.7, b = seed * 3.1;
   return clamp(2 * (Math.sin(2 * Math.PI * 1.3 * t + a) + 0.6 * Math.sin(2 * Math.PI * 2.9 * t + b)), -3.2, 3.2);
 }
@@ -411,7 +411,7 @@ function weightedOrder<T extends { w: number }>(items: readonly T[], rand: Rand)
 // A dart away from a cursor: eight ways, the one most directly away first,
 // to a spot 30 to 40px off whose way there is clear. None: it holds where
 // it is, hovering, which is always in air.
-export function dodge(b: Bee, ctx: Context, now: number, cursor: Point): Bee {
+function dodge(b: Bee, ctx: Context, now: number, cursor: Point): Bee {
   const page = ctx.air.page;
   const here = where(b, page, now);
   const calmed = { ...b, calm: now + CALM, bonk: null, startled: null, fled: cursor };
@@ -563,7 +563,7 @@ function comeBack(b: Bee, ctx: Context, now: number, rand: Rand): Bee {
 }
 
 // How visible it is: fading in or out over FADE ms.
-export function opacityOf(b: Bee, now: number): number {
+function opacityOf(b: Bee, now: number): number {
   if (b.mode === 'away') return 0;
   if (!b.fade) return 1;
   const t = clamp((now - b.fade.at) / FADE, 0, 1);

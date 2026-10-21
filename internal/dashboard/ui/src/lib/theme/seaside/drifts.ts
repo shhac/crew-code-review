@@ -29,11 +29,11 @@ const MAX_GRAINS = 3;
 // The page holds at most this many shells, so a long page costs no more.
 export const MAX_SHELLS = 14;
 
-export type ShellKind = 'cockle' | 'winkle';
+type ShellKind = 'cockle' | 'winkle';
 // A shell standing on the ledge at x, size px across, facing dir.
-export type Shell = { key: string; x: number; kind: ShellKind; size: number; dir: 1 | -1 };
+type Shell = { key: string; x: number; kind: ShellKind; size: number; dir: 1 | -1 };
 // One drift: from lo to hi along the ledge, its crest at crest, height tall.
-export type Drift = { lo: number; crest: number; hi: number; height: number; grains: { x: number; y: number }[] };
+type Drift = { lo: number; crest: number; hi: number; height: number; grains: { x: number; y: number }[] };
 // One ledge's sand, ready to draw: the drifts' fill, their crests' lighter
 // line, their darker grains, and the shells.
 export type Beach = { drifts: Drift[]; sand: string; crest: string; grains: string; shells: Shell[] };

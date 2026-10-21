@@ -114,11 +114,11 @@ const NEAR_SHOULDER = { x: 15.2, y: 7.2 };
 const FAR_SHOULDER = { x: 17.4, y: 6.6 };
 // A herring gull's stroke: about 50 degrees above level to 35 below at
 // cruise (the seaside note), the downstroke a little over half the beat.
-export const FLAP: Flap = { top: 50, bottom: -35, down: 0.55, fold: 70, sweep: 20 };
+const FLAP: Flap = { top: 50, bottom: -35, down: 0.55, fold: 70, sweep: 20 };
 // How far a landing gull pitches up, its body braking against the air.
 const UPRIGHT = 34;
 // The dive: wings half folded and swept back, wrists forward.
-export const STOOP: WingPose = { lift: 25, sweep: 75, fold: 40 };
+const STOOP: WingPose = { lift: 25, sweep: 75, fold: 40 };
 const SOAR: WingPose = { lift: 6, sweep: 0, fold: 8 };
 // Pushing off, a gull's legs are stretched down and back, not trailed out
 // behind as a raptor's.
@@ -136,7 +136,7 @@ export type RigGull = { pose: GullPose; walked: number; seed: number; beat: numb
 // When it is drawn; whether it is still (reduced motion); and how far its
 // head turns toward what it eyes (degrees, nose down positive, eased by the
 // layer). Turning round is the layer's: it narrows the whole drawing.
-export type GullLook = { now: number; still: boolean; gaze?: number };
+type GullLook = { now: number; still: boolean; gaze?: number };
 
 // Eyeing something, a gull stands tall, its neck stretched up and its head
 // raised (the eye key pose), turning a little further toward what it eyes:
@@ -176,7 +176,7 @@ function headLayer(gull: RigGull, look: GullLook, head: Turn, open = 0): Layer {
 
 // Where the head is through the long call, t of the way: its nod (nose down
 // positive), how far it is lifted, and how far the bill is open.
-export function callPose(t: number): { angle: number; lift: number; open: number } {
+function callPose(t: number): { angle: number; lift: number; open: number } {
   if (t < CALL.down) return { angle: CALL_DOWN * smooth(t / CALL.down), lift: 0, open: 0 };
   if (t < CALL.up) {
     const u = smooth((t - CALL.down) / (CALL.up - CALL.down));
@@ -311,7 +311,7 @@ export const FORAGE_SPEED = 13;
 // The box each pose's drawing stays inside through its whole motion (page
 // px, standing on the anchor; `down` below it), as gull-rig.test.ts
 // measures them.
-export type Footprint = { width: number; height: number; down?: number };
+type Footprint = { width: number; height: number; down?: number };
 export const FOOTPRINTS: Record<GullPose, Footprint> = {
   stand: { width: 39.5, height: 26.5 }, strut: { width: 36.5, height: 26 }, forage: { width: 41.5, height: 26 },
   eye: { width: 42.5, height: 27 }, call: { width: 44.5, height: 27 },

@@ -11,7 +11,7 @@ import { hash } from '../seed';
 // An egg's size on the page, and where it stands: centred this far in from
 // its ledge's end.
 export const EGG = { width: 10.75, height: 14 };
-export const END_IN = 10;
+const END_IN = 10;
 // Hidden, this much of its height peeps over the ledge.
 export const PEEP = 0.42;
 // It needs this much clear above the ledge over the stretch it stands on,
@@ -28,7 +28,7 @@ export const START = 5;
 export const MOST = 8;
 // A stroke passing this close to an egg's top finds it.
 export const FIND_REACH = 26;
-export const DESIGNS = 6;
+const DESIGNS = 6;
 
 export type End = 'left' | 'right';
 export type Egg = {

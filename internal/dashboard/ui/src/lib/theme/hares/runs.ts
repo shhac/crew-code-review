@@ -13,10 +13,10 @@ import { arcPoint, claimsOf, placeOn, segmentsWithStart, sweptClear, type Claim,
 
 // A hare on a trail: how far behind the leader it keeps, and where along the
 // trail it started (it waits there until the leader is lag ahead).
-export type Member = { id: number; lag: number; start: number };
+type Member = { id: number; lag: number; start: number };
 export type Run = { kind: 'chase' | 'bolt' | 'trip'; trail: Trail; at: number; speed: number; members: Member[] };
 // The hares, and the trails some of them are running.
-export type Troupe = { hares: Hare[]; runs: Run[] };
+type Troupe = { hares: Hare[]; runs: Run[] };
 
 export const sAt = (run: Run, m: Member) => Math.max(m.start, run.at - m.lag);
 export const runOf = (group: Troupe, id: number) => group.runs.find((r) => r.members.some((m) => m.id === id)) ?? null;

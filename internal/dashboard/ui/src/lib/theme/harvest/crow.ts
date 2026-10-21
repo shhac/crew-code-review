@@ -26,18 +26,16 @@ export const SIDLE = 45;
 export const WALK_MOST = 60;
 export const SIDLE_MOST = 30;
 // A cursor within WARY (moving, or still for less than CALM) makes it wary;
-// one coming at it within SIDLE_REACH makes it sidle away. Its head turns
-// toward a cursor within LOOK.
-export const WARY = 70;
-export const SIDLE_REACH = 40;
+// one coming at it within SIDLE_REACH makes it sidle away.
+const WARY = 70;
+const SIDLE_REACH = 40;
 export const CALM = 1200;
-export const LOOK = 160;
 // The timings of its modes, ms.
 export const SETTLE = 600;
 export const FIRST_SCAN = { lo: 1500, hi: 3000 };
 export const SCAN = { lo: 800, hi: 2000 };
 export const PECK = 350;
-export const PECKS = { lo: 2, hi: 5 };
+const PECKS = { lo: 2, hi: 5 };
 // Each peck strikes this far through it, when the bill is down.
 const STRIKE = 0.6;
 export const CROUCH = 150;
@@ -45,9 +43,9 @@ export const SPRING = 120;
 // After a bout of pecks it walks on this often, else it looks about.
 const WALK_ON = 0.7;
 
-export type Mode = 'away' | 'arrive' | 'settle' | 'scan' | 'walk' | 'peck' | 'wary' | 'sidle' | 'takeoff' | 'depart';
-export const GROUNDED: readonly Mode[] = ['settle', 'scan', 'walk', 'peck', 'wary', 'sidle'];
-export const FLYING: readonly Mode[] = ['takeoff', 'depart', 'arrive'];
+type Mode = 'away' | 'arrive' | 'settle' | 'scan' | 'walk' | 'peck' | 'wary' | 'sidle' | 'takeoff' | 'depart';
+const GROUNDED: readonly Mode[] = ['settle', 'scan', 'walk', 'peck', 'wary', 'sidle'];
+const FLYING: readonly Mode[] = ['takeoff', 'depart', 'arrive'];
 
 // floor and x: the ledge and the feet's ledge-local x it stands at, or is
 // coming down to. target: where a walk or sidle is going. until: when a
@@ -130,7 +128,7 @@ const peckBout = (c: Crow, now: number, rand: Rand): Crow => {
 };
 
 // Its middle on the page, where the cursor is measured from.
-export const middleOf = (c: Crow, scene: PageMap): Point | null => {
+const middleOf = (c: Crow, scene: PageMap): Point | null => {
   return pageOf(scene, c, 13);
 };
 

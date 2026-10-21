@@ -60,7 +60,7 @@ export const routeLength = (legs: readonly Leg[]) => legs.reduce((sum, l) => sum
 // Where a flight is at now: its leg, how far through it, the body's middle
 // on the page and the way it is heading; null with its ledge gone or the
 // flight over.
-export type InFlight = { leg: Leg; index: number; u: number; at: Point; heading: Point };
+type InFlight = { leg: Leg; index: number; u: number; at: Point; heading: Point };
 export function inFlight(page: PageMap, f: Flight, now: number): InFlight | null {
   const found = firstOf(f.legs, (l, i) => {
     const begin = f.start + f.legs.slice(0, i).reduce((s, x) => s + x.duration, 0);

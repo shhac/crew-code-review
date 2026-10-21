@@ -29,7 +29,7 @@ import wingArt from './cupid-wing.webp';
 // the mode shown, over the rig to compare.
 
 // Page pixels per drawing unit, for every pose.
-export const SCALE = 1.5;
+const SCALE = 1.5;
 
 const ANCHOR = { x: 12.4, y: 17.5 };
 const FRAME = { width: 23, height: 28, anchor: ANCHOR, scale: SCALE };
@@ -100,7 +100,7 @@ export type RigCupid = {
   // The head's turn toward the cursor, degrees, nose down positive.
   gaze: number;
 };
-export type CupidLook = { now: number; still: boolean };
+type CupidLook = { now: number; still: boolean };
 
 const along = (from: Point, deg: number, length: number): Point => ({ x: from.x + Math.cos(rad(deg)) * length, y: from.y + Math.sin(rad(deg)) * length });
 const angleOf = (from: Point, to: Point) => degrees(Math.atan2(to.y - from.y, to.x - from.x));
@@ -156,7 +156,7 @@ function bow(grip: Point, aim: number, bend: number, nock: Point | null): { stav
 }
 
 // A small heart at p, its point toward `aim`, `size` across.
-export function heart(p: Point, aim: number, size: number): Point[] {
+function heart(p: Point, aim: number, size: number): Point[] {
   const k = size / 6;
   const outline = [[0, 2.6], [-1.8, 1.2], [-3, -0.6], [-2.6, -2.4], [-1.2, -3], [0, -2.1], [1.2, -3], [2.6, -2.4], [3, -0.6], [1.8, 1.2]];
   // Drawn with its point down (+y), turned so it points along the aim.

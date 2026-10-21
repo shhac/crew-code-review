@@ -9,9 +9,9 @@ export const board: Ledge = { left: 290, right: 994, y: 182, base: 500, room: 22
 export const side: Ledge = { left: 1014, right: 1386, y: 182, base: 446, room: 22, headroom: 24, kind: 'card' };
 // A card in the second row, below the board.
 export const lower: Ledge = { left: 290, right: 994, y: 522, base: 800, room: 22, headroom: 22, kind: 'card' };
-export const TITLE: Obstacle = { left: 290, right: 487, top: 50, bottom: 110 };
+const TITLE: Obstacle = { left: 290, right: 487, top: 50, bottom: 110 };
 export const SUBTITLE: Obstacle = { left: 290, right: 657, top: 115, bottom: 134 };
-export const INPUT: Obstacle = { left: 826, right: 1386, top: 92, bottom: 133 };
+const INPUT: Obstacle = { left: 826, right: 1386, top: 92, bottom: 133 };
 const block = (f: Ledge): Obstacle => ({ left: f.left, right: f.right, top: f.y, bottom: f.base, block: true });
 
 export const overview = (extra: readonly Obstacle[] = [], floors: [number, Ledge][] = [[1, rule], [2, board], [3, side], [4, lower]]): PageMap => ({

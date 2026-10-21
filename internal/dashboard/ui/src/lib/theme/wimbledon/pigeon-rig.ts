@@ -105,12 +105,12 @@ const FAR_SHOULDER = { x: 15.3, y: 7 };
 // downstroke a little over half the beat, the hand flexed back hard on the
 // upstroke at slow speeds (the tip-reversal upstroke doves use; Tobalske,
 // Hedrick and Biewener 2003). Taking off, the wings meet over its back.
-export const FLAP: Flap = { top: 40, bottom: -40, down: 0.55, fold: 90, sweep: 30 };
+const FLAP: Flap = { top: 40, bottom: -40, down: 0.55, fold: 90, sweep: 30 };
 const CLAP = 90;
 const LIFTING_BOTTOM = 25;
 // The take-off's deep strokes ease into the plain flap over this many
 // beats: quickly, since the air over a card is low (the note's "Sizes").
-export const TAKEOFF_BEATS = 1.6;
+const TAKEOFF_BEATS = 1.6;
 // Braking to land, the body swings this far up.
 const UPRIGHT = 25;
 // Reaching to land, a pigeon's feet come down nearly flat under it, so its
@@ -133,7 +133,7 @@ export type PigeonPose = 'stand' | 'walk' | 'peck' | 'alert' | 'takeoff' | 'fly'
 // `gaze` turns its head (degrees, nose down positive) toward what it is
 // looking at, standing or alert; eased by the layer.
 export type RigPigeon = { pose: PigeonPose; walked: number; seed: number; beat: number; t: number; gaze?: number };
-export type PigeonLook = { now: number; still: boolean };
+type PigeonLook = { now: number; still: boolean };
 
 // The neck: a piece of its feathers laid from the base of the neck in the
 // body to where it meets the head, wherever the head has gone, so the head

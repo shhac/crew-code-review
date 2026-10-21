@@ -28,7 +28,7 @@ export const EDGES = ['#9e2d27', '#b9ab88', '#3d649f', '#b8902a', '#b8668b', '#5
 export const TAPE = '#efe6d0';
 
 // A pennant: 5px along the tape, 7px deep.
-export const WIDE = 5;
+const WIDE = 5;
 export const DEEP = 7;
 // Pennants this far apart along a festoon, and kept this far from its pins.
 const PITCH = 7;
@@ -71,7 +71,7 @@ const ROCK_HZ = 2.5;
 const SWING_HZ = 1.6;
 const DECAY = Math.LN2 / 600;
 
-export type Pennant = { x: number; colour: number; phase: number; rate: number };
+type Pennant = { x: number; colour: number; phase: number; rate: number };
 export type Swag = {
   id: string;
   gap: string;
@@ -85,15 +85,15 @@ export type Swag = {
 
 // One damped mode, from the state it had at `at`: its offset and speed
 // (per ms), worked out at any later moment in closed form.
-export type Spring = { x: number; v: number; at: number };
-export const REST: Spring = { x: 0, v: 0, at: 0 };
+type Spring = { x: number; v: number; at: number };
+const REST: Spring = { x: 0, v: 0, at: 0 };
 type Mode = { omega: number };
 const SAG: Mode = { omega: (2 * Math.PI * SAG_HZ) / 1000 };
 const ROCK: Mode = { omega: (2 * Math.PI * ROCK_HZ) / 1000 };
 const SWING: Mode = { omega: (2 * Math.PI * SWING_HZ) / 1000 };
 const damped = (m: Mode) => Math.sqrt(Math.max(1e-12, m.omega * m.omega - DECAY * DECAY));
 
-export function springAt(s: Spring, m: Mode, now: number): { x: number; v: number } {
+function springAt(s: Spring, m: Mode, now: number): { x: number; v: number } {
   const t = Math.max(0, now - s.at);
   const w = damped(m);
   const e = Math.exp(-DECAY * t);
@@ -110,7 +110,7 @@ export type Swing = { sag: Spring; rock: Spring; pennants: readonly Spring[] };
 const still = (s: Swag): Swing => ({ sag: REST, rock: REST, pennants: s.pennants.map(() => REST) });
 
 // A seed from a string's id, so its colours and flutter stay put.
-export function seedOf(id: string): number {
+function seedOf(id: string): number {
   const n = [...id].reduce((h, ch) => Math.imul(h ^ ch.charCodeAt(0), 16777619) >>> 0, 2166136261);
   return n % 100003;
 }
@@ -261,7 +261,7 @@ export function gust(now: number): number {
 
 // What to draw: the tape as a line of points, and each pennant as its two
 // top corners and its tip, with its colour.
-export type Drawn = { id: string; tape: Point[]; pennants: { points: [Point, Point, Point]; colour: number }[] };
+type Drawn = { id: string; tape: Point[]; pennants: { points: [Point, Point, Point]; colour: number }[] };
 
 export function drawSwag(s: Swag, swing: Swing | undefined, now: number, reduced: boolean): Drawn {
   const curve = curveOf(s);

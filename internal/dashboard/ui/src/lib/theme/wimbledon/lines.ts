@@ -32,13 +32,13 @@ export const MAX_BASELINES = 40;
 export const MAX_SCUFFS = 40;
 const SCUFF_SLOT = 50;
 // A bounce puffs chalk when it lands this close to a mark.
-export const PUFF_REACH = 3;
+const PUFF_REACH = 3;
 
 // A worn stretch of the line, x to x + width, its chalk faint.
-export type Scuff = { key: string; x: number; width: number; tone: number };
+type Scuff = { key: string; x: number; width: number; tone: number };
 // One baseline on a clear stretch, lo to hi, the x of each mark
 // standing up from it (at most five), and its worn patches.
-export type Baseline = { key: string; lo: number; hi: number; marks: readonly number[]; scuffs: readonly Scuff[] };
+type Baseline = { key: string; lo: number; hi: number; marks: readonly number[]; scuffs: readonly Scuff[] };
 // Everything chalked on one ledge.
 export type Lines = readonly Baseline[];
 
@@ -116,7 +116,7 @@ export const PUFF = 400;
 export const PUFF_RISE = 5;
 const SPREAD = 4;
 export type Puff = { key: string; x: number; at: number; count: number; seed: number };
-export type Speck = { x: number; y: number; r: number; opacity: number };
+type Speck = { x: number; y: number; r: number; opacity: number };
 
 export const puffAt = (key: string, x: number, at: number): Puff => ({ key, x, at, count: 4 + (hash(at) < 0.5 ? 0 : 1), seed: Math.round(at) });
 

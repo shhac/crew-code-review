@@ -20,7 +20,7 @@ import { replan, roomToTakeOff, stillClear } from './swoop';
 // card as the page scrolls; in flight, its route is held by the ledge it
 // lands on. design-docs/seaside/README.md has the state table.
 
-export type Mode = 'stand' | 'strut' | 'eye' | 'ready' | FlightMode | 'touchdown' | 'call' | 'away';
+type Mode = 'stand' | 'strut' | 'eye' | 'ready' | FlightMode | 'touchdown' | 'call' | 'away';
 export type Gull = {
   id: number;
   // Its own blinks and breaths, so no two keep time.
@@ -65,12 +65,12 @@ const IDLE = [4000, 10000] as const;
 const WANDER = [30, 120] as const;
 // Turning round: at most once this often, a quick mirror this long.
 const TURN_REST = 1200;
-export const TURN = 200;
+const TURN = 200;
 const TOUCHDOWN = 700;
 // The run-out's two steps are taken in this much of the touchdown.
 const RUN_OUT_TIME = 400;
 export const CALL = 1600;
-export const FADE = 150;
+const FADE = 150;
 const AWAY = [1200, 2500] as const;
 const GLANCE = 900;
 // Wingbeats a second: 2.8 cruising and climbing, 4 in the quick flaps of
@@ -93,7 +93,7 @@ export function standingAt(self: Self, floor: number, x: number, now: number, un
 
 // Where the other gulls are, or are going: on their ledge and where a strut
 // takes them, or where a flight lands.
-export const claims = (others: readonly Gull[]): Claim[] => others.flatMap((o) => {
+const claims = (others: readonly Gull[]): Claim[] => others.flatMap((o) => {
   if (o.mode === 'away') return [];
   if (o.flight) return [pointClaim(o.flight.land.floor, o.flight.land.x)];
   return [pointClaim(o.floor, o.x), pointClaim(o.floor, o.target)];

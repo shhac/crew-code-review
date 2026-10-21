@@ -30,12 +30,12 @@ const PASSING = 90;
 const MOVING = 120;
 const NEAR = 60;
 const LINGER = 1000;
-export const GROOM = 2400;
+const GROOM = 2400;
 export const NUDGE = 900;
 export const THUMP = 500;
 const AWAY = { lo: 1500, hi: 3000 };
 const PAUSE = { lo: 100, hi: 350 };
-export const FADE = 14;
+const FADE = 14;
 
 // Who a rabbit is, kept across every change of place.
 type Self = Pick<Rabbit, 'id' | 'seed' | 'walked'>;
@@ -49,7 +49,7 @@ function sitAt(self: Self, floor: number, x: number, now: number, restless: numb
 }
 
 // Where a rabbit's hops will bring it.
-export const targetOf = (r: Pick<Rabbit, 'x' | 'hops' | 'hop' | 'dir'>) => (r.hop ? r.hop.x + r.dir * (r.hops + 1) * HOP_LENGTH : r.x + r.dir * r.hops * HOP_LENGTH);
+const targetOf = (r: Pick<Rabbit, 'x' | 'hops' | 'hop' | 'dir'>) => (r.hop ? r.hop.x + r.dir * (r.hops + 1) * HOP_LENGTH : r.x + r.dir * r.hops * HOP_LENGTH);
 
 // Where the others are, or are going.
 const claims = (others: readonly Rabbit[]): Claim[] => others.flatMap((o) => [
@@ -108,7 +108,7 @@ export function reconcileRabbit(r: Rabbit, scene: PageMap, now: number, rand: Ra
 }
 
 // Where the rabbit is drawn, or null while it is out of sight.
-export type RabbitView = Point & { pose: Pose; dir: 1 | -1; opacity: number };
+type RabbitView = Point & { pose: Pose; dir: 1 | -1; opacity: number };
 
 // Faded out over FADE px before its ledge's end as it leaves, gone past
 // it; faded in over FADE px from the other's as it comes in.

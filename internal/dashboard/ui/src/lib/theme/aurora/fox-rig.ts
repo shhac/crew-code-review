@@ -28,7 +28,7 @@ import torsoArt from './fox-torso.webp';
 // that drawing over the rig to compare.
 
 // Page pixels per drawing unit, for every pose.
-export const SCALE = 1.5;
+const SCALE = 1.5;
 
 const GROUND = 17.66;
 const ANCHOR = { x: 15.6, y: GROUND };

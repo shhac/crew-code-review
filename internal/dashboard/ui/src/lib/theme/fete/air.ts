@@ -12,7 +12,7 @@ export type WaspAir = { air: Box; lane: Box };
 
 // How far past the window's edge the lane runs, so a wasp is wholly out of
 // sight before it is gone.
-export const OFF_SCREEN = 24;
+const OFF_SCREEN = 24;
 
 // The air in the stage's coordinates, from the rail's air as measured (in
 // viewport coordinates) and where the stage's top left is in the viewport;

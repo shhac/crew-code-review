@@ -16,7 +16,7 @@ import { between, maxBy, type Rand } from '../seed';
 // held to.
 
 // A place on a ledge.
-export type Spot = { floor: number; x: number };
+type Spot = { floor: number; x: number };
 export type Segment =
   // Along one ledge, from one ledge-local x to another.
   | { kind: 'run'; floor: number; from: number; to: number }

@@ -70,7 +70,7 @@ function layingSpot(r: Rabbit, f: Ledge, run: Run, scene: PageMap, taken: readon
 
 // A way out by one of its ledge's ends (away from `away` when given, else
 // the nearer) to another ledge in view; null if there is none.
-export type Way = { trip: Trip; exit: number };
+type Way = { trip: Trip; exit: number };
 export function way(r: Rabbit, f: Ledge, run: Run, scene: PageMap, rand: Rand, taken: readonly Claim[], away: Point | null): Way | null {
   const exit = exitEnd(f, run, r, taken, SPACING, away);
   const ways = waysOn(r, scene, rand, taken);

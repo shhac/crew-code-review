@@ -28,7 +28,7 @@ export const COOLDOWN = 30000;
 // How long a cursor must rest, and the swoops be apart: as above, or, cued
 // by a test (`?theme-cue=swoop`), as soon as the cursor has stopped moving
 // and with no wait between swoops.
-export type Pace = { still: number; cooldown: number };
+type Pace = { still: number; cooldown: number };
 export const PACE: Pace = { still: STILL, cooldown: COOLDOWN };
 export const CUED: Pace = { still: MOVING, cooldown: 0 };
 // A neighbour this near answers a long call half the time, a little later.

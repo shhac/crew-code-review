@@ -27,7 +27,7 @@ export const POSES = {
   bow: { width: 53.5, height: 29.5 },
   pounce: { width: 54, height: 29.5 },
 } as const;
-export type Pose = keyof typeof POSES;
+type Pose = keyof typeof POSES;
 
 // Wherever the fox lies or trots needs this much clear space above the
 // ledge, counting REACH: it may stand that far up past the bottom edge of a
@@ -162,7 +162,7 @@ export function reconcileFox(fox: Fox, scene: PageMap, now: number, rand: Rand, 
 }
 
 // Where the fox is drawn, or null while it is out of sight.
-export type FoxView = Point & { pose: Pose; dir: 1 | -1; opacity: number };
+type FoxView = Point & { pose: Pose; dir: 1 | -1; opacity: number };
 
 // How far through its leap the fox is, 0 to 1.
 export const leapt = (fox: Pick<Fox, 'until'>, now: number) => clamp01(1 - (fox.until - now) / LEAP);

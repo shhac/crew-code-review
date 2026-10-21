@@ -48,7 +48,7 @@ const SPACING = HOG.width + GAP;
 const ROOMY = 4 * SPACING;
 
 export type Mode = 'hidden' | 'peek' | 'walk' | 'sniff' | 'curled' | 'flee' | 'home';
-export type Home = { floor: number; pile: number; lo: number; hi: number };
+type Home = { floor: number; pile: number; lo: number; hi: number };
 // walked: distance walked, which drives its steps. seed: its own blinks.
 export type Hog = { id: number; seed: number; x: number; dir: 1 | -1; mode: Mode; target: number; until: number; out: number; walked: number };
 export type Hogs = { home: Home | null; hogs: Hog[] };

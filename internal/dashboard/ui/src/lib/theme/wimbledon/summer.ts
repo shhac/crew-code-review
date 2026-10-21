@@ -25,7 +25,7 @@ export type Cue = 'sweep' | 'rally' | null;
 const CUED = 300;
 
 // The chalk puffed up, on the ledge it was puffed from.
-export type Chalk = Puff & { floor: number };
+type Chalk = Puff & { floor: number };
 export type Play = { flock: Flock; rally: Rally; chalk: readonly Chalk[] };
 
 export function createPlay(s: Summer, now: number, rand: Rand, cue: Cue = null): Play {
@@ -49,7 +49,7 @@ export const restingPlay = (s: Summer, previous: Play | null, now: number): Play
 
 // What the cursor did this frame: where it rests, the stroke it moved along
 // (if it moved), and how fast.
-export type Touch = { cursor: Point | null; stroke: Segment | null; speed: number };
+type Touch = { cursor: Point | null; stroke: Segment | null; speed: number };
 
 // A frame on: the birds (kept off the court while a ball is in play), then
 // the rally (started only on a court with no pigeon in it and no bird in
