@@ -1,5 +1,5 @@
 # /// script
-# dependencies = ["pillow", "numpy", "scipy"]
+# dependencies = ["pillow==12.3.0", "numpy==2.5.4", "scipy==1.18.1"]
 # ///
 """Keys, crops and exports the harvest art. Run: uv run design-docs/harvest/export.py
 

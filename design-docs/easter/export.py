@@ -1,5 +1,5 @@
 # /// script
-# dependencies = ["pillow", "numpy"]
+# dependencies = ["pillow==12.3.0", "numpy==2.5.4"]
 # ///
 """Keys, crops and exports the Easter art. Run: uv run design-docs/easter/export.py
 

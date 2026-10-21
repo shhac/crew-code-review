@@ -6,6 +6,9 @@ despill, crop to the art plus a margin, split pose sheets at their empty
 column (or row) runs, measure a feature (an eye) to put sheets drawn at
 different sizes on one scale, and write WebP. EyeScale holds one animal's
 pictures on that scale and prints where each part sat in its reference.
+
+The scripts pin their libraries: Pillow 13 writes a few pixels of some
+pictures differently, so the shipped WebPs would no longer be reproduced.
 """
 from collections import deque
 from collections.abc import Callable

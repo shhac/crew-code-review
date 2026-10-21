@@ -1,5 +1,5 @@
 # /// script
-# dependencies = ["pillow", "numpy"]
+# dependencies = ["pillow==12.3.0", "numpy==2.5.4"]
 # ///
 """Keys, crops and exports the Mad March hares art. Run: uv run design-docs/hares/export.py
 
