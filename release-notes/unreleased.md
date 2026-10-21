@@ -153,3 +153,13 @@ rising out of a shortened shelf's air; the Easter egg counter is as wide as
 its count, so a double-digit hunt no longer spills toward the brand; a finger
 on a touch screen no longer startles the Halloween spiders; and March's
 hares crouch for a stand-off wherever a sit-up would reach a chart above.
+
+Discovery now lists a repo's open PRs with a lean paged search that fits
+GitHub's query timeout, so a repo with hundreds of open PRs no longer falls
+into backoff and out of discovery; a listing cut short keeps the PRs it has,
+and every gh call is bounded at a minute, so a stalled one no longer holds
+every later sweep. After each sweep the daemon records each repo's discovery
+health (last success, PRs listed, degraded listings, failures, backoff, last
+error) in discovery.json in the state dir: `doctor` reports a failing or
+stale repo, and the Config page lists every repo under Discovery. A shutdown
+mid-sweep is no longer recorded as a repo failure.
