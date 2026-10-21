@@ -53,7 +53,9 @@ export type SeasonalSet = {
   // A test-only cue (`?theme-cue=`) that starts a flight by itself, and a
   // selector, in the animals' home, for something only drawn while it is
   // under way. The seaside's swoop waits for a still cursor, so it has none.
-  cue?: { name: string; flying: string };
+  // back: how many come back at 1024px after the cue's resize mid-flight,
+  // where fewer than min[1024] can.
+  cue?: { name: string; flying: string; back?: number };
 };
 
 export const SETS: readonly SeasonalSet[] = [
@@ -121,13 +123,14 @@ export const SETS: readonly SeasonalSet[] = [
   },
   {
     // The crows feed where they can get away; drawn is every picture still
-    // seen (a wing's hidden side lies under its seen one). No cue until a
-    // known bug is fixed: the scatter cue's shortened absence is lost when
-    // the page reconciles, so after a resize mid-scatter the crows come back
-    // at the normal pace (the second in 30 to 40s), not the cue's few seconds.
+    // seen (a wing's hidden side lies under its seen one). After the scatter
+    // one comes back at 1024: the queue's only way in there is a skim along
+    // the first row's band from the right edge, the scout lands farthest
+    // from the scarecrow at its right end, and every other way in passes it
+    // standing, until it wanders off or leaves on its own.
     theme: 'harvest', overlay: '[data-harvest]', shelf: '.harvest-shelf', accent: 'rgb(195, 155, 224)',
     animal: 'crow', drawn: 'image:not([visibility="hidden"])', decoration: '[data-chaff]', parts: [['[data-chaff]', 'path']],
-    min: { 1440: 2, 1024: 2, 390: 1 }, still: 'scan', settle: 400,
+    min: { 1440: 2, 1024: 2, 390: 1 }, still: 'scan', settle: 400, cue: { name: 'scatter', flying: '[data-crow="depart"]', back: 1 },
   },
 ];
 

@@ -145,7 +145,7 @@ for (const set of SETS) {
         await page.setViewportSize({ width: 1024, height: 800 });
         const looks = coversOf(set).filter((what) => !knownAt(set.theme, 1024, what).some((k) => k.route === '/'));
         expect((await framesCoveredBy(page, set, looks, 4000)).covered).toEqual([]);
-        await expect.poll(() => present(page, set).count(), { timeout: 30_000 }).toBeGreaterThanOrEqual(set.min[1024]);
+        await expect.poll(() => present(page, set).count(), { timeout: 30_000 }).toBeGreaterThanOrEqual(cue.back ?? set.min[1024]);
       });
     }
   });
