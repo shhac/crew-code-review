@@ -9,11 +9,11 @@ import type { Drawing } from '../drawings';
 
 // One frame of it: what it is doing, the time, and how far it has walked.
 export type Moment = { mode: string; now: number; walked: number };
-export type Look = { gaze: number; still: boolean };
+type Look = { gaze: number; still: boolean };
 // A footprint's box, standing on its anchor; a flier's also reaches `down`
 // below it.
-export type Size = { width: number; height: number; down?: number };
-export type Art = { name: string; src: string };
+type Size = { width: number; height: number; down?: number };
+type Art = { name: string; src: string };
 
 type Shown = {
   name: string;
@@ -45,7 +45,7 @@ export type RigCritter = Shown & {
 
 // The props a ViewCritter's view takes. `marked` is the big one on the stage,
 // which carries data-critter for tests.
-export type ViewProps = {
+type ViewProps = {
   mode: string;
   now: number;
   walked: number;

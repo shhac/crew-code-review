@@ -28,7 +28,7 @@ import { holdForSteering, releaseSteeringHold } from './api';
 
 const RENEW_MS = 60_000;
 
-export type SteeringSession = {
+type SteeringSession = {
   /** Take the hold and keep renewing it until told to stop. */
   start: () => Promise<void>;
   /** End the session: stop renewing and release, if we ever started one. */

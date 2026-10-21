@@ -6,7 +6,7 @@
 import { ago, untilRel } from './format';
 import type { AllowedAuthor, ConfigResponse, RepoDiscovery, ScoringMode } from './types';
 
-export type SettingsGroup = [string, [string, string][]];
+type SettingsGroup = [string, [string, string][]];
 
 // One wording for the per-daemon loop state cells (review + discovery).
 // Three states, not two: a loop can be enabled in config and still off because
@@ -159,9 +159,9 @@ export function settingsGroups(c: ConfigResponse | null): SettingsGroup[] {
 }
 
 // A filter option and how many roster rows it would show.
-export type RosterOption = [name: string, rows: number];
+type RosterOption = [name: string, rows: number];
 
-export type RosterView = { repoOptions: RosterOption[]; groupOptions: RosterOption[]; visible: AllowedAuthor[] };
+type RosterView = { repoOptions: RosterOption[]; groupOptions: RosterOption[]; visible: AllowedAuthor[] };
 
 const tally = (rows: AllowedAuthor[], of: (a: AllowedAuthor) => string): RosterOption[] => {
   const counts = new Map<string, number>();

@@ -10,8 +10,8 @@ type ActivityDay = MetricsResponse['activity'][number];
 // carry (SKIPPED, ERROR) are deliberately not "primary": they fall through to
 // the neutral scatter colour and the ring's trailing wedge. One source of truth
 // for which verdicts get their own colour; the mappings below must stay in step.
-export const VERDICTS = ['APPROVED', 'COMMENTED', 'REQUESTED_CHANGES'] as const;
-export type Verdict = (typeof VERDICTS)[number];
+const VERDICTS = ['APPROVED', 'COMMENTED', 'REQUESTED_CHANGES'] as const;
+type Verdict = (typeof VERDICTS)[number];
 
 const VERDICT_SET = new Set<string>(VERDICTS);
 const isVerdict = (v: string): v is Verdict => VERDICT_SET.has(v);

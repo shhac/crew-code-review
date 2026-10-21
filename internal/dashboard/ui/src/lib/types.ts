@@ -9,11 +9,11 @@
 // This is a claim about the CURRENT server, which is why the components keep a
 // fallback arm: a deploy can briefly make it false, and rendering something
 // unrecognised beats rendering nothing.
-export type QueueStatus = 'queued' | 'reviewing' | 'held';
+type QueueStatus = 'queued' | 'reviewing' | 'held';
 
 // ReviewLogState is the same vocabulary plus the state a row reaches once it
 // has left the queue. The log page is the one view that outlives the row.
-export type ReviewLogState = QueueStatus | 'finished';
+type ReviewLogState = QueueStatus | 'finished';
 
 export type Candidate = {
   repo: string;
@@ -173,7 +173,7 @@ export type UsageSnapshot = {
 // One engine's meter. `available` is not derivable from the snapshot: a failed
 // poll still stamps fetched_at, so the server decides, and `error` explains an
 // unavailable engine rather than leaving a blank meter.
-export type EngineUsage = {
+type EngineUsage = {
   engine: string;
   active: boolean;
   available: boolean;
@@ -198,7 +198,7 @@ export type UsageResponse = {
   fresh_tokens_24h?: number;
 };
 
-export type ConfigRepo = {
+type ConfigRepo = {
   name: string;
   // True when an author with no roster row is not discovered here, derived
   // from the repo's unlisted policy rather than a separate setting.
@@ -209,7 +209,7 @@ export type ConfigRepo = {
 // One tier label and the changed-line count it runs to. Labels now: they
 // explain a score rather than decide it, and their boundaries follow the
 // dials. up_to 0 is the open-ended last one.
-export type ScoreTier = { name: string; up_to?: number };
+type ScoreTier = { name: string; up_to?: number };
 
 // One hypothetical PR, priced by the daemon. The two rewards travel apart
 // because a total that does not decompose is a number to take on faith:
@@ -306,7 +306,7 @@ export type RepoDiscovery = {
   last_error_at?: string;
 };
 
-export type DiscoveryStatus = {
+type DiscoveryStatus = {
   written_at: string;
   // Whether the daemon serving this page wrote it, rather than an earlier one.
   current: boolean;
@@ -326,7 +326,7 @@ export type AllowedAuthor = {
   policy?: AuthorPolicy;
 };
 
-export type AuthorPolicy = {
+type AuthorPolicy = {
   group: string;
   review: string; // "ignore" | "comment" | "approve"
   engine?: string;
@@ -351,9 +351,9 @@ export type RuleCondition = {
   outcome?: string;
 };
 
-export type Rule = { name: string; prompt: string; when?: RuleCondition };
+type Rule = { name: string; prompt: string; when?: RuleCondition };
 
-export type PromptGroup = {
+type PromptGroup = {
   name: string;
   review: string; // ignore | comment | approve
   builtin: boolean;
@@ -368,14 +368,14 @@ export type PromptResponse = {
   note?: string;
 };
 
-export type RuleTrace = {
+type RuleTrace = {
   name: string;
   target: string; // "body" | "approve" | "comment" | "reject"
   matched: boolean;
   reason?: string;
 };
 
-export type PolicyStep = {
+type PolicyStep = {
   field: string;
   value: string;
   source: string;
@@ -453,7 +453,7 @@ export type Steering = {
 // pair of optionals the client has to recombine. Only `held` means the PR is
 // actually parked, and only `held` is worth asking again about: `capped` and
 // `disabled` both mean stop renewing, for different reasons.
-export type SteeringHoldState = 'held' | 'capped' | 'released' | 'disabled';
+type SteeringHoldState = 'held' | 'capped' | 'released' | 'disabled';
 
 export type SteeringHold = {
   state: SteeringHoldState;
@@ -485,7 +485,7 @@ export type QueuePreflight = {
 
 // ViewerState is how the dashboard knows the caller. The server classifies;
 // the client only chooses words and colours for each case.
-export type ViewerState = 'anonymous' | 'unmapped' | 'author' | 'operator';
+type ViewerState = 'anonymous' | 'unmapped' | 'author' | 'operator';
 
 // Viewer is who the dashboard believes is asking, derived from the identity
 // `tailscale serve` attaches. `handle` is empty for someone the roster does

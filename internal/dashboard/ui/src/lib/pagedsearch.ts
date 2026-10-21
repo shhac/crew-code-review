@@ -14,7 +14,7 @@
 export type PageRequest = { q: string; cursor: string; limit: number };
 export type PageResult<T> = { rows: T[]; total: number; nextCursor?: string };
 
-export type Snapshot<T> = {
+type Snapshot<T> = {
   /** Rows to render right now. */
   rows: T[];
   /** True while what is rendered is a guess rather than the server's answer. */

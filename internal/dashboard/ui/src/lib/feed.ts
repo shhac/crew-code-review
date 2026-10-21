@@ -3,7 +3,7 @@
 
 import { writable } from 'svelte/store';
 
-export type Feed = { ok: boolean; detail: string };
+type Feed = { ok: boolean; detail: string };
 
 export const feed = writable<Feed>({ ok: true, detail: 'syncing' });
 

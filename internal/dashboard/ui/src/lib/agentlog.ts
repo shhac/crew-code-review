@@ -38,13 +38,13 @@ export type ExecEvent = {
 // The agent-message kinds, one per engine. Kept as a set so callers can ask
 // "is this the agent talking?" without naming every engine.
 export const agentKinds = ['codex', 'claude', 'grok'] as const;
-export type AgentKind = (typeof agentKinds)[number];
+type AgentKind = (typeof agentKinds)[number];
 
 export function isAgentKind(kind: string): kind is AgentKind {
   return agentKinds.some((k) => k === kind);
 }
 
-export type LogEvent =
+type LogEvent =
   | { kind: 'meta'; body: string }
   | { kind: 'user'; body: string }
   | { kind: 'thinking'; body: string }

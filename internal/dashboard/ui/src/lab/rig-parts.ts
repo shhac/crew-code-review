@@ -6,7 +6,7 @@ type Leaf = Exclude<Layer, { kind: 'group' }>;
 const leaves = (layers: readonly Layer[]): Leaf[] => layers.flatMap((l) => (l.kind === 'group' ? leaves(l.layers) : [l]));
 
 // Every part a pose draws, in drawing order, each once.
-export const partNames = (pose: RigPose): string[] => [...new Set(leaves(pose.layers).map(layerName))];
+const partNames = (pose: RigPose): string[] => [...new Set(leaves(pose.layers).map(layerName))];
 
 // Every part any of the poses draws, in drawing order: one seen in only some
 // (an eyelid, mid-blink) goes after the part it follows there.
