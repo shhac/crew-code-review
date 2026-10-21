@@ -47,9 +47,11 @@ group (Animal Diversity Web; Baglione et al. on carrion crow family groups).
   only when the page has fewer spots. Decided once when the group is placed,
   and kept: crows that leave and come back are the same crows, and a group
   never grows on scroll or on a later measurement.
-- **Spacing**: never closer than 60px centre to centre on a ledge (a 38px
-  crow and a gap), so they never overlap. A walk stops 60px short of another
-  crow and never passes one. They are stepped and placed in a fixed order,
+- **Spacing**: never closer than 60px centre to centre on the page (a 38px
+  crow and a gap), on one ledge or on two stacked close together (a heading
+  rule 22px above the card top under it), so they never overlap. A walk
+  stops 60px short of another crow and never passes one. Feeding spots on
+  two such ledges are 60px apart on the page too (90px along one ledge). They are stepped and placed in a fixed order,
   each seeing the others as they now are (`lib/theme/group.ts`).
 
 ### Size, measured from the page

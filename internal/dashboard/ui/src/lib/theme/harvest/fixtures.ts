@@ -12,6 +12,12 @@ export const PAGE: PageMap = {
   floors: new Map([[1, card(300, 1300, 200)], [2, card(300, 780, 500)], [3, card(820, 1300, 500)]]),
   obstacles: [], width: 1440, height: 900, main: { left: 280, right: 1440, top: 0, bottom: 900 },
 };
+// The queue's first row at 1440: the heading rule over it 22px above the
+// card top under it, so a crow on each can stand a few px apart.
+export const STACKED: PageMap = {
+  floors: new Map([[1, card(290, 994, 182)], [5, { ...card(290, 1386, 160), kind: 'heading' }]]),
+  obstacles: [], width: 1440, height: 900, main: { left: 280, right: 1440, top: 0, bottom: 900 },
+};
 export const OPEN: Clear = () => true;
 export const SHUT: Clear = () => false;
 export const envelope = (p: Point): Box => ({ left: p.x - 23, right: p.x + 23, top: p.y - 40, bottom: p.y + 18 });

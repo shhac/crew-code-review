@@ -65,15 +65,26 @@ const claimsOf = (crows: readonly Crow[]): Spot[] => crows
   .filter((c) => c.mode !== 'away' && c.mode !== 'depart' && c.floor >= 0)
   .flatMap((c) => [{ floor: c.floor, x: c.x }, { floor: c.floor, x: c.target }]);
 
+// Whether two feeding spots are far enough apart: SPOT_APART along one
+// ledge, and on two stacked close together (a heading rule over a card
+// top) the walk's spacing on the page, so a crow at each never overlaps
+// the other.
+const spaced = (page: PageMap, a: Spot, b: Spot) => {
+  if (a.floor === b.floor) return Math.abs(a.x - b.x) >= SPOT_APART;
+  const p = pageOf(page, a);
+  const q = pageOf(page, b);
+  return !p || !q || apart(p, q) >= WALKER.spacing;
+};
+
 // Every place on the page in view where a crow could feed, before the
 // escape route is checked: its stand pose fits, grain lies near, and it
-// keeps SPOT_APART from every claim on its ledge.
+// keeps SPOT_APART from every claim.
 export function feedingSpots(field: Field, taken: readonly Spot[]): Spot[] {
   const { page, chaff } = field;
   return [...page.floors].flatMap(([floor, f]) => {
     if (!inView(f, page)) return [];
     return pointsAlong(runsOf(f, page, WALKER).map((r) => ({ floor, room: bodyOf(r, WALKER.half) })), SPOT_STEP)
-      .filter((s) => grainNear(chaff, floor, s.x, SPOT_GRAIN) && taken.every((t) => t.floor !== floor || Math.abs(t.x - s.x) >= SPOT_APART));
+      .filter((s) => grainNear(chaff, floor, s.x, SPOT_GRAIN) && taken.every((t) => spaced(page, t, s)));
   });
 }
 
@@ -287,7 +298,7 @@ export function restingCrows(field: Field, previous: Crows | null): Crows {
     .filter((r) => r.body.hi >= r.body.lo).sort((a, b) => lengthOf(b.body) - lengthOf(a.body));
   const place = (all: Crow[], id: number) => {
     const spot = runs.map((r) => ({ floor: r.floor, x: (r.body.lo + r.body.hi) / 2 }))
-      .find((s) => all.every((o) => o.floor !== s.floor || Math.abs(o.x - s.x) >= SPOT_APART) && escapes(field, s, 0));
+      .find((s) => all.every((o) => spaced(field.page, o, s)) && escapes(field, s, 0));
     return spot ? still(id, spot.floor, spot.x, 1) : null;
   };
   // Placed afresh, two or three as the page has room for three.

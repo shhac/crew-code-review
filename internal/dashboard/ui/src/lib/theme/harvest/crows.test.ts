@@ -7,7 +7,7 @@ import type { Alarm } from './alarm';
 import { peck, type Chaff } from './chaff';
 import { away, comeIn, grounded, standing, WALKER, type Crow } from './crow';
 import { AWAY, createCrows, feedingSpots, LOOK_AGAIN, pointOf, reconcileCrows, RESTLESS_AWAY, restingCrows, RETURN_GAP, SPOT_APART, SPOT_GRAIN, STAGGER, stepCrows, type Crows, type Field } from './crows';
-import { card, field, OPEN, PAGE, seeded, SHUT } from './fixtures';
+import { card, field, OPEN, PAGE, seeded, SHUT, STACKED } from './fixtures';
 import { arrive, flightAt, leave } from './flight';
 
 const SCARECROW = { x: 80, y: 780 };
@@ -48,6 +48,20 @@ describe('the crows', () => {
     // With no way off the page, nobody is placed at all.
     const shut = createCrows(field(PAGE, SHUT), 0, seeded(1));
     expect(modes(shut)).toEqual(['away', 'away']);
+  });
+
+  it('feed 60px apart on the page across stacked ledges, so none stands over another', () => {
+    // A claim on the heading rule at page (690, 160) keeps the card top 22px
+    // under it clear for 56px either way.
+    const f = field(STACKED);
+    const spots = feedingSpots(f, [{ floor: 5, x: 400 }]).filter((s) => s.floor === 1);
+    expect(spots.length).toBeGreaterThan(0);
+    expect(Math.min(...spots.map((s) => Math.hypot(290 + s.x - 690, 182 - 160)))).toBeGreaterThanOrEqual(WALKER.spacing);
+    for (const seed of [1, 2, 3, 4, 5]) {
+      const placed = createCrows(f, 0, seeded(seed)).crows.flatMap((c) => pointOf(c, STACKED, 0) ?? []);
+      expect(placed.length).toBeGreaterThan(1);
+      placed.forEach((p, i) => placed.slice(i + 1).forEach((q) => expect(Math.hypot(p.x - q.x, p.y - q.y)).toBeGreaterThanOrEqual(WALKER.spacing)));
+    }
   });
 
   it('are three where three spots are 90px apart, two where only two are, never more later', () => {

@@ -90,15 +90,22 @@ const scan = (c: Crow, now: number, rand: Rand, first = false): Crow => {
 };
 
 // The stretch of the crow's run its feet may use, less what the other
-// crows on its ledge keep for themselves.
+// crows keep for themselves: WALKER.spacing on the page, so one on a ledge
+// stacked just above or below keeps it off too, for less of its run the
+// farther the two ledges are apart.
 function roomOf(c: Crow, g: Ground): Run | null {
   const f = g.scene.floors.get(c.floor);
   const run = f && runAt(f, g.scene, WALKER, c.x);
-  if (!run) return null;
+  if (!f || !run) return null;
   const body = bodyOf(run, WALKER.half);
-  return g.others.filter((o) => grounded(o) && o.floor === c.floor).reduce<Run>((r, o) => {
-    const at = Math.abs(o.target - c.x) < Math.abs(o.x - c.x) ? o.target : o.x;
-    return at < c.x ? { ...r, lo: Math.max(r.lo, at + WALKER.spacing) } : { ...r, hi: Math.min(r.hi, at - WALKER.spacing) };
+  return g.others.filter(grounded).reduce<Run>((r, o) => {
+    const of = g.scene.floors.get(o.floor);
+    const dy = of ? Math.abs(of.y - f.y) : Infinity;
+    if (!of || dy >= WALKER.spacing) return r;
+    const shift = o.floor === c.floor ? 0 : of.left - f.left;
+    const keep = Math.sqrt(WALKER.spacing ** 2 - dy ** 2);
+    const at = Math.abs(o.target + shift - c.x) < Math.abs(o.x + shift - c.x) ? o.target + shift : o.x + shift;
+    return at < c.x ? { ...r, lo: Math.max(r.lo, at + keep) } : { ...r, hi: Math.min(r.hi, at - keep) };
   }, body);
 }
 

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { Cursor } from '../pointer';
 import type { Chaff, Grain } from './chaff';
 import { BILL, CALM, CROUCH, FIRST_SCAN, PECK, SCAN, SETTLE, SIDLE, SIDLE_MOST, SPRING, standing, stepCrow, takeOff, comeIn, WALK, WALK_MOST, type Bite, type Crow, type Ground } from './crow';
-import { PAGE, OPEN, seeded } from './fixtures';
+import { PAGE, OPEN, seeded, STACKED } from './fixtures';
 import { arrive, leave } from './flight';
 
 // Grain only where a test puts it, on ledge 1 (left 300, y 200).
@@ -60,6 +60,16 @@ describe('a crow on a ledge', () => {
     const other = { ...standing(1, 1, 300, -1, 0, () => 0), until: Infinity };
     const { states } = run(at(200), 0, 6000, { chaff: chaffOf(300), others: [other] });
     expect(Math.max(...states.map((s) => s.x))).toBeLessThanOrEqual(240 + 1e-6);
+  });
+
+  it('stops 60px short of a crow on a ledge stacked 22px above it, measured on the page', () => {
+    // The other stands on the heading rule at page (590, 160); the walk to
+    // grain near under it stops where the two are 60px apart.
+    const other = { ...standing(1, 5, 300, -1, 0, () => 0), until: Infinity };
+    const { states } = run(at(200), 0, 6000, { scene: STACKED, chaff: chaffOf(260), others: [other] });
+    const gap = (s: Crow) => Math.hypot(290 + s.x - 590, 182 - 160);
+    expect(Math.max(...states.map((s) => s.x))).toBeGreaterThan(240);
+    expect(Math.min(...states.map(gap))).toBeGreaterThanOrEqual(60 - 1e-6);
   });
 
   it('settles for 0.6s on landing, then looks about 1.5 to 3s the first time and 0.8 to 2s after', () => {
