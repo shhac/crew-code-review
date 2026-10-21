@@ -22,7 +22,9 @@ test('Christmas shelf geometry, lights and real pointer pass-through', async ({ 
   await expect(lights).toHaveCount(7);
   const timings = await lights.evaluateAll(els => els.map(el => {
     const style = getComputedStyle(el);
-    const frames = el.getAnimations()[0].effect!.getKeyframes();
+    const effect = el.getAnimations()[0].effect;
+    if (!(effect instanceof KeyframeEffect)) throw new Error('expected a keyframe animation');
+    const frames = effect.getKeyframes();
     return { timing: [style.animationDuration, style.animationDelay].join('/'), pointer: style.pointerEvents,
       frames: frames.map(frame => Object.keys(frame).filter(key => !['offset', 'computedOffset', 'easing', 'composite'].includes(key))) };
   }));
