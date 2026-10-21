@@ -8,7 +8,7 @@ import { runsAlong, type Ledge, type Obstacle, type PageMap, type Run } from './
 // numbers.
 
 // One end of a gap: a ledge's end, by the ledge's id and which end.
-export type GapEnd = { ledge: number; side: 'left' | 'right'; x: number; y: number };
+type GapEnd = { ledge: number; side: 'left' | 'right'; x: number; y: number };
 // from is the gap's left end and to its right (from.x < to.x). step is the
 // height between the ends of a side gap, or an under gap's band. Anything
 // hung in the gap starts at top and may reach down to bottom, before any

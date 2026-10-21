@@ -75,7 +75,7 @@ export function freeOf(r: Run, claims: readonly Claim[], spacing: number): Run[]
 // always holds x itself ('held', the pigeons' and the hares' rule); or it is
 // behind it and the stretch may not hold x ('behind', the gulls'); or it is
 // passed over ('past', the foxes' and the rabbits').
-export type Edge = 'held' | 'behind' | 'past';
+type Edge = 'held' | 'behind' | 'past';
 export function stretchAmong(room: Run, taken: readonly Claim[], floor: number, x: number, spacing: number, { edge = 'held' }: { edge?: Edge } = {}): Run {
   const near = taken.filter((c) => c.floor === floor);
   const behind = (c: Claim) => (edge === 'past' ? c.hi < x : c.hi <= x);
@@ -106,7 +106,7 @@ export function nearLedgeClaims(taken: readonly Claim[], scene: PageMap, near: n
 // Where a walker could settle: every clear run in view at least minSpot
 // long, as the stretch its middle may use, away from the claims. Ledges
 // nobody has claimed come first, so walkers spread out.
-export type Spot = { floor: number; room: Run };
+type Spot = { floor: number; room: Run };
 export function spots(scene: PageMap, taken: readonly Claim[], w: Walker, minSpot: number): Spot[] {
   const all = [...scene.floors].flatMap(([floor, f]) => {
     if (!inView(f, scene)) return [];
@@ -137,7 +137,7 @@ export function towardTarget<T extends { x: number; target: number; walked: numb
 // What a walker hears of the cursor: since when it has been within `near`
 // of its middle (null once it is not), and whether it is passing, having
 // moved in the last `moving` ms within `reach`.
-export type Senses = { near: number; reach: number; moving: number };
+type Senses = { near: number; reach: number; moving: number };
 export function noticing(cursor: Cursor | null, middle: Point, now: number, since: number | null, senses: Senses): { near: number | null; passing: boolean } {
   const away = cursor ? apart(cursor, middle) : Infinity;
   return { near: away < senses.near ? since ?? now : null, passing: !!cursor && now - cursor.at < senses.moving && away < senses.reach };

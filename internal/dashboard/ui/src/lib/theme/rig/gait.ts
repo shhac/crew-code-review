@@ -27,7 +27,7 @@ export type Toes = { kind: 'toes'; length: number; lean: number; fold: number };
 // A sole walker's foot: where its toes press the ground, from the heel
 // (where the leg comes down), and how far (degrees) the heel peels up over
 // them as the foot pushes off.
-export type Sole = { kind: 'sole'; toes: Point; peel: number };
+type Sole = { kind: 'sole'; toes: Point; peel: number };
 
 // When each leg steps is the gait's (a walk and a trot move the same legs in
 // different orders), so a leg has no beat of its own.
@@ -190,7 +190,7 @@ export const beatsFor = (specs: readonly QuadLeg[], landings: Landings): number[
 
 // A stretch of the cycle when no foot is down: where it starts (0 to 1) and
 // how long it lasts, as shares of the cycle.
-export type Flight = { from: number; length: number };
+type Flight = { from: number; length: number };
 
 // A gait's flights: none for a walk or a slow hop.
 export function flightsOf(gait: Gait): Flight[] {

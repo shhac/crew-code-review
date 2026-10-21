@@ -151,7 +151,7 @@ export const wingFace = (lift: number, far: boolean, view = 0): 'upper' | 'under
 // A wing's art: each piece's upper side and underside, as images placed in
 // the wing's own flat drawing (drawing units), with the shoulder and the
 // wrist where they sit in it.
-export type WingPiece = { upper: string; under: string; x: number; y: number; width: number; height: number };
+type WingPiece = { upper: string; under: string; x: number; y: number; width: number; height: number };
 export type WingArt = { name: string; arm: WingPiece; hand: WingPiece; shoulder: Point; wrist: Point };
 
 // The smallest share of its span a wing is drawn at, seen nearly edge-on,

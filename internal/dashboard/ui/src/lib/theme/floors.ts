@@ -7,9 +7,9 @@ const CARD_TOPS = 'main .surface, main .queue-board, main .context section, main
 // Page headings sit on a rule; the spider walks along the rule, not the text.
 const HEADING_RULES = 'main .hero, main .page-head';
 
-// box.ts has the algebra; Box and meets are still exported from here for
-// the callers that have not moved to it yet.
-export { meets, type Box };
+// box.ts has the algebra; Box is still exported from here for the callers
+// that have not moved to it yet.
+export type { Box };
 // A block is a card's own box, empty at its edges; everything else (text,
 // controls, charts) is content, never to be covered.
 export type Obstacle = Box & { block?: boolean };
@@ -20,7 +20,7 @@ export type Reach = { half: number; up: number; down: number };
 // rig's test measures it: its width centred on the anchor, its height above
 // it and `down` below (a walker stands on its anchor, so none; a flier's
 // wings beat below the line it flies along).
-export type Footprint = { width: number; height: number; down?: number };
+type Footprint = { width: number; height: number; down?: number };
 // How far an animal may reach into a card's empty edge (standing, up into
 // the bottom of a card above; flying, wherever its month lets it), never
 // into content.
@@ -200,7 +200,7 @@ export const samePage = (a: PageMap, b: PageMap) => a.width === b.width && a.hei
 // left). id is the ledge's id with l or r, so a wall lives as long as its
 // card's element does. A point on a wall is held as d, px down from its top,
 // so it rides with its card on scroll as ledge-local x does.
-export type Wall = { id: string; floor: number; side: -1 | 1; x: number; top: number; bottom: number };
+type Wall = { id: string; floor: number; side: -1 | 1; x: number; top: number; bottom: number };
 
 // A card shorter than this has no side worth the name.
 const MIN_WALL = 24;

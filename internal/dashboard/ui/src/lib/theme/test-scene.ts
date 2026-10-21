@@ -45,7 +45,7 @@ export function seeded(seed: number): () => number {
 
 // A troupe as each month's layer places it (layout.ts's TroupeModel), and
 // the members it shows (those away left out).
-export type Placed<T, S, M> = {
+type Placed<T, S, M> = {
   create(scene: S, now: number, rand: Rand): T;
   reconcile(group: T, scene: S, now: number, rand: Rand): T;
   members(group: T): readonly M[];

@@ -21,7 +21,7 @@ export function placeInTurn<T, U>(items: readonly T[], place: (item: T, placed: 
 }
 
 // A member of a troupe: one of a few animals, told apart by a small id.
-export type Member = { id: number };
+type Member = { id: number };
 
 // One placed for each id in turn, each seeing those placed before it.
 export const placeIds = <T>(ids: readonly number[], place: (others: T[], id: number) => T | null): T[] => placeInTurn<number, T>(ids, (id, placed) => place(placed, id));
@@ -33,7 +33,7 @@ export const troupeSize = (placed: readonly unknown[]): 2 | 3 => (placed.length 
 // Each kept where it can be, in turn, so the same one wins a crowded spot;
 // keep sees those settled before it and, for one that must move, every
 // other (those still to come as they were), so it lands in nobody's way.
-export type Keep<T> = (item: T, settled: T[], all: T[]) => T | null;
+type Keep<T> = (item: T, settled: T[], all: T[]) => T | null;
 export function keepInTurn<T extends Member>(items: readonly T[], keep: Keep<T>): T[] {
   return placeInTurn<T, T>(items, (item, settled) => keep(item, settled, [...settled, ...items.filter((o) => o.id > item.id)]));
 }

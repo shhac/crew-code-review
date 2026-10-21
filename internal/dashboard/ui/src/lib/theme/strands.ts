@@ -68,8 +68,8 @@ export function stepped(from: Pose | null, to: Pose | null): number {
 
 // The pointer, but only while it is moving: one that has sat still for this
 // long startles nothing.
-export const STILL_AFTER = 300;
-export type Pointer = { x: number; y: number; at: number };
+const STILL_AFTER = 300;
+type Pointer = { x: number; y: number; at: number };
 
 export function movingPointer(pointer: Pointer, now: number): { x: number; y: number } | undefined {
   return now - pointer.at < STILL_AFTER ? { x: pointer.x, y: pointer.y } : undefined;

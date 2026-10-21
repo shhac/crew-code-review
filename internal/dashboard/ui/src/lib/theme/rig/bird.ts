@@ -174,7 +174,7 @@ export const stepRise = (walked: number, gait: Gait): number => (1 - Math.cos(2 
 // and the tarsus's lean (degrees from straight down, its foot end ahead):
 // tucked, folded forward along the belly; trailing, laid out behind;
 // reaching, angled forward to the ground.
-export type AirLeg = { ankle: Point; lean: number };
+type AirLeg = { ankle: Point; lean: number };
 export type AirLegs = { tucked: AirLeg; trailing: AirLeg; reaching: AirLeg };
 export const AIR_LEGS: AirLegs = {
   tucked: { ankle: { x: -0.25, y: 0.65 }, lean: 105 },

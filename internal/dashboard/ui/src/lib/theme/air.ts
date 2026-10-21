@@ -34,7 +34,7 @@ type Bounded = Pick<Airspace, 'page' | 'room' | 'exits' | 'keepOff'>;
 export type Exit = 'right' | 'top' | 'rail';
 export const EXITS: readonly Exit[] = ['right', 'top', 'rail'];
 // Each exit's line, in viewport px: right and rail are an x, top a y.
-export type Exits = { right?: number; top?: number; rail?: number };
+type Exits = { right?: number; top?: number; rail?: number };
 
 // Kept this far from main's edges, the window's and every obstacle.
 const EDGE = 6;
@@ -43,7 +43,7 @@ export const GAP = 4;
 // What a flier keeps off of an obstacle: a box it may not meet, or null
 // where there is nothing to keep off (a card too small to have an inside).
 // By default every obstacle widened by GAP.
-export type KeepOff = (o: Obstacle) => Box | null;
+type KeepOff = (o: Obstacle) => Box | null;
 const gapped: KeepOff = (o) => grow(o, GAP);
 
 // A month whose fliers reach into cards' empty edges, as the ledge animals
@@ -52,7 +52,7 @@ const gapped: KeepOff = (o) => grow(o, GAP);
 // keeps that far off instead; by default GAP, as from anything). Content
 // (text, controls, charts) is kept `content` px off, GAP by default. A card
 // with no inside left is null.
-export type CardReach = { top?: number; bottom?: number; sides?: number; content?: number };
+type CardReach = { top?: number; bottom?: number; sides?: number; content?: number };
 export const cardReach = ({ top = -GAP, bottom = -GAP, sides = -GAP, content = GAP }: CardReach = {}): KeepOff => (o) => {
   if (!o.block) return grow(o, content);
   const off = { left: o.left + sides, right: o.right - sides, top: o.top + top, bottom: o.bottom - bottom };

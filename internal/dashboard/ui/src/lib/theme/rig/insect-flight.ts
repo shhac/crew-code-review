@@ -34,7 +34,7 @@ export function hoverBob(seed: number, now: number, amplitude: number, hz: numbe
 // the distance in the time), with where it is and how fast it is going at
 // each moment. `t` runs 0 to 1 over the dart; speed is in distance per
 // second for a dart lasting `ms`.
-export type Dart = { at: Point; speed: number; heading: number };
+type Dart = { at: Point; speed: number; heading: number };
 export function dartAt(from: Point, to: Point, t: number, ms: number): Dart {
   const u = Math.min(1, Math.max(0, t));
   const s = u * u * u * (10 - 15 * u + 6 * u * u);

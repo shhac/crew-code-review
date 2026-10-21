@@ -9,7 +9,7 @@ import { easeTo } from './life';
 // Where its eye is in its drawing, the point there standing on the ledge,
 // its page scale, how far its head turns at most (degrees), and from how far
 // (page px) it notices a cursor.
-export type Gazer = { eye: Point; anchor: Point; scale: number; look: number; reach: number };
+type Gazer = { eye: Point; anchor: Point; scale: number; look: number; reach: number };
 
 // How far the head would turn toward the cursor (degrees, nose down
 // positive), standing at `at` on the page facing dir.

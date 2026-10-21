@@ -88,7 +88,7 @@ export function ledgeScene(scene: LedgeScene): () => void {
 
 // How a layer's troupe of animals is made, kept and stilled. scene is what
 // they are placed against: the page map, or what a layer makes of it.
-export type TroupeModel<T, S> = {
+type TroupeModel<T, S> = {
   create(scene: S, now: number, rand: Rand): T;
   reconcile(group: T, scene: S, now: number, rand: Rand): T;
   resting(scene: S, previous: T | null): T;

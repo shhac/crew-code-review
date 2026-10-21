@@ -6,7 +6,7 @@ export type World = { spiders: Spider[]; lines: Line[]; nextLine: number };
 // Idle lines need an in-view lower floor and expire by age. A claimed line
 // follows its climber even when the lower anchor scrolls out of view, then
 // fades after release. Both kinds disappear if their anchors go away.
-export function keep(line: Line, ctx: Context): boolean {
+function keep(line: Line, ctx: Context): boolean {
   const bottom = ctx.floors.get(line.bottom.floor);
   if (!bottom || (!line.claimed && !inView(bottom, ctx.frame))) return false;
   if (line.claimed ? (line.released ?? 0) >= USED_LINE_FADE : line.age > LINE_LIFE) return false;

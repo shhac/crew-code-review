@@ -128,7 +128,7 @@ export const DROP_SPEED = 90;
 export const REEL_SPEED = 32;
 export const CLIMB_SPEED = 24;
 // A hanging spider's swing: degrees either side, and seconds per full swing.
-export const SWAY = { degrees: 3.2, period: 6.8 };
+const SWAY = { degrees: 3.2, period: 6.8 };
 
 export type Point = { x: number; y: number };
 
@@ -149,7 +149,7 @@ export const INSET = 14;
 export const MIN_DROP = 60;
 // A spider standing on a floor needs this much clear space above it, or the
 // floor above runs through its body (a card tucked right under a heading rule).
-export const HEADROOM = 34;
+const HEADROOM = 34;
 export const fits = (f: Floor) => (f.headroom ?? Infinity) >= HEADROOM;
 // A hanging spider hangs head-down below its thread, so it touches a floor
 // this far before the end of its thread does.

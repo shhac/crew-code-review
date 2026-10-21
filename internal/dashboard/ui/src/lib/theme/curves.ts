@@ -110,7 +110,7 @@ export function chainOf(curves: readonly Curve[], fine = 64): Chain {
 // Where on a chain s px along it is (s held to the chain): the curve it
 // falls on (the first that reaches s), its index, the t on it and the
 // point. A curve of no length is at its end. Null for a chain of nothing.
-export type OnChain = { i: number; curve: Curve; t: number; p: Point };
+type OnChain = { i: number; curve: Curve; t: number; p: Point };
 export function chainAt(chain: Chain, s: number): OnChain | null {
   const { curves, lengths } = chain;
   if (!curves.length) return null;

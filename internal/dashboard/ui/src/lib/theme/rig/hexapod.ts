@@ -1,6 +1,6 @@
 import { mix, mixPoint, rad } from '../math';
 import type { Point } from '../pointer';
-import { legsTo, restingFeet, stepping, type Gait, type Limb, type QuadLeg, type Step } from './gait';
+import { legsTo, restingFeet, stepping, type Gait, type Limb, type QuadLeg } from './gait';
 import type { Layer } from './rig';
 
 // An insect's six legs, drawn in code. All six come from the thorax, a pair
@@ -15,7 +15,7 @@ import type { Layer } from './rig';
 // leg is posed as a toe walker's is, the tarsus standing in for the bone up
 // from the toes, so its lean and its curl through a swing come for free.
 
-export type Pair = 'fore' | 'mid' | 'hind';
+type Pair = 'fore' | 'mid' | 'hind';
 export type InsectLeg = {
   pair: Pair;
   // The far side's leg, seen past the body, drawn behind it and darker.
@@ -40,7 +40,7 @@ export type InsectLeg = {
 };
 
 // The leg as the shared stepping knows a leg.
-export const asQuad = (leg: InsectLeg): QuadLeg => ({
+const asQuad = (leg: InsectLeg): QuadLeg => ({
   hip: leg.hip, reach: leg.reach, thigh: leg.femur, shin: leg.tibia, fore: leg.pair === 'fore', bend: leg.bend, far: leg.far,
   walksOn: { kind: 'toes', length: leg.tarsus, lean: leg.lean, fold: leg.curl },
 });
@@ -94,7 +94,7 @@ export function standingLegs(legs: readonly InsectLeg[], hips: readonly Point[],
 // the landing studies; no measured posture turned up). `pitch` is the
 // body's turn (degrees): legs drawn up turn with it, hanging and reaching
 // ones only partly, as they hang.
-export type AirHold = { hang: number; reach: number; pitch: number };
+type AirHold = { hang: number; reach: number; pitch: number };
 
 // Each hold, per pair: where the tibia's end (the ankle) is from the hip,
 // as an angle from straight down (degrees, positive forward) and a share
@@ -194,4 +194,4 @@ export function podAlong(from: Point, to: Point, at: number, length: number, wid
   });
 }
 
-export type { Limb, Step };
+export type { Limb };

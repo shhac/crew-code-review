@@ -60,7 +60,7 @@ export const reachesTopWeb = (ctx: Context, f: Floor, dir: Dir) => dir === 1 && 
 // into the bottom-right web when that is drawn and the side is in its square.
 export const sideRunsOut = (ctx: Context, f: Floor) => f.base >= ctx.frame.height - 40 && f.y < ctx.frame.height - 40;
 
-export type Path = {
+type Path = {
   from: Point;
   to: Point;
   // The drawing's turn while on it, facing the way the climb goes.

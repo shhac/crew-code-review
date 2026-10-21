@@ -19,7 +19,7 @@ export type Fur = { fill: string; outline: string };
 export type Foot = { src: string; fur: string; width: number; height: number; heel: Point };
 // Joint centres within a horizontal limb picture, as fractions of its
 // width. Its rounded cap can surround the joint instead of starting at it.
-export type BoneAnchors = { start: number; end: number };
+type BoneAnchors = { start: number; end: number };
 // A limb's art: a bone piece (straight, lying along x, rounded at both
 // ends) laid along each bone, and the foot standing at its end. Each comes
 // twice: as drawn, and as fur alone with the outline taken out, which is
@@ -144,7 +144,7 @@ export const limbLayers = (name: string, leg: DrawnLeg, far: boolean): Layer[] =
 
 // The pieces a leg is drawn with: a piece of art laid along each bone, as
 // thick as it is drawn, outlined and as fur alone.
-export type Piece = { from: Point; to: Point; width: number; src: string; fur: string; anchors?: BoneAnchors };
+type Piece = { from: Point; to: Point; width: number; src: string; fur: string; anchors?: BoneAnchors };
 export function piecesOf(leg: DrawnLeg): Piece[] {
   const { limb: { hip, knee, ankle, foot }, art, width } = leg;
   const plain = { src: art.bone, fur: art.boneFur };
@@ -168,7 +168,7 @@ export function footBox(leg: DrawnLeg, foot: Foot = leg.art.foot) {
 // piece of art stretched along each bone (in the fur pass the first runs
 // flush from the hip, see bone), then the foot over the leg's end; or, for
 // a sole walker, the foot first, under the leg's rounded end, its heel.
-export type LegImage = { href: string; stretch: boolean; x: number; y: number; width: number; height: number; transform: string; opacity?: number };
+type LegImage = { href: string; stretch: boolean; x: number; y: number; width: number; height: number; transform: string; opacity?: number };
 export function legImages(leg: DrawnLeg, fur: boolean): LegImage[] {
   const pieces = piecesOf(leg).map((p, i) => ({ href: fur ? p.fur : p.src, stretch: true, ...bone(p.from, p.to, p.width, fur && i === 0, p.anchors) }));
   const feet = footImages(leg, fur);
