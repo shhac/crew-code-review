@@ -216,6 +216,14 @@ function comeBack(g: Crows, field: Field, now: number, rand: Rand): Crows {
   return update(g, { ...comeIn(c, landing.flight, landing.spot.floor, landing.spot.x, now), wait: 0 });
 }
 
+// A cue's crows stay away from when each has gone, so one slow to get off
+// the page is not back the moment it has left.
+function goneFor(before: readonly Crow[], after: Crow[], alarm: Alarm | null, now: number): Crow[] {
+  if (alarm?.early === undefined) return after;
+  const early = alarm.early;
+  return after.map((c, i) => (c.mode === 'away' && before[i].mode !== 'away' && c.wait > 0 ? { ...c, back: now + c.wait - early } : c));
+}
+
 // One frame for the family: the alarm, take-offs, a restless one, a
 // return, then each crow in turn, seeing the others as they now are.
 // Returns the bites the pecks made, for the grain.
@@ -223,7 +231,7 @@ export function stepCrows(g: Crows, field: Field, now: number, dt: number, rand:
   const ready = comeBack(restless(launch(hear(g, field, alarm, now, rand), field, now, rand), now, rand), field, now, rand);
   const ground = { scene: field.page, chaff: field.chaff, now, dt, rand, cursor };
   const stepped = inTurn<ReturnType<typeof stepCrow>>(ready.crows.map((crow) => ({ crow, bite: null })), ({ crow }, others) => stepCrow(crow, { ...ground, others: others.map((o) => o.crow) }));
-  const crows = stepped.map((s) => s.crow);
+  const crows = goneFor(g.crows, stepped.map((s) => s.crow), ready.alarm, now);
   const landedNow = crows.some((c, i) => c.mode === 'settle' && ready.crows[i].mode === 'arrive');
   return { group: { ...ready, crows, landed: landedNow ? now + between(rand, RETURN_GAP.lo, RETURN_GAP.hi) : ready.landed }, bites: stepped.flatMap((s) => (s.bite ? [s.bite] : [])) };
 }
@@ -235,7 +243,7 @@ export function stepCrows(g: Crows, field: Field, now: number, dt: number, rand:
 // otherwise finds a new way out from where it is, an arriving one a new way
 // down to its spot, or turns back; with no way it is taken away.
 export function reconcileCrows(g: Crows, field: Field, now: number, rand: Rand): Crows {
-  return { ...g, crows: keepInTurn(g.crows, (c, _, others) => keep(c, others, field, now, rand)) };
+  return { ...g, crows: goneFor(g.crows, keepInTurn(g.crows, (c, _, others) => keep(c, others, field, now, rand)), g.alarm, now) };
 }
 
 // A crow that has never been out (the page had no spot for it when the

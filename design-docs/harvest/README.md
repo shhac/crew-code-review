@@ -439,7 +439,9 @@ while building, each within the contract:
 - **The cue.** `?theme-cue=scatter` scatters the family 1.2s after it is
   placed, as if the scarecrow had flapped, its flapping taken to have ended
   8s before, so the crows start back within 7 to 17s instead of 15 to 25:
-  the whole scatter and return fits a test.
+  the whole scatter and return fits a test. Each crow's 7 to 17s counts
+  from when it leaves the page, not from the cue, so one slow to get away
+  (waiting on the others' separation) is not back the moment it has gone.
 - **Phones.** At 390 the metrics page has one clear run with a way out (its
   stacked cards leave 22px between them, too little to stand), so the SETS
   row asks for one crow at 390; 1440 and 1024 get two.

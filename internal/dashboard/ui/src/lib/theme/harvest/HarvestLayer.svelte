@@ -25,7 +25,8 @@
   // `?theme-cue=scatter` (tests only): the crows are scattered once they
   // have been placed a moment, as if the scarecrow had flapped, and its
   // flapping is taken to have ended 8s before, so they start back within
-  // 7 to 17s rather than half a minute, all of them gone by then.
+  // 7 to 17s rather than half a minute, each counted from when it left the
+  // page, so one slow to get away is not back the moment it has gone.
   const CUE = cueOf(['scatter'] as const);
   const CUE_AFTER = 1200;
   const CUE_EARLY = 8000;
@@ -94,7 +95,7 @@
       now = time;
       if (!step || !field || !group) return;
       if (CUE === 'scatter' && !cued && time - placedAt >= CUE_AFTER) {
-        cued = { at: time, until: time - CUE_EARLY, x: 80, y: page.height - 80 };
+        cued = { at: time, until: time - CUE_EARLY, early: CUE_EARLY, x: 80, y: page.height - 80 };
       }
       const before = group.crows;
       const stepped = stepCrows(group, { ...field, chaff }, time, step.dt, Math.random, step.cursor, latest());

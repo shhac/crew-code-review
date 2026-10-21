@@ -149,6 +149,25 @@ describe('the crows', () => {
     for (const c of again.crows) expect(c.back).toBeGreaterThanOrEqual(6000 + AWAY.lo);
   });
 
+  it('scattered by a cue, stay away its shortened wait from when each leaves the page, however late', () => {
+    // The cue takes the flapping to have ended 8s before it; here nobody
+    // can get off the page for its first 5s, so the crows leave late.
+    const f = field();
+    const cue = { at: 1000, until: 1000 - 8000, early: 8000, ...SCARECROW };
+    const g = { ...createCrows(f, 0, seeded(3)), restless: Infinity };
+    const stuck = run(g, { ...f, clear: SHUT }, 0, 6000, seeded(4), (now) => (now >= 1000 ? cue : null));
+    const { frames } = run(stuck.group, { ...stuck.field, clear: OPEN }, 6000, 30000, seeded(5), () => cue);
+    const all = [...stuck.frames, ...frames];
+    for (const c of g.crows) {
+      const gone = all.findIndex(({ group }, i) => i > 0 && group.crows[c.id].mode === 'away' && all[i - 1].group.crows[c.id].mode === 'depart');
+      const back = all.slice(gone).find(({ group }) => group.crows[c.id].mode === 'arrive');
+      expect(gone).toBeGreaterThan(0);
+      expect(all[gone].now).toBeGreaterThan(6000);
+      if (back) expect(back.now - all[gone].now).toBeGreaterThanOrEqual(AWAY.lo - cue.early - 16);
+    }
+    expect(frames.some(({ group }) => group.crows.some((c) => c.mode === 'arrive'))).toBe(true);
+  });
+
   it('turn back if they were coming in when the scarecrow flapped', () => {
     const f = field();
     const gone = run(createCrows(f, 0, seeded(3)), f, 0, 5000, seeded(4), (now) => (now >= 1000 ? alarmAt(1000, 1000) : null));
