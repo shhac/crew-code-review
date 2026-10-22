@@ -656,7 +656,10 @@ frame for anything drawn over content.
 
 - **Body**, with the folded near wing painted on, the legs taken off and the
   belly closed where they were. The pigeon's body is one rigid shape; its
-  bob is in the neck.
+  bob is in the neck. Its rear runs back over the tail's root (the rump
+  above, the vent and undertail coverts below), so the tail, closed or
+  fanned, tucks under it with no gap; the first body stopped short there,
+  where the reference's folded wing hid it.
 - **Head and neck as two parts**: the head (with its soft, unoutlined back
   edge, as the hedgehog's has) and a neck piece laid along a bone from the
   upper breast to the back of the head, drawn twice (outlined, then fur alone)
@@ -736,6 +739,7 @@ were checked by laying them at their printed places over their drawing.
 | File | What | Edit of |
 | --- | --- | --- |
 | `pigeon-parts.png` | the body (legs, folded wing and tail off, belly and back closed, a soft unoutlined top where the head and neck go), the folded wing, the closed tail, the head with the green of the upper neck and a soft lower edge | `pigeon-standing-2.png` |
+| `pigeon-body-3.png` | the body redrawn with its rear intact (2026-10-22): the rump and the darker grey vent and undertail coverts run back and down over the tail's root, ending soft and unoutlined where the tail comes out; the head beside it, to measure its scale by | `pigeon-parts.png`, in two rounds with the reference: the first ran the rear back but kept it high, so the tail's cut root still showed below it; the second was given a guide with the closed and fanned tails laid where the rig puts them and the outline to reach |
 | `pigeon-limbs.png` | the neck piece (green over violet), the feathered tibiotarsus piece, the bare coral tarsometatarsus, a foot flat (three toes forward, the hallux back) and a foot curled | `pigeon-standing-2.png` |
 | `pigeon-wings.png` | the near wing's arm and hand, each as upper side and underside, root at the left with a soft end; the fanned tail | `pigeon-standing-2.png`, with the flight and take-off poses as guides |
 | `hawk-parts.png` | the gliding body (wing, head and tail off, the feet tucked under the tail painted on), the head with a soft back edge, the closed tail | `hawk-pose-glide-2.png` |
@@ -755,7 +759,7 @@ by overlay. Where each part sat (units, the reference's top left at 1, 1):
 
 | Part | Size | At |
 | --- | --- | --- |
-| `pigeon-body` | 12.17x10.17 | 8.02, 4.36 |
+| `pigeon-body` | 13.83x9.92 | 6.23, 4.43 |
 | `pigeon-wing` | 12.42x6.92 | 3.98, 5.75 |
 | `pigeon-tail` | 7.92x4.17 | 1.00, 10.04 |
 | `pigeon-head` | 7.67x6.67 | 13.45, 1.00 |

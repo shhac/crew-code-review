@@ -11,9 +11,10 @@ eye, so every pose of it is the same animal), at RES file pixels per unit,
 and the rigs set one page size for a unit, so the hawk is the size it should
 be beside the pigeons (1.6 times as long). The pigeon's parts are cut from
 pigeon-standing-2.png (its anatomy reference) into pigeon-parts.png and
-placed where they sat in it; its leg and neck pieces, cut from its own legs
-and neck, are in pigeon-limbs.png; its flight wings and fanned tail in
-pigeon-wings.png. The hawk only flies, so its parts are cut from its glide,
+placed where they sat in it, the body from its redraw with the rump and
+undertail coverts kept (pigeon-body-3.png); its leg and neck pieces, cut
+from its own legs and neck, are in pigeon-limbs.png; its flight wings and
+fanned tail in pigeon-wings.png. The hawk only flies, so its parts are cut from its glide,
 hawk-pose-glide-2.png, into hawk-parts.png and placed on the glide; its
 wings are in hawk-wings.png, each wing piece stood span up as the bird kit
 draws one. The sizes printed are what the rigs lay out.
@@ -39,7 +40,7 @@ PIGEON_EYE = 1.0
 HAWK_EYE = 1.8
 HAWK_DARK = 90
 # Where each sheet's eye is (source pixels), measured by eye.
-PIGEON_EYES = {'pigeon-standing-2.png': (1082, 199), 'pigeon-parts.png': (1925, 298)}
+PIGEON_EYES = {'pigeon-standing-2.png': (1082, 199), 'pigeon-parts.png': (1925, 298), 'pigeon-body-3.png': (1302, 432)}
 PIGEON_POSES = {
     'alert': (1012, 131), 'peck': (1194, 727), 'walk-thrust': (1273, 238), 'walk-hold': (1086, 265),
     'takeoff': (1100, 374), 'flight-down': (1164, 298), 'flight-up': (1168, 455), 'land': (1006, 378),
@@ -47,6 +48,11 @@ PIGEON_POSES = {
 HAWK_EYES = {'hawk-pose-glide-2.png': (995, 620), 'hawk-parts.png': (1140, 370)}
 HAWK_POSES = {'flap-down': (986, 400), 'flap-up': (971, 764)}
 PIGEON_PARTS = ['pigeon-body', 'pigeon-wing', 'pigeon-tail', 'pigeon-head']
+# pigeon-parts.png's body stopped short behind, where the reference's folded
+# wing hid the rump, so a notch showed between the tail's root and the
+# belly; the body is cut from pigeon-body-3.png instead, redrawn with its
+# rear running back over the tail's root, beside the same head.
+BODY_SHEET = ['pigeon-body', 'pigeon-head']
 HAWK_PARTS = ['hawk-body', 'hawk-head', 'hawk-tail']
 # The leg and neck pieces, left to right in pigeon-limbs.png, and how thick
 # each is drawn, outline included, in drawing units, measured from the
@@ -91,7 +97,10 @@ def main() -> None:
         print(f'{sheet}: eye {pigeon.px(sheet):.1f}px')
     pigeon.reference('pigeon-standing-2.png', LAB, 'pigeon-reference')
     pigeon.key_poses('pigeon-pose-', PIGEON_POSES, LAB)
-    pigeon.parts(cut(keyed(HERE / 'pigeon-parts.png'), PIGEON_PARTS), 'pigeon-parts.png', OUT, mask=by_colour)
+    parts = cut(keyed(HERE / 'pigeon-parts.png'), PIGEON_PARTS)
+    pigeon.parts({name: art for name, art in parts.items() if name != 'pigeon-body'}, 'pigeon-parts.png', OUT, mask=by_colour)
+    body = cut(keyed(HERE / 'pigeon-body-3.png'), BODY_SHEET)['pigeon-body']
+    pigeon.parts({'pigeon-body': body}, 'pigeon-body-3.png', OUT, mask=by_colour)
     limbs = cut(keyed(HERE / 'pigeon-limbs.png'), LIMBS)
     for name, thick in THICK.items():
         pigeon.bar(name, limbs[name], OUT, thick)
@@ -99,7 +108,7 @@ def main() -> None:
         pigeon.foot(name, limbs[name], OUT, length, heel)
     flight = wings('pigeon-wings.png', 'pigeon', PIGEON_HAND, [*WINGS, 'tail-fan'])
     # The fanned tail as long as the closed one.
-    closed = cut(keyed(HERE / 'pigeon-parts.png'), PIGEON_PARTS)['pigeon-tail']
+    closed = parts['pigeon-tail']
     length = closed.shape[1] * pigeon.on_eye('pigeon-parts.png')
     w, h = export(flight['tail-fan'], OUT, 'pigeon-tail-fan', length / flight['tail-fan'].shape[1])
     print(f'pigeon-tail-fan: {w / RES:.2f}x{h / RES:.2f}')
