@@ -14,6 +14,7 @@ import curledArt from './crow-foot-curled.webp';
 import footFurArt from './crow-foot-fur.webp';
 import footArt from './crow-foot.webp';
 import headArt from './crow-head.webp';
+import rumpArt from './crow-rump.webp';
 import tailArt from './crow-tail.webp';
 import tarsusFurArt from './crow-tarsus-fur.webp';
 import tarsusArt from './crow-tarsus.webp';
@@ -44,12 +45,15 @@ const GROUND = 27.75;
 const ANCHOR = { x: 21.7, y: GROUND };
 const FRAME: Frame = { width: 41, height: 28.8, anchor: ANCHOR, scale: SCALE };
 export const REFERENCE = { x: 1, y: 1, width: 39, height: 27 };
-const BODY = { x: 15.54, y: 5.53, width: 17.33, height: 16.33 };
+const BODY = { x: 15.25, y: 5.66, width: 17.67, height: 16.33 };
+// The rump and undertail coverts behind the body, drawn as one with it and
+// cut away only so the body's box stays where its feathers are: running
+// back over the tail's root, so no gap shows between the tail and the
+// belly, standing or flying.
+const RUMP = { x: 10.97, y: 12.38, width: 4.83, height: 9.33 };
 const HEAD = { x: 24.96, y: 1.19, width: 14.83, height: 10.83 };
 // Moved in from where the reference has it, so its root runs on under the
-// rump: the body as cut is shorter behind than the reference's, whose back
-// the folded wing hid, and in flight, the folded wing put away, a gap
-// showed.
+// rump.
 const TAIL = { x: 2.6, y: 16.9, width: 14.58, height: 8.08 };
 const FOLDED_WING = { x: 10.3, y: 8.41, width: 19.42, height: 10.17 };
 export const EYE = { x: 32.17, y: 4.33 };
@@ -246,6 +250,7 @@ function flying(crow: RigCrow, look: CrowLook): RigPose {
     // Pitched up to brake, the long tail is lifted so it stays clear of the
     // ledge, fanned and pressed down a little against the air.
     tailLayer(0.75 * Math.max(0, pose.pitch - level) - 4 * pose.tail, pose.tail),
+    imageLayer('rump', rumpArt, RUMP),
     imageLayer('body', bodyArt, BODY),
     imageLayer('folded wing', foldedArt, FOLDED_WING, !folded),
     // The head held level as the body tips forward under it.
@@ -275,7 +280,7 @@ export function crowRig(crow: RigCrow, look: CrowLook): RigPose {
   const { body, head, tail, limbs } = onGround(crow, look);
   const hips = LEGS.map((s) => turned(body, s.hip));
   const legs = limbs(hips);
-  const parts: Layer[] = [tailLayer(tail, 0), imageLayer('body', bodyArt, BODY), imageLayer('folded wing', foldedArt, FOLDED_WING), headLayer(crow, look, head)];
+  const parts: Layer[] = [tailLayer(tail, 0), imageLayer('rump', rumpArt, RUMP), imageLayer('body', bodyArt, BODY), imageLayer('folded wing', foldedArt, FOLDED_WING), headLayer(crow, look, head)];
   return {
     ...FRAME,
     // The legs start inside the body, the hips high in it.
@@ -298,7 +303,7 @@ export const SIDLE_SPEED = 45;
 export type Footprint = { width: number; height: number; down?: number };
 export const FOOTPRINTS: Record<CrowPose, Footprint> = {
   stand: { width: 40, height: 27.5 }, walk: { width: 42, height: 27.5, down: 0.2 }, sidle: { width: 42.5, height: 27.5, down: 0.2 },
-  peck: { width: 46.5, height: 24, down: 0.3 }, alert: { width: 38, height: 32.5 },
+  peck: { width: 46.5, height: 24, down: 0.45 }, alert: { width: 38, height: 32.5 },
   takeoff: { width: 51.5, height: 51.5, down: 4.5 }, flap: { width: 52, height: 44, down: 6 }, skim: { width: 48, height: 28.5 },
   glide: { width: 48, height: 27 }, flare: { width: 45.5, height: 50, down: 3.5 }, settle: { width: 47.5, height: 48.5, down: 3 },
 };

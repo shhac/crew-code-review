@@ -14,10 +14,11 @@ The crow's pictures are all on one scale, the eye's, as every animal's are.
 A crow is black all over, so its eye is not the dark blob art.py's feature
 finds: it is measured by its brown iris instead (iris below). The parts are
 cut from crow-standing.png (the anatomy reference) into crow-parts.png,
-each printed with where it sat in the reference; the spread wing's two
-pieces (crow-wing.png) are sized to the wing's true length, about the
-bird's; the leg pieces (crow-limbs.png) to the reference's own legs. The
-key poses are written for the lab to lay over the rig.
+each printed with where it sat in the reference, the body from its redraw
+with the rump and undertail coverts kept (crow-body-4.png); the spread
+wing's two pieces (crow-wing.png) are sized to the wing's true length,
+about the bird's; the leg pieces (crow-limbs.png) to the reference's own
+legs. The key poses are written for the lab to lay over the rig.
 
 Pass --check to also write overlays of every placed part on its reference
 into the scratch directory given after it, to look at.
@@ -30,7 +31,7 @@ from PIL import Image
 from scipy import ndimage
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from art import EyeScale, crop, cut, export, export_with_fur, keyed, lum, opaque, place, poses, rescaled, rows, span_up  # noqa: E402
+from art import MARGIN, EyeScale, crop, crop_origin, cut, export, export_with_fur, keyed, lum, opaque, place, poses, rescaled, rows, span_up  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
 OUT = HERE.parents[1] / 'internal/dashboard/ui/src/lib/theme/harvest'
@@ -51,8 +52,21 @@ KEY_POSES = {
     'walk': (1134, 186), 'peck': (1202, 736), 'alert': (1061, 120), 'takeoff-2': (1110, 340),
     'flight-up-2': (1158, 530), 'flight-down-2': (1150, 198), 'land-2': (1015, 359),
 }
-# crow-parts.png's two rows, each left to right.
+# crow-parts.png's two rows, each left to right. Its body stopped short
+# behind, where the reference's folded wing hid the rump, so a gap showed
+# under the wing between the tail's root and the belly; the body is cut from
+# crow-body-4.png instead, redrawn with its rear running back over the
+# tail's root, beside the same head.
 CROW_ROWS = [['crow-body', 'crow-head'], ['crow-tail', 'crow-wing-folded']]
+BODY_SHEET = ['crow-body', 'crow-head']
+# The redrawn body is written in two pieces, cut across at RUMP drawing
+# units from the reference's left (overlapping by RUMP_OVERLAP so no seam
+# shows): the body, as far back as the old one reached, and the rump behind
+# it, each its own picture. One picture would have a box reaching far behind
+# and above the rump, empty there, that tipped forward to peck rises over
+# the crow's footprint.
+RUMP = 15.5
+RUMP_OVERLAP = 0.25
 # The spread wing, shoulder to the longest primary's tip, is this many of
 # the bird's lengths (bill tip to tail tip): a carrion crow's span is about
 # 2.1 times its length, less the body between the shoulders.
@@ -117,6 +131,29 @@ def defringed(rgba: np.ndarray) -> np.ndarray:
     fringe = np.minimum(r, b) - g > 25
     out = rgba.copy()
     out[fringe, :3] = (34, 40, 52)
+    return out
+
+
+def unreddened(rgba: np.ndarray) -> np.ndarray:
+    """A picture of the crow's body with the red cast its redraw's outline
+    came with taken out: nothing on a crow's body is red, so wherever red
+    stands above green and blue it is brought down to the higher of them,
+    leaving the outline black."""
+    out = rgba.copy()
+    out[..., 0] = np.minimum(rgba[..., 0], np.maximum(rgba[..., 1], rgba[..., 2]))
+    return out
+
+
+def matched(rgba: np.ndarray, like: np.ndarray) -> np.ndarray:
+    """A picture's colours brought to another's: each channel of its opaque
+    pixels moved and stretched to the other's mean and spread. The body's
+    redraw came back a greener, paler black than the head and the wing cut
+    with the first body, so it is matched to that body's colours."""
+    out = rgba.copy()
+    mine, theirs = opaque(rgba), opaque(like)
+    for c in range(3):
+        a, b = rgba[..., c][mine].astype(np.float32), like[..., c][theirs].astype(np.float32)
+        out[..., c][mine] = np.clip((a - a.mean()) * (b.std() / a.std()) + b.mean(), 0, 255).astype(np.uint8)
     return out
 
 
@@ -227,14 +264,44 @@ def overlay(whole: np.ndarray, parts: list[tuple[int, int, np.ndarray]], out: Pa
     faded.save(out)
 
 
+def rump_and_body(scale: EyeScale, body: np.ndarray, first: np.ndarray, sheet: str) -> tuple[float, float]:
+    """The redrawn body, on sheet's scale as the first body is, placed where
+    the first body sits (its front by line work over the first's, which the
+    rig's legs and wing were fitted to), then written cut across at RUMP,
+    each piece cropped and printed with where it sits; returns where the
+    whole body sits, in drawing units."""
+    per_unit = scale.per_unit()
+    y, x = scale.find(rescaled(first, scale.px(scale.standing_sheet) / scale.px(sheet)), ink)
+    on_sheet = scale.px(sheet) / scale.eye
+    pad = 60
+    under = np.zeros((first.shape[0] + 2 * pad, first.shape[1] + 2 * pad, 4), np.uint8)
+    under[pad:-pad, pad:-pad] = first
+    behind = body.shape[1] - first.shape[1] - 20
+    fy, fx = place(body[:, behind:], under, mask=ink, step=2)
+    at = (x / per_unit + scale.margin + (fx - pad - behind) / on_sheet, y / per_unit + scale.margin + (fy - pad) / on_sheet)
+    column = round((RUMP - at[0]) * on_sheet)
+    overlap = round(RUMP_OVERLAP * on_sheet)
+    for name, left, piece in [('crow-rump', 0, body[:, :column + overlap]), ('crow-body', column - overlap, body[:, column - overlap:])]:
+        dx, dy = crop_origin(piece)
+        size = export(crop(piece), OUT, name, scale.on_eye(sheet))
+        print(f'{name}: {scale.units(size)} at {at[0] + (left + dx) / on_sheet:.2f}, {at[1] + dy / on_sheet:.2f}')
+    return at
+
+
 def crow(check: Path | None) -> None:
     scale = EyeScale(HERE, EYES, EYE, RES, measure=iris, middle=iris_middle)
     scale.reference('crow-standing.png', LAB, 'crow-reference')
     scale.key_poses('crow-pose-', KEY_POSES, LAB)
     sheet = crow_keyed(HERE / 'crow-parts.png')
     parts = {name: art for row, names in zip(rows(sheet, 2), CROW_ROWS) for name, art in cut(row, names).items()}
+    first = parts.pop('crow-body')
     masks = {'crow-head': bill_and_eye, 'crow-body': ink, 'crow-wing-folded': ink, 'crow-tail': None}
     scale.parts(parts, 'crow-parts.png', OUT, masks=masks)
+    body = matched(unreddened(cut(crow_keyed(HERE / 'crow-body-4.png'), BODY_SHEET)['crow-body']), first)
+    # The redraw came back a little bigger than the first body beside the
+    # same head, so it is drawn as tall as that body was.
+    body = rescaled(body, (first.shape[0] - 2 * MARGIN) / (body.shape[0] - 2 * MARGIN))
+    body_at = rump_and_body(scale, body, first, 'crow-parts.png')
     onto = scale.px(scale.standing_sheet) / scale.px('crow-parts.png')
     ty, tx = tip_at(rescaled(parts['crow-tail'], onto), scale.standing)
     print(f'crow-tail: placed by its tip at {tx / scale.per_unit() + scale.margin:.2f}, {ty / scale.per_unit() + scale.margin:.2f}')
@@ -266,8 +333,11 @@ def crow(check: Path | None) -> None:
     if check:
         laid = []
         for name in ['crow-tail', 'crow-body', 'crow-wing-folded', 'crow-head']:
-            art = rescaled(parts[name], onto)
-            y, x = tip_at(art, scale.standing) if name == 'crow-tail' else place(art, scale.standing, mask=masks[name])
+            art = rescaled(body if name == 'crow-body' else parts[name], onto)
+            if name == 'crow-body':
+                x, y = (round((u - scale.margin) * per_unit) for u in body_at)
+            else:
+                y, x = tip_at(art, scale.standing) if name == 'crow-tail' else place(art, scale.standing, mask=masks[name])
             laid.append((x, y, art))
         overlay(scale.standing, laid, check / 'crow-overlay.png')
 

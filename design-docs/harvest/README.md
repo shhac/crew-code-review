@@ -388,9 +388,18 @@ mode (lab spec `lab-tests/crow.spec.ts`).
   jumps from the one before. The kit's flare sweeps the wings so far
   forward that a crow's long wings covered its head, so it sweeps 30
   degrees less. Pitched up, the long tail is lifted to stay off the ledge.
-  The tail was moved 1.6 units in from the reference: the body as cut is
-  shorter behind than the reference's, and in flight, with the folded wing
-  put away, a gap showed.
+  The tail was moved 1.6 units in from the reference: the first body was
+  cut shorter behind than the reference's, and in flight, with the folded
+  wing put away, a gap showed. That did not close it: the first body had
+  no rump at all, so standing and flying alike background showed under the
+  wing between the tail's root and the belly. The body is now redrawn with
+  its rear intact (`crow-body-4.png`, below), its rump and long undertail
+  coverts running back over the tail's root, and drawn as two pictures cut
+  across at 15.5 units, `crow-body` and `crow-rump` behind it, so the
+  body's box does not reach far behind and above the rump, empty there,
+  and tipped forward to peck rise over the footprint. The peck's `down`
+  went from 0.3 to 0.45: the redraw's breast sits 0.13 lower, so its box's
+  clear corner dips 0.1 further.
 - **Wings**: the spread wing's pieces are turned to the kit's span-up
   drawing in `export.py`, and their undersides are the upper sides greyed
   (a crow's underwing is as dark, only flatter), not another drawing.
@@ -668,7 +677,8 @@ file, printing the placements and sizes below.
 | Source | What it is | Prompt summary | Shipped |
 | --- | --- | --- | --- |
 | `scarecrow-parts.png` | the scarecrow's four parts, an edit of `scarecrow.png` | the hat alone above; the left sleeve, the body (head completed under the hat, shoulders closed) and the right sleeve, each sleeve's inner end rounded and run on 40px to tuck under the jacket | `scarecrow-{hat,left-arm,body,right-arm}.webp`, laid out 66.8x64 |
-| `crow-parts.png` | the crow's body, head, tail and folded wing, an edit of the reference | a 2x2 sheet; the body closed where the legs, wing and tail were, keeping the feathered trousers; the head's and tail's cut edges soft | `crow-{body,head,tail,wing-folded}.webp` |
+| `crow-parts.png` | the crow's body, head, tail and folded wing, an edit of the reference | a 2x2 sheet; the body closed where the legs, wing and tail were, keeping the feathered trousers; the head's and tail's cut edges soft | `crow-{head,tail,wing-folded}.webp` (its body is no longer used) |
+| `crow-body-4.png` | the body redrawn with its rear intact, an edit of `crow-parts.png` (2026-10-22) | the body with the head beside it; the rump and the long undertail coverts run back over the tail's root, ending soft and unoutlined where the tail comes out, the back's rear running just under the folded wing's top edge. Three rounds: the first ran the rear back but kept it high, so the tail's cut root still showed under it; the second was given a guide of the tail where the rig lays it and the outline to reach; the third lowered the rump's back line, which had poked up above the folded wing | `crow-body`, `crow-rump` |
 | `crow-wing.png` | the spread wing, seen flat from above | the arm wing (shoulder to wrist, secondaries) and the hand wing (wrist to the fingered primaries), drawn 150px apart | `crow-wing-{arm,hand}` and their `-under` sides |
 | `crow-drumstick.png` | the feathered drumstick, from the reference's legs | one capsule: shaggy trousers from the knee, the bare scaled leg at the intertarsal joint | `crow-drumstick` (with `-fur`) |
 | `crow-limbs.png` | the leg pieces, from the reference's legs | a bare scaled tarsus, the foot from the side (three toes forward, hallux back), the foot curled | `crow-tarsus`, `crow-foot`, `crow-foot-curled` (each with `-fur`) |
@@ -694,6 +704,13 @@ How they were placed and sized:
   the body between the shoulders): the arm piece 16.3 units, the hand 20.7.
 - **The drumstick** is as thick as the trousers where they leave the belly,
   1.6 units.
+- **The redrawn body** came back a little bigger than the first body beside
+  the same head, and a greener, paler black, with a red cast in its
+  outline: `export.py` draws it as tall as the first body, takes the red
+  out and matches its colours to the first body's (each channel's mean and
+  spread), then places it by its front's line work over the first body's
+  place, which the legs and the folded wing were fitted to. The body is
+  17.67x16.33 at 15.25, 5.66 and the rump 4.83x9.33 at 10.97, 12.38.
 - **The legs** are sized to the reference's: the tarsus 0.85 units thick,
   the foot 5.6 units long with claws (the reference's foot is 6.7; kept
   smaller, as the brief asks of feet), the tarsus coming down on it at
