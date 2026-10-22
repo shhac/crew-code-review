@@ -129,6 +129,51 @@ describe('the bees', () => {
     expect(final).toBeDefined();
   });
 
+  describe('with nowhere to go', () => {
+    // Hovering in the left margin beside the first card, no flower in view,
+    // and looking for a way since 0.
+    const m = meadowOn();
+    const page = m.air.page;
+    const lost: Bee = { ...createBees(m, 0, seeded(30)).bees[0], mode: 'hover', since: 0, until: 0, flower: null, at: { frame: 2, x: -20, y: 60 }, to: null, stuck: 0 };
+    const nowhere = (others: readonly Box[] = []) => ({ air: m.air, flowers: new Map(), claimed: new Set<string>(), others, cursor: null, bonks: [], mayBonk: false, mayDodge: true });
+
+    it('hover on for 2s, then fly out of the window off the top or the bottom, clear all the way, and are away', () => {
+      const ctx = nowhere();
+      expect(stepBee(lost, ctx, 1990, 16, seeded(31)).mode).toBe('hover');
+      const off = stepBee(lost, ctx, 2000, 16, seeded(31));
+      expect(off.mode).toBe('leave');
+      expect(off.flower).toBeNull();
+      expect(off.flight?.purpose).toBe('leave');
+      const out = along(placeRoute(off.flight!.route, originOf(page, off.flight!.frame)!), off.flight!.route.length).p;
+      expect(out.y < 0 || out.y > page.height).toBe(true);
+      const flown = Array.from({ length: 1000 }, (_, i) => 2000 + (i + 1) * 16).reduce((b: Bee, t) => {
+        if (b.mode === 'away') return b;
+        const next = stepBee(b, ctx, t, 16, seeded(t));
+        const box = boxOf(next, page, t);
+        if (box) expect(clear(m.air, box), `${next.mode} at ${t}`).toBe(true);
+        return next;
+      }, off);
+      expect(flown.mode).toBe('away');
+      expect(flown.until - flown.since).toBeGreaterThanOrEqual(3000);
+      expect(flown.until - flown.since).toBeLessThanOrEqual(8000);
+    });
+
+    it('fade out where they hover when no way out is clear, and are away', () => {
+      // The margin shut above and below it.
+      const ctx = nowhere([{ left: 236, right: 290, top: 150, bottom: 190 }, { left: 236, right: 290, top: 300, bottom: 340 }]);
+      const here = where(lost, page, 2000);
+      const fading = stepBee(lost, ctx, 2000, 16, seeded(32));
+      expect(fading.mode).toBe('leave');
+      expect(fading.flight).toBeNull();
+      expect(fading.flower).toBeNull();
+      expect(where(fading, page, 2150)).toEqual(here);
+      expect(beeView(fading, page, 2150)?.opacity).toBeCloseTo(0.5);
+      expect(beeView(fading, page, 2300)?.opacity).toBe(0);
+      expect(stepBee(fading, ctx, 2290, 16, seeded(33)).mode).toBe('leave');
+      expect(stepBee(fading, ctx, 2300, 16, seeded(33)).mode).toBe('away');
+    });
+  });
+
   it('bonk at the first chance when a test cues it, once, and visit the shelf first when that is cued', { timeout: 30000 }, () => {
     const m = meadowOn();
     const card = m.air.page.floors.get(2)!;
