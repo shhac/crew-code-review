@@ -141,7 +141,11 @@ for (const set of SETS) {
         test.setTimeout(90_000);
         await page.setViewportSize({ width: 1440, height: 900 });
         await page.goto(`/?theme=${set.theme}&theme-cue=${cue.name}`);
-        await expect(page.locator(`${set.home ?? set.overlay} ${cue.flying}`).first()).toBeAttached({ timeout: 20_000 });
+        // Looked for every frame: what shows a flight under way can be drawn
+        // for less than half a second (May's last dash at the wall), which an
+        // assertion's polls, half a second apart and slower under load, can
+        // step over, and the cue comes only once.
+        await page.waitForFunction((flying) => !!document.querySelector(flying), `${set.home ?? set.overlay} ${cue.flying}`, { polling: 'raf', timeout: 20_000 });
         await page.setViewportSize({ width: 1024, height: 800 });
         const looks = coversOf(set).filter((what) => !knownAt(set.theme, 1024, what).some((k) => k.route === '/'));
         expect((await framesCoveredBy(page, set, looks, 4000)).covered).toEqual([]);
