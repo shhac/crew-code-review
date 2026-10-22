@@ -498,13 +498,7 @@ function arrived(b: Bee, f: Flight, ctx: Context, now: number, rand: Rand): Bee 
   if (!spot) return awayBee(b, now, rand);
   const flower = b.flower ? ctx.flowers.get(b.flower) : undefined;
   switch (f.purpose) {
-    case 'visit': case 'enter': {
-      if (!flower) return hoverHere(b, spot, now, between(rand, ...HOVER));
-      const over = hoverSpot(flower, 0);
-      const overPage = onPage(page, over);
-      const dir = overPage && there ? facingFrom(overPage.x - there.x, 1, b.dir) : b.dir;
-      return { ...timed({ ...b, at: spot, flight: null, dir }, 'approach', now, BRAKING + between(rand, ...SETTLE), over), bell: 0, visited: 1 };
-    }
+    case 'visit': case 'enter': return flower ? approach(b, spot, flower, page, now, rand) : hoverHere(b, spot, now, between(rand, ...HOVER));
     case 'bonk': {
       const contact = b.bonk && onPage(page, b.bonk.contact);
       if (!b.bonk || !contact || !there) return hoverHere(b, spot, now, between(rand, ...HOVER));
@@ -515,6 +509,14 @@ function arrived(b: Bee, f: Flight, ctx: Context, now: number, rand: Rand): Bee 
     case 'leave': return awayBee(b, now, rand);
     default: return hoverHere({ ...b, calm: Math.max(b.calm, now) }, spot, now, AFTER_DODGE);
   }
+}
+
+// Beside a flower: braking in to land on its first bell.
+function approach(b: Bee, spot: Spot, flower: Flower, page: PageMap, now: number, rand: Rand): Bee {
+  const over = hoverSpot(flower, 0);
+  const from = onPage(page, spot), to = onPage(page, over);
+  const dir = from && to ? facingFrom(to.x - from.x, 1, b.dir) : b.dir;
+  return { ...timed({ ...b, at: spot, flight: null, dir }, 'approach', now, BRAKING + between(rand, ...SETTLE), over), flower: flower.key, bell: 0, visited: 1 };
 }
 
 // Which way it faces along a flight: the way it is heading, keeping the way
@@ -542,7 +544,8 @@ function leave(b: Bee, ctx: Context, here: Point, now: number): Bee {
 
 // Away: after its time, and once there is a flower to come to, it flies in
 // from beyond the window's edge nearest the flower; with no way in from
-// there, it fades in beside the flower instead.
+// there, it fades in beside the flower instead, and lands on it as if it
+// had flown in.
 function comeBack(b: Bee, ctx: Context, now: number, rand: Rand): Bee {
   if (now < b.until) return b;
   const page = ctx.air.page;
@@ -560,7 +563,7 @@ function comeBack(b: Bee, ctx: Context, now: number, rand: Rand): Bee {
     const off = route && flyOff({ ...b, flower: f.key, bell: 0, visited: 0, fade: null }, ctx.air, route, f.frame, 'enter', now);
     if (off) return off;
   }
-  return { ...hoverHere({ ...b, flower: f.key, bell: 0, visited: 0 }, side, now, between(rand, ...HOVER)), fade: { from: 0, to: 1, at: now } };
+  return { ...approach(b, side, f, page, now, rand), fade: { from: 0, to: 1, at: now } };
 }
 
 // How visible it is: fading in or out over FADE ms.

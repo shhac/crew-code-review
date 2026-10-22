@@ -681,7 +681,7 @@ visitable), `footprints.ts`, `bee.ts` (one bee's state table) and `bees.ts`
   landing" needed a bee to keep flying with nowhere to fly; instead it
   fades out where it hovers (0.3s) and is away. Coming back with no way in
   from beyond the window's top or bottom (the page scrolled to its top),
-  it fades in beside its flower.
+  it fades in beside its flower and lands on it, as one flown in does.
 - **Held bees.** A bee whose next step would bring it within 8px of another
   (and closer than it was) holds that frame: a timed move waits, a flight
   neither flies on nor bumbles. Held half a second on a flight, the later in

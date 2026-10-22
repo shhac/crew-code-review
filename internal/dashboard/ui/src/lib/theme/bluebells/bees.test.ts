@@ -4,7 +4,7 @@ import type { Cursor } from '../pointer';
 import type { Rand } from '../seed';
 import { seeded, spacedAfterRelayout } from '../test-scene';
 import { clear } from './beeair';
-import { beeView, boxOf, stepBee, where, type Bee } from './bee';
+import { awayBee, beeView, boxOf, stepBee, where, type Bee } from './bee';
 import { boxesOf, createBees, reconcileBees, restingBees, SPACE, stepBees, type Bees, type Meadow } from './bees';
 import type { WallSide } from './bonks';
 import { cursorAt, dashboard, meadowOn } from './fixtures';
@@ -172,6 +172,28 @@ describe('the bees', () => {
       expect(stepBee(fading, ctx, 2290, 16, seeded(33)).mode).toBe('leave');
       expect(stepBee(fading, ctx, 2300, 16, seeded(33)).mode).toBe('away');
     });
+  });
+
+  it('coming back to a flower with no way in, fade in beside it and land on it', () => {
+    // The shelf alone: the rail above it is no air, so there is no way in
+    // from beyond the window's top or bottom.
+    const m = meadowOn();
+    const ctx = { air: m.air, flowers: new Map([[SHELF_KEY, m.flowers.get(SHELF_KEY)!]]), claimed: new Set<string>(), others: [], cursor: null, bonks: [], mayBonk: false, mayDodge: true };
+    const away = awayBee({ id: 0, seed: 3 }, 0, () => 0);
+    const back = stepBee(away, ctx, away.until, 16, seeded(40));
+    expect(back.fade).toEqual({ from: 0, to: 1, at: away.until });
+    expect(back.flight).toBeNull();
+    expect(back.flower).toBe(SHELF_KEY);
+    const modes: string[] = [];
+    const landed = Array.from({ length: 300 }, (_, i) => away.until + (i + 1) * 16).reduce((b: Bee, t) => {
+      if (b.mode === 'perch') return b;
+      const next = stepBee(b, ctx, t, 16, seeded(t));
+      modes.push(next.mode);
+      return next;
+    }, back);
+    expect(modes).not.toContain('leave');
+    expect(landed.mode).toBe('perch');
+    expect(landed.flower).toBe(SHELF_KEY);
   });
 
   it('bonk at the first chance when a test cues it, once', { timeout: 30000 }, () => {
