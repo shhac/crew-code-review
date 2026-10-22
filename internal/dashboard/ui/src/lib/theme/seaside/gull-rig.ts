@@ -47,7 +47,7 @@ const GROUND = 18;
 const ANCHOR = { x: 13.75, y: GROUND };
 const FRAME: Frame = { width: 26.7, height: 19.2, anchor: ANCHOR, scale: SCALE };
 export const REFERENCE = { x: 1, y: 1, width: 24.67, height: 17.33 };
-const BODY = { x: 1.83, y: 5.34, width: 19.58, height: 8.17 };
+const BODY = { x: 1.89, y: 5.34, width: 19.5, height: 8.17 };
 const FLIGHT_BODY = { x: 4.21, y: 5.45, width: 18.08, height: 8.33 };
 const HEAD = { x: 16.39, y: 1.19, width: 9.33, height: 9.83 };
 // The lower mandible, as it sits closed under the upper, and the corner of

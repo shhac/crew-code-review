@@ -547,7 +547,11 @@ The rig follows the fox's and the hedgehog's: parts on the shared rig
 (`lib/theme/rig/`), legs posed in code, every picture on one eye scale.
 
 - **Ground parts** (an edit of `gull-standing.png`): the body with its
-  folded wing as drawn, legs taken off and the belly closed where they were;
+  folded wing as drawn, legs taken off and the belly closed where they were,
+  its tail tucked under the folded primaries (the reference hung it below
+  them as a flap of its own, nearly as long as the wingtips, with a notch
+  between; a standing gull's primaries lie over its tail, which hardly shows
+  beneath them, so the body was redrawn there, `gull-body-2.png`);
   the head and neck with a soft unoutlined back edge where it overlaps the
   body; the lower mandible as its own piece pivoting at the gape, with the
   orange-red gape drawn behind it, so the bill opens smoothly for the call
@@ -617,7 +621,8 @@ as style references. Every pose is an edit of `gull-standing.png`.
 | `gull-pose-swoop.png` | a shallow dive, wings half folded and swept back | the lab's overlay | |
 | `gull-pose-flare-2.png` | the flare, pitched up, wings raised, tail fanned, feet reaching forward, true side view; the first try was a three-quarter front view | the lab's overlay | |
 
-| `gull-parts.png` | the reference taken apart: the body with its folded wing, legs off and belly closed, head off with a soft edge; the head and neck with a soft unoutlined back edge | `gull-body.webp`, `gull-head.webp` | placed where they sat |
+| `gull-parts.png` | the reference taken apart: the body with its folded wing, legs off and belly closed, head off with a soft edge; the head and neck with a soft unoutlined back edge | no longer shipped: the body is cut from `gull-body-2.png`, the head from `gull-bill.png` | placed where they sat |
+| `gull-body-2.png` | `gull-parts.png` with the body's rear redrawn (2026-10-22, `gpt-6.1-sol`): the tail tucked under the black primaries with no gap, ending a little past where the black begins, a narrow outlined white band beneath them running on from the belly and vent; two rounds, the first leaving the tail's tip a straight unoutlined cut | `gull-body.webp` | placed where it sat |
 | `gull-flight-body.png` | an edit of `gull-parts.png`'s body, in place: folded wing, wingtips and tail taken off, the back closed as a grey mantle | `gull-flight-body.webp` | |
 | `gull-flight-parts.png` | the tail closed and fanned, soft at the root (its first piece, an egg-shaped body, is not used) | `gull-tail.webp`, `gull-tail-fanned.webp` | laid at the rump by hand |
 | `gull-wings.png` | the spread wing flat, seen from above and from below, each cut at the wrist: arm and hand, span up the picture, leading edge right | `gull-arm.webp`, `gull-hand.webp`, `-under` of each | arm 10.5, hand 11.5 drawing units long |
