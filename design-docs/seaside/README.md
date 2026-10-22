@@ -668,6 +668,11 @@ As the owner built on it:
 - **The turn**: the layer draws the whole gull narrowing to nothing and
   widening the other way over 0.2s (`Rig`'s new optional `squash`), rather
   than snapping round.
+- **The tail in the air**: the closed and fanned tails are drawn behind the
+  flight body; in the frames where the wings are folded (the first of a
+  take-off, the last of a settle) the body with its folded wing is drawn
+  instead, and it carries its own tail under its primaries, so the flight
+  tail is not drawn then (it showed above the primaries, a second tail).
 - **Footprints** (the rig test, the head turned every way it can): stand
   39.5x26.5, strut 36.5x26, eye 42.5x27, call 44.5x27.
 

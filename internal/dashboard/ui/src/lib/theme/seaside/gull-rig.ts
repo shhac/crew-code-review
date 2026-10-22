@@ -254,8 +254,10 @@ function flying(gull: RigGull, look: GullLook): RigPose {
   // off (GULL_AIR), close to where they stood, tucked, or reaching to land.
   const limbs = pose.airborne ? airLegsTo(LEGS, hips, pose.legs, GULL_AIR) : planted(hips);
   const folded = pose.wings.fold > 120;
+  // The body with its wing folded has its own tail, tucked under the
+  // primaries: the flight tail behind it would show above them.
   const tail = (fanned: boolean, box: typeof TAIL, src: string, name: string) =>
-    ({ kind: 'group', turn: turnAbout(fanned ? -10 * pose.tail : 0, TAIL_ROOT), layers: [imageLayer(name, src, box, fanned ? pose.tail < 0.5 : pose.tail >= 0.5)] } satisfies Layer);
+    ({ kind: 'group', turn: turnAbout(fanned ? -10 * pose.tail : 0, TAIL_ROOT), layers: [imageLayer(name, src, box, folded || (fanned ? pose.tail < 0.5 : pose.tail >= 0.5))] } satisfies Layer);
   const bodyLayers: Layer[] = [
     birdWing(WING, pose.wings, FAR_SHOULDER, true, 0, !folded),
     tail(false, TAIL, tailArt, 'tail'), tail(true, TAIL_FANNED, tailFannedArt, 'tail, fanned'),
