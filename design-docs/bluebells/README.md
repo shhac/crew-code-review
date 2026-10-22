@@ -667,7 +667,11 @@ visitable), `footprints.ts`, `bee.ts` (one bee's state table) and `bees.ts`
   front within half a pixel of the card's side, measured on the page.
 - **Test cues** (`?theme-cue=`, the surfaces kit's): `bonk` makes the first
   bee leave its flower after half a second and bonk at its next choice,
-  once; `shelf` puts the shelf first among its choices. Without a cue
+  once; `shelf` leaves the shelf empty when the bees are placed, and makes
+  every bee leave any other flower after half a second, with the shelf
+  first among its choices, so the spec sees a visit flown: placed by room,
+  a bee often started on the shelf, and on the queue a bee on the clump
+  nearest the rail closes the only way there for the others. Without a cue
   nothing changes. The month spec drives both and checks every frame.
 - **A page still loading.** A bee the group could not place when it was
   made (no flowers yet: the page's cards had not arrived) is put on a

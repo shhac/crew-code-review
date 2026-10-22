@@ -6,7 +6,7 @@ import { maxBy, type Rand } from '../seed';
 import { clear, type BeeAir } from './beeair';
 import { AT_FLOWER, awayBee, beeView, boxOf, ON_BELL, perchOn, placedBee, stepBee, where, type Bee, type Context, type Cue, type Flowers } from './bee';
 import type { WallSide } from './bonks';
-import { fitsAt, frameAt, hoverSpot, onPage, perchSpot, roomAt, visitable, type Flower } from './flowers';
+import { fitsAt, frameAt, hoverSpot, onPage, perchSpot, roomAt, SHELF_KEY, visitable, type Flower } from './flowers';
 import { grow } from './footprints';
 import { flyReach, originOf, placeRoute, routeFrom, samplesOf, stillClear } from './route';
 
@@ -41,6 +41,9 @@ const STAGGER = 1700;
 export const meadowOf = (air: BeeAir, flowers: readonly Flower[], bonks: readonly WallSide[] = [], cue: Cue = null): Meadow => ({ air, flowers: new Map(flowers.map((f) => [f.key, f])), bonks, cue });
 
 const hoverAt = (m: Meadow, f: Flower) => onPage(m.air.page, hoverSpot(f, 0));
+// Cued to visit the shelf, no bee is put on it, so the first bee's visit
+// is flown.
+const placeable = (m: Meadow, f: Flower) => !(m.cue === 'shelf' && f.key === SHELF_KEY);
 const facingMiddle = (m: Meadow, f: Flower): 1 | -1 => {
   const p = hoverAt(m, f);
   const main = m.air.page.main;
@@ -54,7 +57,7 @@ function bestFlower(m: Meadow, taken: readonly Flower[], spacing: number, also: 
     const a = hoverAt(m, f), b = hoverAt(m, t);
     return a && b && apart(a, b) >= spacing;
   });
-  const open = [...m.flowers.values()].filter((f) => !taken.some((t) => t.key === f.key) && spaced(f) && visitable(m.air, f, also));
+  const open = [...m.flowers.values()].filter((f) => placeable(m, f) && !taken.some((t) => t.key === f.key) && spaced(f) && visitable(m.air, f, also));
   return maxBy(open, (f) => roomAt(m.air, f)) ?? null;
 }
 
@@ -121,7 +124,10 @@ function contextFor(b: Bee, others: readonly Bee[], m: Meadow, lastBonk: number,
     get others() { memo.boxes = memo.boxes ?? shields(others, m.air.page, now, true); return memo.boxes; },
     // A cued bonk comes at once, once.
     mayBonk: (m.cue === 'bonk' && lastBonk === -Infinity && b.id === 0) || (now - lastBonk >= BONK_EVERY && !others.some((o) => o.bonk)),
-    cue: b.id === 0 && !(m.cue === 'bonk' && lastBonk > -Infinity) ? m.cue : null,
+    // A cued bonk is the first bee's; a cued visit to the shelf is anyone's,
+    // since one bee on the clump nearest the rail can close the way there
+    // for the others.
+    cue: m.cue === 'shelf' || (b.id === 0 && !(m.cue === 'bonk' && lastBonk > -Infinity)) ? m.cue : null,
     mayDodge: !others.some((o) => o.mode === 'dodge'),
   };
 }
@@ -199,7 +205,7 @@ function hoverFree(b: Bee, m: Meadow, now: number): Bee | null {
 function onNearest(b: Bee, m: Meadow, now: number, rand: Rand, others: readonly Box[]): Bee | null {
   const page = m.air.page;
   const was = where(b, page, now);
-  const open = [...m.flowers.values()].filter((f) => visitable(m.air, f, others));
+  const open = [...m.flowers.values()].filter((f) => placeable(m, f) && visitable(m.air, f, others));
   const nearest = maxBy(open, (f) => -apart(hoverAt(m, f) ?? { x: Infinity, y: Infinity }, was ?? { x: 0, y: 0 }));
   if (!nearest) return null;
   return perchOn({ ...b, flight: null, bonk: null, startled: null, fled: null, fade: null, unplaced: false }, nearest, 0, now, 3000 + 5000 * rand(), b.dir);

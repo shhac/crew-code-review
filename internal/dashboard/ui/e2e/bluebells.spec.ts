@@ -79,21 +79,26 @@ test('a bee visits the shelf through the rail\'s air, never over the nav or the 
   await page.goto('/?theme=bluebells&theme-cue=shelf');
   await expect(bees(page).first()).toBeVisible({ timeout: 20_000 });
   const shelf = (await page.locator('[data-bluebell-shelf]').boundingBox())!;
-  const bee = page.locator(bee0);
-  const onShelf = async () => {
-    if ((await bee.getAttribute('data-bee')) !== 'perch') return false;
-    const b = (await bee.boundingBox())!;
-    return b.x + b.width / 2 > shelf.x && b.x + b.width / 2 < shelf.x + shelf.width;
-  };
-  // Every frame, a quarter of a second at a time, until it perches on the
-  // shelf: in the rail a bee keeps below the nav and above the identity chip.
+  const rail = (await page.locator('.rail').boundingBox())!;
+  // The bees, by id, in a mode whose centre is within [left, right].
+  const within = (mode: string, left: number, right: number) => page.locator(`[data-bluebells] [data-bee="${mode}"]`).evaluateAll((els, [l, r]) => els.flatMap((el) => {
+    const b = el.getBoundingClientRect();
+    const x = b.x + b.width / 2;
+    return x > l && x < r ? [el.getAttribute('data-id') ?? ''] : [];
+  }), [left, right]);
+  // Every frame, a quarter of a second at a time, until a bee seen flying in
+  // the rail perches on the shelf: there a bee keeps below the nav and above
+  // the identity chip. The cue leaves the shelf empty at first and sends
+  // every bee there; one coming back with no way in fades in beside it,
+  // which is no visit through the air.
   const keepOut = [CARDS, { name: 'the nav', boxes: '.rail nav' }, { name: 'the identity chip', boxes: '.rail .viewer-chip' }];
-  const visit = async (end: number, covered: readonly string[]): Promise<{ done: boolean; covered: readonly string[] }> => {
+  const visit = async (end: number, flown: ReadonlySet<string>, covered: readonly string[]): Promise<{ done: boolean; covered: readonly string[] }> => {
     const all = [...covered, ...(await watchFrames(page, BEES, { ms: 250, keepOut })).covered];
-    if (await onShelf()) return { done: true, covered: all };
-    return Date.now() < end ? visit(end, all) : { done: false, covered: all };
+    const inRail = new Set([...flown, ...(await within('fly', rail.x, rail.x + rail.width))]);
+    if ((await within('perch', shelf.x, shelf.x + shelf.width)).some((id) => inRail.has(id))) return { done: true, covered: all };
+    return Date.now() < end ? visit(end, inRail, all) : { done: false, covered: all };
   };
-  const visited = await visit(Date.now() + 45_000, []);
+  const visited = await visit(Date.now() + 45_000, new Set(), []);
   expect(visited.done).toBe(true);
   expect(visited.covered).toEqual([]);
 });

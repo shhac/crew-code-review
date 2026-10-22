@@ -147,7 +147,7 @@ export type Context = {
   bonks: readonly WallSide[];
   mayBonk: boolean;
   // A test's cue (`?theme-cue=`): a bonk at the next choice, or the shelf
-  // first among the flowers.
+  // first among the flowers, any other left after half a second.
   cue?: Cue;
   mayDodge: boolean;
 };
@@ -311,8 +311,9 @@ const nowhere = (b: Bee): Flower => ({ key: b.flower ?? '', frame: b.at.frame, b
 function perched(b: Bee, flower: Flower | undefined, ctx: Context, now: number, rand: Rand): Bee {
   const scare = startled(b, ctx, where(b, ctx.air.page, now), now, STARTLE);
   if (scare) return takeOff({ ...b, startled: { x: scare.x, y: scare.y } }, flower, ctx, now, rand);
-  // Cued to bonk, it does not wait out its time on the flower.
-  const restless = ctx.cue === 'bonk' && now - b.since >= CUED_REST;
+  // Cued to bonk, or to visit the shelf it is not on, it does not wait out
+  // its time on the flower.
+  const restless = (ctx.cue === 'bonk' || (ctx.cue === 'shelf' && b.flower !== SHELF_KEY)) && now - b.since >= CUED_REST;
   if (restless) return timed(b, 'shiver', now, SHIVER);
   if (now < b.until || !flower) return b;
   const next = b.bell + 1;

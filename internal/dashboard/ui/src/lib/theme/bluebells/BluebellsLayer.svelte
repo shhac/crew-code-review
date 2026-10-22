@@ -34,7 +34,8 @@
   // Perched or hovering, a bee's antennae lean toward a cursor within 120px.
   const gaze = gazeFrom({ eye: EYE, anchor: ANCHOR, scale: SCALE, look: 15, reach: 120 });
   const LOOKING = new Set(['perch', 'shiver', 'hover', 'approach']);
-  // A test's cue: a bonk at the first bee's next choice, or the shelf first.
+  // A test's cue: a bonk at the first bee's next choice, or a visit to the
+  // shelf, which is left empty for one.
   const CUE = cueOf(['bonk', 'shelf'] as const);
 
   let floors: ReadonlyMap<number, Ledge> = new Map();
