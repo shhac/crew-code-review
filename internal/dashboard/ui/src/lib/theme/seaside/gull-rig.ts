@@ -148,6 +148,9 @@ type GullLook = { now: number; still: boolean; gaze?: number };
 // animal has (the key pose's full lift would need 31).
 const EYE_TILT = -2;
 const GAZE = { up: -4, down: 20 };
+// How far the head turns down on the neck's top: turned further about the
+// nape, its crown would rise out of that room.
+const SKULL_DOWN = 10;
 const STRETCH = { dx: 0.35, dy: -0.3 };
 // The long call, over its 1.6s (the seaside note): the bill brought down
 // and forward for 0.3s, the head swung up over 0.25s, held 0.8s with the
@@ -189,9 +192,10 @@ function callPose(t: number): { angle: number; lift: number; open: number } {
 // after touchdown): each foot planted under its hip.
 const planted = (hips: readonly Point[]): Goal[] => LEGS.map((leg, i) => ({ kind: 'plant', at: { x: hips[i].x + leg.reach, y: FEET } }));
 
-// How it stands on the ledge: the body's turn; the head's, which nods
-// about the neck's base, or thrown back for the call about its nape; how
-// far the bill is open; each foot's goal from where its hip is.
+// How it stands on the ledge: the body's turn; the neck's, which nods,
+// stretches and bobs the head from its base; the head's own small turns on
+// the neck's top at the nape (toward what it eyes, thrown back for the
+// call); how far the bill is open; each foot's goal from where its hip is.
 type Ground = { body: Turn; neck: JointPose; skull: JointPose; open: number; goals: (hips: readonly Point[]) => Goal[] };
 
 // On the ledge: standing, strutting or foraging, eyeing something or giving
@@ -201,8 +205,12 @@ function onGround(gull: RigGull, look: GullLook): Ground {
   const body = turnAbout(0, MIDDLE, 0, -breathe);
   if (look.still) return { body, neck: {}, skull: {}, open: 0, goals: planted };
   if (gull.pose === 'eye') {
-    const angle = EYE_TILT + clamp(look.gaze ?? 0, GAZE.up, GAZE.down);
-    return { body, neck: { angle, shift: { x: STRETCH.dx, y: STRETCH.dy } }, skull: {}, open: 0, goals: planted };
+    // The neck stretched up from its base; the head tilted, and turned to
+    // what it eyes, on the neck's top, a look further down than that a nod
+    // of the neck.
+    const gaze = clamp(look.gaze ?? 0, GAZE.up, GAZE.down);
+    const turn = Math.min(gaze, SKULL_DOWN);
+    return { body, neck: { angle: gaze - turn, shift: { x: STRETCH.dx, y: STRETCH.dy } }, skull: { angle: EYE_TILT + turn }, open: 0, goals: planted };
   }
   if (gull.pose === 'call') {
     const { angle, lift, open } = callPose(gull.t);
@@ -212,7 +220,7 @@ function onGround(gull: RigGull, look: GullLook): Ground {
     return { body, neck: angle > 0 ? turn : {}, skull: angle > 0 ? {} : turn, open, goals: planted };
   }
   if (gull.pose === 'stand') {
-    return { body, neck: { angle: clamp(look.gaze ?? 0, GAZE.up, GAZE.down) / 2 }, skull: {}, open: 0, goals: planted };
+    return { body, neck: {}, skull: { angle: clamp(look.gaze ?? 0, GAZE.up, GAZE.down) / 2 }, open: 0, goals: planted };
   }
   const gait = gull.pose === 'forage' ? FORAGE : STRUT;
   const walked = gull.walked / SCALE;

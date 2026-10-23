@@ -3,7 +3,7 @@
 // modes in, held still, and with its head turned as far as it goes either
 // way. Its old rig is kept beside it (its *-legacy.ts) until its last
 // planned change, only for this.
-import { planDiff, planOf } from '../../lib/theme/rig/skeleton/plan';
+import { planDiff, planOf, type Plan } from '../../lib/theme/rig/skeleton/plan';
 import { momentsOf, type RigCritter } from './critter';
 
 type Pose = RigCritter['pose'];
@@ -21,12 +21,13 @@ export function gazeExtremes(rig: RigCritter): number[] {
 }
 
 // Where the new rig draws otherwise than the old, the first `limit` of
-// them, each saying when.
-export function unlike(rig: RigCritter, legacy: Pose, limit = 10): string[] {
+// them, each saying when; `except` takes out of both what a fix since has
+// meant to change (a turned head), so all the rest must still match.
+export function unlike(rig: RigCritter, legacy: Pose, limit = 10, except: (plan: Plan) => Plan = (plan) => plan): string[] {
   const looks = [{ gaze: 0, still: false }, { gaze: 0, still: true }, ...gazeExtremes(rig).map((gaze) => ({ gaze, still: false }))];
   return momentsOf(rig).flatMap((at) => looks.map((look) => ({ at, look }))).reduce<string[]>((found, { at, look }) => {
     if (found.length >= limit) return found;
     const when = `${at.mode} at ${at.now}, gaze ${look.gaze.toFixed(2)}${look.still ? ', still' : ''}`;
-    return [...found, ...planDiff(planOf(rig.pose(at, look)), planOf(legacy(at, look)), 1e-6, when)].slice(0, limit);
+    return [...found, ...planDiff(except(planOf(rig.pose(at, look))), except(planOf(legacy(at, look))), 1e-6, when)].slice(0, limit);
   }, []);
 }
