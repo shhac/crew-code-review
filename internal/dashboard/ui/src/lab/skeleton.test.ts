@@ -4,12 +4,13 @@ import { crowRig as crowDrawnAsBefore } from '../lib/theme/harvest/crow-rig-lega
 import type { Point } from '../lib/theme/pointer';
 import { turnAbout, type DrawnLeg, type RigPose } from '../lib/theme/rig/rig';
 import { gullRig as gullDrawnAsBefore } from '../lib/theme/seaside/gull-rig-legacy';
+import { hawkRig as hawkDrawnAsBefore } from '../lib/theme/wimbledon/hawk-rig-legacy';
 import { pigeonRig as pigeonDrawnAsBefore } from '../lib/theme/wimbledon/pigeon-rig-legacy';
 import { bee } from './critters/bee';
 import { BIRD, mammalHead, mammalLeg, mammalSpine } from './critters/bones';
 import { crowAt } from './critters/crow';
 import { gullAt } from './critters/gull';
-import { hawk } from './critters/hawk';
+import { hawkAt } from './critters/hawk';
 import { pigeonAt } from './critters/pigeon';
 import { rabbitAt } from './critters/rabbit';
 import { CRITTERS } from './critters/registry';
@@ -115,7 +116,7 @@ describe('skeletonOf', () => {
     expect(walking.joints.filter((j) => j.code.startsWith('S')).map((j) => j.name)).toEqual(['head joint', 'neck base', 'body pivot', 'tail root']);
     expect(skeletonOf(crowDrawnAsBefore(crowAt(at('walk')), { now: at('walk').now, ...look }), BIRD).bones.filter((b) => b.code.startsWith('S'))).toHaveLength(3);
     // The hawk's tail is drawn in its body's group, so has no pivot of its own.
-    expect(skeletonOf(hawk.pose(at('glide'), look), hawk.bones).joints.filter((j) => j.code.startsWith('S')).map((j) => j.name)).toEqual(['head joint', 'body pivot']);
+    expect(skeletonOf(hawkDrawnAsBefore(hawkAt(at('glide')), { now: at('glide').now, still: false }), BIRD).joints.filter((j) => j.code.startsWith('S')).map((j) => j.name)).toEqual(['head joint', 'body pivot']);
   });
 
   it("carries a near wing's marks to the far wing drawn the same, by the far wing's own group, never a fanned tail's", () => {

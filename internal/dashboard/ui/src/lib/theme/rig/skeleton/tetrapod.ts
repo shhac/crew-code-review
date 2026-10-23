@@ -67,7 +67,9 @@ export type Measured<L extends ArtLeg> = {
   // Pieces drawn where `order` names their draws, and shapes on joints.
   pieces?: readonly Piece[];
   shapes?: readonly Omit<Shape, 'z'>[];
-  guides: (code: (leg: L, joint: number) => string) => readonly { name: string; at: Handle }[];
+  guides: (code: (leg: L, joint: number) => string) => readonly { name: string; at: Handle; unsquashed?: boolean }[];
+  // What its anchor's mark is called, where it does not stand there.
+  stands?: string;
 };
 
 export type Tetrapod<L extends ArtLeg> = {
@@ -183,6 +185,7 @@ export function tetrapod<L extends ArtLeg>(preset: Preset, m: Measured<L>): Tetr
     pieces: [...legs, ...own],
     shapes: placedShapes,
     guides: m.guides(at),
+    ...(m.stands ? { stands: m.stands } : {}),
     ...(preset.titles ? { titles: preset.titles } : {}),
   };
   return {

@@ -135,7 +135,8 @@ export type Piece = PieceOf<Exclude<Attachment, { kind: 'bar' }>, Art> | PieceOf
 
 // An animal built on a skeleton: its frame, its bones, its parts, the
 // points it marks for the lab and the tests (where it stands is always
-// first; with none given, every joint by its name), and what the lab calls
+// first, called `stands` where it is not standing, as a flier's belly
+// line; with none given, every joint by its name), and what the lab calls
 // each limb, by its code, where that is not a fore or hind leg (a bird's
 // wing and its leg).
 export type Body = {
@@ -147,6 +148,7 @@ export type Body = {
   // taken out, as a rig marked a point turned with the body but not
   // breathing with it.
   guides?: readonly { name: string; at: Handle; unsquashed?: boolean }[];
+  stands?: string;
   titles?: Readonly<Record<string, string>>;
 };
 

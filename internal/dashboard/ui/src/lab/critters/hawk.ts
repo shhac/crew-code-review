@@ -3,7 +3,6 @@ import type { Drawing } from '../drawings';
 import hawkFlapDown from '../hawk-pose-flap-down.webp';
 import hawkFlapUp from '../hawk-pose-flap-up.webp';
 import hawkGlide from '../hawk-pose-glide.webp';
-import { BIRD } from './bones';
 import type { Moment, RigCritter } from './critter';
 
 // The Harris's hawk of summer tennis, held up in the air over the stage: it
@@ -22,7 +21,7 @@ const DRAWINGS: Record<string, Drawing> = {
   'flap, up': byEye(hawkFlapUp, 27.42, 24.94, { x: 23.85, y: 17.95 }),
 };
 
-const hawkAt = ({ mode, now }: Moment): RigHawk => {
+export const hawkAt = ({ mode, now }: Moment): RigHawk => {
   const pick = MODES.find((m) => m.label === mode) ?? MODES[0];
   return { pose: pick.pose, seed: 2, beat: (BEATS * now) / 1000, gaze: 0 };
 };
@@ -37,5 +36,7 @@ export const hawk = {
   pose: (at, { still }) => hawkRig(hawkAt(at), { now: at.now, still }),
   box: (at) => FOOTPRINTS[hawkAt(at).pose],
   drawings: DRAWINGS,
-  bones: BIRD,
+  // Before its skeleton was its own, read off the drawing, its spine was
+  // its head joint and body pivot (SJ1), through the shoulder.
+  aliases: { SJ1: 'SJ2', SB1: 'SB0' },
 } satisfies RigCritter;

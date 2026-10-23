@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { legsTo, type Step } from '../gait';
 import { legsAround, turnAbout, turned, type ArtLeg, type Foot, type Frame, type LimbArt, type RigPose } from '../rig';
+import { legsOf, solesOf } from '../test-rig';
 import { compose } from './compose';
 import { planDiff, planOf } from './plan';
 import { MAMMAL, picture, spine, tetrapod } from './tetrapod';
@@ -42,4 +43,17 @@ describe('a tetrapod from a preset and its measured legs', () => {
       }
     });
   }
+
+  it('stands an animal on no legs at all, as a hawk that only flies is drawn', () => {
+    const flier = tetrapod(MAMMAL, {
+      frame: FRAME, root: 'body', joints: [{ id: 'body', parent: null, role: spine(2), at: PIVOT, name: 'body' }],
+      legs: [], ground: () => 0, order: [picture('body', 'body', 'body.webp', BODY)], guides: () => [], stands: 'belly line',
+    });
+    const root = turnAbout(5, PIVOT);
+    const pose = compose(flier.body, () => ({ root, joints: {}, limbs: flier.limbs([]), show: {}, z: {} }), 0);
+    expect([flier.body.skeleton.limbs, flier.codes, flier.hips({ root, joints: {} }), legsOf(pose), solesOf(pose)]).toEqual([[], [], [], [], []]);
+    expect(pose.guides).toEqual([{ name: 'belly line', at: FRAME.anchor }]);
+    const old: RigPose = { ...FRAME, layers: [{ kind: 'group', turn: root, layers: [{ kind: 'image', name: 'body', src: 'body.webp', ...BODY }] }] };
+    expect(planDiff({ ...planOf(pose), guides: [] }, planOf(old))).toEqual([]);
+  });
 });

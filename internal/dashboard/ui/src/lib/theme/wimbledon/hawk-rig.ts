@@ -1,6 +1,9 @@
 import { blinking } from '../rig/life';
-import { imageLayer, lidLayers, turnAbout, turned, type Frame, type Fur, type Layer, type RigPose } from '../rig/rig';
-import { birdWing, flapping, gliding, wingPoint, type Flap, type WingArt, type WingPose } from '../rig/wings';
+import { lidLayers, turnAbout, type Frame, type Fur, type RigPose } from '../rig/rig';
+import { compose } from '../rig/skeleton/compose';
+import { BIRD, head, picture, spine, tetrapod } from '../rig/skeleton/tetrapod';
+import { wingOf } from '../rig/skeleton/wing';
+import { flapping, gliding, type Flap, type WingArt, type WingPose } from '../rig/wings';
 import armUnderArt from './hawk-arm-under.webp';
 import armArt from './hawk-arm.webp';
 import bodyArt from './hawk-body.webp';
@@ -13,7 +16,8 @@ import tailArt from './hawk-tail.webp';
 // gliding body with its feet tucked under the tail painted on (it never
 // lands or strikes), a head that can turn a little toward what it passes,
 // the closed tail with its white base and tip, and two wings each of an arm
-// and a hand. Facing right, its belly line on ANCHOR.
+// and a hand, all hung on its skeleton (rig/skeleton). Facing right, its
+// belly line on ANCHOR.
 //
 // The parts were cut from the glide drawing
 // (design-docs/wimbledon/hawk-pose-glide-2.png), and the drawing units are
@@ -58,26 +62,35 @@ export type HawkPose = 'glide' | 'flap';
 export type RigHawk = { pose: HawkPose; seed: number; beat: number; gaze: number };
 type HawkLook = { now: number; still: boolean };
 
+// Its skeleton: the body, the head on its neck with the eye on it, and the
+// wings; no legs, its feet painted on. The far wing behind it all, the
+// near over it all.
+const NEAR_WING = wingOf({ art: WING, side: 'near', parent: 'body', root: NEAR_SHOULDER, tip: TIP, z: 0 });
+const FAR_WING = wingOf({ art: WING, side: 'far', parent: 'body', root: FAR_SHOULDER, tip: TIP, z: 0 });
+const HAWK = tetrapod(BIRD, {
+  frame: FRAME,
+  root: 'body',
+  joints: [
+    { id: 'body', parent: null, role: spine(2), at: MIDDLE, name: 'body pivot' },
+    { id: 'skull', parent: 'body', role: spine(0), at: NECK, name: 'head joint' },
+    { id: 'eye', parent: 'skull', role: head(0), at: EYE, name: 'eye' },
+    ...FAR_WING.joints, ...NEAR_WING.joints,
+  ],
+  bones: [{ from: 'skull', to: 'body', name: 'neck and back line' }, ...FAR_WING.bones, ...NEAR_WING.bones],
+  legs: [],
+  ground: () => BELLY,
+  order: [FAR_WING.pieces, picture('tail', 'body', tailArt, TAIL), picture('body', 'body', bodyArt, BODY), picture('head', 'skull', headArt, HEAD), 'eyelid', NEAR_WING.pieces],
+  shapes: [{ id: 'eyelid', on: 'skull' }],
+  stands: 'belly line',
+  guides: () => [{ name: 'eye', at: 'eye' }, { name: 'shoulder', at: NEAR_WING.ids.shoulder }, { name: 'wrist', at: NEAR_WING.ids.wrist }, { name: 'wingtip', at: NEAR_WING.ids.tip }],
+});
+
 export function hawkRig(hawk: RigHawk, look: HawkLook): RigPose {
   const wings = hawk.pose === 'flap' && !look.still ? flapping(hawk.beat, FLAP) : gliding(GLIDE, look.still ? 0 : look.now, look.still ? 0 : 1, 1600);
-  const body = turnAbout(0, MIDDLE);
-  const head = turnAbout(hawk.gaze, NECK);
-  const layers: Layer[] = [
-    birdWing(WING, wings, FAR_SHOULDER, true),
-    imageLayer('tail', tailArt, TAIL),
-    imageLayer('body', bodyArt, BODY),
-    { kind: 'group', turn: head, layers: [imageLayer('head', headArt, HEAD), ...lidLayers(!look.still && blinking(hawk.seed, look.now), EYE, 0.55, MEMBRANE)] },
-    birdWing(WING, wings, NEAR_SHOULDER, false),
-  ];
-  return {
-    ...FRAME,
-    layers: [{ kind: 'group', turn: body, layers }],
-    guides: [
-      { name: 'belly line', at: ANCHOR }, { name: 'eye', at: turned(head, EYE) }, { name: 'shoulder', at: NEAR_SHOULDER },
-      { name: 'wrist', at: wingPoint(WING, wings, NEAR_SHOULDER, WING.wrist, false) },
-      { name: 'wingtip', at: wingPoint(WING, wings, NEAR_SHOULDER, TIP, true) },
-    ],
-  };
+  const [far, near] = [FAR_WING.pose(wings), NEAR_WING.pose(wings)];
+  const joints = { ...far.joints, ...near.joints, skull: { angle: hawk.gaze } };
+  const shapes = { eyelid: lidLayers(!look.still && blinking(hawk.seed, look.now), EYE, 0.55, MEMBRANE) };
+  return compose(HAWK.body, () => ({ root: turnAbout(0, MIDDLE), joints, limbs: {}, show: { ...far.show, ...near.show }, z: {}, shapes }), look.now);
 }
 
 // The box each pose's drawing stays inside through its whole motion (page
