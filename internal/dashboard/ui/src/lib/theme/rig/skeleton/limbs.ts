@@ -30,7 +30,8 @@ export function solveLimb(limb: LimbSpec, root: Point, goal: Goal, handle: (h: H
   const at = goal.kind === 'plant' ? goal.at : plus(handle(goal.to), goal.by);
   const steps = goal.step ? [goal.step] : [];
   if (limb.solve === 'bird') return birdLegsTo([birdOf(limb, root)], [root], [at], steps, goal.kind === 'plant' ? goal.ground : undefined)[0];
-  return legsTo([quadOf(limb, root)], [root], [at], steps)[0];
+  const quad = quadOf(limb, root);
+  return legsTo([goal.walksOn ? { ...quad, walksOn: goal.walksOn } : quad], [root], [at], steps)[0];
 }
 
 // Standing at rest: its foot down `reach` ahead of its root, on its ground.

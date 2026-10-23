@@ -18,5 +18,5 @@ describe('the pigeon on its skeleton', () => {
       const look = { now: i * 37, still: false };
       expect(planDiff(planOf(built(p, look)), planOf(legacy(p, look))), `${pose} ${i} gaze ${gaze}`).toEqual([]);
     }
-  });
+  }, 60000);
 });

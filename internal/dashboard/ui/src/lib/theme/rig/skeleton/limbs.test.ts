@@ -81,6 +81,16 @@ describe('a limb\'s constraint', () => {
   });
 });
 
+describe('a limb standing otherwise in one pose', () => {
+  it('poses the foot on what the goal says it stands on, as legsTo does with the leg so changed', () => {
+    const spec: gait.QuadLeg = { hip: { x: 0, y: 0 }, reach: 0, thigh: 2.5, shin: 2.8, bend: 1, fore: false, far: false, walksOn: { kind: 'toes', length: 2, lean: 30, fold: 40 } };
+    const [soles] = gait.onSoles([spec], 1);
+    const goal = { kind: 'plant', at: { x: 0.5, y: 5 }, step: { down: false, t: 0.3 }, walksOn: soles.walksOn } as const;
+    expect(solveLimb(quad(spec), { x: 0, y: 0 }, goal, nowhere)).toEqual(gait.legsTo([soles], [{ x: 0, y: 0 }], [goal.at], [goal.step])[0]);
+    expect(solveLimb(quad(spec), { x: 0, y: 0 }, goal, nowhere)).not.toEqual(solveLimb(quad(spec), { x: 0, y: 0 }, { ...goal, walksOn: undefined }, nowhere));
+  });
+});
+
 describe('the joints a limb owns', () => {
   const spec: gait.QuadLeg = { hip: { x: 4, y: 6 }, reach: 0.5, thigh: 3, shin: 3, bend: 1, fore: false, far: false, walksOn: { kind: 'toes', length: 1.5, lean: 15, fold: 70 } };
   const limb: LimbSpec = { ...quad(spec, 13), joints: { ...OWNED, tip: 'J4' } };

@@ -205,6 +205,13 @@ describe('shapes, guides and a whole picture', () => {
     }
   });
 
+  it('marks a point turned with the body but not breathing with it, where it is asked to', () => {
+    const steady: Body = { ...body, guides: [{ name: 'neck', at: { on: 'body', at: { x: 14, y: 6 } }, unsquashed: true }] };
+    const [, neck] = drawn(steady, pose(false)).guides ?? [];
+    const want = turned(root, { x: 14, y: 6 });
+    expect([neck.at.x, neck.at.y]).toEqual([expect.closeTo(want.x, 9), expect.closeTo(want.y, 9)]);
+  });
+
   it('marks the points it names, where it stands first', () => {
     const marks = drawn(body, pose(false)).guides ?? [];
     // On the breathing body, so breathing with it.

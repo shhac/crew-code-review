@@ -61,10 +61,13 @@ export type JointPose = { angle?: number; squash?: { by: number; axis?: number }
 
 // What a limb's constraint reaches for: a foot planted (or stepping, with
 // its step; a bird's kept clear of `ground`), a handle reached, or a bird's
-// legs in the air (bird.ts's airLegsTo `reach`).
+// legs in the air (bird.ts's airLegsTo `reach`). `walksOn`: what the foot
+// stands on in this pose, where that is not the limb's own (a hare sat on
+// its long hind soles, gait.ts's onSoles).
+type Stands = { walksOn?: NonNullable<QuadLeg['walksOn']> };
 export type Goal =
-  | { kind: 'plant'; at: Point; step?: Step; ground?: number }
-  | { kind: 'reach'; to: Handle; by?: Point; step?: Step }
+  | ({ kind: 'plant'; at: Point; step?: Step; ground?: number } & Stands)
+  | ({ kind: 'reach'; to: Handle; by?: Point; step?: Step } & Stands)
   | { kind: 'air'; reach: number; legs?: AirLegs };
 
 // One moment's pose: the root's turn (the one joint that may turn about a
@@ -140,7 +143,10 @@ export type Body = {
   skeleton: Skeleton;
   pieces: readonly Piece[];
   shapes?: readonly Shape[];
-  guides?: readonly { name: string; at: Handle }[];
+  // `unsquashed`: marked where it would be with every squash above it
+  // taken out, as a rig marked a point turned with the body but not
+  // breathing with it.
+  guides?: readonly { name: string; at: Handle; unsquashed?: boolean }[];
   titles?: Readonly<Record<string, string>>;
 };
 

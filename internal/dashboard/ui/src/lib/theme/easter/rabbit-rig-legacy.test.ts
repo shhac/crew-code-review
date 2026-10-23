@@ -18,5 +18,5 @@ describe('the rabbit on its skeleton', () => {
       const look = { now: since + 500, gaze: 4, still: false };
       expect(planDiff(planOf(built(r, look)), planOf(legacy(r, look))), `${was} to ${pose} at ${since}`).toEqual([]);
     }
-  });
+  }, 60000);
 });

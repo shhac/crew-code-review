@@ -27,12 +27,12 @@ function mixJoint(a: JointPose = {}, b: JointPose = {}, f: number): JointPose {
 }
 
 // Where a goal puts the foot, in its own pose; a foot in the air has none.
-type Planted = { at: Point; step?: Step; ground?: number };
+type Planted = { at: Point; step?: Step; ground?: number; walksOn?: Extract<Goal, { kind: 'plant' }>['walksOn'] };
 function planted(skeleton: Skeleton, pose: PoseSpec, goal: Goal): Planted | null {
   if (goal.kind === 'plant') return goal;
   if (goal.kind === 'air') return null;
   const to = handleAt(skeleton, pose, goal.to);
-  return { at: { x: to.x + (goal.by?.x ?? 0), y: to.y + (goal.by?.y ?? 0) }, step: goal.step };
+  return { at: { x: to.x + (goal.by?.x ?? 0), y: to.y + (goal.by?.y ?? 0) }, step: goal.step, walksOn: goal.walksOn };
 }
 
 function mixGoal(skeleton: Skeleton, a: PoseSpec, b: PoseSpec, id: string, f: number, mixer?: StepMixer): Goal | undefined {
@@ -43,7 +43,8 @@ function mixGoal(skeleton: Skeleton, a: PoseSpec, b: PoseSpec, id: string, f: nu
   if (!pa || !pb) return gb;
   const step = mixer ? mixer(pa.step, pb.step, f) : pb.step ?? pa.step;
   const ground = pb.ground ?? pa.ground;
-  return { kind: 'plant', at: mixPoint(pa.at, pb.at, f), ...(step ? { step } : {}), ...(ground === undefined ? {} : { ground }) };
+  const walksOn = pb.walksOn ?? pa.walksOn;
+  return { kind: 'plant', at: mixPoint(pa.at, pb.at, f), ...(step ? { step } : {}), ...(ground === undefined ? {} : { ground }), ...(walksOn ? { walksOn } : {}) };
 }
 
 export function mixPose(skeleton: Skeleton, a: PoseSpec, b: PoseSpec, f: number, mixers: Mixers = {}): PoseSpec {

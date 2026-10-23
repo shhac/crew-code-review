@@ -256,6 +256,7 @@ export function compose(body: Body, poseAt: (now: number) => PoseSpec, now: numb
   // Where each joint would be with no squash anywhere above it: what a
   // bone's length is measured between (a limb's own joints are posed from
   // its root, which never takes one).
+  const steady = on((id) => carried.get(id) ?? frameMap.get(id));
   const unsquashed = found(new Map([...[...carried].map(([id, m]): [string, Point] => [id, applied(m, restAt(id))]), ...limbs.flatMap((l) => [...l.points])]));
 
   const placings = body.pieces.map((piece) => {
@@ -290,7 +291,7 @@ export function compose(body: Body, poseAt: (now: number) => PoseSpec, now: numb
   return {
     ...body.frame,
     layers,
-    guides: [{ name: 'stands here', at: body.frame.anchor }, ...(body.guides?.map((g) => ({ name: g.name, at: posed.handle(g.at) })) ?? joints.map((j) => ({ name: j.name, at: j.at })))],
+    guides: [{ name: 'stands here', at: body.frame.anchor }, ...(body.guides?.map((g) => ({ name: g.name, at: (g.unsquashed ? steady : posed.handle)(g.at) })) ?? joints.map((j) => ({ name: j.name, at: j.at })))],
     skeleton: { joints, bones: layout.bones.map((b) => ({ ...b, length: apart(unsquashed(b.from), unsquashed(b.to)) })), limbs: posedLimbs, ...(body.titles ? { titles: body.titles } : {}) },
   };
 }
