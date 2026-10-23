@@ -10,14 +10,14 @@ written at RES pixels per drawing unit, and hare-rig.ts sets how big a
 drawing unit is on the page. It is put together from PARTS cut from
 hare-standing.png (the whole hare standing square, its anatomy reference)
 into hare-parts.png, each printed with where it sat in the reference: its
-place in the rig. Its legs are pieces cut from the reference's own legs into
-hare-limbs.png. The sizes printed are what the components lay out.
+place in the rig. Its legs are pieces drawn after the reference's own legs in
+hare-limbs-2.png. The sizes printed are what the components lay out.
 """
 from pathlib import Path
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from art import EyeScale, crop, cut, export, keyed, opaque, place, rescaled  # noqa: E402
+from art import EyeScale, crop, cut, export, keyed, opaque, place, rescaled, rows  # noqa: E402
 import numpy as np  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
@@ -37,26 +37,31 @@ KEY_POSES = {
     'sit': (970, 315), 'graze': (1222, 705), 'lope': (1160, 340), 'bound-reach': (1245, 385),
     'bound-gather': (1135, 375), 'box': (897, 180), 'freeze': (1130, 432), 'bolt': (1270, 380),
 }
-# The limb pieces, left to right in hare-limbs.png, and how thick each is
-# drawn, outline included, in drawing units: the thigh at the hip, the leg
-# bone (its forelegs' thickness, also the shank and the long hind foot), and
-# the toes by their length. The middle piece (a hind foot with its heel
-# turned up) is not used: the long foot is a leg bone, with the toes on it.
-LIMBS = ['hare-thigh', 'hare-leg', None, 'hare-hind-toes', 'hare-fore-toes']
-THIGH = 2.4
-LEG = 1.15
+# The limb pieces in hare-limbs-2.png: the hind leg's, left to right along
+# the top row, and the foreleg's along the bottom. Each is exported as thick
+# as it is drawn, outline included, in drawing units: the thigh at the hip,
+# the shank at the knee, the long hind foot (the bone up from the toes), the
+# upper arm at the elbow, the forearm and the short forefoot; the toes by
+# their length.
+HIND = ['hare-thigh', 'hare-shank', 'hare-hind-foot', 'hare-hind-toes']
+FORE = ['hare-upper-arm', 'hare-foreleg', 'hare-fore-toes']
+BARS = {'hare-thigh': 3.8, 'hare-shank': 1.44, 'hare-hind-foot': 1.25, 'hare-upper-arm': 1.6, 'hare-foreleg': 1.25, 'hare-forefoot': 1.25}
+# The forefoot (wrist to toes, 1 unit) is laid along its bone as long as it
+# is thick plus 1 unit: this many times as long as it is thick.
+FOREFOOT = (1 + 1.25) / 1.25
 # Toes: length in drawing units, and where on them (as fractions of their
 # box) the leg comes down: high enough on them that a long foot laid flat,
 # as thick as the leg, rests on the ledge level with their soles.
-TOES = {'hare-hind-toes': (2.6, (0.16, 0.375)), 'hare-fore-toes': (1.7, (0.2, 0.25))}
+TOES = {'hare-hind-toes': (2.6, (0.16, 0.466)), 'hare-fore-toes': (1.7, (0.2, 0.17))}
 
 
-def symmetric(piece: np.ndarray) -> np.ndarray:
-    """A bar whose right end is drawn rounded and whose left end is a ragged
-    cut: its right half mirrored onto its left, so both ends are rounded."""
-    half = piece.shape[1] // 2
-    right = piece[:, half:]
-    return np.concatenate([right[:, ::-1][:, :piece.shape[1] - right.shape[1]], right], axis=1)
+def short(piece: np.ndarray, aspect: float) -> np.ndarray:
+    """A short bar cut from a long one: its rounded right end, as long as
+    half the bar it makes, mirrored onto its left, so a short bone is drawn
+    with the long one's fur and rounded ends rather than squashed into it."""
+    half = round(piece.shape[0] * aspect / 2)
+    right = piece[:, -half:]
+    return np.concatenate([right[:, ::-1], right], axis=1)
 
 
 def fitted(part: np.ndarray, like: np.ndarray) -> float:
@@ -101,9 +106,11 @@ def main() -> None:
     hare.placed('hare-body', torso, OUT, t * hare.on_eye('hare-standing.png'), t)
     hare.parts({name: art for name, art in parts.items() if name != 'hare-body'}, 'hare-parts.png', OUT)
     # Each limb piece as drawn and as fur alone, its outline taken out.
-    pieces = cut(keyed(HERE / 'hare-limbs.png'), LIMBS)
-    hare.bar('hare-thigh', pieces['hare-thigh'], OUT, THIGH)
-    hare.bar('hare-leg', symmetric(pieces['hare-leg']), OUT, LEG)
+    hind, fore = rows(keyed(HERE / 'hare-limbs-2.png'), 2)
+    pieces = cut(hind, HIND) | cut(fore, FORE)
+    pieces['hare-forefoot'] = short(pieces['hare-foreleg'], FOREFOOT)
+    for name, thick in BARS.items():
+        hare.bar(name, pieces[name], OUT, thick)
     for name, (length, heel) in TOES.items():
         hare.foot(name, pieces[name], OUT, length, heel)
 

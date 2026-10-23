@@ -88,6 +88,16 @@ describe('legImages', () => {
     expect(outline.x + outline.width - 4.2).toBeLessThan(0.6);
   });
 
+  it('draws a tapering shank with its own piece where it has one, else with the thigh\'s', () => {
+    const thigh = { src: 'thigh.webp', fur: 'thigh-fur.webp' };
+    const hind: DrawnLeg = { ...leg, taper: true, art: { ...art, knee: true, thigh }, limb: { ...leg.limb, ankle: { x: 1, y: 5 }, foot: { x: 2, y: 6 } } };
+    expect(legImages(hind, false).map((i) => i.href)).toEqual(['thigh.webp', 'thigh.webp', 'bone.webp', 'foot.webp']);
+    const shank = { src: 'shank.webp', fur: 'shank-fur.webp', anchors: { start: 0.1, end: 0.9 } };
+    const own = legImages({ ...hind, art: { ...hind.art, shank } }, true);
+    expect(own.map((i) => i.href)).toEqual(['thigh-fur.webp', 'shank-fur.webp', 'bone-fur.webp', 'foot-fur.webp']);
+    expect(own[1].x + 0.1 * own[1].width).toBeCloseTo(0, 6);
+  });
+
   it('counts a registered cap extending behind the hip in the footprint', () => {
     const registered: LimbArt = { ...art, knee: true, thigh: { src: 'thigh.webp', fur: 'thigh-fur.webp', anchors: { start: 0.5, end: 1 } } };
     const drawn: DrawnLeg = { ...leg, art: registered, limb: { ...leg.limb, hip: { x: 0, y: 0 }, knee: { x: 4, y: 0 }, ankle: { x: 6, y: 0 }, foot: { x: 8, y: 0 } } };

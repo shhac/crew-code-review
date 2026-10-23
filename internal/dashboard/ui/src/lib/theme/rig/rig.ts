@@ -32,6 +32,11 @@ export type LimbArt = {
   // The upper bone's own piece (thick at the hip, tapering to the knee), if
   // the limb has one; drawn as thick as each leg's haunch.
   thigh?: { src: string; fur: string; anchors?: BoneAnchors };
+  // The middle bone's own piece (a shank from the knee to the hock, a
+  // forearm from the elbow to the wrist), if the limb has one; otherwise a
+  // tapering shank is drawn with the thigh's piece, and any other with the
+  // bone piece.
+  shank?: { src: string; fur: string; anchors?: BoneAnchors };
   foot: Foot;
   knee: boolean;
   // A sole walker's leg is drawn over its foot, its rounded end the heel,
@@ -153,7 +158,7 @@ export function piecesOf(leg: DrawnLeg): Piece[] {
   const upper = { from: hip, to: knee, width: leg.haunch, ...(art.thigh ?? plain) };
   const toes = ankle.x === foot.x && ankle.y === foot.y ? [] : [{ from: ankle, to: foot, width, ...plain }];
   // A hind shank tapers to a narrow hock.
-  const shank = leg.taper ? { from: knee, to: ankle, width: width * 1.15, ...(art.thigh ?? plain) } : { from: knee, to: ankle, width, ...plain };
+  const shank = leg.taper ? { from: knee, to: ankle, width: width * 1.15, ...(art.shank ?? art.thigh ?? plain) } : { from: knee, to: ankle, width, ...(art.shank ?? plain) };
   return [upper, shank, ...toes];
 }
 

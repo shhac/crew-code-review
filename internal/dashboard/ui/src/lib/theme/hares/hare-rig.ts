@@ -8,13 +8,21 @@ import bodyArt from './hare-body.webp';
 import earsArt from './hare-ears.webp';
 import foreToesFurArt from './hare-fore-toes-fur.webp';
 import foreToesArt from './hare-fore-toes.webp';
+import forefootFurArt from './hare-forefoot-fur.webp';
+import forefootArt from './hare-forefoot.webp';
+import forelegFurArt from './hare-foreleg-fur.webp';
+import forelegArt from './hare-foreleg.webp';
 import headArt from './hare-head.webp';
+import hindFootFurArt from './hare-hind-foot-fur.webp';
+import hindFootArt from './hare-hind-foot.webp';
 import hindToesFurArt from './hare-hind-toes-fur.webp';
 import hindToesArt from './hare-hind-toes.webp';
-import legFurArt from './hare-leg-fur.webp';
-import legArt from './hare-leg.webp';
+import shankFurArt from './hare-shank-fur.webp';
+import shankArt from './hare-shank.webp';
 import thighFurArt from './hare-thigh-fur.webp';
 import thighArt from './hare-thigh.webp';
+import upperArmFurArt from './hare-upper-arm-fur.webp';
+import upperArmArt from './hare-upper-arm.webp';
 
 // The brown hare put together from its parts: a torso with its tail, chest
 // and neck, a head over the neck's soft top, its ears behind the head, and
@@ -52,11 +60,21 @@ const HIPS = { x: 7.4, y: 13.6 };
 export const REFERENCE = { x: 1, y: 1, width: 22.5, height: 22.42 };
 
 const FACE: Fur = { fill: '#d39552', outline: '#0b0503' };
-const HIND_TOES: Foot = { src: hindToesArt, fur: hindToesFurArt, width: 2.58, height: 1, heel: { x: 0.41, y: 0.38 } };
-const FORE_TOES: Foot = { src: foreToesArt, fur: foreToesFurArt, width: 1.67, height: 0.83, heel: { x: 0.33, y: 0.21 } };
-// In the thigh picture, the hip lies inside the rounded haunch, and the
-// knee inside its narrow tip. Both image passes use those same centres.
-const legArtOn = (foot: Foot): LimbArt => ({ bone: legArt, boneFur: legFurArt, knee: true, thigh: { src: thighArt, fur: thighFurArt, anchors: { start: 0.25, end: 0.92 } }, foot });
+const HIND_TOES: Foot = { src: hindToesArt, fur: hindToesFurArt, width: 2.58, height: 1.17, heel: { x: 0.41, y: 0.54 } };
+const FORE_TOES: Foot = { src: foreToesArt, fur: foreToesFurArt, width: 1.67, height: 0.75, heel: { x: 0.33, y: 0.13 } };
+// Each bone its own piece: the hind leg's haunch, its lean shank narrowing
+// to the heel's point, and its long furred foot; the foreleg's upper arm,
+// slim forearm and short forefoot. In the thigh picture, the hip lies
+// inside the rounded haunch, and the knee inside its narrow tip; both image
+// passes use those same centres.
+const HIND_ART: LimbArt = {
+  bone: hindFootArt, boneFur: hindFootFurArt, knee: true, foot: HIND_TOES,
+  thigh: { src: thighArt, fur: thighFurArt, anchors: { start: 0.25, end: 0.88 } }, shank: { src: shankArt, fur: shankFurArt },
+};
+const FORE_ART: LimbArt = {
+  bone: forefootArt, boneFur: forefootFurArt, knee: true, foot: FORE_TOES,
+  thigh: { src: upperArmArt, fur: upperArmFurArt }, shank: { src: forelegArt, fur: forelegFurArt },
+};
 const LEG_WIDTH = 1.25;
 // A long foot laid flat rests its bone on the ledge, as thick as the leg,
 // a pixel above its edge, on the rule's line: a row of tabs can start a
@@ -74,8 +92,8 @@ const FEET = GROUND - LEG_WIDTH / 2 - 0.7;
 // tibia/femur 148.2/132.4 = 1.12 (Fostowicz-Frelik 2007, Table 3),
 // radius/humerus 102/113 = 0.90 (Williams et al. 2007, Table 4).
 // Sources and the projected pose tuning are in design-docs/hares/README.md.
-const HIND_LEG = { art: legArtOn(HIND_TOES), width: LEG_WIDTH, thigh: 4.2, shin: 4.7, bend: 1, bendFrame: 'limb', jointLimits: { min: 40, max: 175 }, fore: false, haunch: 3.8, taper: true, reach: 0.5, walksOn: { kind: 'toes', length: 3.5, lean: 35, fold: 40 } } as const;
-const FORE_LEG = { art: legArtOn(FORE_TOES), width: LEG_WIDTH, thigh: 4.4, shin: 4, bend: -1, bendFrame: 'limb', jointLimits: { min: 30, max: 175 }, fore: true, haunch: 1.6, reach: -0.2, walksOn: { kind: 'toes', length: 1, lean: 30, fold: 45 } } as const;
+const HIND_LEG = { art: HIND_ART, width: LEG_WIDTH, thigh: 4.2, shin: 4.7, bend: 1, bendFrame: 'limb', jointLimits: { min: 40, max: 175 }, fore: false, haunch: 3.8, taper: true, reach: 0.5, walksOn: { kind: 'toes', length: 3.5, lean: 35, fold: 40 } } as const;
+const FORE_LEG = { art: FORE_ART, width: LEG_WIDTH, thigh: 4.4, shin: 4, bend: -1, bendFrame: 'limb', jointLimits: { min: 30, max: 175 }, fore: true, haunch: 1.6, reach: -0.2, walksOn: { kind: 'toes', length: 1, lean: 30, fold: 45 } } as const;
 const LEGS: ArtLeg[] = [
   { ...HIND_LEG, hip: { x: 5.8, y: 13.1 }, far: true },
   { ...FORE_LEG, hip: { x: 18.2, y: 13.9 }, far: true },

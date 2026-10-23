@@ -71,7 +71,7 @@ is lowered and retuned to keep the forefeet reachable and the drawing
 inside its existing footprint. Tests cover all three bone lengths and the
 knees/hocks throughout a whole stride, including the original frame flip.
 
-The thigh artwork has explicit joint anchors at 25% and 92% of its width:
+The thigh artwork has explicit joint anchors at 25% and 88% of its width:
 the hip inside the rounded haunch and the knee inside the narrow tip.
 Both outline and fur map those centres to the same bone endpoints. The old
 generic bar mapping extended the image half a haunch beyond the knee and
@@ -400,13 +400,19 @@ Hare-only tuning (strides, stances, timings, reaches) stays in
   (3.8 units at the hip, so it makes the rump's round thigh, which moves with
   the leg) and its shank tapering to a sharp hock; a foreleg shoulder, elbow,
   wrist, toes, long and slim. The hind leg's long foot is the bone up from the
-  toes, drawn with the leg piece, its toes the hind toes' piece, and let down
+  toes, drawn with the long-foot piece, its toes the hind toes' piece, and let down
   flat sitting, grazing, crouched and boxing (`onSoles`); in a leap it
   streams out behind in line with the shank. The hare opts into the shared
   rig's limb-relative three-bone hinge; existing animals retain their
   previous solver. A first plan for a separate long-foot piece was dropped when the
-  generated one came out as a foot with an ankle. Every piece drawn
-  outlined, then as fur alone, the near pair's fur over the body's edge.
+  generated one came out as a foot with an ankle; it came back as a straight
+  bar, laid along the bone like the others. Each bone has its own
+  piece (`hare-limbs-2.png`, below): the haunch, the shank narrowing to the
+  heel's point, the long hind foot widening to the toes on its furred sole,
+  the upper arm, the slim forearm and the short forefoot, each tawny over a
+  cream underside; the shank and forearm are the middle bones' pieces
+  (`LimbArt`'s `shank`). Every piece drawn outlined, then as fur alone, the
+  near pair's fur over the body's edge.
 - **Gaits.** Grazing it lopes (the slow hop: forefeet then the hind pair, no
   flight, the body low and arching). Running it half-bounds: forefeet one
   after the other, then the hind pair together landing ahead of where the
@@ -477,12 +483,30 @@ stifle, hock and long foot.
   thigh piece makes the haunch, and moves with it. That edit came out about
   15% larger, so `export.py` fits it to the first torso's shape (0.86) to put
   it on the reference's scale.
-- `hare-limbs.png`: five pieces from its own legs, in a row: a thigh piece
+- `hare-limbs.png` (superseded by `hare-limbs-2.png`): five pieces from its own legs, in a row: a thigh piece
   thick at the hip, a leg bone, a hind foot with its heel turned up (not
   used: it reads as a foot and an ankle, the long foot is a leg bone
   instead), the hind toes and the fore toes. The leg bone's left end came
   out as a ragged cut, so `export.py` mirrors its rounded right half onto
   its left.
+- `hare-limbs-2.png` (2026-10-23, Codex `gpt-6.1-sol`, three rounds): the
+  first sheet's pieces read as flat sticks next to the body: one uniform
+  bar for the forearm, the forefoot and the long hind foot, the thigh's
+  haunch squashed to make the shank, no pale underside and little fur. Asked
+  for, with `hare-standing.png` (anatomy and style), `hare-limbs.png`
+  (layout) and `hare-torso-2.png` (fur) as references: seven straight
+  pieces on magenta in two rows, the hind leg's thigh (a haunch tapering to
+  the knee), shank (lean, tapering to a bony hock, the heel's point on its
+  lower edge), long foot (a narrow rounded heel widening to the toes, its
+  sole a band of dense cream fur: hares have no pads) and toes, then the
+  foreleg's upper arm, forearm (slim and even) and forepaw, each tawny with
+  the body's grizzled fur over a cream lower edge. The second round took the
+  dog-bone waist out of the long foot and the upper arm, evened the forearm
+  and made the forepaw taller; the third repainted the fur to the torso's
+  muted tawny, as the first two came out brighter and glossier than the
+  body. The forefoot is the forearm's rounded end mirrored into a short bar
+  (`export.py`'s `short`), so it is not the forearm squashed, which drew a
+  cuff at the wrist.
 - Key poses (`hare-pose-*.png`), each asked for as this exact hare in a new
   pose: sit (on its haunches, hind feet flat, forelegs straight), graze
   (low, nose to the ground), lope (forefeet planted, hind pair swinging
@@ -497,7 +521,7 @@ stifle, hock and long foot.
 | `hare-standing.png` | `ui/src/lab/hare-reference.webp` (the lab's overlay) | 22.5x22.42 units |
 | `hare-torso-2.png` (fitted to `hare-torso.png`) | `hare-body.webp` | 20.25x11 units at (1, 6.72) |
 | `hare-parts.png` | `hare-head.webp`, `hare-ears.webp` | 6.83x6.58 at (16.6, 5.99); 5.83x7.42 at (14.44, 1.14) |
-| `hare-limbs.png` | `hare-thigh`, `hare-leg`, `hare-hind-toes`, `hare-fore-toes` (`.webp`, each with `-fur`) | thigh exported 2.4 units thick at the hip and drawn 3.8 (hind) or 1.6 (fore), leg 1.15 (drawn 1.25), toes 2.6 and 1.7 long |
+| `hare-limbs-2.png` | `hare-thigh`, `hare-shank`, `hare-hind-foot`, `hare-hind-toes`, `hare-upper-arm`, `hare-foreleg`, `hare-forefoot`, `hare-fore-toes` (`.webp`, each with `-fur`) | each bar exported as thick as it is drawn: thigh 3.8 at the hip, shank 1.44, upper arm 1.6, long foot, forearm and forefoot 1.25; toes 2.6 and 1.7 long |
 | `hare-pose-*.png` | `ui/src/lab/hare-pose-*.webp` (the lab's overlays) | on the same eye scale |
 
 The hare's pictures are in drawing units, all on one scale: each sheet's eye
