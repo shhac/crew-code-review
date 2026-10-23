@@ -21,9 +21,7 @@ vi.mock('../bird', async (original) => {
 
 const OWNED = { root: 'J0', middle: 'J1', lower: 'J2', end: 'J3' } as const;
 // A rig's leg as a limb of the skeleton: what the skeleton owns taken out.
-function limbOf<L extends gait.QuadLeg>(spec: L): Omit<L, 'hip' | 'far' | 'fore'> & { side: 'near' | 'far'; pair: number } {
-  const { hip, far, fore, ...leg } = spec;
-  expect(hip).toBeDefined();
+function limbOf<L extends gait.QuadLeg>({ hip, far, fore, ...leg }: L): Omit<L, 'hip' | 'far' | 'fore'> & { side: 'near' | 'far'; pair: number } {
   return { ...leg, side: far ? 'far' : 'near', pair: fore ? 0 : 1 };
 }
 const quad = (spec: gait.QuadLeg, ground = 0): LimbSpec => {

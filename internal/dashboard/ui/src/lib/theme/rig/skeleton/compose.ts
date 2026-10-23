@@ -138,11 +138,11 @@ function placing(at: Attachment, posed: Posed): Placing {
     }
     case 'bar': {
       const [from, to] = [posed.point(at.from), posed.point(at.to)];
-      const laid = (draw: Draw) => bone(from, to, at.thick, !!draw.flush, at.anchors);
-      return { matrix: product(translate(from.x, from.y), rotate(direction(from, to))), anchor: { x: 0, y: 0 }, box: (draw) => {
-        const { x, y, width, height } = laid(draw);
+      const box = (draw: Draw) => {
+        const { x, y, width, height } = bone(from, to, at.thick, !!draw.flush, at.anchors);
         return { x, y, width, height };
-      } };
+      };
+      return { matrix: product(translate(from.x, from.y), rotate(direction(from, to))), anchor: { x: 0, y: 0 }, box };
     }
   }
 }
