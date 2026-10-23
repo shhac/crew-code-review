@@ -123,7 +123,9 @@
     ...(reference ? { ref: reference } : {}),
     ...(hidden.length ? { hide: hidden.join(',') } : {}),
     ...(skeleton ? { skeleton } : {}),
-    ...(pinned ? { [parseCode(pinned)?.kind === 'J' ? 'joint' : 'bone']: pinned } : {}),
+    // `codes`: the code is as skeletons have them now, so an animal's old
+    // codes (its aliases) are not read into it.
+    ...(pinned ? { [parseCode(pinned)?.kind === 'J' ? 'joint' : 'bone']: pinned, codes: 'role' } : {}),
   });
   // Written while paused, or as it plays without the ever-changing frame.
   $: if (ready && !playing) history.replaceState(null, '', `#${state}`);
@@ -146,7 +148,7 @@
     hidden = q.get('hide')?.split(',') ?? [];
     skeleton = SKELETONS.find((s) => s.value && s.value === q.get('skeleton'))?.value ?? '';
     const code = q.get('bone') ?? q.get('joint');
-    pinned = code && codeNow(c, code);
+    pinned = code && (q.has('codes') ? code : codeNow(c, code));
     // Opened at a frame, it waits there.
     playing = !q.has('frame');
   }

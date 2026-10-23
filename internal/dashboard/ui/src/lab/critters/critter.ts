@@ -45,7 +45,9 @@ export type RigCritter = Shown & {
   // What its bones are, for the lab's skeleton view.
   bones?: BoneNames;
   // Codes its skeleton's joints and bones had before (an old link's
-  // &joint= or &bone=), by the codes they have now.
+  // &joint= or &bone=, one without &codes=), by the codes they have now. A
+  // code can mean another joint now (the hedgehog's J1 was its foot, and is
+  // its elbow), so only an old link is read through them.
   aliases?: Readonly<Record<string, string>>;
 };
 
