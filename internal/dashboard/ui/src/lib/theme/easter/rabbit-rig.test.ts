@@ -54,6 +54,35 @@ describe('rabbit rig', () => {
     expect(legsOf(pose)).toHaveLength(4);
   });
 
+  // As the skeleton has it (design-docs/easter/README.md): the hock on the
+  // ledge under the hip, the stifle forward of both; the elbow tucked back
+  // behind the shoulder, the forearm upright or reaching forward to the
+  // wrist, never raked back under the belly.
+  it('sits and rests between hops with each hock under its hip and each forepaw under its chest', () => {
+    for (const pose of [rabbitRig(rabbit('sit'), look()), rabbitRig(rabbit('hop', REST * HOP_LENGTH), look())]) {
+      const [farHind, farFore, nearHind, nearFore] = legsOf(pose);
+      for (const leg of [farHind, nearHind]) {
+        expect(Math.abs(leg.ankle.x - leg.hip.x)).toBeLessThan(0.8);
+        expect(leg.knee.x).toBeGreaterThan(leg.hip.x + 2);
+      }
+      for (const leg of [farFore, nearFore]) {
+        expect(leg.knee.x).toBeLessThan(leg.hip.x - 0.5);
+        expect(leg.ankle.x).toBeGreaterThanOrEqual(leg.knee.x - 0.1);
+      }
+    }
+  });
+
+  it('keeps every bone its own length, whatever it does', () => {
+    const [first] = momentsOf('sit');
+    const lengths = (pose: RigPose) => legsOf(pose).map((l) => [Math.hypot(l.knee.x - l.hip.x, l.knee.y - l.hip.y), Math.hypot(l.ankle.x - l.knee.x, l.ankle.y - l.knee.y)]);
+    for (const name of POSE_NAMES) for (const pose of momentsOf(name)) {
+      lengths(pose).forEach(([thigh, shin], i) => {
+        expect(thigh).toBeCloseTo(lengths(first)[i][0], 6);
+        expect(shin).toBeCloseTo(lengths(first)[i][1], 6);
+      });
+    }
+  });
+
   it('hops as a half-bound: hind feet together, forefeet one after the other, and a flight between', () => {
     const cycle = HOP_LENGTH / SCALE;
     const frames = Array.from({ length: 400 }, (_, i) => down(rabbitRig(rabbit('hop', ((REST + i / 400) * cycle) * SCALE), look())));

@@ -72,16 +72,26 @@ const TOES = GROUND - (PAW.height - PAW.heel.y);
 // its toes). A foreleg's shoulder in the chest, the upper arm back to the
 // elbow, the forearm down to the wrist (the carpus), and a short bone to the
 // forepaw, which folds back as it swings. The far pair a little apart.
+//
+// Placed against the skeleton (design-docs/easter/README.md): the shoulder
+// low at the front of the chest, the hip in the haunch. Between hops (REST)
+// the hind feet have just landed and the forefeet are about to lift, so
+// each reach is set for where the feet stand then, as a sitting rabbit's
+// do: the hock on the ledge under the hip, the long foot running forward,
+// and the forepaws under the chest, the elbows tucked back behind the
+// shoulders. Thigh to shank 1:1.1 and upper arm to forearm 1:1, as the
+// rabbit's bones measure; each limb hinges on its own side (bendFrame), so
+// no bone is stretched to reach a foot.
 const HIND_LEG = {
-  art: HIND_ART, width: 1.9, thigh: 3.3, shin: 3.4, bend: 1, fore: false, haunch: 3.2, taper: true, reach: -0.6,
+  art: HIND_ART, width: 1.9, thigh: 3.3, shin: 3.6, bend: 1, bendFrame: 'limb', jointLimits: { min: 30, max: 175 }, fore: false, haunch: 3.2, taper: true, reach: -3.1,
   walksOn: { kind: 'sole', toes: { x: FOOT.width - FOOT.heel.x, y: FOOT.height - FOOT.heel.y }, peel: 62 },
 } as const;
-const FORE_LEG = { art: FORE_ART, width: 1.45, thigh: 2, shin: 2.4, bend: -1, fore: true, haunch: 1.7, reach: 0.3, walksOn: { kind: 'toes', length: 0.8, lean: 6, fold: 60 } } as const;
+const FORE_LEG = { art: FORE_ART, width: 1.45, thigh: 2.6, shin: 2.6, bend: -1, bendFrame: 'limb', jointLimits: { min: 30, max: 175 }, fore: true, haunch: 1.7, reach: 1, walksOn: { kind: 'toes', length: 0.8, lean: 6, fold: 60 } } as const;
 const LEGS: ArtLeg[] = [
   { ...HIND_LEG, hip: { x: 7.6, y: 11.4 }, far: true },
-  { ...FORE_LEG, hip: { x: 15.5, y: 12.2 }, far: true },
+  { ...FORE_LEG, hip: { x: 15.8, y: 12.8 }, far: true },
   { ...HIND_LEG, hip: { x: 6.4, y: 11.6 }, far: false },
-  { ...FORE_LEG, hip: { x: 14.4, y: 12.4 }, far: false },
+  { ...FORE_LEG, hip: { x: 15, y: 13 }, far: false },
 ];
 
 // The slow half-bound (design-docs/easter/README.md): the hind feet land
@@ -158,7 +168,7 @@ function hopping(walked: number): Stance {
   const foot = (f: Point, i: number): Point => {
     if (fore(i)) return { x: f.x, y: f.y - HEEL + TOES - paws(s.steps[i]) };
     const k = trail(s.steps[i]);
-    return { x: f.x - 2.6 * k, y: f.y - 0.8 * k };
+    return { x: f.x - 1.4 * k, y: f.y - 0.8 * k };
   };
   return {
     body: turnAbout(pitch, HIND, 0, -lift - 0.4 * air),
@@ -240,10 +250,12 @@ function eased(rabbit: RigRabbit, look: RabbitLook): Stance {
   const f = smooth(rabbit.since / EASE);
   const mix = (a: number, b: number) => a + (b - a) * f;
   const turn = { angle: mix(before.body.angle, next.body.angle), pivot: next.body.pivot, dx: mix(before.body.dx, next.body.dx), dy: mix(before.body.dy, next.body.dy) };
-  const feet = (hips: readonly Point[]) => {
-    const from = before.feet(hips), to = next.feet(hips);
-    return to.map((p, i) => ({ x: mix(from[i].x, p.x), y: mix(from[i].y, p.y) }));
-  };
+  // A lifted paw eases between where each pose holds it against its own
+  // shoulders: carried on the shoulders in between, a paw held to the chest
+  // would sink into the ledge as they drop into a nudge.
+  const own = (s: Stance) => s.feet(LEGS.map((l) => turned(s.body, l.hip)));
+  const from = own(before), to = own(next);
+  const feet = () => to.map((p, i) => ({ x: mix(from[i].x, p.x), y: mix(from[i].y, p.y) }));
   const steps = LEGS.map((l, i) => (l.fore ? foldBetween(before.steps[i], next.steps[i], f) : next.steps[i] ?? before.steps[i]));
   return { body: turn, head: mix(before.head, next.head), ears: mix(before.ears, next.ears), tail: mix(before.tail, next.tail), feet, steps };
 }

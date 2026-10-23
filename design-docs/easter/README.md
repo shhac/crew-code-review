@@ -78,6 +78,50 @@ The names the rig and the lab's joints view use:
   ground), both hind feet flat beside the body, forepaws straight down just
   ahead of the hind toes, ears up or tilted back.
 
+### The skeleton, and where the rig puts each joint (2026-10-23)
+
+The first legs put the joints in the wrong places: at rest the hock stood
+2 to 2.6 units ahead of the hip, under the belly, with the long foot running
+on to the forepaws, and the forepaws 2.5 units behind the shoulders, the
+forearms raked back and stretched 45% past their length to reach them. The
+cause was the gait's rest, not the drawing: between hops (`REST`) the hind
+feet have just landed, at the front of their stride, and the forefeet are
+about to lift, at its back, and each leg's `reach` (where its stride is
+centred under its hip) did not allow for that, so every still pose, which
+stands on those same feet, bunched all four under the middle. Two mounted
+skeletons, measured from their photographs (side view, the scale bars
+giving centimetres), and March's hare, whose legs were already placed
+right, set where they go:
+
+| Joint | Sitting skeleton (SU.CPZ.Mm.240) | Standing skeleton (MAV-USP) | The rig, at rest |
+| --- | --- | --- | --- |
+| Hip (acetabulum) | 1.5cm in from the rump, 27% of the sitting height up | 2cm in from the rump, 68% of the rump's height up | in the haunch, 15% of the body's length in from the rump, 60% up (unchanged) |
+| Stifle | 8.5cm ahead of the hip, about level with it | 8.3cm ahead, the femur near level, at the belly | 2.5 to 2.9 units ahead of the hip, at the haunch's lower front |
+| Hock (calcaneus) | on the ground under the hip, a little behind | on the ground under the hip | under the hip: 0.1 ahead between hops, 0.5 behind sitting (was 2 to 2.6 ahead) |
+| Hind foot | flat forward from the hock, 10cm | flat forward, 9.3cm | flat forward, its toes behind the forepaws (was reaching them) |
+| Shoulder | low at the front of the chest, 75% of its depth down | 86% of the chest's depth down, a third of the way back from the nose | 72% down the chest, 35% of the length back from the nose (was 0.6 higher and 0.6 to 0.3 further back) |
+| Elbow | 4.2cm behind the shoulder, 5cm below | 4.6cm behind, 3.9cm below | 1.8 to 2.4 units behind the shoulder |
+| Wrist (carpus) | 2.9cm behind the shoulder; the forearm leaning forward about 10 degrees | 2cm behind; leaning forward about 20 degrees | 1.2 to 1.7 units behind the shoulder, the forearm upright (was 2.65 behind, raked back) |
+
+At the rig's scale a centimetre of rabbit is about 0.38 drawing units (its
+3.3-unit thigh is an 8.7cm femur). The bones' proportions are the measured
+ones: femur 82 to 87mm and tibia 91mm, about 1:1.1 (Ajayi et al. 2012;
+Selcuk 2023), so the shank is 3.6 units (was 3.4); humerus 67.5mm and radius
+66mm, about 1:1 (Selcuk 2023; Özkadif et al. 2015), so the upper arm and
+forearm are 2.6 each (were 2 and 2.4: the forearm was longer than the upper
+arm, and both too short for a sitting rabbit's chest, which is why it
+stretched). Every limb now hinges on its own side of the line from its root
+(`bendFrame: 'limb'`, as the hare's), so a foreleg bends its wrist rather
+than stretch a bone, and a test holds every bone at its length through
+every pose. The reaches are set for where the feet stand at rest: the hind
+legs' -3.1 (was -0.6) puts the hock under the hip; the forelegs' 1 (was 0.3),
+with the shoulder moved to the front of the chest, puts the forepaws under
+it. The forepaws stay a little further back than the skeletons' because
+the same reach also centres their stride: further forward and a forefoot
+could not reach where it lands. With the hind stride now sweeping back from
+under the hip, the hind legs trail 1.4 units further out behind after
+pushing off (was 2.6), which keeps the hop inside its footprint.
+
 ### The hop
 
 Rabbits are saltatorial: they move by hopping, not by walking or trotting,
@@ -300,9 +344,12 @@ a forepaw from its near legs, so their thickness is the drawing's.
   (the haunch piece, thick at the hip), stifle to hock (the leg bar,
   tapering to the hock's point), and the long hind foot from the hock,
   standing flat as a sole walker's foot (`walksOn: sole`), its heel peeling
-  up over its toes as it pushes off.
+  up over its toes as it pushes off. At rest the hock is under the hip
+  ("The skeleton" above).
 - **Foreleg**: shoulder to elbow to wrist, a slim bar, and a short bone on
   to the small forepaw, which folds back as the paw lifts (`walksOn: toes`).
+  The shoulder low at the front of the chest, the elbow tucked behind it,
+  the forepaw under the chest.
   Sat up on alert the forepaws are held to the chest; grooming, they are at
   the muzzle, stroking up over it as the head bobs down to them.
 - **Outlines only on the silhouette**: each piece drawn outlined and again as
@@ -420,6 +467,26 @@ regenerated parts mean measuring again.
   kinematics and ground contact kinetics during the stance phase of gait*,
   PeerJ 10:e13611 (plantigrade foot, digitigrade locomotion; ankle
   plantarflexion peaking at toe-off): https://peerj.com/articles/13611
+- Ajayi, Shawulu, Zachariya, Ahmed and Adah 2012, *Osteomorphometry of the
+  bones of the thigh, crus and foot in the New Zealand white rabbit
+  (Oryctolagus cuniculus)*, Italian Journal of Anatomy and Embryology
+  117(3):125 (femur 82.3mm, tibia 91mm; four toes):
+  https://oajournals.fupress.net/index.php/ijae/article/view/1131
+- Selcuk 2023, *Computed tomography reconstruction and morphometric
+  analysis of the humerus and femur in New Zealand rabbits*, Eurasian
+  Journal of Veterinary Sciences 39(4):164 (humerus 67.5mm, femur 87.3mm, in
+  the same rabbits): https://www.eurasianjvetsci.org/pdf.php3?id=1434
+- Özkadif, Eken, Besoluk and Dayan 2015, *Three-dimensional reconstruction
+  of New Zealand rabbit antebrachium by multidetector computed tomography*,
+  Iranian Journal of Veterinary Research 16(2):205 (radius 64.5 to 67.4mm,
+  ulna 71.7 to 78mm): https://ijvr.shirazu.ac.ir/article_3069.html
+- Mounted skeletons, side view, with scale bars: a domestic rabbit sitting,
+  Sorbonne Université's zoology teaching collection, SU.CPZ.Mm.240 (photo
+  Pierre Kitmacher),
+  https://commons.wikimedia.org/wiki/File:Lapin_domestique_(SU.CPZ.Mm.240).jpg;
+  and one standing at the Museum of Veterinary Anatomy, FMVZ USP (photo
+  Wagner Souza e Silva),
+  https://commons.wikimedia.org/wiki/File:Rabbit_skeleton_at_MAV-USP.jpg
 - Bertram and Gutmann 2008, *Motions of the running horse and cheetah
   revisited*, J. R. Soc. Interface 6:549 (the half-bound: hind feet landing
   almost together, forefeet together or slightly apart; the jackrabbit's
