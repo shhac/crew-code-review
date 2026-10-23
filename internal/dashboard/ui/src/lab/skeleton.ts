@@ -300,7 +300,10 @@ export function skeletonFromPosed(posed: PosedSkeleton): Skeleton {
   const bones = posed.bones.map((b) => ({ code: b.code, name: b.name, from: codes.get(b.from) ?? b.from, to: codes.get(b.to) ?? b.to, far: b.far }));
   const title = (code: string) => {
     const limb = posed.limbs.find((l) => l.code === code);
-    if (limb) return `${side(Number(code.slice(1)) % 2 === 1)} ${limb.fore ? 'foreleg' : 'hind leg'}`;
+    const named = posed.titles?.[code];
+    const far = Number(code.slice(1)) % 2 === 1;
+    if (named) return `${side(far)} ${named}`;
+    if (limb) return `${side(far)} ${limb.fore ? 'foreleg' : 'hind leg'}`;
     return TITLES[code] ?? code;
   };
   const rank = (code: string) => (code.startsWith('L') ? 0 : ['S', 'H', 'W0', 'W1'].indexOf(code) + 1 || 5);

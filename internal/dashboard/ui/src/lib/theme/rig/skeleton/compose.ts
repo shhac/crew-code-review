@@ -291,6 +291,6 @@ export function compose(body: Body, poseAt: (now: number) => PoseSpec, now: numb
     ...body.frame,
     layers,
     guides: [{ name: 'stands here', at: body.frame.anchor }, ...(body.guides?.map((g) => ({ name: g.name, at: posed.handle(g.at) })) ?? joints.map((j) => ({ name: j.name, at: j.at })))],
-    skeleton: { joints, bones: layout.bones.map((b) => ({ ...b, length: apart(unsquashed(b.from), unsquashed(b.to)) })), limbs: posedLimbs },
+    skeleton: { joints, bones: layout.bones.map((b) => ({ ...b, length: apart(unsquashed(b.from), unsquashed(b.to)) })), limbs: posedLimbs, ...(body.titles ? { titles: body.titles } : {}) },
   };
 }

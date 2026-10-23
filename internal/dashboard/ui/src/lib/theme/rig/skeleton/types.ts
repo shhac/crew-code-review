@@ -130,10 +130,19 @@ type PieceOf<A extends Attachment, Arts> = {
 };
 export type Piece = PieceOf<Exclude<Attachment, { kind: 'bar' }>, Art> | PieceOf<Extract<Attachment, { kind: 'bar' }>, Omit<Art, 'box'>>;
 
-// An animal built on a skeleton: its frame, its bones, its parts, and the
+// An animal built on a skeleton: its frame, its bones, its parts, the
 // points it marks for the lab and the tests (where it stands is always
-// first; with none given, every joint by its name).
-export type Body = { frame: Frame; skeleton: Skeleton; pieces: readonly Piece[]; shapes?: readonly Shape[]; guides?: readonly { name: string; at: Handle }[] };
+// first; with none given, every joint by its name), and what the lab calls
+// each limb, by its code, where that is not a fore or hind leg (a bird's
+// wing and its leg).
+export type Body = {
+  frame: Frame;
+  skeleton: Skeleton;
+  pieces: readonly Piece[];
+  shapes?: readonly Shape[];
+  guides?: readonly { name: string; at: Handle }[];
+  titles?: Readonly<Record<string, string>>;
+};
 
 // The skeleton as a pose has it, for the lab and the tests: each joint where
 // it is drawn, coded by its role; each bone, by its joints' ids, and how
@@ -142,4 +151,4 @@ export type Body = { frame: Frame; skeleton: Skeleton; pieces: readonly Piece[];
 export type PosedJoint = { id: string; code: string; name: string; at: Point; derived: boolean; far: boolean; parent: string | null; angle: number; limits?: { min: number; max: number } };
 export type PosedBone = { code: string; name: string; from: string; to: string; far: boolean; length: number; stretch?: { min: number; max: number } };
 export type PosedLimb = { id: string; code: string; limb: Limb; fore: boolean; sole: number };
-export type PosedSkeleton = { joints: readonly PosedJoint[]; bones: readonly PosedBone[]; limbs: readonly PosedLimb[] };
+export type PosedSkeleton = { joints: readonly PosedJoint[]; bones: readonly PosedBone[]; limbs: readonly PosedLimb[]; titles?: Readonly<Record<string, string>> };
