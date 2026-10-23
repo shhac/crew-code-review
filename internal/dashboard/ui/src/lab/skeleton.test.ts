@@ -1,12 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { rabbitRig as rabbitDrawnAsBefore } from '../lib/theme/easter/rabbit-rig-legacy';
+import { crowRig as crowDrawnAsBefore } from '../lib/theme/harvest/crow-rig-legacy';
 import type { Point } from '../lib/theme/pointer';
 import { turnAbout, type DrawnLeg, type RigPose } from '../lib/theme/rig/rig';
 import { gullRig as gullDrawnAsBefore } from '../lib/theme/seaside/gull-rig-legacy';
 import { pigeonRig as pigeonDrawnAsBefore } from '../lib/theme/wimbledon/pigeon-rig-legacy';
 import { bee } from './critters/bee';
 import { BIRD, mammalHead, mammalLeg, mammalSpine } from './critters/bones';
-import { crow } from './critters/crow';
+import { crowAt } from './critters/crow';
 import { gullAt } from './critters/gull';
 import { hawk } from './critters/hawk';
 import { pigeonAt } from './critters/pigeon';
@@ -112,7 +113,7 @@ describe('skeletonOf', () => {
     expect(s.joints.filter((j) => /^[SH]/.test(j.code)).map((j) => j.name)).toEqual(['head joint', 'body pivot', 'tail root', 'jaw hinge (lower mandible)']);
     const walking = skeletonOf(pigeonDrawnAsBefore(pigeonAt(at('stand')), { now: at('stand').now, still: false }), BIRD);
     expect(walking.joints.filter((j) => j.code.startsWith('S')).map((j) => j.name)).toEqual(['head joint', 'neck base', 'body pivot', 'tail root']);
-    expect(skeletonOf(crow.pose(at('walk'), look), crow.bones).bones.filter((b) => b.code.startsWith('S'))).toHaveLength(3);
+    expect(skeletonOf(crowDrawnAsBefore(crowAt(at('walk')), { now: at('walk').now, ...look }), BIRD).bones.filter((b) => b.code.startsWith('S'))).toHaveLength(3);
     // The hawk's tail is drawn in its body's group, so has no pivot of its own.
     expect(skeletonOf(hawk.pose(at('glide'), look), hawk.bones).joints.filter((j) => j.code.startsWith('S')).map((j) => j.name)).toEqual(['head joint', 'body pivot']);
   });

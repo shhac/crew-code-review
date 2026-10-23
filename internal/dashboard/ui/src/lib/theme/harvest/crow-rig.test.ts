@@ -23,7 +23,9 @@ function moments(pose: CrowPose, depth = 1): RigPose[] {
 }
 const most = (rigs: readonly RigPose[], of: (r: RigPose) => number) => Math.max(...rigs.map(of));
 const below = (r: RigPose) => (rigBounds(r).bottom - r.anchor.y) * r.scale;
-const seen = (pose: RigPose, name: string) => flatLayers(pose.layers).some((l: Layer) => l.kind === 'image' && l.name === name && !l.hidden);
+// A wing piece's underside is its variant 'under' on a skeleton.
+const nameOf = (l: Layer) => (l.kind === 'image' ? l.name : l.kind === 'piece' ? `${l.name}${l.id.endsWith('(under)') ? ', underside' : ''}` : '');
+const seen = (pose: RigPose, name: string) => flatLayers(pose.layers).some((l: Layer) => (l.kind === 'image' || l.kind === 'piece') && nameOf(l) === name && !l.hidden);
 const at = (pose: RigPose, name: string) => guideAt(pose, name) ?? { x: NaN, y: NaN };
 
 describe('crow rig', () => {

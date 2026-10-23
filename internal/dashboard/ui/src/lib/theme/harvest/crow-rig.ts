@@ -1,11 +1,15 @@
 import { clamp, smooth } from '../math';
 import type { Point } from '../pointer';
-import { airLegsTo, birdJointGuides, birdLegsTo, birdWalk, feetLine, headBob, plantedLegs, stepRise, type AirLegs, type BirdLeg } from '../rig/bird';
-import { stepping, type Limb } from '../rig/gait';
+import { birdWalk, curledIn, feetLine, headBob, stepRise, type AirLegs, type BirdLeg } from '../rig/bird';
+import { stepping } from '../rig/gait';
 import { gazeFrom } from '../rig/gaze';
 import { blinking, breath } from '../rig/life';
-import { imageLayer, legsAround, lidLayers, turnAbout, turned, type Frame, type Fur, type Layer, type LimbArt, type RigPose, type Turn } from '../rig/rig';
-import { birdWing, flaring, flapping, gliding, settling, takingOff, wingPoint, type Flap, type FlightPose, type WingArt, type WingPose } from '../rig/wings';
+import { lidLayers, turnAbout, type Frame, type Fur, type LimbArt, type RigPose, type Turn } from '../rig/rig';
+import { compose } from '../rig/skeleton/compose';
+import { BIRD, head, picture, spine, tetrapod } from '../rig/skeleton/tetrapod';
+import type { Goal, JointPose, PoseSpec } from '../rig/skeleton/types';
+import { wingOf } from '../rig/skeleton/wing';
+import { flaring, flapping, gliding, settling, takingOff, type Flap, type FlightPose, type WingArt, type WingPose } from '../rig/wings';
 import bodyArt from './crow-body.webp';
 import drumstickFurArt from './crow-drumstick-fur.webp';
 import drumstickArt from './crow-drumstick.webp';
@@ -28,8 +32,8 @@ import handArt from './crow-wing-hand.webp';
 // (rig/bird.ts's legs, walk and head bob; rig/wings.ts's wings and flight
 // poses): a body with its folded wing over it and a head at its neck, on two
 // legs posed in code; in the air, the folded wing put away and two spread
-// wings each of an arm and a hand. Facing right, its feet on the ledge at
-// ANCHOR.
+// wings each of an arm and a hand; all hung on its skeleton (rig/skeleton).
+// Facing right, its feet on the ledge at ANCHOR.
 //
 // The parts were cut from one drawing of the crow standing square
 // (design-docs/harvest/crow-standing.png), and the drawing units are that
@@ -148,19 +152,14 @@ export type RigCrow = { pose: CrowPose; walked: number; seed: number; beat: numb
 // gaze: how far its head is turned toward a cursor (degrees, nose down).
 type CrowLook = { now: number; still: boolean; gaze: number };
 
-// The head, turned as `head` says, its third eyelid blinking.
-const headLayer = (crow: RigCrow, look: CrowLook, head: Turn): Layer => ({
-  kind: 'group', turn: head,
-  layers: [imageLayer('head', headArt, HEAD), ...lidLayers(!look.still && blinking(crow.seed, look.now), EYE, 0.62, MEMBRANE)],
-});
-
 // The tail about its root: lifted (degrees, up positive) and fanned.
-const tailLayer = (lift: number, fan: number): Layer =>
-  ({ kind: 'group', turn: turnAbout(lift, TAIL_ROOT), foreshorten: 1 + 0.4 * fan, layers: [imageLayer('tail', tailArt, TAIL)] });
+const tailOf = (lift: number, fan: number): JointPose => ({ angle: lift, squash: { by: 1 + 0.4 * fan } });
 
-const planted = (hips: readonly Point[]) => plantedLegs(LEGS, hips, FEET);
+const planted = (hips: readonly Point[]): Goal[] => LEGS.map((leg, i) => ({ kind: 'plant', at: { x: hips[i].x + leg.reach, y: FEET } }));
 
-type Ground = { body: Turn; head: Turn; tail: number; limbs: (hips: readonly Point[]) => Limb[] };
+// How it stands on the ledge: the body's turn, the head's at its neck, the
+// tail's, and each foot's goal from where its hip is.
+type Ground = { body: Turn; head: JointPose; tail: number; goals: (hips: readonly Point[]) => Goal[] };
 
 // A peck's dip, 0 to 1: down to strike 0.6 of the way through, a moment
 // held, then lifted.
@@ -173,17 +172,17 @@ function onGround(crow: RigCrow, look: CrowLook): Ground {
   const gaze = look.still ? 0 : clamp(look.gaze, -LOOK_UP, LOOK);
   const breathe = look.still ? 0 : 0.1 * breath(crow.seed, look.now, 3200);
   if (look.still || crow.pose === 'stand') {
-    return { body: turnAbout(0, MIDDLE, 0, -breathe), head: turnAbout(gaze, NECK), tail: 0, limbs: planted };
+    return { body: turnAbout(0, MIDDLE, 0, -breathe), head: { angle: gaze }, tail: 0, goals: planted };
   }
   if (crow.pose === 'alert') {
     // Body up, neck stretched, sleeked.
-    return { body: turnAbout(-12, HIPS, 0, -breathe), head: turnAbout(gaze - 6, NECK, 0.4, -1.1), tail: 10, limbs: planted };
+    return { body: turnAbout(-12, HIPS, 0, -breathe), head: { angle: gaze - 6, shift: { x: 0.4, y: -1.1 } }, tail: 10, goals: planted };
   }
   if (crow.pose === 'peck') {
     // Tipped forward from the hips between pecks, further at each strike,
     // the neck reaching down and the tail lifting behind.
     const d = dip(crow.t);
-    return { body: turnAbout(24 + 10 * d, LEG_ROOTS, 0, 0.5), head: turnAbout(26 + 26 * d, NECK, -1.2 * d, 1.6 * d), tail: -4 + 4 * d, limbs: planted };
+    return { body: turnAbout(24 + 10 * d, LEG_ROOTS, 0, 0.5), head: { angle: 26 + 26 * d, shift: { x: -1.2 * d, y: 1.6 * d } }, tail: -4 + 4 * d, goals: planted };
   }
   const gait = crow.pose === 'sidle' ? SIDLE : WALK;
   const walked = crow.walked / SCALE;
@@ -191,9 +190,9 @@ function onGround(crow: RigCrow, look: CrowLook): Ground {
   const { feet, steps } = stepping(LEGS, walked, FEET, gait);
   return {
     body: turnAbout(0, MIDDLE, 0, -rise),
-    head: turnAbout(gaze, NECK, headBob(walked, gait, THRUST), rise),
+    head: { angle: gaze, shift: { x: headBob(walked, gait, THRUST), y: rise } },
     tail: 0,
-    limbs: (hips) => birdLegsTo(LEGS, hips, feet(hips), steps, GROUND),
+    goals: (hips) => feet(hips).map((at, i) => ({ kind: 'plant', at, step: steps[i], ground: GROUND })),
   };
 }
 
@@ -238,55 +237,83 @@ function levelled(crow: RigCrow): number {
   }
 }
 
+// Its skeleton: the body, which rolls about its middle, pitches about its
+// hips and tips forward over its legs to peck; the head on its neck, the
+// eye and the bill on it; the tail at its root; each leg from its hip high
+// in the body; and, in the air, the wings. The legs start inside the body:
+// the far leg drawn behind it, the near outlined behind it too and its fur
+// over its edge (or, tucked up in flight, into the belly feathers, behind
+// it). In the air the far wing is behind it all, the near over it all.
+const NEAR_WING = wingOf({ art: WING, side: 'near', parent: 'body', root: NEAR_SHOULDER, tip: TIP, z: 0 });
+const FAR_WING = wingOf({ art: WING, side: 'far', parent: 'body', root: FAR_SHOULDER, tip: TIP, z: 0 });
+const PARTS = [
+  picture('tail', 'tail', tailArt, TAIL), picture('rump', 'body', rumpArt, RUMP), picture('body', 'body', bodyArt, BODY),
+  picture('folded wing', 'body', foldedArt, FOLDED_WING), picture('head', 'skull', headArt, HEAD), 'eyelid',
+];
+const crowOf = (air: boolean) => tetrapod(BIRD, {
+  frame: FRAME,
+  root: 'body',
+  joints: [
+    { id: 'body', parent: null, role: spine(2), at: MIDDLE, name: 'body pivot (its middle, its hips, or over its legs)' },
+    { id: 'skull', parent: 'body', role: spine(0), at: NECK, name: 'head joint' },
+    { id: 'eye', parent: 'skull', role: head(0), at: EYE, name: 'eye' },
+    { id: 'bill', parent: 'skull', role: head(1), at: BILL, name: 'bill' },
+    { id: 'tail', parent: 'body', role: spine(3), at: TAIL_ROOT, name: 'tail root' },
+    ...(air ? [...FAR_WING.joints, ...NEAR_WING.joints] : []),
+  ],
+  bones: [
+    // Its neck stretches and shortens as the head bobs, stretches up alert
+    // and reaches down to peck.
+    { from: 'skull', to: 'body', name: 'neck and back line', stretch: { min: 5.4, max: 8.6 } }, { from: 'body', to: 'tail', name: 'pelvis line (to the tail root)' },
+    ...(air ? [...FAR_WING.bones, ...NEAR_WING.bones] : []),
+  ],
+  legs: LEGS,
+  ground: () => FEET,
+  order: air ? [FAR_WING.pieces, ...PARTS, NEAR_WING.pieces] : PARTS,
+  shapes: [{ id: 'eyelid', on: 'skull' }],
+  guides: (at) => [
+    ...(air
+      ? [{ name: 'shoulder', at: NEAR_WING.ids.shoulder }, { name: 'wrist', at: NEAR_WING.ids.wrist }, { name: 'wingtip', at: NEAR_WING.ids.tip }, { name: 'eye', at: 'eye' }]
+      : [{ name: 'eye', at: 'eye' }, { name: 'bill', at: 'bill' }]),
+    ...LEGS.flatMap((leg) => [0, 1, 2, 3].map((k) => ({ name: BIRD.legs.hind.joints[k], at: at(leg, k) }))),
+  ],
+});
+const ON_GROUND = crowOf(false);
+const IN_AIR = crowOf(true);
+
+// Its toes drawn together while a foot swings (bird.ts's curledIn), or
+// while a leg in the air is not reaching to land.
+const curled = (goal: Goal) => (goal.kind === 'air' ? goal.reach < 0.6 : curledIn(goal.kind === 'plant' ? goal.step : undefined));
+const feetShown = (goals: readonly Goal[]) => ON_GROUND.feet((_, i) => (curled(goals[i]) ? 'curled' : 'toes'));
+const eyelid = (crow: RigCrow, look: CrowLook) => ({ eyelid: lidLayers(!look.still && blinking(crow.seed, look.now), EYE, 0.62, MEMBRANE) });
+
 function flying(crow: RigCrow, look: CrowLook): RigPose {
   const pose = inAir(crow, look.now);
   const level = levelled(crow);
   const body = turnAbout(level - pose.pitch - (crow.climb ?? 0), HIPS);
-  const hips = LEGS.map((s) => turned(body, s.hip));
-  const limbs = pose.airborne ? airLegsTo(LEGS, hips, pose.legs, CROW_AIR) : planted(hips);
   const folded = pose.wings.fold > 120;
-  const bodyLayers: Layer[] = [
-    birdWing(WING, pose.wings, FAR_SHOULDER, true, 0, !folded),
-    // Pitched up to brake, the long tail is lifted so it stays clear of the
-    // ledge, fanned and pressed down a little against the air.
-    tailLayer(0.75 * Math.max(0, pose.pitch - level) - 4 * pose.tail, pose.tail),
-    imageLayer('rump', rumpArt, RUMP),
-    imageLayer('body', bodyArt, BODY),
-    imageLayer('folded wing', foldedArt, FOLDED_WING, !folded),
-    // The head held level as the body tips forward under it.
-    headLayer(crow, look, turnAbout(-0.8 * level, NECK)),
-    birdWing(WING, pose.wings, NEAR_SHOULDER, false, 0, !folded),
-  ];
+  const [far, near] = [FAR_WING.pose(pose.wings, 0, !folded), NEAR_WING.pose(pose.wings, 0, !folded)];
+  // Pitched up to brake, the long tail is lifted so it stays clear of the
+  // ledge, fanned and pressed down a little against the air; the head held
+  // level as the body tips forward under it.
+  const joints = { ...far.joints, ...near.joints, tail: tailOf(0.75 * Math.max(0, pose.pitch - level) - 4 * pose.tail, pose.tail), skull: { angle: -0.8 * level } };
+  const hips = IN_AIR.hips({ root: body, joints });
+  const goals: Goal[] = pose.airborne ? LEGS.map(() => ({ kind: 'air', reach: pose.legs, legs: CROW_AIR })) : planted(hips);
+  const show: PoseSpec['show'] = { ...far.show, ...near.show, ...feetShown(goals), 'folded wing': folded ? 'drawn' : false };
   // Tucked up in flight, the legs are hidden in the belly feathers, so even
   // the near leg's fur goes behind the body.
-  const [farLegs, farFur, nearLegs, drawn, nearFur] = legsAround(LEGS, limbs, { kind: 'group', turn: body, layers: bodyLayers });
   const tucked = pose.airborne && Math.abs(pose.legs) < 0.25;
-  return {
-    ...FRAME,
-    layers: tucked ? [farLegs, farFur, nearLegs, nearFur, drawn] : [farLegs, farFur, nearLegs, drawn, nearFur],
-    guides: [
-      { name: 'stands here', at: ANCHOR }, { name: 'shoulder', at: turned(body, NEAR_SHOULDER) },
-      { name: 'wrist', at: turned(body, wingPoint(WING, pose.wings, NEAR_SHOULDER, WING.wrist, false)) },
-      { name: 'wingtip', at: turned(body, wingPoint(WING, pose.wings, NEAR_SHOULDER, TIP, true)) },
-      { name: 'eye', at: turned(body, turned(turnAbout(-0.8 * level, NECK), EYE)) }, ...birdJointGuides(limbs),
-    ],
-  };
+  return compose(IN_AIR.body, () => ({ root: body, joints, limbs: IN_AIR.limbs(goals), show, z: tucked ? IN_AIR.furUnder('near') : {}, shapes: eyelid(crow, look) }), look.now);
 }
 
 export const grounded = (pose: CrowPose) => GROUND_POSES.includes(pose);
 
 export function crowRig(crow: RigCrow, look: CrowLook): RigPose {
   if (!grounded(crow.pose) && !look.still) return flying(crow, look);
-  const { body, head, tail, limbs } = onGround(crow, look);
-  const hips = LEGS.map((s) => turned(body, s.hip));
-  const legs = limbs(hips);
-  const parts: Layer[] = [tailLayer(tail, 0), imageLayer('rump', rumpArt, RUMP), imageLayer('body', bodyArt, BODY), imageLayer('folded wing', foldedArt, FOLDED_WING), headLayer(crow, look, head)];
-  return {
-    ...FRAME,
-    // The legs start inside the body, the hips high in it.
-    layers: legsAround(LEGS, legs, { kind: 'group', turn: body, layers: parts }),
-    guides: [{ name: 'stands here', at: ANCHOR }, { name: 'eye', at: turned(body, turned(head, EYE)) }, { name: 'bill', at: turned(body, turned(head, BILL)) }, ...birdJointGuides(legs)],
-  };
+  const { body, head: skull, tail, goals: goalsAt } = onGround(crow, look);
+  const joints = { skull, tail: tailOf(tail, 0) };
+  const goals = goalsAt(ON_GROUND.hips({ root: body, joints }));
+  return compose(ON_GROUND.body, () => ({ root: body, joints, limbs: ON_GROUND.limbs(goals), show: feetShown(goals), z: {}, shapes: eyelid(crow, look) }), look.now);
 }
 
 // How far the head turns toward a cursor: at most 14 degrees, from 160px.

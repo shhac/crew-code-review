@@ -1,6 +1,20 @@
 import { describe, expect, it, vi } from 'vitest';
-import { momentsOf } from '../../../../lab/critters/critter';
+import { momentsOf, type RigCritter } from '../../../../lab/critters/critter';
+import { crow, crowAt } from '../../../../lab/critters/crow';
+import { fox, foxAt } from '../../../../lab/critters/fox';
+import { gull, gullAt } from '../../../../lab/critters/gull';
+import { hare, hareAt } from '../../../../lab/critters/hare';
+import { hedgehog, hogAt } from '../../../../lab/critters/hedgehog';
+import { pigeon, pigeonAt } from '../../../../lab/critters/pigeon';
+import { rabbit, rabbitAt } from '../../../../lab/critters/rabbit';
 import { CRITTERS } from '../../../../lab/critters/registry';
+import { foxRig } from '../../aurora/fox-rig-legacy';
+import { hogRig } from '../../bonfire/hedgehog-rig-legacy';
+import { rabbitRig } from '../../easter/rabbit-rig-legacy';
+import { crowRig } from '../../harvest/crow-rig-legacy';
+import { hareRig } from '../../hares/hare-rig-legacy';
+import { gullRig } from '../../seaside/gull-rig-legacy';
+import { pigeonRig } from '../../wimbledon/pigeon-rig-legacy';
 import type { Point } from '../../pointer';
 import * as bird from '../bird';
 import * as gait from '../gait';
@@ -41,8 +55,16 @@ const callsSoFar = () => Object.values(mocks()).reduce((n, m) => n + m.calls.len
 
 describe('a limb\'s constraint', () => {
   it('poses every leg of every animal as legsTo, birdLegsTo, airLegsTo and plantedLegs do, over the moments the lab shows', () => {
-    // Every moment the lab shows each animal in, moving and held still.
-    const asked = CRITTERS.flatMap((critter) => {
+    // Every moment the lab shows each animal in, moving and held still; and
+    // each animal moved onto a skeleton as it was drawn before, asking the
+    // solvers itself.
+    const drawnBefore: RigCritter[] = [
+      { ...hedgehog, pose: (at, look) => hogRig(hogAt(at), { now: at.now, ...look }) }, { ...rabbit, pose: (at, look) => rabbitRig(rabbitAt(at), { now: at.now, ...look }) },
+      { ...pigeon, pose: (at, look) => pigeonRig(pigeonAt(at), { now: at.now, ...look }) }, { ...fox, pose: (at, look) => foxRig(foxAt(at), { now: at.now, ...look }) },
+      { ...hare, pose: (at, look) => hareRig(hareAt(at), { now: at.now, ...look }) }, { ...gull, pose: (at, look) => gullRig(gullAt(at), { now: at.now, ...look }) },
+      { ...crow, pose: (at, look) => crowRig(crowAt(at), { now: at.now, ...look }) },
+    ];
+    const asked = [...CRITTERS, ...drawnBefore.map((c) => ({ ...c, name: `${c.name}, as drawn before` }))].flatMap((critter) => {
       if (critter.kind !== 'rig') return [];
       const before = callsSoFar();
       momentsOf(critter).forEach((at) => [false, true].forEach((still) => critter.pose(at, { gaze: 0, still })));
@@ -67,7 +89,7 @@ describe('a limb\'s constraint', () => {
       expect(standing(birdLimb(s, feet), hips[i])).toEqual(planted.results[n].value[i]);
       checked.planted += 1;
     }));
-    for (const name of ['hedgehog', 'fox', 'rabbit', 'hare', 'gull', 'crow', 'pigeon']) expect(asked.find((a) => a.name === name)?.calls, name).toBeGreaterThan(0);
+    for (const name of ['hedgehog', 'fox', 'rabbit', 'hare', 'gull', 'crow', 'pigeon']) expect(asked.find((a) => a.name === `${name}, as drawn before`)?.calls, name).toBeGreaterThan(0);
     expect(checked.legs).toBeGreaterThan(1000);
     expect(Math.min(checked.birds, checked.air, checked.planted)).toBeGreaterThan(100);
   }, 60000);

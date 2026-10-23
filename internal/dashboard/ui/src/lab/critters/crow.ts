@@ -8,7 +8,6 @@ import crowReference from '../crow-reference.webp';
 import crowTakeoff from '../crow-pose-takeoff-2.webp';
 import crowWalk from '../crow-pose-walk.webp';
 import type { Drawing } from '../drawings';
-import { BIRD } from './bones';
 import type { Moment, RigCritter } from './critter';
 
 // September's carrion crow: its ground poses on the stage's floor, its
@@ -40,7 +39,7 @@ const DRAWINGS: Record<string, Drawing> = {
   land: byEye(crowLand, 39.67, 36.83, { x: 31.23, y: 12.89 }, 'flare'),
 };
 
-const crowAt = ({ mode, now, walked }: Moment): RigCrow => {
+export const crowAt = ({ mode, now, walked }: Moment): RigCrow => {
   const pick = MODES.find((m) => m.label === mode) ?? MODES[0];
   const time = pick.every ? now % pick.every : now;
   const beat = ((pick.beats ?? 0) * time) / 1000;
@@ -60,5 +59,8 @@ export const crow = {
   gaze: (dir, cursor) => crowGaze(dir, { x: 0, y: 0 }, cursor),
   box: (at) => FOOTPRINTS[crowAt(at).pose],
   drawings: DRAWINGS,
-  bones: BIRD,
+  // Before its skeleton was its own, read off the drawing, its spine
+  // numbered only the points it found (the body pivot SJ1, the tail root
+  // SJ2) and ran through the hip, and in the air the shoulder.
+  aliases: { SJ1: 'SJ2', SJ2: 'SJ3', SB2: 'SB1', SB3: 'SB1' },
 } satisfies RigCritter;
