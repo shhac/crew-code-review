@@ -1,11 +1,15 @@
 import { clamp, mix, smooth } from '../math';
 import type { Point } from '../pointer';
 import { gazeFrom } from '../rig/gaze';
-import { airLegsTo, birdJointGuides, birdLegsTo, birdWalk, feetLine, headBob, plantedLegs, stepRise, type AirLegs, type BirdLeg } from '../rig/bird';
-import { stepping, type Limb } from '../rig/gait';
+import { birdWalk, curledIn, feetLine, headBob, stepRise, type AirLegs, type BirdLeg } from '../rig/bird';
+import { stepping } from '../rig/gait';
 import { blinking, breath } from '../rig/life';
-import { imageLayer, legsAround, lidLayers, turnAbout, turned, type Frame, type Fur, type Layer, type LimbArt, type RigPose, type Turn } from '../rig/rig';
-import { birdWing, flaring, flapping, gliding, settling, takingOff, wingPoint, type Flap, type FlightPose, type WingArt, type WingPose } from '../rig/wings';
+import { lidLayers, turnAbout, turned, type Frame, type Fur, type Layer, type LimbArt, type RigPose, type Turn } from '../rig/rig';
+import { compose } from '../rig/skeleton/compose';
+import { BIRD, head, picture, spine, tetrapod } from '../rig/skeleton/tetrapod';
+import type { Goal, JointPose, PoseSpec } from '../rig/skeleton/types';
+import { wingOf } from '../rig/skeleton/wing';
+import { flaring, flapping, gliding, settling, takingOff, type Flap, type FlightPose, type WingArt, type WingPose } from '../rig/wings';
 import armUnderArt from './gull-arm-under.webp';
 import armArt from './gull-arm.webp';
 import bodyArt from './gull-body.webp';
@@ -30,8 +34,8 @@ import toesArt from './gull-toes.webp';
 // body with its folded wing and a head over its breast, its lower mandible
 // a piece of its own that opens for the long call, on two legs posed in
 // code; in the air, the body without its folded wing, a tail closed or
-// fanned, and two wings each of an arm and a hand. Facing right, on the
-// ledge at ANCHOR.
+// fanned, and two wings each of an arm and a hand; all hung on its skeleton
+// (rig/skeleton). Facing right, on the ledge at ANCHOR.
 //
 // The parts were cut from one drawing of the gull standing square
 // (design-docs/seaside/gull-standing.png), and the drawing units are that
@@ -157,22 +161,12 @@ const CALL_UP = -10;
 const NAPE = { x: 20.4, y: 4.6 };
 const BILL_OPEN = 26;
 
-// The head, turned as `head` says (nodded, slid along the body), its eye
-// blinking, its bill open by `open` (0 to 1): the lower mandible turned down
-// about the gape's corner, the orange-red gape showing between.
-function headLayer(gull: RigGull, look: GullLook, head: Turn, open = 0): Layer {
-  const jaw = turnAbout(open * BILL_OPEN, GAPE);
-  const gape: Layer[] = open > 0.02 ? [{ kind: 'stroke', name: 'gape', points: [GAPE, UPPER_EDGE, turned(jaw, LOWER_EDGE)], width: 0.12, colour: '#7a2a12', fill: GAPE_FILL }] : [];
-  return {
-    kind: 'group', turn: head,
-    layers: [
-      ...gape,
-      { kind: 'group', turn: jaw, layers: [imageLayer('lower mandible', mandibleArt, MANDIBLE)] },
-      imageLayer('head', headArt, HEAD),
-      ...lidLayers(!look.still && blinking(gull.seed, look.now), EYE, 0.28, FACE),
-    ],
-  };
-}
+// Its bill open by `open` (0 to 1): the lower mandible turned down about
+// the gape's corner, and the orange-red gape showing between.
+const jawOf = (open: number): JointPose => ({ angle: open * BILL_OPEN });
+const gapeOf = (open: number): Layer[] => (open > 0.02
+  ? [{ kind: 'stroke', name: 'gape', points: [GAPE, UPPER_EDGE, turned(turnAbout(open * BILL_OPEN, GAPE), LOWER_EDGE)], width: 0.12, colour: '#7a2a12', fill: GAPE_FILL }]
+  : []);
 
 // Where the head is through the long call, t of the way: its nod (nose down
 // positive), how far it is lifted, and how far the bill is open.
@@ -193,28 +187,32 @@ function callPose(t: number): { angle: number; lift: number; open: number } {
 
 // Stood on the ledge (or taking off before its feet leave it, or settled
 // after touchdown): each foot planted under its hip.
-const planted = (hips: readonly Point[]) => plantedLegs(LEGS, hips, FEET);
+const planted = (hips: readonly Point[]): Goal[] => LEGS.map((leg, i) => ({ kind: 'plant', at: { x: hips[i].x + leg.reach, y: FEET } }));
 
-type Ground = { body: Turn; head: Turn; open: number; limbs: (hips: readonly Point[]) => Limb[] };
+// How it stands on the ledge: the body's turn; the head's, which nods
+// about the neck's base, or thrown back for the call about its nape; how
+// far the bill is open; each foot's goal from where its hip is.
+type Ground = { body: Turn; neck: JointPose; skull: JointPose; open: number; goals: (hips: readonly Point[]) => Goal[] };
 
 // On the ledge: standing, strutting or foraging, eyeing something or giving
 // the long call.
 function onGround(gull: RigGull, look: GullLook): Ground {
   const breathe = look.still ? 0 : 0.12 * breath(gull.seed, look.now, 3600);
   const body = turnAbout(0, MIDDLE, 0, -breathe);
-  if (look.still) return { body, head: turnAbout(0, NECK), open: 0, limbs: planted };
+  if (look.still) return { body, neck: {}, skull: {}, open: 0, goals: planted };
   if (gull.pose === 'eye') {
     const angle = EYE_TILT + clamp(look.gaze ?? 0, GAZE.up, GAZE.down);
-    return { body, head: turnAbout(angle, NECK, STRETCH.dx, STRETCH.dy), open: 0, limbs: planted };
+    return { body, neck: { angle, shift: { x: STRETCH.dx, y: STRETCH.dy } }, skull: {}, open: 0, goals: planted };
   }
   if (gull.pose === 'call') {
     const { angle, lift, open } = callPose(gull.t);
     // Brought down about the neck, thrown back about the nape: either way
     // its crown stays down.
-    return { body, head: turnAbout(angle, angle > 0 ? NECK : NAPE, STRETCH.dx * lift, 0), open, limbs: planted };
+    const turn = { angle, shift: { x: STRETCH.dx * lift, y: 0 } };
+    return { body, neck: angle > 0 ? turn : {}, skull: angle > 0 ? {} : turn, open, goals: planted };
   }
   if (gull.pose === 'stand') {
-    return { body, head: turnAbout(clamp(look.gaze ?? 0, GAZE.up, GAZE.down) / 2, NECK), open: 0, limbs: planted };
+    return { body, neck: { angle: clamp(look.gaze ?? 0, GAZE.up, GAZE.down) / 2 }, skull: {}, open: 0, goals: planted };
   }
   const gait = gull.pose === 'forage' ? FORAGE : STRUT;
   const walked = gull.walked / SCALE;
@@ -226,9 +224,10 @@ function onGround(gull: RigGull, look: GullLook): Ground {
   const { feet, steps } = stepping(LEGS, walked, FEET, gait);
   return {
     body: turnAbout(0, MIDDLE, 0, -rise),
-    head: turnAbout(forage ? 6 : 0, NECK, forage ? 0.6 * headBob(walked, gait, THRUST) : 0, rise),
+    neck: { angle: forage ? 6 : 0, shift: { x: forage ? 0.6 * headBob(walked, gait, THRUST) : 0, y: rise } },
+    skull: {},
     open: 0,
-    limbs: (hips) => birdLegsTo(LEGS, hips, feet(hips), steps, GROUND),
+    goals: (hips) => feet(hips).map((at, i) => ({ kind: 'plant', at, step: steps[i], ground: GROUND })),
   };
 }
 
@@ -246,56 +245,92 @@ function inAir(gull: RigGull, now: number): FlightPose {
 }
 
 
+// Its skeleton: the body, which rolls about its middle and pitches about
+// its hips; the neck's base on it, the head on the neck at the nape, the
+// eye and the lower mandible on the head; the tail at its root, fanned
+// further about it; each leg from its hip high in the body; and, in the
+// air, the wings. The legs start inside the body: the far leg drawn behind
+// it, the near outlined behind it too and its fur over its edge (or,
+// tucked up in flight, into the belly feathers, behind it). In the air the
+// far wing is behind it all, the near over it all, and the body is drawn
+// without its folded wing, with a tail of its own.
+const TIP = { x: -1.5, y: -18.2 };
+const NEAR_WING = wingOf({ art: WING, side: 'near', parent: 'body', root: NEAR_SHOULDER, tip: TIP, z: 0 });
+const FAR_WING = wingOf({ art: WING, side: 'far', parent: 'body', root: FAR_SHOULDER, tip: TIP, z: 0 });
+const HEAD_PARTS = ['gape', picture('lower mandible', 'jaw', mandibleArt, MANDIBLE), picture('head', 'skull', headArt, HEAD), 'eyelid'];
+const gullOf = (air: boolean) => tetrapod(BIRD, {
+  frame: FRAME,
+  root: 'body',
+  joints: [
+    { id: 'body', parent: null, role: spine(2), at: MIDDLE, name: 'body pivot (its middle, or its hips)' },
+    { id: 'neck base', parent: 'body', role: spine(1), at: NECK, name: 'neck base' },
+    { id: 'skull', parent: 'neck base', role: spine(0), at: NAPE, name: 'head joint (nape)' },
+    { id: 'eye', parent: 'skull', role: head(0), at: EYE, name: 'eye' },
+    { id: 'jaw', parent: 'skull', role: head(1), at: GAPE, name: 'jaw hinge (lower mandible)' },
+    ...(air ? [
+      { id: 'tail', parent: 'body', role: spine(3), at: TAIL_ROOT, name: 'tail root' },
+      { id: 'tail fan', parent: 'tail', role: spine(4), at: TAIL_ROOT, name: 'tail, fanned (turned further about its root)' },
+      ...FAR_WING.joints, ...NEAR_WING.joints,
+    ] : []),
+  ],
+  bones: [
+    // Its neck stretches and shortens as the head thrusts and bobs, eyes
+    // something and calls.
+    { from: 'skull', to: 'neck base', name: 'neck line', stretch: { min: 3.85, max: 4.1 } },
+    { from: 'neck base', to: 'body', name: 'back line', stretch: { min: 3.8, max: 4.8 } },
+    ...(air ? [{ from: 'body', to: 'tail', name: 'pelvis line (to the tail root)' }, ...FAR_WING.bones, ...NEAR_WING.bones] : []),
+  ],
+  legs: LEGS,
+  ground: () => FEET,
+  order: air
+    ? [FAR_WING.pieces, picture('tail', 'tail', tailArt, TAIL), picture('tail, fanned', 'tail fan', tailFannedArt, TAIL_FANNED),
+      picture('body', 'body', bodyArt, BODY), picture('body in flight', 'body', flightBodyArt, FLIGHT_BODY), ...HEAD_PARTS, NEAR_WING.pieces]
+    : [picture('body', 'body', bodyArt, BODY), ...HEAD_PARTS],
+  shapes: [{ id: 'gape', on: 'skull' }, { id: 'eyelid', on: 'skull' }],
+  guides: (at) => [
+    ...(air ? [{ name: 'shoulder', at: NEAR_WING.ids.shoulder }, { name: 'wrist', at: NEAR_WING.ids.wrist }, { name: 'wingtip', at: NEAR_WING.ids.tip }] : [{ name: 'eye', at: 'eye' }, { name: 'gape', at: 'jaw' }]),
+    ...LEGS.flatMap((leg) => [0, 1, 2, 3].map((k) => ({ name: BIRD.legs.hind.joints[k], at: at(leg, k) }))),
+  ],
+});
+const ON_GROUND = gullOf(false);
+const IN_AIR = gullOf(true);
+
+// Its toes drawn together while a foot swings (bird.ts's curledIn), or
+// while a leg in the air is not reaching to land.
+const curled = (goal: Goal) => (goal.kind === 'air' ? goal.reach < 0.6 : curledIn(goal.kind === 'plant' ? goal.step : undefined));
+const feetShown = (goals: readonly Goal[]) => ON_GROUND.feet((_, i) => (curled(goals[i]) ? 'curled' : 'toes'));
+const shapesOf = (gull: RigGull, look: GullLook, open: number) => ({ gape: gapeOf(open), eyelid: lidLayers(!look.still && blinking(gull.seed, look.now), EYE, 0.28, FACE) });
+
 function flying(gull: RigGull, look: GullLook): RigPose {
   const pose = inAir(gull, look.now);
   const body = turnAbout(-pose.pitch, HIPS);
-  const hips = LEGS.map((s) => turned(body, s.hip));
+  const folded = pose.wings.fold > 120;
+  const [far, near] = [FAR_WING.pose(pose.wings, 0, !folded), NEAR_WING.pose(pose.wings, 0, !folded)];
+  const joints = { ...far.joints, ...near.joints, 'tail fan': { angle: -10 * pose.tail } };
+  const hips = IN_AIR.hips({ root: body, joints });
   // Down until its feet leave; then stretched down and back as they push
   // off (GULL_AIR), close to where they stood, tucked, or reaching to land.
-  const limbs = pose.airborne ? airLegsTo(LEGS, hips, pose.legs, GULL_AIR) : planted(hips);
-  const folded = pose.wings.fold > 120;
+  const goals: Goal[] = pose.airborne ? LEGS.map(() => ({ kind: 'air', reach: pose.legs, legs: GULL_AIR })) : planted(hips);
   // The body with its wing folded has its own tail, tucked under the
   // primaries: the flight tail behind it would show above them.
-  const tail = (fanned: boolean, box: typeof TAIL, src: string, name: string) =>
-    ({ kind: 'group', turn: turnAbout(fanned ? -10 * pose.tail : 0, TAIL_ROOT), layers: [imageLayer(name, src, box, folded || (fanned ? pose.tail < 0.5 : pose.tail >= 0.5))] } satisfies Layer);
-  const bodyLayers: Layer[] = [
-    birdWing(WING, pose.wings, FAR_SHOULDER, true, 0, !folded),
-    tail(false, TAIL, tailArt, 'tail'), tail(true, TAIL_FANNED, tailFannedArt, 'tail, fanned'),
-    imageLayer('body', bodyArt, BODY, !folded), imageLayer('body in flight', flightBodyArt, FLIGHT_BODY, folded),
-    headLayer(gull, look, turnAbout(0, NECK)),
-    birdWing(WING, pose.wings, NEAR_SHOULDER, false, 0, !folded),
-  ];
-  const tip = wingPoint(WING, pose.wings, NEAR_SHOULDER, { x: -1.5, y: -18.2 }, true);
+  const seen = (shown: boolean) => (shown ? 'drawn' : false);
+  const show: PoseSpec['show'] = {
+    ...far.show, ...near.show, ...feetShown(goals),
+    tail: seen(!folded && pose.tail < 0.5), 'tail, fanned': seen(!folded && pose.tail >= 0.5), body: seen(folded), 'body in flight': seen(!folded),
+  };
   // Tucked up in flight, a gull's legs are hidden in its belly feathers
   // (the seaside note), so even the near leg's fur goes behind the body.
-  const [farLegs, farFur, nearLegs, drawn, nearFur] = legsAround(LEGS, limbs, { kind: 'group', turn: body, layers: bodyLayers });
   const tucked = pose.airborne && Math.abs(pose.legs) < 0.25;
-  return {
-    ...FRAME,
-    layers: tucked ? [farLegs, farFur, nearLegs, nearFur, drawn] : [farLegs, farFur, nearLegs, drawn, nearFur],
-    guides: [
-      { name: 'stands here', at: ANCHOR }, { name: 'shoulder', at: turned(body, NEAR_SHOULDER) },
-      { name: 'wrist', at: turned(body, wingPoint(WING, pose.wings, NEAR_SHOULDER, WING.wrist, false)) },
-      { name: 'wingtip', at: turned(body, tip) }, ...birdJointGuides(limbs),
-    ],
-  };
+  return compose(IN_AIR.body, () => ({ root: body, joints, limbs: IN_AIR.limbs(goals), show, z: tucked ? IN_AIR.furUnder('near') : {}, shapes: shapesOf(gull, look, 0) }), look.now);
 }
 
 const GROUNDED = new Set<GullPose>(['stand', 'strut', 'forage', 'eye', 'call']);
 
 function standing(gull: RigGull, look: GullLook): RigPose {
-  const { body, head, open, limbs } = onGround(gull, look);
-  const hips = LEGS.map((s) => turned(body, s.hip));
-  const legs = limbs(hips);
-  return {
-    ...FRAME,
-    // The legs start inside the body, the hips high in it.
-    layers: legsAround(LEGS, legs, { kind: 'group', turn: body, layers: [imageLayer('body', bodyArt, BODY), headLayer(gull, look, head, open)] }),
-    guides: [
-      { name: 'stands here', at: ANCHOR }, { name: 'eye', at: turned(body, turned(head, EYE)) },
-      { name: 'gape', at: turned(body, turned(head, GAPE)) }, ...birdJointGuides(legs),
-    ],
-  };
+  const { body, neck, skull, open, goals: goalsAt } = onGround(gull, look);
+  const joints = { 'neck base': neck, skull, jaw: jawOf(open) };
+  const goals = goalsAt(ON_GROUND.hips({ root: body, joints }));
+  return compose(ON_GROUND.body, () => ({ root: body, joints, limbs: ON_GROUND.limbs(goals), show: feetShown(goals), z: {}, shapes: shapesOf(gull, look, open) }), look.now);
 }
 
 export function gullRig(gull: RigGull, look: GullLook): RigPose {

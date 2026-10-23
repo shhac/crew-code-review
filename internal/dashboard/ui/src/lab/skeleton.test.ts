@@ -2,11 +2,12 @@ import { describe, expect, it } from 'vitest';
 import { rabbitRig as rabbitDrawnAsBefore } from '../lib/theme/easter/rabbit-rig-legacy';
 import type { Point } from '../lib/theme/pointer';
 import { turnAbout, type DrawnLeg, type RigPose } from '../lib/theme/rig/rig';
+import { gullRig as gullDrawnAsBefore } from '../lib/theme/seaside/gull-rig-legacy';
 import { pigeonRig as pigeonDrawnAsBefore } from '../lib/theme/wimbledon/pigeon-rig-legacy';
 import { bee } from './critters/bee';
 import { BIRD, mammalHead, mammalLeg, mammalSpine } from './critters/bones';
 import { crow } from './critters/crow';
-import { gull } from './critters/gull';
+import { gullAt } from './critters/gull';
 import { hawk } from './critters/hawk';
 import { pigeonAt } from './critters/pigeon';
 import { rabbitAt } from './critters/rabbit';
@@ -100,8 +101,8 @@ describe('skeletonOf', () => {
   });
 
   it("makes a bird's marked wing its near forelimb, its spine from the pivots its pictures turn about", () => {
-    const p = gull.pose(at('flap'), look);
-    const s = skeletonOf(p, gull.bones);
+    const p = gullDrawnAsBefore(gullAt(at('flap')), { now: at('flap').now, still: false });
+    const s = skeletonOf(p, BIRD);
     expect(s.groups.map((g) => g.code)).toEqual(['L0', 'L1', 'L2', 'L3', 'S', 'H']);
     expect(s.joints.filter((j) => j.code.startsWith('L1')).map((j) => [j.name, j.far])).toEqual([['shoulder', true], ['wrist', true], ['wingtip', true]]);
     // The far wing's shoulder is its group's root, posed by the rig: where the far wing joins the body.

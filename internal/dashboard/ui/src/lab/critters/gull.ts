@@ -10,7 +10,6 @@ import gullSwoop from '../gull-pose-swoop.webp';
 import gullTakeoff from '../gull-pose-takeoff.webp';
 import gullWalkContact from '../gull-pose-walk-contact.webp';
 import gullWalkPass from '../gull-pose-walk-pass.webp';
-import { BIRD } from './bones';
 import type { Moment, RigCritter } from './critter';
 
 // The herring gull: its ground poses on the stage's floor, its flight
@@ -46,7 +45,7 @@ const DRAWINGS: Record<string, Drawing> = {
   flare: byEye(gullFlare, 25.5, 25.92, { x: 20.97, y: 8.92 }, 'flare'),
 };
 
-const gullAt = ({ mode, now, walked }: Moment): RigGull => {
+export const gullAt = ({ mode, now, walked }: Moment): RigGull => {
   const pick = MODES.find((m) => m.label === mode) ?? MODES[0];
   const time = pick.every ? now % pick.every : now;
   const beat = ((pick.beats ?? 0) * time) / 1000;
@@ -65,5 +64,8 @@ export const gull = {
   pose: (at, { still }) => gullRig(gullAt(at), { now: at.now, still }),
   box: (at) => FOOTPRINTS[gullAt(at).pose],
   drawings: DRAWINGS,
-  bones: BIRD,
+  // Before its skeleton was its own, read off the drawing, its spine had no
+  // neck base (the body pivot SJ1, in the air the tail root SJ2), and its
+  // gape and jaw hinge were two marks on one point.
+  aliases: { SJ1: 'SJ2', SJ2: 'SJ3', HJ2: 'HJ1', SB3: 'SB2' },
 } satisfies RigCritter;
