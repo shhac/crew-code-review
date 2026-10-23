@@ -102,6 +102,7 @@ right, set where they go:
 | Shoulder | low at the front of the chest, 75% of its depth down | 86% of the chest's depth down, a third of the way back from the nose | 72% down the chest, 35% of the length back from the nose (was 0.6 higher and 0.6 to 0.3 further back) |
 | Elbow | 4.2cm behind the shoulder, 5cm below | 4.6cm behind, 3.9cm below | 1.8 to 2.4 units behind the shoulder |
 | Wrist (carpus) | 2.9cm behind the shoulder; the forearm leaning forward about 10 degrees | 2cm behind; leaning forward about 20 degrees | 1.2 to 1.7 units behind the shoulder, the forearm upright (was 2.65 behind, raked back) |
+| Metacarpus (wrist to forepaw) | | down and forward from the wrist, about 37 degrees off upright, the toes flat forward on the ground | 35 degrees forward of upright, the wrist behind the toes (was 11 to 21 degrees back: see below) |
 
 At the rig's scale a centimetre of rabbit is about 0.38 drawing units (its
 3.3-unit thigh is an 8.7cm femur). The bones' proportions are the measured
@@ -121,6 +122,31 @@ the same reach also centres their stride: further forward and a forefoot
 could not reach where it lands. With the hind stride now sweeping back from
 under the hip, the hind legs trail 1.4 units further out behind after
 pushing off (was 2.6), which keeps the hop inside its footprint.
+
+The forepaw's own bone, the metacarpus (0.8 units from the wrist to where
+the toes' picture starts), sloped down and BACK at first, 11 to 21 degrees
+behind upright sitting and up to 30 thumping, so the wrist stood ahead of
+the forepaw and the toes then ran forward again: a zigzag that read as two
+wrists. The leg asked for a forward lean (6 degrees) but `rig/gait.ts` kept
+the bone on the elbow's side of the line from the shoulder to the paw, the
+side a hind leg's hock is right to take and a foreleg's wrist is not, so
+with the paw behind the shoulder the lean was pressed back along that line.
+A planted foot's bone now lies behind its toes on any leg; a paw off the
+ground still folds to the elbow's side, moving over as it lifts. In the
+standing skeleton (MAV-USP, measured on its photograph) the near forefoot's
+metacarpals slope down and forward about 37 degrees from the carpus, with
+the forearm close to upright and the toes flat forward on the board, so the
+foreleg leans 35 degrees, and its reach is 1.8 (was 1), which keeps the
+forearm upright over it (0 to 4 degrees forward sitting) rather than raked
+back. Through a hop's stance the bone leans 30 to 55 degrees, lower as the
+forefoot trails behind. Its fold is 89 (was 60), so a paw folded in its
+swing, held to the chest alert or washing the face, sits at the angle it
+did (54 degrees back of upright), its picture turned a little further
+toes down. A rig test holds every planted forepaw's wrist behind its toes.
+The hind foot has no such bone of its own: it is the foot's picture, flat
+from the hock to the toes, its heel peeling up over the toes as it pushes
+off, the hock behind and above them (rabbits move digitigrade, on the toes,
+for all that they sit plantigrade: Hall et al. 2022).
 
 ### The hop
 

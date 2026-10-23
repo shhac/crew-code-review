@@ -171,6 +171,8 @@ function stretched(feet: readonly Point[], hips: readonly Point[], phase: number
 // line with the shank rather than standing up from the toes.
 const TRAILING: ArtLeg[] = LEGS.map((s) => (s.fore || s.walksOn?.kind !== 'toes' ? s : { ...s, walksOn: { ...s.walksOn, lean: -70 } }));
 
+const LIFTED: Step[] = LEGS.map((s) => (s.fore ? { down: false, t: 0.75 } : { down: true, t: 0 }));
+
 // Each tuned against its key pose (design-docs/hares/hare-pose-*.png, laid
 // over the rig in the critters lab).
 function stance(hare: RigHare, look: HareLook): Stance {
@@ -216,7 +218,9 @@ function stance(hare: RigHare, look: HareLook): Stance {
       const paw = (h: Point, i: number): Point => (LEGS[i].fore
         ? { x: h.x + 1.5 + 3 * beat(i), y: h.y + 0.5 - 1.5 * beat(i) }
         : { x: h.x + 2.6, y: FEET });
-      return still(turnAbout(-70, HIPS, 0, 2.2), 62, -55, onSoles(LEGS, 1), (hips) => hips.map(paw));
+      // Its forepaws are off the ground (gait.ts folds a lifted paw's wrist
+      // to the elbow's side), held flat, as a paw is just before it lands.
+      return { ...still(turnAbout(-70, HIPS, 0, 2.2), 62, -55, onSoles(LEGS, 1), (hips) => hips.map(paw)), steps: LIFTED };
     }
     default:
       return still(turnAbout(0, HIPS), look.gaze, 0);

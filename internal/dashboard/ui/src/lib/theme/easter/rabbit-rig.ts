@@ -70,8 +70,10 @@ const TOES = GROUND - (PAW.height - PAW.heel.y);
 // hock to the toes, flat on the ground when it sits and standing; pushing
 // off, the heel peels up over the toes (it walks on its soles and hops on
 // its toes). A foreleg's shoulder in the chest, the upper arm back to the
-// elbow, the forearm down to the wrist (the carpus), and a short bone to the
-// forepaw, which folds back as it swings. The far pair a little apart.
+// elbow, the forearm down to the wrist (the carpus), and a short bone, the
+// metacarpus, sloping down and forward from it to the forepaw (35 degrees,
+// as the standing skeleton's), which folds back as it swings. The far pair
+// a little apart.
 //
 // Placed against the skeleton (design-docs/easter/README.md): the shoulder
 // low at the front of the chest, the hip in the haunch. Between hops (REST)
@@ -86,7 +88,7 @@ const HIND_LEG = {
   art: HIND_ART, width: 1.9, thigh: 3.3, shin: 3.6, bend: 1, bendFrame: 'limb', jointLimits: { min: 30, max: 175 }, fore: false, haunch: 3.2, taper: true, reach: -3.1,
   walksOn: { kind: 'sole', toes: { x: FOOT.width - FOOT.heel.x, y: FOOT.height - FOOT.heel.y }, peel: 62 },
 } as const;
-const FORE_LEG = { art: FORE_ART, width: 1.45, thigh: 2.6, shin: 2.6, bend: -1, bendFrame: 'limb', jointLimits: { min: 30, max: 175 }, fore: true, haunch: 1.7, reach: 1, walksOn: { kind: 'toes', length: 0.8, lean: 6, fold: 60 } } as const;
+const FORE_LEG = { art: FORE_ART, width: 1.45, thigh: 2.6, shin: 2.6, bend: -1, bendFrame: 'limb', jointLimits: { min: 30, max: 175 }, fore: true, haunch: 1.7, reach: 1.8, walksOn: { kind: 'toes', length: 0.8, lean: 35, fold: 89 } } as const;
 const LEGS: ArtLeg[] = [
   { ...HIND_LEG, hip: { x: 7.6, y: 11.4 }, far: true },
   { ...FORE_LEG, hip: { x: 15.8, y: 12.8 }, far: true },

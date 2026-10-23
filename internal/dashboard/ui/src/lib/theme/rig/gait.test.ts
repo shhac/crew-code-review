@@ -130,6 +130,19 @@ describe('a limb-relative toe hinge', () => {
     expect(Math.hypot(at({ x: 20, y: 20 }).foot.x, at({ x: 20, y: 20 }).foot.y)).toBeLessThan(12.4);
   });
 
+  // The rabbit's: its elbow back, its paw behind the shoulder at rest.
+  const foreleg: QuadLeg = { ...spec, thigh: 2.6, shin: 2.6, bend: -1, fore: true, jointLimits: { min: 30, max: 175 }, walksOn: { kind: 'toes', length: 0.8, lean: 35, fold: 89 } };
+  it("stands a foreleg's wrist behind its toes, and folds the paw back to the elbow's side as it swings", () => {
+    const paw = { x: -1, y: 4.5 };
+    const [planted] = legsTo([foreleg], [foreleg.hip], [paw]);
+    expect(planted.ankle.x).toBeLessThan(planted.foot.x);
+    expect(Math.atan2(planted.foot.x - planted.ankle.x, planted.foot.y - planted.ankle.y) * 180 / Math.PI).toBeCloseTo(35, 6);
+    const [swung] = legsTo([foreleg], [foreleg.hip], [paw], [{ down: false, t: 0.375 }]);
+    expect(swung.ankle.x).toBeGreaterThan(swung.foot.x);
+    const lifting = Array.from({ length: 101 }, (_, i) => legsTo([foreleg], [foreleg.hip], [paw], [{ down: false, t: (0.375 * i) / 100 }])[0]);
+    lifting.slice(1).forEach((leg, i) => expect(Math.hypot(leg.ankle.x - lifting[i].ankle.x, leg.ankle.y - lifting[i].ankle.y)).toBeLessThan(0.05));
+  });
+
   it('keeps the knee on its branch when the leg crosses horizontal', () => {
     const [before, after] = [at({ x: -6, y: -0.0001 }), at({ x: -6, y: 0.0001 })];
     expect(Math.hypot(after.knee.x - before.knee.x, after.knee.y - before.knee.y)).toBeLessThan(0.001);

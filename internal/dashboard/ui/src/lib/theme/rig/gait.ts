@@ -107,6 +107,10 @@ export function roll(step?: Step): number {
   return step.down ? smooth((step.t - 0.6) / 0.4) : 1 - smooth(step.t / 0.8);
 }
 
+// How far a foot is off the ground in its step, for which way its bone up
+// from the toes folds: soon after it lifts, until just before it lands.
+const liftedBy = (step?: Step) => (!step || step.down ? 0 : smooth(step.t / 0.2) * smooth((1 - step.t) / 0.15));
+
 // Where the bone up from the toes starts, folded `fold` degrees back from
 // standing: rotating it that way swings the paw back behind the joint.
 function ankleOf(toes: Toes, foot: Point, fold: number): Point {
@@ -117,7 +121,7 @@ function ankleOf(toes: Toes, foot: Point, fold: number): Point {
 // A three-bone hinge with a chosen toe target. Keep the foot planted when
 // it is reachable: change the hock/wrist angle instead of stretching the
 // shin. Only an impossible target moves, to the nearest reachable point.
-function hingedToes(spec: QuadLeg, hip: Point, target: Point, on: Toes, fold: number): Limb {
+function hingedToes(spec: QuadLeg, hip: Point, target: Point, on: Toes, fold: number, lifted: number): Limb {
   const spanAt = (angle: number) => Math.sqrt(spec.thigh ** 2 + spec.shin ** 2 - 2 * spec.thigh * spec.shin * Math.cos(rad(angle)));
   const upperMin = spec.jointLimits ? spanAt(spec.jointLimits.min) : Math.abs(spec.thigh - spec.shin) + 1e-3;
   const upperMax = spec.jointLimits ? spanAt(spec.jointLimits.max) : spec.thigh + spec.shin - 1e-6;
@@ -133,8 +137,15 @@ function hingedToes(spec: QuadLeg, hip: Point, target: Point, on: Toes, fold: nu
   const delta = Math.atan2(Math.sin(desired - direction), Math.cos(desired - direction));
   // Stay in one continuous fold sector. Choosing whichever circle
   // intersection is nearest independently each frame can flip the hock
-  // across the hip, even with a stable knee solution.
-  const angle = direction + spec.bend * clamp(spec.bend * delta, opening(upperMin), opening(upperMax));
+  // across the hip, even with a stable knee solution. A planted foot's
+  // sector is behind its toes, a wrist's as a hock's, the bone sloping down
+  // and forward to them; a foreleg's elbow side would zigzag it forward at
+  // the wrist, which reads as two wrists. A forepaw off the ground, folding
+  // back as it swings or held up, folds to the elbow's side, so a foreleg
+  // moves from one sector to the other as it lifts (`lifted`), by its angle
+  // off that line, never the short way round.
+  const off = (side: number) => side * clamp(side * delta, opening(upperMin), opening(upperMax));
+  const angle = direction + off(1) + (off(spec.bend) - off(1)) * lifted;
   const ankle = { x: foot.x - on.length * Math.sin(angle), y: foot.y - on.length * Math.cos(angle) };
   return { hip, knee: jointBeside(hip, ankle, spec.thigh, spec.shin, spec.bend === 1 ? -1 : 1), ankle, foot, paw: fold };
 }
@@ -154,7 +165,7 @@ function limbOf(spec: QuadLeg, hip: Point, foot: Point, step?: Step): Limb {
     return { hip, knee: knee(heel), ankle: heel, foot: heel, paw };
   }
   const fold = on.fold * flexion(step);
-  if (spec.bendFrame === 'limb') return hingedToes(spec, hip, foot, on, fold);
+  if (spec.bendFrame === 'limb') return hingedToes(spec, hip, foot, on, fold, liftedBy(step));
   const ankle = ankleOf(on, foot, fold);
   return { hip, knee: knee(ankle), ankle, foot, paw: fold };
 }

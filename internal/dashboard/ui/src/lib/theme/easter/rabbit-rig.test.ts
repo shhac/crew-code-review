@@ -72,6 +72,26 @@ describe('rabbit rig', () => {
     }
   });
 
+  // A rabbit stands on its fore toes: the metacarpus slopes down and
+  // forward from the wrist to them (about 37 degrees off upright in the
+  // standing skeleton, lower as a hop's forefoot trails behind), so the
+  // wrist is behind the toes, never ahead of them, which would read as a
+  // second wrist.
+  it('stands each planted forepaw with its wrist behind the toes, the metacarpus sloping down and forward', () => {
+    const slope = (leg: { ankle: { x: number; y: number }; foot: { x: number; y: number } }) =>
+      (Math.atan2(leg.foot.x - leg.ankle.x, leg.foot.y - leg.ankle.y) * 180) / Math.PI;
+    for (const name of POSE_NAMES) for (const pose of momentsOf(name)) {
+      const [, farFore, , nearFore] = legsOf(pose);
+      const [, farDown, , nearDown] = down(pose);
+      for (const [leg, planted] of [[farFore, farDown], [nearFore, nearDown]] as const) {
+        if (!planted) continue;
+        expect(leg.ankle.x, name).toBeLessThan(leg.foot.x);
+        expect(slope(leg), name).toBeGreaterThan(25);
+        expect(slope(leg), name).toBeLessThan(60);
+      }
+    }
+  });
+
   it('keeps every bone its own length, whatever it does', () => {
     const [first] = momentsOf('sit');
     const lengths = (pose: RigPose) => legsOf(pose).map((l) => [Math.hypot(l.knee.x - l.hip.x, l.knee.y - l.hip.y), Math.hypot(l.ankle.x - l.knee.x, l.ankle.y - l.knee.y)]);
