@@ -8,6 +8,7 @@ import feed from '../wasp-pose-feed.webp';
 import hover from '../wasp-pose-hover.webp';
 import land from '../wasp-pose-land.webp';
 import reference from '../wasp-reference.webp';
+import { INSECT_LEGS } from './bones';
 import type { Moment, RigCritter } from './critter';
 
 // June's common wasp (lib/theme/fete/wasp-rig.ts) on the insect rig. The
@@ -56,4 +57,5 @@ export const wasp = {
   },
   gaze: (dir, cursor) => gaze(dir, { x: 0, y: -(GROUND - ANCHOR.y) * SCALE }, cursor),
   drawings: DRAWINGS,
+  bones: { marked: INSECT_LEGS, between: [['petiole', 'neck', 'thorax line (petiole to neck)'], ['neck', 'scape', 'head']] },
 } satisfies RigCritter;

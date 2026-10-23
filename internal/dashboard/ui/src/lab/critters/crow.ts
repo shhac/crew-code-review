@@ -8,6 +8,7 @@ import crowReference from '../crow-reference.webp';
 import crowTakeoff from '../crow-pose-takeoff-2.webp';
 import crowWalk from '../crow-pose-walk.webp';
 import type { Drawing } from '../drawings';
+import { BIRD } from './bones';
 import type { Moment, RigCritter } from './critter';
 
 // September's carrion crow: its ground poses on the stage's floor, its
@@ -59,4 +60,5 @@ export const crow = {
   gaze: (dir, cursor) => crowGaze(dir, { x: 0, y: 0 }, cursor),
   box: (at) => FOOTPRINTS[crowAt(at).pose],
   drawings: DRAWINGS,
+  bones: BIRD,
 } satisfies RigCritter;

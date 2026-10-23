@@ -3,6 +3,7 @@ import type { Drawing } from '../drawings';
 import hawkFlapDown from '../hawk-pose-flap-down.webp';
 import hawkFlapUp from '../hawk-pose-flap-up.webp';
 import hawkGlide from '../hawk-pose-glide.webp';
+import { BIRD } from './bones';
 import type { Moment, RigCritter } from './critter';
 
 // The Harris's hawk of summer tennis, held up in the air over the stage: it
@@ -36,4 +37,5 @@ export const hawk = {
   pose: (at, { still }) => hawkRig(hawkAt(at), { now: at.now, still }),
   box: (at) => FOOTPRINTS[hawkAt(at).pose],
   drawings: DRAWINGS,
+  bones: BIRD,
 } satisfies RigCritter;

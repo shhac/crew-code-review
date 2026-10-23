@@ -10,6 +10,7 @@ import rabbitNudge from '../rabbit-pose-nudge.webp';
 import rabbitSit from '../rabbit-pose-sit.webp';
 import rabbitThump from '../rabbit-pose-thump.webp';
 import rabbitReference from '../rabbit-reference.webp';
+import { mammalLeg, mammalTrunk } from './bones';
 import type { Moment, RigCritter } from './critter';
 
 // The lab's labels for what the rabbit does: a bolt is a hop at full tilt.
@@ -46,4 +47,10 @@ export const rabbit = {
   pose: (at, look) => rabbitRig(rabbitAt(at), { now: at.now, ...look }),
   box: (at) => POSES[rabbitAt(at).pose],
   drawings: DRAWINGS,
+  // It stands on its hind soles, so no bone rises from the hind toes: the
+  // long hind foot is one picture from the hock forward.
+  bones: {
+    legs: ({ fore }) => (fore ? mammalLeg({ fore }) : { ...mammalLeg({ fore }), foot: 'hind foot (metatarsus and toes)' }),
+    between: mammalTrunk('nose'),
+  },
 } satisfies RigCritter;

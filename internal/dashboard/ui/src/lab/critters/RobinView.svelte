@@ -3,6 +3,8 @@
   // its pieces spread out where it stands.
   import LayeredRobin from '../../lib/theme/christmas/LayeredRobin.svelte';
   import { partsViewport } from '../../lib/theme/christmas/parts-pose';
+  import type { Placed } from '../skeleton';
+  import { robinSkeleton } from './robin-skeleton';
 
   export let mode: string;
   export let now: number;
@@ -12,10 +14,13 @@
   export let separate: boolean;
   export let hidden: string[];
   export let marked = false;
+  export let bones: Placed | null = null;
 
   // The robin's drawing is 128x112 at 0.35 on the page, standing at (64, 100).
   const ROBIN = { scale: 0.35, x: 64, y: 100 };
   $: viewport = partsViewport(mode, still);
+  $: [x, y, width, height] = viewport;
+  $: bones = { skeleton: robinSkeleton(mode, now, still, separate), view: { x, y, width, height }, anchor: { x: ROBIN.x, y: ROBIN.y }, scale: ROBIN.scale };
 </script>
 
 <div class="robin" data-critter={marked ? mode : undefined} style="left: {(viewport[0] - ROBIN.x) * ROBIN.scale}px; top: {(viewport[1] - ROBIN.y) * ROBIN.scale}px; width: {viewport[2] * ROBIN.scale}px; height: {viewport[3] * ROBIN.scale}px">

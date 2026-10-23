@@ -10,6 +10,7 @@ import hareGraze from '../hare-pose-graze.webp';
 import hareLope from '../hare-pose-lope.webp';
 import hareSit from '../hare-pose-sit.webp';
 import hareReference from '../hare-reference.webp';
+import { mammalLeg, mammalTrunk } from './bones';
 import type { Moment, RigCritter } from './critter';
 
 const MODES: HarePose[] = ['bound', 'lope', 'graze', 'sit', 'alert', 'box', 'leap', 'stand'];
@@ -42,4 +43,5 @@ export const hare = {
   box: (at) => POSES[hareAt(at).pose],
   gaze: (dir, cursor) => gazeAt(dir, { x: 0, y: 0 }, cursor),
   drawings: DRAWINGS,
+  bones: { legs: mammalLeg, between: mammalTrunk('nose') },
 } satisfies RigCritter;

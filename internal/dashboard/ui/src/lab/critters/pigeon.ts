@@ -9,6 +9,7 @@ import pigeonTakeoff from '../pigeon-pose-takeoff.webp';
 import pigeonWalkHold from '../pigeon-pose-walk-hold.webp';
 import pigeonWalkThrust from '../pigeon-pose-walk-thrust.webp';
 import pigeonReference from '../pigeon-reference.webp';
+import { BIRD } from './bones';
 import type { Moment, RigCritter } from './critter';
 
 // The feral pigeon of summer tennis: its ground poses on the stage's floor,
@@ -59,4 +60,5 @@ export const pigeon = {
   pose: (at, { still }) => pigeonRig(pigeonAt(at), { now: at.now, still }),
   box: (at) => FOOTPRINTS[pigeonAt(at).pose],
   drawings: DRAWINGS,
+  bones: BIRD,
 } satisfies RigCritter;

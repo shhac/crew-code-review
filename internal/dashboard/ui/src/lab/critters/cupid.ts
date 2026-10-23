@@ -50,4 +50,12 @@ export const cupid = {
     return { width: 2 * f.half, height: f.up, down: f.down };
   },
   drawings: DRAWINGS,
+  // A child's limbs: the hand and foot are each one picture, from the
+  // wrist and the ankle.
+  bones: {
+    legs: ({ layer }) => (layer.endsWith('arm')
+      ? { upper: 'humerus', middle: 'radius and ulna', foot: 'hand' }
+      : { upper: 'femur', middle: 'tibia and fibula', foot: 'foot' }),
+    between: [['hip', 'shoulder', 'back line (hip to shoulder)'], ['shoulder', 'neck', 'neck line (shoulder to head pivot)'], ['neck', 'eye', 'skull']],
+  },
 } satisfies RigCritter;

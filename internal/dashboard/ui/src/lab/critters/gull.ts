@@ -10,6 +10,7 @@ import gullSwoop from '../gull-pose-swoop.webp';
 import gullTakeoff from '../gull-pose-takeoff.webp';
 import gullWalkContact from '../gull-pose-walk-contact.webp';
 import gullWalkPass from '../gull-pose-walk-pass.webp';
+import { BIRD } from './bones';
 import type { Moment, RigCritter } from './critter';
 
 // The herring gull: its ground poses on the stage's floor, its flight
@@ -64,4 +65,5 @@ export const gull = {
   pose: (at, { still }) => gullRig(gullAt(at), { now: at.now, still }),
   box: (at) => FOOTPRINTS[gullAt(at).pose],
   drawings: DRAWINGS,
+  bones: BIRD,
 } satisfies RigCritter;

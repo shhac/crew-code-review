@@ -7,6 +7,7 @@ import hogSniff from '../hedgehog-pose-sniff.webp';
 import hogWalkContact from '../hedgehog-pose-walk-contact.webp';
 import hogWalkPass from '../hedgehog-pose-walk-pass.webp';
 import hogReference from '../hedgehog-reference.webp';
+import { mammalTrunk } from './bones';
 import type { Moment, RigCritter } from './critter';
 
 const MODES: Mode[] = ['walk', 'flee', 'sniff', 'peek', 'curled'];
@@ -36,4 +37,12 @@ export const hedgehog = {
   box: () => HOG,
   gaze: (dir, cursor) => gazeAt({ dir }, { x: 0, y: 0 }, cursor),
   drawings: DRAWINGS,
+  // Its legs are too short to show a knee: one piece from the hip (or
+  // shoulder) to the ankle (or wrist), and the foot flat on its sole.
+  bones: {
+    legs: ({ fore }) => (fore
+      ? { upper: 'leg (humerus to forearm, one piece)', foot: 'forefoot (metacarpus and toes)' }
+      : { upper: 'leg (femur to shin, one piece)', foot: 'hind foot (metatarsus and toes)' }),
+    between: mammalTrunk('nose'),
+  },
 } satisfies RigCritter;

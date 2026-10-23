@@ -2,7 +2,8 @@
   // Every seasonal animal, large, on a floor, with the dials that matter for
   // judging them: what each is doing, speed, zoom, a timeline of numbered
   // frames to inspect a single pose and talk about it, and for those drawn from parts, the parts: hide
-  // any, see each alone, mark the joints and the footprint placement allows.
+  // any, see each alone, mark the joints and the footprint placement allows;
+  // and its skeleton, over the drawing faded or instead of it.
   // The cursor over the big stage is passed on, so heads turning toward it
   // can be checked. The animals are those in critters/registry.ts, each
   // known here only by what it says of itself there. Each keeps its own lab
@@ -16,6 +17,8 @@
   import { CRITTERS, critterNamed } from './critters/registry';
   import { drawingFor, overlay } from './drawings';
   import { allPartNames, keepParts, partArt } from './rig-parts';
+  import Skeleton from './Skeleton.svelte';
+  import { skeletonOf, type Placed } from './skeleton';
 
   let critter: Critter = CRITTERS[0];
   let mode = critter.modes[0];
@@ -37,6 +40,14 @@
   let separate = false;
   let guides = false;
   let footprint = true;
+  // The skeleton view: none, over the drawing faded, or alone.
+  const SKELETONS = [{ value: '', label: 'art' }, { value: 'faded', label: 'skeleton over art' }, { value: 'only', label: 'skeleton only' }] as const;
+  type SkeletonView = (typeof SKELETONS)[number]['value'];
+  let skeleton: SkeletonView = '';
+  // Faded, the drawing is still there to see the bones against.
+  const FADED = 0.22;
+  // A view draws its own animal, so it hands its skeleton back.
+  let viewBones: Placed | null = null;
   // The drawing laid over the animal to compare, by name; none is ''.
   let reference = '';
   function setMode(m: string) {
@@ -66,6 +77,9 @@
   // A flier hovers above the floor; a walker stands on it.
   $: lift = rig ? liftOf(rig, mode) : 0;
   $: apart = view ? view.apart(mode) : 'pieces';
+  $: placed = !skeleton ? null
+    : rig && pose ? { skeleton: skeletonOf(pose, rig.bones ?? {}), view: { x: 0, y: 0, width: pose.width, height: pose.height }, anchor: pose.anchor, scale: pose.scale }
+    : viewBones;
 
   function choose(c: Critter) {
     critter = c;
@@ -98,6 +112,7 @@
     ...Object.fromEntries(flags.flatMap((f) => ({ still, guides, separate, footprint }[f] ? [[f, '1']] : []))),
     ...(reference ? { ref: reference } : {}),
     ...(hidden.length ? { hide: hidden.join(',') } : {}),
+    ...(skeleton ? { skeleton } : {}),
   });
   // Written while paused, or as it plays without the ever-changing frame.
   $: if (ready && !playing) history.replaceState(null, '', `#${state}`);
@@ -118,6 +133,7 @@
     footprint = q.has('footprint');
     reference = q.get('ref') ?? '';
     hidden = q.get('hide')?.split(',') ?? [];
+    skeleton = SKELETONS.find((s) => s.value && s.value === q.get('skeleton'))?.value ?? '';
     // Opened at a frame, it waits there.
     playing = !q.has('frame');
   }
@@ -158,12 +174,18 @@
   </div>
   <div class="controls">
     <label>speed {speed}px/s <input type="range" min="0" max="80" bind:value={speed} /></label>
-    <label>zoom {zoom}x <input type="range" min="1" max="12" bind:value={zoom} /></label>
+    <label>zoom {zoom}x <input type="range" min="1" max="24" bind:value={zoom} /></label>
     <button type="button" on:click={() => (dir = dir === 1 ? -1 : 1)}>face {dir === 1 ? 'left' : 'right'}</button>
     <label><input type="checkbox" bind:checked={still} /> reduced motion</label>
     <label><input type="checkbox" bind:checked={guides} /> joints</label>
     <label><input type="checkbox" bind:checked={separate} /> separate pieces</label>
     {#if box}<label><input type="checkbox" bind:checked={footprint} /> footprint</label>{/if}
+    <fieldset class="segmented">
+      <legend>skeleton</legend>
+      {#each SKELETONS as s}
+        <label class:on={skeleton === s.value}><input type="radio" name="skeleton" value={s.value} bind:group={skeleton} /> {s.label}</label>
+      {/each}
+    </fieldset>
     {#if Object.keys(drawings).length}
       <label>drawing
         <select bind:value={reference}>
@@ -193,14 +215,17 @@
       {#if box && footprint && pose}
         <span class="footprint" style="left: {-box.width / 2}px; top: {-lift - box.height}px; width: {box.width}px; height: {box.height + (box.down ?? 0)}px"></span>
       {/if}
-      {#if shown}
-        <Rig pose={shown} x={0} y={-lift} {dir} {guides} data-critter={mode} />
-        {#if drawings[reference]}
-          <Rig pose={overlay(shown, drawings[reference])} x={0} y={-lift} {dir} opacity={0.45} />
+      <div class="art" data-art={skeleton || 'shown'} style:opacity={skeleton === 'faded' ? FADED : null} style:visibility={skeleton === 'only' ? 'hidden' : null}>
+        {#if shown}
+          <Rig pose={shown} x={0} y={-lift} {dir} {guides} data-critter={mode} />
+        {:else if view}
+          <svelte:component this={view.View} {mode} {now} {walked} {dir} {playing} {still} {guides} {separate} {hidden} marked bind:bones={viewBones} />
         {/if}
-      {:else if view}
-        <svelte:component this={view.View} {mode} {now} {walked} {dir} {playing} {still} {guides} {separate} {hidden} marked />
+      </div>
+      {#if shown && drawings[reference]}
+        <Rig pose={overlay(shown, drawings[reference])} x={0} y={-lift} {dir} opacity={0.45} />
       {/if}
+      {#if placed}<Skeleton {placed} y={rig ? -lift : 0} {dir} {zoom} />{/if}
     </div>
   </div>
 
@@ -276,6 +301,10 @@
   .floor { position: absolute; left: 0; right: 0; bottom: 60px; border-top: 2px solid var(--line-strong); }
   .big { position: absolute; left: 50%; bottom: 60px; width: 0; height: 0; transform-origin: 0 0; }
   .footprint { position: absolute; outline: .2px dashed var(--accent); opacity: .6; }
+  .segmented { display: inline-flex; gap: 2px; align-items: center; margin: 0; padding: 0; border: 0; }
+  .segmented legend { float: left; margin-right: 8px; padding: 0; }
+  .segmented label { padding: 2px 8px; border: 1px solid var(--line-strong); border-radius: 6px; cursor: pointer; }
+  .segmented input { position: absolute; opacity: 0; }
   .row { display: flex; align-items: flex-end; flex-wrap: wrap; gap: 60px; padding: 30px 40px 0; border-bottom: 2px solid var(--line-strong); }
   .pieces, .lineup { gap: 24px 90px; padding-top: 70px; }
   .spot { position: relative; width: 40px; height: 0; transform-origin: 0 0; }

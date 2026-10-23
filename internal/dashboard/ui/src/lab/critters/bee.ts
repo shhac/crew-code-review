@@ -11,6 +11,7 @@ import land from '../bee-pose-land.webp';
 import perch from '../bee-pose-perch.webp';
 import reference from '../bee-reference.webp';
 import type { Drawing } from '../drawings';
+import { INSECT_LEGS } from './bones';
 import type { Moment, RigCritter } from './critter';
 
 // The bumblebee the insect rig was proved on (rig/wing-blur.ts,
@@ -77,7 +78,10 @@ export const bee = {
   pose: (at, { gaze: lean, still }) => {
     const pose = beeRig(beeAt(at, lean), { now: at.now, still });
     if (at.mode !== 'dart' || still) return pose;
-    return { ...pose, layers: [{ kind: 'group', turn: turnAbout(0, ANCHOR, darting(at.now).dx, 0), layers: pose.layers }] };
+    // Her joint marks travel with her.
+    const { dx } = darting(at.now);
+    const guides = pose.guides?.map((g) => ({ ...g, at: { x: g.at.x + dx, y: g.at.y } }));
+    return { ...pose, layers: [{ kind: 'group', turn: turnAbout(0, ANCHOR, dx, 0), layers: pose.layers }], guides };
   },
   // Her reach in the mode, centred on her as the lab draws a footprint; a
   // dart's carries her its length ahead.
@@ -88,4 +92,8 @@ export const bee = {
   },
   gaze: (dir, cursor) => gaze(dir, { x: 0, y: -(GROUND - ANCHOR.y) * SCALE }, cursor),
   drawings: DRAWINGS,
+  bones: {
+    marked: INSECT_LEGS,
+    between: [['waist (petiole)', 'neck', 'thorax line (waist to neck)'], ['neck', 'antenna socket', 'head']],
+  },
 } satisfies RigCritter;
