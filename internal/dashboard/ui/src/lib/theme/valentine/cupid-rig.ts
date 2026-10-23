@@ -1,9 +1,13 @@
 import { clamp, degrees, mixPoint, rad, smooth } from '../math';
 import type { Point } from '../pointer';
 import { blinking } from '../rig/life';
-import { lidLayers, limbLayers, turnAbout, turned, type DrawnLeg, type Fur, type Layer, type LimbArt, type RigPose, type Turn } from '../rig/rig';
-import { jointBeside } from '../rig/limb';
-import { wingLayer, wingStroke, type Stroke } from '../rig/wings';
+import { lidLayers, turnAbout, turned, type ArtLeg, type Fur, type Layer, type LimbArt, type RigPose, type Turn } from '../rig/rig';
+import { compose } from '../rig/skeleton/compose';
+import { rootsOf } from '../rig/skeleton/forward';
+import { standing } from '../rig/skeleton/limbs';
+import { head, limbPieces, picture, spine } from '../rig/skeleton/tetrapod';
+import type { Body, Goal, JointSpec, LimbSpec, PoseSpec, Role, Skeleton } from '../rig/skeleton/types';
+import { wingStroke, type Stroke } from '../rig/wings';
 import armFurArt from './cupid-arm-fur.webp';
 import armArt from './cupid-arm.webp';
 import bodyArt from './cupid-body.webp';
@@ -21,8 +25,8 @@ import wingArt from './cupid-wing.webp';
 // A cupid put together from its parts: a body (its tunic and quiver), a
 // head over the neck, two wings beating behind it, arms and legs of limb
 // art laid along bones posed in code, and a bow, its string and an arrow
-// drawn in code. Facing right, its anchor the middle of its belly, where it
-// hovers. The parts were cut from one drawing of the cupid hovering
+// drawn in code, all hung on its skeleton (rig/skeleton). Facing right, its
+// anchor the middle of its belly, where it hovers. The parts were cut from one drawing of the cupid hovering
 // (design-docs/valentine/cupid-reference.png) and the drawing units are
 // that drawing's: export.py prints where each part sat in it, which is
 // where it sits here. The critters lab lays that drawing, or a key pose for
@@ -115,21 +119,6 @@ type CupidLook = { now: number; still: boolean };
 
 const along = (from: Point, deg: number, length: number): Point => ({ x: from.x + Math.cos(rad(deg)) * length, y: from.y + Math.sin(rad(deg)) * length });
 const angleOf = (from: Point, to: Point) => degrees(Math.atan2(to.y - from.y, to.x - from.x));
-
-// A limb from its root to its end: the middle joint bent to one side, the
-// end piece (fist or foot) turned to `paw`.
-function limb(root: Point, end: Point, first: number, second: number, side: 1 | -1, paw: number): DrawnLeg['limb'] {
-  const knee = jointBeside(root, end, first, second, side);
-  return { hip: root, knee, ankle: end, foot: end, paw };
-}
-const arm = (l: DrawnLeg['limb']): DrawnLeg => ({ limb: l, art: ARM_ART, width: ARM.width, haunch: ARM.width, fore: true, taper: false });
-const leg = (l: DrawnLeg['limb']): DrawnLeg => ({ limb: l, art: LEG_ART, width: LEG.width, haunch: LEG.haunch, fore: true, taper: false });
-
-function wing(stroke: Stroke, far: boolean): Layer {
-  const root = far ? { x: WING_ROOT.x + FAR_WING.x, y: WING_ROOT.y + FAR_WING.y } : WING_ROOT;
-  const at = far ? { ...WING, x: WING.x + FAR_WING.x, y: WING.y + FAR_WING.y } : WING;
-  return wingLayer({ kind: 'image', name: far ? 'far wing' : 'near wing', src: wingArt, ...at, far }, root, WING_AXIS, stroke);
-}
 
 // The bow in the far fist at `grip`, pointing `aim` degrees: its stave
 // curving back from the grip, bent `bend`, its string from tip to tip
@@ -289,32 +278,99 @@ function hold(c: RigCupid, now: number): Hold {
   }
 }
 
-// The arms from the shoulders the body carries, each fist turned along its
-// forearm. An arm hanging loose is only carried along by its shoulder;
-// drawing or loosing, the hands are held to the jaw and the arrow's line,
-// so they turn with the body.
-function armsOf(h: Hold, body: Turn) {
-  const at = (p: Point) => turned(body, p);
-  const nearShoulder = at(NEAR_SHOULDER), farShoulder = at(FAR_SHOULDER);
-  const nearEnd = h.near(nearShoulder, at), farEnd = h.far(farShoulder, at);
-  const nearArm = limb(nearShoulder, nearEnd.wrist, ARM.upper, ARM.fore, nearEnd.side, 0);
-  const farArm = limb(farShoulder, farEnd.wrist, ARM.upper, ARM.fore, farEnd.side, 0);
-  const fistTurn = (l: DrawnLeg['limb']) => ({ ...l, paw: angleOf(l.knee, l.foot) });
-  return { near: fistTurn(nearArm), far: fistTurn(farArm), nearArm, farArm };
+// Its skeleton: the body, which turns about where it hovers (drawing, its
+// chest); the head on its neck with the eye on it; each wing at its root
+// on the back; each arm from its shoulder to its fist, its grip on the
+// fist, the elbow to whichever side the hold has it; each leg from its hip,
+// swung and bent by angles.
+const wingRole = (far: boolean): Role => ({ part: 'wing', side: far ? 'far' : 'near', index: 0 });
+const FAR_ROOT = { x: WING_ROOT.x + FAR_WING.x, y: WING_ROOT.y + FAR_WING.y };
+type Member = { code: string; root: Point; far: boolean; arm: boolean };
+const LIMBS: readonly Member[] = [
+  { code: 'L0', root: NEAR_SHOULDER, far: false, arm: true }, { code: 'L1', root: FAR_SHOULDER, far: true, arm: true },
+  { code: 'L2', root: NEAR_HIP, far: false, arm: false }, { code: 'L3', root: FAR_HIP, far: true, arm: false },
+];
+const NAMES = {
+  arm: { joints: ['shoulder', 'elbow', 'wrist', 'hand', 'grip (the fist\'s middle)'], bones: ['humerus', 'radius and ulna', '', 'hand'] },
+  leg: { joints: ['hip', 'knee', 'ankle', 'foot', 'toe tip'], bones: ['femur', 'tibia and fibula', '', 'foot'] },
+} as const;
+// An arm stands at rest hanging under its shoulder; a leg hangs straight.
+const HANG = ARM.upper + ARM.fore - 0.4;
+// Where each limb's end is at rest, and its tip: an arm's grip along its
+// fist (turned as the fist is at rest), a leg's toes at the front of its
+// foot.
+const restEnd = (l: Member): Point => (l.arm ? { x: l.root.x, y: l.root.y + HANG } : { x: l.root.x, y: l.root.y + LEG.thigh + LEG.shin });
+const restTip = (l: Member): Point => {
+  const end = restEnd(l);
+  if (!l.arm) return { x: end.x + FOOT.width - FOOT.heel.x, y: end.y + FOOT.height - FOOT.heel.y };
+  return along(end, standing(limbSpec(l), l.root).paw, GRIP);
+};
+function limbJoints(l: Member): JointSpec[] {
+  const names = NAMES[l.arm ? 'arm' : 'leg'];
+  const role = (index: 0 | 1 | 2 | 3 | 4): Role => ({ part: 'limb', pair: l.arm ? 0 : 1, side: l.far ? 'far' : 'near', index });
+  return ([0, 1, 2, 3, 4] as const).map((k) => ({
+    id: `${l.code}J${k}`, parent: k ? `${l.code}J${k - 1}` : 'body', role: role(k), at: k === 4 ? restTip(l) : l.root, name: names.joints[k], ...(k ? { derived: true } : {}),
+  }));
 }
+const limbBones = (l: Member) => NAMES[l.arm ? 'arm' : 'leg'].bones.flatMap((name, k) => (name ? [{ from: `${l.code}J${k}`, to: `${l.code}J${k + 1}`, name }] : []));
+const limbSpec = (l: Member): LimbSpec => ({
+  id: l.code, pair: l.arm ? 0 : 1, side: l.far ? 'far' : 'near', ground: restEnd(l).y, solve: l.arm ? 'arm' : 'angles',
+  joints: { root: `${l.code}J0`, middle: `${l.code}J1`, lower: `${l.code}J2`, end: `${l.code}J3`, tip: `${l.code}J4` },
+  leg: l.arm ? { thigh: ARM.upper, shin: ARM.fore, reach: 0 } : { thigh: LEG.thigh, shin: LEG.shin, reach: 0 },
+});
+// Each limb's art as rigs lay it (tetrapod.ts's limbPieces): an arm's or a
+// leg's two pieces and its fist or foot.
+const artLeg = (l: Member): ArtLeg => (l.arm
+  ? { hip: l.root, reach: 0, thigh: ARM.upper, shin: ARM.fore, bend: 1, fore: true, far: l.far, art: ARM_ART, width: ARM.width, haunch: ARM.width }
+  : { hip: l.root, reach: 0, thigh: LEG.thigh, shin: LEG.shin, bend: 1, fore: true, far: l.far, art: LEG_ART, width: LEG.width, haunch: LEG.haunch });
+const SKELETON: Skeleton = {
+  joints: [
+    { id: 'body', parent: null, role: spine(2), at: ANCHOR, name: 'body pivot (where it hovers, or drawing its chest)' },
+    { id: 'skull', parent: 'body', role: spine(0), at: NECK, name: 'head joint (neck)' },
+    { id: 'eye', parent: 'skull', role: head(0), at: EYE, name: 'eye' },
+    { id: 'W0', parent: 'body', role: wingRole(false), at: WING_ROOT, name: 'wing root' },
+    { id: 'W1', parent: 'body', role: wingRole(true), at: FAR_ROOT, name: 'wing root' },
+    ...LIMBS.flatMap(limbJoints),
+  ],
+  bones: [{ from: 'skull', to: 'body', name: 'neck and back line' }, { from: 'eye', to: 'skull', name: 'skull' }, ...LIMBS.flatMap(limbBones)],
+  limbs: LIMBS.map(limbSpec),
+};
 
-// The legs from the hips the body carries, swung as the hold says and a
-// little with the body's turn, the far one a little behind.
-function legsOf(h: Hold, body: Turn) {
-  const legOf = (hip: Point, offset: number): DrawnLeg['limb'] => {
-    const swing = h.legs.swing + offset + 0.3 * h.body.angle;
-    const knee = along(hip, 90 - swing, LEG.thigh);
-    const shin = swing - h.legs.bend;
-    const foot = along(knee, 90 - shin, LEG.shin);
-    return { hip, knee, ankle: foot, foot, paw: 60 - shin };
-  };
-  return { nearLeg: legOf(turned(body, NEAR_HIP), 0), farLeg: legOf(turned(body, FAR_HIP), -16) };
-}
+// The draw order: the wings behind it all, then the bow's stave behind the
+// fist that grips it, the far arm and leg, the near leg, the body and head,
+// the string and the arrow in front of the body, and the near arm over it
+// all; each limb outlined then as fur alone.
+const Z = { wings: 0, stave: 1, farArm: 2, farLeg: 4, nearLeg: 6, body: 8, head: 9, eyelid: 10, string: 11, arrow: 12, nearArm: 13 } as const;
+const limbZ = (l: Member) => {
+  const z = l.arm ? (l.far ? Z.farArm : Z.nearArm) : l.far ? Z.farLeg : Z.nearLeg;
+  return { outlined: z, fur: z + 1 };
+};
+const wingPiece = (far: boolean) => ({
+  ...picture(far ? 'far wing' : 'near wing', far ? 'W1' : 'W0', wingArt, far ? { ...WING, x: WING.x + FAR_WING.x, y: WING.y + FAR_WING.y } : WING),
+  side: far ? 'far' : 'near',
+} as const);
+const withZ = <P extends { draws: readonly { id: string; z: number }[] }>(p: P, z: number): P => ({ ...p, draws: p.draws.map((d) => ({ ...d, z })) });
+const CUPID: Body = {
+  frame: FRAME,
+  skeleton: SKELETON,
+  pieces: [
+    withZ(wingPiece(true), Z.wings), withZ(wingPiece(false), Z.wings),
+    ...LIMBS.flatMap((l) => limbPieces(artLeg(l), l.code, limbZ(l), `${l.far ? 'far' : 'near'} ${l.arm ? 'arm' : 'leg'}`)),
+    withZ(picture('body', 'body', bodyArt, BODY), Z.body), withZ(picture('head', 'skull', headArt, HEAD), Z.head),
+  ],
+  shapes: [{ id: 'stave', on: 'L1J3', z: Z.stave }, { id: 'eyelid', on: 'skull', z: Z.eyelid }, { id: 'string', on: 'L0J3', z: Z.string }, { id: 'arrow', on: 'L0J3', z: Z.arrow }],
+  stands: 'hovers here',
+  titles: { L0: 'arm', L1: 'arm', L2: 'leg', L3: 'leg' },
+  guides: [
+    { name: 'neck', at: 'skull' }, { name: 'eye', at: 'eye' }, { name: 'wing root', at: { on: 'body', at: WING_ROOT } }, { name: 'grip', at: 'L1J4' },
+    ...['L0', 'L1'].flatMap((c) => [{ name: 'shoulder', at: `${c}J0` }, { name: 'elbow', at: `${c}J1` }, { name: 'wrist', at: `${c}J3` }]),
+    ...['L2', 'L3'].flatMap((c) => [{ name: 'hip', at: `${c}J0` }, { name: 'knee', at: `${c}J1` }, { name: 'ankle', at: `${c}J3` }]),
+  ],
+};
+
+// A wing's stroke as its joint's pose: turned about its root, lifted and
+// falling with the stroke, squashed across its long axis.
+const wingPose = (stroke: Stroke) => ({ angle: stroke.angle, shift: { x: 0, y: stroke.lift }, squash: { by: stroke.squash, axis: WING_AXIS } });
 
 // Held still under reduced motion: hovering upright, wings spread, legs
 // hanging, the bow held in front.
@@ -327,39 +383,39 @@ export function cupidRig(cupid: RigCupid, look: CupidLook): RigPose {
   // The slow bob of a hover, and a lift on each downstroke.
   const bob = look.still ? 0 : Math.sin((2 * Math.PI * now) / 1600 + c.seed) + 0.25 * Math.sin(2 * Math.PI * c.beat);
   const body: Turn = { ...h.body, dy: h.body.dy + bob };
+  const joints = { skull: { angle: h.head }, W0: wingPose(h.stroke), W1: wingPose(h.stroke) };
+  // The arms from the shoulders the body carries. An arm hanging loose is
+  // only carried along by its shoulder; drawing or loosing, the hands are
+  // held to the jaw and the arrow's line, so they turn with the body. The
+  // legs from the hips, swung as the hold says and a little with the
+  // body's turn, the far one a little behind.
+  const roots = rootsOf(SKELETON, { root: body, joints });
   const at = (p: Point) => turned(body, p);
-  const { near, far, nearArm, farArm } = armsOf(h, body);
-  const grip = along(far.foot, far.paw, GRIP);
-  const nock = h.drawing ? along(near.foot, near.paw, GRIP) : null;
-  // Drawing, the arrow lies from the nock over the bow fist, resting on it,
-  // and the bow stands square to it.
-  const shot = nock ? angleOf(nock, along(grip, h.aim - 90, REST)) : h.aim;
-  const { nearLeg, farLeg } = legsOf(h, body);
-  const nod = turnAbout(h.head, NECK);
-  const drawnBow = bow(grip, shot, h.bend, nock);
-  return {
-    ...FRAME,
-    layers: [
-      { kind: 'group', turn: body, layers: [wing(h.stroke, true), wing(h.stroke, false)] },
-      ...drawnBow.stave,
-      ...limbLayers('far arm', arm(far), true),
-      ...limbLayers('far leg', leg(farLeg), true),
-      ...limbLayers('near leg', leg(nearLeg), false),
-      {
-        kind: 'group', turn: body, layers: [
-          { kind: 'image', name: 'body', src: bodyArt, ...BODY },
-          { kind: 'group', turn: nod, layers: [{ kind: 'image', name: 'head', src: headArt, ...HEAD }, ...lidLayers(!look.still && blinking(c.seed, now), EYE, 0.8, SKIN)] },
-        ],
-      },
-      drawnBow.string,
-      ...(h.arrow ? drawnBow.arrow : []),
-      ...limbLayers('near arm', arm(near), false),
-    ],
-    guides: [
-      { name: 'hovers here', at: ANCHOR }, { name: 'neck', at: at(NECK) }, { name: 'eye', at: at(turned(nod, EYE)) },
-      { name: 'wing root', at: at(WING_ROOT) }, { name: 'grip', at: grip },
-      ...[nearArm, farArm].flatMap((l) => [{ name: 'shoulder', at: l.hip }, { name: 'elbow', at: l.knee }, { name: 'wrist', at: l.foot }]),
-      ...[nearLeg, farLeg].flatMap((l) => [{ name: 'hip', at: l.hip }, { name: 'knee', at: l.knee }, { name: 'ankle', at: l.foot }]),
-    ],
+  const reach = (code: string, arm: Arm): Goal => {
+    const end = arm(roots.get(code) ?? at(NEAR_SHOULDER), at);
+    return { kind: 'plant', at: end.wrist, side: end.side };
   };
+  const swung = (offset: number): Goal => {
+    const swing = h.legs.swing + offset + 0.3 * h.body.angle;
+    return { kind: 'angles', swing, bend: h.legs.bend, paw: 60 - (swing - h.legs.bend) };
+  };
+  const limbs = { L0: reach('L0', h.near), L1: reach('L1', h.far), L2: swung(0), L3: swung(-16) };
+  // The bow in the far fist, its string through the drawing fist; drawing,
+  // the arrow lies from the nock over the bow fist, resting on it, and the
+  // bow stands square to it.
+  const drawnBow = (limb: (id: string) => { foot: Point; paw: number }) => {
+    const far = limb('L1'), near = limb('L0');
+    const grip = along(far.foot, far.paw, GRIP);
+    const nock = h.drawing ? along(near.foot, near.paw, GRIP) : null;
+    const shot = nock ? angleOf(nock, along(grip, h.aim - 90, REST)) : h.aim;
+    return bow(grip, shot, h.bend, nock);
+  };
+  const inFrame = (layers: readonly Layer[], local: (p: Point) => Point): Layer[] => layers.map((l) => (l.kind === 'stroke' ? { ...l, points: l.points.map(local) } : l));
+  const shapes: PoseSpec['shapes'] = {
+    stave: ({ limb, local }) => inFrame(drawnBow(limb).stave, local),
+    eyelid: lidLayers(!look.still && blinking(c.seed, now), EYE, 0.8, SKIN),
+    string: ({ limb, local }) => inFrame([drawnBow(limb).string], local),
+    arrow: ({ limb, local }) => (h.arrow ? inFrame(drawnBow(limb).arrow, local) : []),
+  };
+  return compose(CUPID, () => ({ root: body, joints, limbs, show: {}, z: {}, shapes }), now);
 }

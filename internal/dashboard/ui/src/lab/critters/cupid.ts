@@ -29,7 +29,7 @@ const DRAWINGS: Record<string, Drawing> = {
   dodge: { ...byEye(20.5, 22.83, { x: 11.97, y: 6.54 }, 'dodge'), src: dodge },
 };
 
-const cupidAt = ({ mode, now, walked }: Moment): RigCupid => {
+export const cupidAt = ({ mode, now, walked }: Moment): RigCupid => {
   const pick = MODES.find((m) => m.label === mode) ?? MODES[0];
   const progress = pick.every && pick.takes ? Math.min(1, (now % pick.every) / pick.takes) : 1;
   // Flying, the dial's speed is its speed ahead.
@@ -50,14 +50,8 @@ export const cupid = {
     return { width: 2 * f.half, height: f.up, down: f.down };
   },
   drawings: DRAWINGS,
-  // A child's limbs: the hand and foot are each one picture, from the
-  // wrist and the ankle. Its feathered wings are marked at their root.
-  bones: {
-    legs: ({ layer }) => (layer.endsWith('arm')
-      ? { pair: 0, limb: 'arm', upper: 'humerus', middle: 'radius and ulna', foot: 'hand', tip: 'fingertips' }
-      : { pair: 1, limb: 'leg', upper: 'femur', middle: 'tibia and fibula', foot: 'foot' }),
-    spine: [{ mark: 'neck', name: 'head joint (neck)', line: 'neck line' }, { mark: 'shoulder', line: 'back line' }, { mark: 'hip' }],
-    head: { joints: [{ mark: 'eye' }], bones: [['head joint (neck)', 'eye', 'skull']] },
-    wings: { joints: [{ mark: 'wing root' }] },
-  },
+  // Before its skeleton was its own, read off the drawing, a limb ended at
+  // its fingertips or toes' tip (J3) after its hand or foot (B2), the bow's
+  // grip was a mark of its own, and the back line ran shoulder to hip.
+  aliases: Object.fromEntries([...['L0', 'L1', 'L2', 'L3'].flatMap((l) => [[`${l}J3`, `${l}J4`], [`${l}B2`, `${l}B3`]]), ['OJ0', 'L1J4'], ['SB1', 'SB0']]),
 } satisfies RigCritter;
