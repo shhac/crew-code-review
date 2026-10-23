@@ -101,26 +101,38 @@ export function mixPartsPose(from: PartsPose, to: PartsPose, amount: number): Pa
     nearWing: to.flying ? to.nearWing : from.nearWing, farWing: to.flying ? to.farWing : from.farWing };
 }
 
+// Where each part turns, in the drawing's units, for the rig below and the
+// lab's skeleton: a grounded leg squashes from its foot and, tucked up in a
+// hop, turns where it leaves the belly; a tucked flight leg turns there too.
+// The head turns at its `headPivotY`, lower when it pecks.
+export const partsPivots = {
+  head: 82, body: [64, 83], tail: [46, 65], shoulder: [79, 43], farShoulder: [90, 42],
+  nearLegRoot: [59, 86], farLegRoot: [72, 80], nearFoot: [64, 102.1], farFoot: [78, 101],
+  nearTucked: [65.85, 88.61], farTucked: [77.71, 81.75],
+} as const;
+
 // Shared by the live SVG rig and the deterministic exported motion preview.
 export function partsTransforms(pose: ReturnType<typeof partsPose>, exploded = false) {
   const wing = (stroke: ReturnType<typeof wingStroke>, x: number, y: number) =>
     `translate(${x} ${y}) rotate(${stroke.angle - stroke.drawing.angle - pose.lean}) scale(${stroke.span / stroke.drawing.span}) translate(${-x} ${-y})`;
+  const { head: hx, body: [bx, by], tail: [tx, ty], shoulder: [sx, sy], farShoulder: [fx, fy],
+    nearLegRoot, farLegRoot, nearFoot, farFoot, nearTucked, farTucked } = partsPivots;
   return {
     rig: exploded ? '' : `translate(${-5 * pose.flightMix} ${pose.lift + (-12 + pose.bob) * pose.flightMix})`,
-    body: exploded ? 'translate(0 15)' : `translate(0 ${pose.crouch}) rotate(${pose.lean} 64 83) translate(64 83) scale(${1 + pose.breathing * .012} ${1 + pose.breathing * .018}) translate(-64 -83)`,
-    head: exploded ? 'translate(8 -14)' : `translate(0 ${pose.headBreath * -.45}) rotate(${pose.headAngle} 82 ${pose.headPivotY})`,
-    neck: exploded ? 'translate(16 4)' : `rotate(${pose.headAngle * (.3 + .35 * pose.peckMix)} 82 ${pose.headPivotY})`,
-    tail: exploded ? 'translate(-6 5)' : `rotate(${pose.tailAngle} 46 65)`,
-    wing: exploded ? 'translate(-17 -8)' : pose.flying ? wing(pose.nearWing, 79, 43) : `rotate(${pose.breathing * -.6} 79 43)`,
-    farWing: exploded ? 'translate(20 -16)' : wing(pose.farWing, 90, 42),
-    foldedWing: exploded ? 'translate(-17 -8)' : `rotate(${pose.breathing * -.6} 79 43)`,
+    body: exploded ? 'translate(0 15)' : `translate(0 ${pose.crouch}) rotate(${pose.lean} ${bx} ${by}) translate(${bx} ${by}) scale(${1 + pose.breathing * .012} ${1 + pose.breathing * .018}) translate(${-bx} ${-by})`,
+    head: exploded ? 'translate(8 -14)' : `translate(0 ${pose.headBreath * -.45}) rotate(${pose.headAngle} ${hx} ${pose.headPivotY})`,
+    neck: exploded ? 'translate(16 4)' : `rotate(${pose.headAngle * (.3 + .35 * pose.peckMix)} ${hx} ${pose.headPivotY})`,
+    tail: exploded ? 'translate(-6 5)' : `rotate(${pose.tailAngle} ${tx} ${ty})`,
+    wing: exploded ? 'translate(-17 -8)' : pose.flying ? wing(pose.nearWing, sx, sy) : `rotate(${pose.breathing * -.6} ${sx} ${sy})`,
+    farWing: exploded ? 'translate(20 -16)' : wing(pose.farWing, fx, fy),
+    foldedWing: exploded ? 'translate(-17 -8)' : `rotate(${pose.breathing * -.6} ${sx} ${sy})`,
     // The cover's feathers point down-left (150 degrees) in its source.
     // Align them to the continuous wing trajectory, not the selected drawing.
-    shoulder: exploded ? 'translate(-17 -8)' : `rotate(${pose.nearWing.angle + 360 - 150 - pose.lean} 79 43)`,
-    farLeg: exploded ? 'translate(-8 5)' : `translate(78 101) scale(1 ${1 - pose.crouch * .055}) translate(-78 -101) rotate(${-pose.tuck * 10} 72 80)`,
-    nearLeg: exploded ? 'translate(8 5)' : `translate(64 102.1) scale(1 ${1 - pose.crouch * .055}) translate(-64 -102.1) rotate(${pose.tuck * 12} 59 86)`,
-    flightFarLeg: exploded ? 'translate(-8 5)' : 'rotate(-28 77.71 81.75)',
-    flightNearLeg: exploded ? 'translate(8 5)' : 'rotate(-28 65.85 88.61)',
+    shoulder: exploded ? 'translate(-17 -8)' : `rotate(${pose.nearWing.angle + 360 - 150 - pose.lean} ${sx} ${sy})`,
+    farLeg: exploded ? 'translate(-8 5)' : `translate(${farFoot[0]} ${farFoot[1]}) scale(1 ${1 - pose.crouch * .055}) translate(${-farFoot[0]} ${-farFoot[1]}) rotate(${-pose.tuck * 10} ${farLegRoot[0]} ${farLegRoot[1]})`,
+    nearLeg: exploded ? 'translate(8 5)' : `translate(${nearFoot[0]} ${nearFoot[1]}) scale(1 ${1 - pose.crouch * .055}) translate(${-nearFoot[0]} ${-nearFoot[1]}) rotate(${pose.tuck * 12} ${nearLegRoot[0]} ${nearLegRoot[1]})`,
+    flightFarLeg: exploded ? 'translate(-8 5)' : `rotate(-28 ${farTucked[0]} ${farTucked[1]})`,
+    flightNearLeg: exploded ? 'translate(8 5)' : `rotate(-28 ${nearTucked[0]} ${nearTucked[1]})`,
   };
 }
 
@@ -130,11 +142,14 @@ export function partsLayers(pose: ReturnType<typeof partsPose>, exploded = false
   const layer = (id: PartId, ...transforms: string[]): { id: PartId; transform: string; nextId?: PartId; blend?: number; nextAdjustment?: string; opacity?: number } => ({ id, transform: transforms.filter(Boolean).join(' ') });
   const airborne = pose.flightMix > 0, grounded = pose.flightMix < 1;
   const fade = (value: ReturnType<typeof layer>, opacity: number) => ({ ...value, opacity });
-  const flightWing = (far: boolean, stroke: ReturnType<typeof wingStroke>, transform: string) => ({
-    ...layer(('wing-' + (far ? 'far-' : '') + stroke.state) as PartId, t.rig, t.body, transform),
-    nextId: ('wing-' + (far ? 'far-' : '') + stroke.nextState) as PartId, blend: stroke.blend,
-    nextAdjustment: `translate(${far ? 90 : 79} ${far ? 42 : 43}) rotate(${stroke.drawing.angle - stroke.nextDrawing.angle}) scale(${stroke.drawing.span / stroke.nextDrawing.span}) translate(${far ? -90 : -79} ${far ? -42 : -43})`,
-  });
+  const flightWing = (far: boolean, stroke: ReturnType<typeof wingStroke>, transform: string) => {
+    const [x, y] = far ? partsPivots.farShoulder : partsPivots.shoulder;
+    return {
+      ...layer(('wing-' + (far ? 'far-' : '') + stroke.state) as PartId, t.rig, t.body, transform),
+      nextId: ('wing-' + (far ? 'far-' : '') + stroke.nextState) as PartId, blend: stroke.blend,
+      nextAdjustment: `translate(${x} ${y}) rotate(${stroke.drawing.angle - stroke.nextDrawing.angle}) scale(${stroke.drawing.span / stroke.nextDrawing.span}) translate(${-x} ${-y})`,
+    };
+  };
   return [
     ...(airborne ? [fade(flightWing(true, pose.farWing, t.farWing), pose.flightMix),
       fade(layer('leg-far-tucked', t.rig, t.body, t.flightFarLeg), pose.flightMix)] : []),
