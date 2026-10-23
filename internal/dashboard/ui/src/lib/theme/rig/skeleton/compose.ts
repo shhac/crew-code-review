@@ -179,7 +179,8 @@ const seenLayer = (l: PieceLayer) => !l.hidden && l.opacity !== 0;
 
 // Each bone coded within its part: along a limb by the joint it leaves (L2B1
 // from L2J1), elsewhere in turn.
-function posedBones(skeleton: Skeleton, point: (id: string) => Point): PosedBone[] {
+type BoneCode = Omit<PosedBone, 'length'>;
+function boneCodes(skeleton: Skeleton): BoneCode[] {
   const roleOf = (id: string): Role => {
     const joint = skeleton.joints.find((j) => j.id === id);
     if (!joint) throw new Error(`skeleton: no joint ${id}`);
@@ -191,8 +192,29 @@ function posedBones(skeleton: Skeleton, point: (id: string) => Point): PosedBone
     const role = roleOf(b.from);
     const k = role.part === 'limb' ? role.index : skeleton.bones.slice(0, i).filter((o) => groupOf(o.from) === group).length;
     const far = farRole(role) && farRole(roleOf(b.to));
-    return { code: `${group}B${k}`, name: b.name, from: b.from, to: b.to, far, length: apart(point(b.from), point(b.to)), ...(b.stretch ? { stretch: b.stretch } : {}) };
+    return { code: `${group}B${k}`, name: b.name, from: b.from, to: b.to, far, ...(b.stretch ? { stretch: b.stretch } : {}) };
   });
+}
+
+// What never changes from frame to frame, worked out once: each bone's
+// code, each joint's, which pieces are a limb's (hung on its joints), and
+// which hang on each limb's foot.
+type Layout = { bones: readonly BoneCode[]; joints: readonly { code: string; far: boolean }[]; legs: readonly boolean[]; feet: readonly (readonly number[])[] };
+const layouts = new WeakMap<Body, Layout>();
+function layoutOf(body: Body): Layout {
+  const had = layouts.get(body);
+  if (had) return had;
+  const { skeleton } = body;
+  const limbJoints = new Set(skeleton.limbs.flatMap(({ joints }) => Object.values(joints)));
+  const hungOn = (at: Attachment) => (at.kind === 'joint' ? at.to : typeof at.from === 'string' ? at.from : at.from.on);
+  const layout = {
+    bones: boneCodes(skeleton),
+    joints: skeleton.joints.map((j) => ({ code: codeOf(j.role), far: farRole(j.role) })),
+    legs: body.pieces.map((p) => limbJoints.has(hungOn(p.at))),
+    feet: skeleton.limbs.map(({ joints: { end, tip } }) => body.pieces.flatMap((p, i) => (p.at.kind === 'joint' && (p.at.to === end || p.at.to === tip) ? [i] : []))),
+  };
+  layouts.set(body, layout);
+  return layout;
 }
 
 // The animal drawn as `poseAt` has it at `now` (and, for a trailing joint,
@@ -201,7 +223,8 @@ export function compose(body: Body, poseAt: (now: number) => PoseSpec, now: numb
   const { skeleton } = body;
   const pose = poseAt(now);
   const rest = restOf(skeleton);
-  const { world, carried } = frames(skeleton, pose, trailing(skeleton, poseAt, now));
+  const trails = skeleton.joints.some((j) => j.trail);
+  const { world, carried } = frames(skeleton, pose, trails ? trailing(skeleton, poseAt, now) : undefined);
   const restAt = (id: string) => {
     const p = rest.points.get(id);
     if (!p) throw new Error(`skeleton: no joint ${id}`);
@@ -240,29 +263,27 @@ export function compose(body: Body, poseAt: (now: number) => PoseSpec, now: numb
     const extra = piece.extra?.(now, seed);
     return extra ? { ...place, matrix: product(place.matrix, local({ at: place.anchor }, extra)) } : place;
   });
-  // A limb's pieces: those hung on its joints.
-  const limbJoints = new Set(skeleton.limbs.flatMap(({ joints }) => Object.values(joints)));
-  const onLimb = (at: Attachment) => limbJoints.has(at.kind === 'joint' ? at.to : typeof at.from === 'string' ? at.from : at.from.on);
-  const painted = orderOf(body, pose.z).map((slot): { piece?: Piece; layers: readonly Layer[] } => {
+  const layout = layoutOf(body);
+  const painted = orderOf(body, pose.z).map((slot): { piece?: number; layers: readonly Layer[] } => {
     if ('shape' in slot) {
       const shape = (body.shapes ?? [])[slot.shape];
       const frame: Layer = { kind: 'frame', id: shape.id, matrix: posed.frame(shape.on), layers: pose.shapes?.[shape.id] ?? [] };
       return { layers: [frame] };
     }
     const p = body.pieces[slot.piece];
-    return { piece: p, layers: paints(p, p.draws[slot.draw], pose.show[p.id], placings[slot.piece], onLimb(p.at)) };
+    return { piece: slot.piece, layers: paints(p, p.draws[slot.draw], pose.show[p.id], placings[slot.piece], layout.legs[slot.piece]) };
   });
   const layers = painted.flatMap((p) => p.layers);
 
-  const joints: PosedJoint[] = skeleton.joints.map((j) => ({
-    id: j.id, code: codeOf(j.role), name: j.name, at: posed.point(j.id), derived: !!j.derived, far: farRole(j.role), parent: j.parent,
+  const joints: PosedJoint[] = skeleton.joints.map((j, i) => ({
+    id: j.id, code: layout.joints[i].code, name: j.name, at: posed.point(j.id), derived: !!j.derived, far: layout.joints[i].far, parent: j.parent,
     angle: pose.joints[j.id]?.angle ?? 0, ...(j.limits ? { limits: j.limits } : {}),
   }));
   // How low a limb's foot reaches: its foot's pictures as seen, or the foot
   // itself where nothing is hung on it.
-  const posedLimbs: PosedLimb[] = limbs.map(({ limb, now: l }) => {
-    const feet = [limb.joints.end, ...(limb.joints.tip ? [limb.joints.tip] : [])];
-    const onFoot = painted.flatMap(({ piece, layers: drawn }) => (piece?.at.kind === 'joint' && feet.includes(piece.at.to) ? drawn.flatMap((l) => (l.kind === 'piece' && seenLayer(l) ? [l] : [])) : []));
+  const posedLimbs: PosedLimb[] = limbs.map(({ limb, now: l }, n) => {
+    const feet = layout.feet[n];
+    const onFoot = painted.flatMap(({ piece, layers: drawn }) => (piece !== undefined && feet.includes(piece) ? drawn.flatMap((d) => (d.kind === 'piece' && seenLayer(d) ? [d] : [])) : []));
     const sole = onFoot.length ? Math.max(...onFoot.flatMap(corners).map((c) => c.y)) : l.foot.y;
     return { id: limb.id, code: `L${2 * limb.pair + sideCode(limb.side)}`, limb: l, fore: limb.pair === 0, sole };
   });
@@ -270,6 +291,6 @@ export function compose(body: Body, poseAt: (now: number) => PoseSpec, now: numb
     ...body.frame,
     layers,
     guides: [{ name: 'stands here', at: body.frame.anchor }, ...(body.guides?.map((g) => ({ name: g.name, at: posed.handle(g.at) })) ?? joints.map((j) => ({ name: j.name, at: j.at })))],
-    skeleton: { joints, bones: posedBones(skeleton, unsquashed), limbs: posedLimbs },
+    skeleton: { joints, bones: layout.bones.map((b) => ({ ...b, length: apart(unsquashed(b.from), unsquashed(b.to)) })), limbs: posedLimbs },
   };
 }

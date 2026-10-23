@@ -29,11 +29,22 @@ export const local = (j: Pick<JointSpec, 'at'>, p: JointPose = {}): Affine => {
 // a hip does today, turned by the body's Turn outside its breathing group
 // (hare-rig.ts's hips). `carried` is each joint's frame with every squash
 // above it and its own left out, for its limb roots.
-type Frames = { world: Map<string, Affine>; carried: Map<string, Affine> };
+type Frames = { world: ReadonlyMap<string, Affine>; carried: ReadonlyMap<string, Affine> };
 
 // `trailing`, where a joint lags: what it turns by (a matrix without a
 // move), taken from an earlier moment; it stays hung where it is now.
-export function frames(skeleton: Skeleton, pose: Pick<PoseSpec, 'root' | 'joints'>, trailing: (j: JointSpec) => Affine | null = () => null): Frames {
+// Without one, the last answer is kept, as a pose finds its limbs' roots
+// (rootsOf) and is then drawn from the same root and joints.
+type Posing = Pick<PoseSpec, 'root' | 'joints'>;
+const last: { skeleton?: Skeleton; root?: Posing['root']; joints?: Posing['joints']; frames?: Frames } = {};
+export function frames(skeleton: Skeleton, pose: Posing, trailing?: (j: JointSpec) => Affine | null): Frames {
+  if (!trailing && last.frames && last.skeleton === skeleton && last.root === pose.root && last.joints === pose.joints) return last.frames;
+  const found = framesOf(skeleton, pose, trailing ?? (() => null));
+  if (!trailing) Object.assign(last, { skeleton, root: pose.root, joints: pose.joints, frames: found });
+  return found;
+}
+
+function framesOf(skeleton: Skeleton, pose: Posing, trailing: (j: JointSpec) => Affine | null): Frames {
   const roots = new Set(skeleton.limbs.map((l) => l.joints.root));
   const world = new Map<string, Affine>();
   const carried = new Map<string, Affine>();
@@ -44,23 +55,24 @@ export function frames(skeleton: Skeleton, pose: Pick<PoseSpec, 'root' | 'joints
     const aboveCarried = j.parent === null ? top : carried.get(j.parent);
     if (!above || !aboveCarried) throw new Error(`skeleton: ${j.id} comes before its parent ${j.parent}`);
     const p = pose.joints[j.id] ?? {};
-    const own = product(above, local(j, p));
+    const turned = local(j, p);
+    const own = product(above, turned);
     const lag = j.trail ? trailing(j) : null;
     const at = applied(own, j.at);
     const placed = lag ? product(translate(at.x, at.y), lag, translate(-j.at.x, -j.at.y)) : own;
     world.set(j.id, placed);
-    carried.set(j.id, lag ? placed : product(aboveCarried, local(j, { ...p, squash: undefined })));
+    carried.set(j.id, lag ? placed : product(aboveCarried, p.squash ? local(j, { ...p, squash: undefined }) : turned));
   });
   return { world, carried };
 }
 
 // Each authored joint's world matrix, mapping rest space into the drawing.
 // A derived joint has none: its limb's constraint places it.
-export const forward = (skeleton: Skeleton, pose: Pick<PoseSpec, 'root' | 'joints'>): ReadonlyMap<string, Affine> => frames(skeleton, pose).world;
+export const forward = (skeleton: Skeleton, pose: Posing): ReadonlyMap<string, Affine> => frames(skeleton, pose).world;
 
 // Where each limb's root is, by the limb: what a pose sets its feet from
 // (a foot planted under its hip as the body turns) before it has goals.
-export function rootsOf(skeleton: Skeleton, pose: Pick<PoseSpec, 'root' | 'joints'>): ReadonlyMap<string, Point> {
+export function rootsOf(skeleton: Skeleton, pose: Posing): ReadonlyMap<string, Point> {
   const world = forward(skeleton, pose);
   return new Map(skeleton.limbs.map((limb) => {
     const root = skeleton.joints.find((j) => j.id === limb.joints.root);
