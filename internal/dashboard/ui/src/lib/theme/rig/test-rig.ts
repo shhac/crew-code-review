@@ -4,13 +4,14 @@ import { degrees } from '../math';
 import { bone, footBox, footInUse, piecesOf, turnAbout, turned, type DrawnLeg, type Layer, type RigPose } from './rig';
 import { applied } from './skeleton/affine';
 
-export const flatLayers = (layers: readonly Layer[]): Layer[] => layers.flatMap((l) => (l.kind === 'group' ? [l, ...flatLayers(l.layers)] : [l]));
+export const flatLayers = (layers: readonly Layer[]): Layer[] => layers.flatMap((l) => (l.kind === 'group' || l.kind === 'frame' ? [l, ...flatLayers(l.layers)] : [l]));
 // Each leg once (from the outlined pass, not again from the fur over it),
 // in the order the rig lists its legs' layers; or, built on a skeleton, its
 // limbs in the order it lists them.
 export const legsOf = (pose: RigPose) => pose.skeleton?.limbs.map((l) => l.limb) ?? flatLayers(pose.layers).flatMap((l) => (l.kind === 'legs' && !l.fur ? l.legs.map((d) => d.limb) : []));
 export const lidsOf = (pose: RigPose) => flatLayers(pose.layers).filter((l) => l.kind === 'lid');
-export const imagesOf = (pose: RigPose) => flatLayers(pose.layers).flatMap((l) => (l.kind === 'image' ? [l.src] : []));
+// Every picture drawn, a piece's in each of its draws and variants.
+export const imagesOf = (pose: RigPose) => flatLayers(pose.layers).flatMap((l) => (l.kind === 'image' || l.kind === 'piece' ? [l.src] : []));
 
 // The first moment in the first four seconds the eye is shut, if any.
 export const firstShut = (poseAt: (now: number) => RigPose) => Array.from({ length: 4000 }, (_, t) => t).find((t) => lidsOf(poseAt(t)).length > 0);
@@ -31,7 +32,7 @@ export const solesOf = (pose: RigPose) => pose.skeleton?.limbs.map((l) => l.sole
 export const guideAt = (pose: RigPose, name: string) => pose.guides?.find((g) => g.name === name)?.at;
 
 // The points a layer's drawing reaches, in its own group's coordinates.
-function reach(l: Exclude<Layer, { kind: 'group' }>): Point[] {
+function reach(l: Exclude<Layer, { kind: 'group' | 'frame' }>): Point[] {
   switch (l.kind) {
     case 'image': return corners(l.x, l.y, l.x + l.width, l.y + l.height);
     case 'piece': return corners(l.box.x, l.box.y, l.box.x + l.box.width, l.box.y + l.box.height).map((p) => applied(l.matrix, p));
@@ -66,6 +67,7 @@ export function rigBounds(pose: RigPose): { left: number; right: number; top: nu
   const points = (layers: readonly Layer[], place: (p: Point) => Point): Point[] =>
     layers.flatMap((l) => {
       if (l.kind === 'group') return points(l.layers, (p) => place(turned(l.turn, slanted(l, p))));
+      if (l.kind === 'frame') return points(l.layers, (p) => place(applied(l.matrix, p)));
       if ((l.kind === 'image' || l.kind === 'piece') && l.hidden) return [];
       if (l.kind === 'piece' && l.opacity === 0) return [];
       return reach(l).map(place);

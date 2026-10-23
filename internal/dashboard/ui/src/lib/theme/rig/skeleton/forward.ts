@@ -6,6 +6,7 @@
 // (wings.ts's birdWing). A joint carries both:
 //
 //   local(j) = T(at + shift) F(foreshorten) R(angle) Q(squash) T(-at)
+import type { Point } from '../../pointer';
 import { applied, IDENTITY, product, rotate, scale, translate, turnMatrix, type Affine } from './affine';
 import type { JointPose, JointSpec, PoseSpec, Skeleton } from './types';
 
@@ -32,7 +33,7 @@ type Frames = { world: Map<string, Affine>; carried: Map<string, Affine> };
 
 // `trailing`, where a joint lags: what it turns by (a matrix without a
 // move), taken from an earlier moment; it stays hung where it is now.
-export function frames(skeleton: Skeleton, pose: PoseSpec, trailing: (j: JointSpec) => Affine | null = () => null): Frames {
+export function frames(skeleton: Skeleton, pose: Pick<PoseSpec, 'root' | 'joints'>, trailing: (j: JointSpec) => Affine | null = () => null): Frames {
   const roots = new Set(skeleton.limbs.map((l) => l.joints.root));
   const world = new Map<string, Affine>();
   const carried = new Map<string, Affine>();
@@ -55,4 +56,16 @@ export function frames(skeleton: Skeleton, pose: PoseSpec, trailing: (j: JointSp
 
 // Each authored joint's world matrix, mapping rest space into the drawing.
 // A derived joint has none: its limb's constraint places it.
-export const forward = (skeleton: Skeleton, pose: PoseSpec): ReadonlyMap<string, Affine> => frames(skeleton, pose).world;
+export const forward = (skeleton: Skeleton, pose: Pick<PoseSpec, 'root' | 'joints'>): ReadonlyMap<string, Affine> => frames(skeleton, pose).world;
+
+// Where each limb's root is, by the limb: what a pose sets its feet from
+// (a foot planted under its hip as the body turns) before it has goals.
+export function rootsOf(skeleton: Skeleton, pose: Pick<PoseSpec, 'root' | 'joints'>): ReadonlyMap<string, Point> {
+  const world = forward(skeleton, pose);
+  return new Map(skeleton.limbs.map((limb) => {
+    const root = skeleton.joints.find((j) => j.id === limb.joints.root);
+    const m = world.get(limb.joints.root);
+    if (!root || !m) throw new Error(`skeleton: ${limb.id} has no root ${limb.joints.root}`);
+    return [limb.id, applied(m, root.at)];
+  }));
+}

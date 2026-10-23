@@ -3,9 +3,11 @@ import { render } from 'svelte/server';
 import type { Point } from '../../pointer';
 import { legsTo, type QuadLeg } from '../gait';
 import Rig from '../Rig.svelte';
-import { legImages, turnAbout, turned, type DrawnLeg, type Frame, type Layer, type LimbArt, type RigPose } from '../rig';
+import { legImages, lidLayers, stillPicture, turnAbout, turned, type DrawnLeg, type Frame, type Layer, type LimbArt, type RigPose } from '../rig';
 import { rigBounds } from '../test-rig';
 import { compose } from './compose';
+import { rootsOf } from './forward';
+import { wholePicture } from './picture';
 import { planDiff, planOf } from './plan';
 import type { Body, JointSpec, LimbSpec, Piece, PoseSpec, Skeleton } from './types';
 
@@ -148,6 +150,7 @@ describe('a leg built on a limb', () => {
       const groups = drawing([false, true].map((fur) => ({ kind: 'legs', name: 'far legs', legs: [drawnLeg], far: true, fur })));
       expect(legImages(drawnLeg, false).map((i) => i.href)).toEqual(['thigh.webp', 'bone.webp', 'bone.webp', 'foot.webp', 'curled.webp']);
       expect(same(drawn(body, pose), groups)).toEqual([]);
+      expect(drawn(body, pose).layers.every((l) => l.kind === 'piece' && l.leg)).toBe(true);
     }
   });
 
@@ -176,5 +179,51 @@ describe('a trailing joint', () => {
     const angle = was.root.angle + (was.joints.tail?.angle ?? 0);
     const groups = drawing([{ kind: 'group', turn: turnAbout(angle, { x: 4, y: 8 }, at.x - 4, at.y - 8), layers: [picture('tail', 'tail.webp', { x: 0, y: 5, width: 5, height: 4 })] }]);
     expect(same(drawn(body, bounce, now), groups)).toEqual([]);
+  });
+});
+
+describe('shapes, guides and a whole picture', () => {
+  const EYE = { x: 16, y: 6 };
+  const FUR = { fill: '#fdd79b', outline: '#140c05' };
+  const skeleton: Skeleton = { joints: [joint('body', null, { x: 10, y: 8 }), joint('skull', 'body', { x: 14, y: 6 }), joint('eye', 'skull', EYE, { role: { part: 'head', index: 0 } })], bones: [], limbs: [] };
+  const body: Body = {
+    frame: FRAME, skeleton,
+    pieces: [{ id: 'head', art: { drawn: { src: 'head.webp', box } }, at: { kind: 'joint', to: 'skull' }, draws: [{ id: 'head', z: 1 }] }],
+    shapes: [{ id: 'eyelid', on: 'skull', z: 2 }],
+    guides: [{ name: 'neck', at: { on: 'body', at: { x: 14, y: 6 } } }, { name: 'eye', at: 'eye' }],
+  };
+  const root = turnAbout(6, { x: 10, y: 8 }, 0, -0.5);
+  const pose = (shut: boolean) => posing({ root, joints: { body: { squash: { by: 1.04 } }, skull: { angle: 15, shift: { x: 0.8, y: 0 } } }, shapes: { eyelid: lidLayers(shut, EYE, 0.9, FUR) } });
+
+  it('draws an eyelid hung on a joint as it is drawn in that joint\'s group, keeping its slot while the eye is open', () => {
+    const nod = turnAbout(15, { x: 14, y: 6 }, 0.8, 0);
+    for (const shut of [false, true]) {
+      const groups = drawing([{ kind: 'group', turn: root, scaleY: 1.04, layers: [{ kind: 'group', turn: nod, layers: [picture('head', 'head.webp'), ...lidLayers(shut, EYE, 0.9, FUR)] }] }]);
+      const composed = drawn(body, pose(shut));
+      expect(same(composed, groups)).toEqual([]);
+      expect(composed.layers.map((l) => l.kind)).toEqual(['piece', 'frame']);
+    }
+  });
+
+  it('marks the points it names, where it stands first', () => {
+    const marks = drawn(body, pose(false)).guides ?? [];
+    // On the breathing body, so breathing with it.
+    const neck = turned(root, { x: 14, y: 8 - 2 * 1.04 });
+    expect(marks.map((g) => g.name)).toEqual(['stands here', 'neck', 'eye']);
+    expect([marks[1].at.x, marks[1].at.y]).toEqual([expect.closeTo(neck.x, 9), expect.closeTo(neck.y, 9)]);
+  });
+
+  it('finds each limb\'s root before its goals, turned with the body and never breathing', () => {
+    const limb: LimbSpec = { id: 'hind', pair: 1, side: 'near', joints: { root: 'hip', middle: 'k', lower: 'a', end: 'f' }, ground: 15, solve: 'quad', leg: { reach: 0, thigh: 2, shin: 2, bend: 1 } };
+    const legged: Skeleton = { ...skeleton, joints: [...skeleton.joints, joint('hip', 'body', { x: 7, y: 10 })], limbs: [limb] };
+    const hip = rootsOf(legged, { root, joints: { body: { squash: { by: 1.3 } } } }).get('hind');
+    const want = turned(root, { x: 7, y: 10 });
+    expect([hip?.x, hip?.y]).toEqual([expect.closeTo(want.x, 9), expect.closeTo(want.y, 9)]);
+  });
+
+  it('draws one breathing picture as stillPicture does, marking only where it stands', () => {
+    const ball = { name: 'ball', src: 'ball.webp', width: 9, height: 8 };
+    const picture = wholePicture(FRAME, ball);
+    for (const squash of [1, 1.04]) expect(planDiff(planOf(picture(squash)), planOf(stillPicture(FRAME, ball, squash)))).toEqual([]);
   });
 });

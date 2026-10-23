@@ -2,8 +2,8 @@
 // a pose with only some of them drawn.
 import { layerName, type Layer, type RigPose } from '../lib/theme/rig/rig';
 
-type Leaf = Exclude<Layer, { kind: 'group' }>;
-const leaves = (layers: readonly Layer[]): Leaf[] => layers.flatMap((l) => (l.kind === 'group' ? leaves(l.layers) : [l]));
+type Leaf = Exclude<Layer, { kind: 'group' | 'frame' }>;
+const leaves = (layers: readonly Layer[]): Leaf[] => layers.flatMap((l) => (l.kind === 'group' || l.kind === 'frame' ? leaves(l.layers) : [l]));
 
 // Every part a pose draws, in drawing order, each once.
 const partNames = (pose: RigPose): string[] => [...new Set(leaves(pose.layers).map(layerName))];
@@ -33,7 +33,7 @@ const artOf = (pose: RigPose): { name: string; src: string }[] => leaves(pose.la
 // The pose with only the parts `keep` allows, each still where it is.
 export function keepParts(pose: RigPose, keep: (name: string) => boolean): RigPose {
   const filter = (layers: readonly Layer[]): Layer[] => layers.flatMap((l): Layer[] => {
-    if (l.kind === 'group') return [{ ...l, layers: filter(l.layers) }];
+    if (l.kind === 'group' || l.kind === 'frame') return [{ ...l, layers: filter(l.layers) }];
     return keep(layerName(l)) ? [l] : [];
   });
   return { ...pose, layers: filter(pose.layers) };

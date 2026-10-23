@@ -6,7 +6,7 @@
 import type { Point } from '../../pointer';
 import type { AirLegs, BirdLeg } from '../bird';
 import type { Limb, QuadLeg, Step } from '../gait';
-import type { Frame, Turn } from '../rig';
+import type { Frame, Layer, Turn } from '../rig';
 
 export type Side = 'near' | 'far';
 export type Box = { x: number; y: number; width: number; height: number };
@@ -70,13 +70,15 @@ export type Goal =
 // One moment's pose: the root's turn (the one joint that may turn about a
 // different point in each pose), each authored joint's pose, each limb's
 // goal, which variant of a piece shows (false for none; its first
-// otherwise), and draws moved to another z.
+// otherwise), draws moved to another z, and what each shape draws now (an
+// eyelid while the eye is shut), in its joint's rest space.
 export type PoseSpec = {
   root: Turn;
   joints: Readonly<Partial<Record<string, JointPose>>>;
   limbs: Readonly<Partial<Record<string, Goal>>>;
   show: Readonly<Partial<Record<string, string | false>>>;
   z: Readonly<Partial<Record<string, number>>>;
+  shapes?: Readonly<Partial<Record<string, readonly Layer[]>>>;
 };
 
 // A variant of a piece's picture, its box in rest space (or in its joint's
@@ -103,8 +105,13 @@ export type Attachment =
 
 // One drawing of a piece at a place in the draw order: `fur` for the pass
 // of fur alone; `flush`, a bar's fur laid from the joint exactly, over a
-// body's edge from a hip just inside it (bone()'s flush).
-export type Draw = { id: string; z: number; fur?: boolean; flush?: boolean };
+// body's edge from a hip just inside it (bone()'s flush); `part`, what the
+// lab lists it as, where several draws are one part (a side's legs).
+export type Draw = { id: string; z: number; fur?: boolean; flush?: boolean; part?: string };
+
+// Parts drawn in code, not from art (an eyelid, a bow's string), hung on a
+// joint at a place in the draw order; each pose says what they draw.
+export type Shape = { id: string; on: string; z: number };
 
 // A part of the drawing hung from the skeleton. Every variant is drawn in
 // each of its draws, those not shown unseen (`hide`: at opacity 0, as a
@@ -123,8 +130,10 @@ type PieceOf<A extends Attachment, Arts> = {
 };
 export type Piece = PieceOf<Exclude<Attachment, { kind: 'bar' }>, Art> | PieceOf<Extract<Attachment, { kind: 'bar' }>, Omit<Art, 'box'>>;
 
-// An animal built on a skeleton: its frame, its bones, its parts.
-export type Body = { frame: Frame; skeleton: Skeleton; pieces: readonly Piece[] };
+// An animal built on a skeleton: its frame, its bones, its parts, and the
+// points it marks for the lab and the tests (where it stands is always
+// first; with none given, every joint by its name).
+export type Body = { frame: Frame; skeleton: Skeleton; pieces: readonly Piece[]; shapes?: readonly Shape[]; guides?: readonly { name: string; at: Handle }[] };
 
 // The skeleton as a pose has it, for the lab and the tests: each joint where
 // it is drawn, coded by its role; each bone, by its joints' ids, and how

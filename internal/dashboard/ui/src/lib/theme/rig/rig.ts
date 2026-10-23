@@ -85,7 +85,11 @@ export type Layer =
   // box, placed by one matrix, stretched to the box where `aspect` is
   // 'none'. `id` names its paint slot, which keeps its place in the drawing
   // from frame to frame.
-  | { kind: 'piece'; id: string; name: string; src: string; box: { x: number; y: number; width: number; height: number }; aspect: 'none' | 'default'; matrix: Affine; far?: boolean; hidden?: boolean; opacity?: number };
+  // `leg`: one of a limb's pieces, which tests and the lab find by it.
+  | { kind: 'piece'; id: string; name: string; src: string; box: { x: number; y: number; width: number; height: number }; aspect: 'none' | 'default'; matrix: Affine; far?: boolean; hidden?: boolean; opacity?: number; leg?: boolean }
+  // Parts drawn in code (an eyelid, a stroke) hung on a skeleton's joint,
+  // in its frame: in rest space, as they would be drawn in its group.
+  | { kind: 'frame'; id: string; matrix: Affine; layers: readonly Layer[] };
 
 // A part's picture laid in its box in the drawing; `hidden`, drawn but
 // unseen (see Layer).
@@ -213,7 +217,7 @@ export function stillPicture(frame: Frame, art: { name: string; src: string; wid
 
 // What a layer is called in the lab: an image or a stroke by its part, the
 // rest by what they draw.
-export function layerName(layer: Exclude<Layer, { kind: 'group' }>): string {
+export function layerName(layer: Exclude<Layer, { kind: 'group' | 'frame' }>): string {
   switch (layer.kind) {
     case 'image': case 'piece': return layer.name;
     case 'legs': return `${layer.name}${layer.fur ? ', fur' : ''}`;

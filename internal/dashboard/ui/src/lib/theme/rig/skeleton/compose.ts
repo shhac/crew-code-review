@@ -83,9 +83,10 @@ function trailing(skeleton: Skeleton, poseAt: (now: number) => PoseSpec, now: nu
   };
 }
 
-// Each draw in paint order, by its piece and its place in it: draws keep
-// the order they are declared in within a z.
-type Slot = { piece: number; draw: number };
+// Each draw (and each shape) in paint order, by its piece and its place in
+// it: draws keep the order they are declared in within a z, shapes after
+// the pieces' draws.
+type Slot = { piece: number; draw: number } | { shape: number };
 const orders = new WeakMap<Body, Map<string, readonly Slot[]>>();
 function orderOf(body: Body, z: PoseSpec['z']): readonly Slot[] {
   const known = orders.get(body) ?? new Map<string, readonly Slot[]>();
@@ -93,12 +94,15 @@ function orderOf(body: Body, z: PoseSpec['z']): readonly Slot[] {
   const key = JSON.stringify(Object.entries(z).sort(([a], [b]) => a.localeCompare(b)));
   const had = known.get(key);
   if (had) return had;
-  const all = body.pieces.flatMap((p, piece) => p.draws.map((d, draw) => ({ piece, draw, id: d.id, z: z[d.id] ?? d.z })));
+  const all = [
+    ...body.pieces.flatMap((p, piece) => p.draws.map((d, draw) => ({ slot: { piece, draw }, id: d.id, z: z[d.id] ?? d.z }))),
+    ...(body.shapes ?? []).map((s, shape) => ({ slot: { shape }, id: s.id, z: z[s.id] ?? s.z })),
+  ];
   const ids = all.map((d) => d.id);
   const unknown = Object.keys(z).filter((id) => !ids.includes(id));
   if (unknown.length) throw new Error(`skeleton: no draw ${unknown.join(', ')} to move`);
   if (new Set(ids).size !== ids.length) throw new Error('skeleton: two draws share an id');
-  const order = all.map((d, i) => ({ ...d, i })).sort((a, b) => a.z - b.z || a.i - b.i).map(({ piece, draw }) => ({ piece, draw }));
+  const order = all.map((d, i) => ({ ...d, i })).sort((a, b) => a.z - b.z || a.i - b.i).map(({ slot }) => slot);
   known.set(key, order);
   return order;
 }
@@ -151,7 +155,7 @@ function placing(at: Attachment, posed: Posed): Placing {
 const artOf = (piece: Piece): readonly [string, { src: string; fur?: string; box?: { x: number; y: number; width: number; height: number } }][] => Object.entries(piece.art);
 
 // One draw of a piece: every variant of it, the one not shown unseen.
-function paints(piece: Piece, draw: Draw, show: string | false | undefined, place: Placing): PieceLayer[] {
+function paints(piece: Piece, draw: Draw, show: string | false | undefined, place: Placing, leg: boolean): PieceLayer[] {
   const variants = artOf(piece);
   const shown = show === false ? null : show ?? variants[0][0];
   if (shown !== null && !variants.some(([k]) => k === shown)) throw new Error(`skeleton: ${piece.id} has no ${shown}`);
@@ -163,7 +167,10 @@ function paints(piece: Piece, draw: Draw, show: string | false | undefined, plac
     const seen = key === shown;
     const look = piece.hide === 'opacity' ? { opacity: seen ? 1 : 0 } : { hidden: !seen };
     const id = variants.length > 1 ? `${draw.id} (${key})` : draw.id;
-    return { kind: 'piece', id, name: draw.id, src, box, aspect: piece.at.kind === 'bar' ? 'none' : 'default', matrix: place.matrix, far: piece.side === 'far' || undefined, ...look };
+    return {
+      kind: 'piece', id, name: draw.part ?? draw.id, src, box, aspect: piece.at.kind === 'bar' ? 'none' : 'default', matrix: place.matrix,
+      far: piece.side === 'far' || undefined, ...look, ...(leg ? { leg } : {}),
+    };
   });
 }
 
@@ -233,9 +240,17 @@ export function compose(body: Body, poseAt: (now: number) => PoseSpec, now: numb
     const extra = piece.extra?.(now, seed);
     return extra ? { ...place, matrix: product(place.matrix, local({ at: place.anchor }, extra)) } : place;
   });
-  const painted = orderOf(body, pose.z).map(({ piece, draw }) => {
-    const p = body.pieces[piece];
-    return { piece: p, layers: paints(p, p.draws[draw], pose.show[p.id], placings[piece]) };
+  // A limb's pieces: those hung on its joints.
+  const limbJoints = new Set(skeleton.limbs.flatMap(({ joints }) => Object.values(joints)));
+  const onLimb = (at: Attachment) => limbJoints.has(at.kind === 'joint' ? at.to : typeof at.from === 'string' ? at.from : at.from.on);
+  const painted = orderOf(body, pose.z).map((slot): { piece?: Piece; layers: readonly Layer[] } => {
+    if ('shape' in slot) {
+      const shape = (body.shapes ?? [])[slot.shape];
+      const frame: Layer = { kind: 'frame', id: shape.id, matrix: posed.frame(shape.on), layers: pose.shapes?.[shape.id] ?? [] };
+      return { layers: [frame] };
+    }
+    const p = body.pieces[slot.piece];
+    return { piece: p, layers: paints(p, p.draws[slot.draw], pose.show[p.id], placings[slot.piece], onLimb(p.at)) };
   });
   const layers = painted.flatMap((p) => p.layers);
 
@@ -247,14 +262,14 @@ export function compose(body: Body, poseAt: (now: number) => PoseSpec, now: numb
   // itself where nothing is hung on it.
   const posedLimbs: PosedLimb[] = limbs.map(({ limb, now: l }) => {
     const feet = [limb.joints.end, ...(limb.joints.tip ? [limb.joints.tip] : [])];
-    const onFoot = painted.flatMap((p) => (p.piece.at.kind === 'joint' && feet.includes(p.piece.at.to) ? p.layers.filter(seenLayer) : []));
+    const onFoot = painted.flatMap(({ piece, layers: drawn }) => (piece?.at.kind === 'joint' && feet.includes(piece.at.to) ? drawn.flatMap((l) => (l.kind === 'piece' && seenLayer(l) ? [l] : [])) : []));
     const sole = onFoot.length ? Math.max(...onFoot.flatMap(corners).map((c) => c.y)) : l.foot.y;
     return { id: limb.id, code: `L${2 * limb.pair + sideCode(limb.side)}`, limb: l, fore: limb.pair === 0, sole };
   });
   return {
     ...body.frame,
     layers,
-    guides: [{ name: 'stands here', at: body.frame.anchor }, ...joints.map((j) => ({ name: j.name, at: j.at }))],
+    guides: [{ name: 'stands here', at: body.frame.anchor }, ...(body.guides?.map((g) => ({ name: g.name, at: posed.handle(g.at) })) ?? joints.map((j) => ({ name: j.name, at: j.at })))],
     skeleton: { joints, bones: posedBones(skeleton, unsquashed), limbs: posedLimbs },
   };
 }
