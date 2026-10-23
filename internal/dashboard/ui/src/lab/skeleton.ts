@@ -28,7 +28,8 @@ import type { Point } from '../lib/theme/pointer';
 import { footInUse, turnAbout, turned, type DrawnLeg, type Guide, type Layer, type RigPose } from '../lib/theme/rig/rig';
 import type { PosedSkeleton } from '../lib/theme/rig/skeleton/types';
 
-export type Joint = { code: string; name: string; at: Point; far: boolean };
+// `derived`: placed by its limb's solve, not authored (a skeleton's own).
+export type Joint = { code: string; name: string; at: Point; far: boolean; derived?: boolean };
 // From joint to joint, by their codes.
 export type Bone = { code: string; name: string; from: string; to: string; far: boolean };
 // A limb, a wing, the head, the spine: what its codes start with, and what
@@ -289,19 +290,21 @@ const TITLES: Readonly<Record<string, string>> = { S: 'spine', H: 'head', W0: 'n
 
 // An animal built on a skeleton says where its joints are itself
 // (RigPose's `skeleton`), coded by what each is, so nothing is read off the
-// drawing: its parts by their codes, a joint its limb's constraint placed
+// drawing: its parts in the order the reader gives them (limbs, then the
+// spine, the head, wings and the rest), a joint its limb's constraint placed
 // marked as derived.
 export function skeletonFromPosed(posed: PosedSkeleton): Skeleton {
   const groupOf = (code: string) => code.replace(/[JB]\d+$/, '');
   const codes = new Map(posed.joints.map((j) => [j.id, j.code]));
-  const joints = posed.joints.map((j) => ({ code: j.code, name: j.derived ? `${j.name} (derived)` : j.name, at: j.at, far: j.far }));
+  const joints = posed.joints.map((j) => ({ code: j.code, name: j.name, at: j.at, far: j.far, ...(j.derived ? { derived: true } : {}) }));
   const bones = posed.bones.map((b) => ({ code: b.code, name: b.name, from: codes.get(b.from) ?? b.from, to: codes.get(b.to) ?? b.to, far: b.far }));
   const title = (code: string) => {
     const limb = posed.limbs.find((l) => l.code === code);
     if (limb) return `${side(Number(code.slice(1)) % 2 === 1)} ${limb.fore ? 'foreleg' : 'hind leg'}`;
     return TITLES[code] ?? code;
   };
-  const order = [...new Set(joints.map((j) => groupOf(j.code)))].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+  const rank = (code: string) => (code.startsWith('L') ? 0 : ['S', 'H', 'W0', 'W1'].indexOf(code) + 1 || 5);
+  const order = [...new Set(joints.map((j) => groupOf(j.code)))].sort((a, b) => rank(a) - rank(b) || a.localeCompare(b, undefined, { numeric: true }));
   const groups = order.map((code) => ({ code, title: title(code), far: joints.filter((j) => groupOf(j.code) === code).every((j) => j.far) }));
   return { groups, joints, bones };
 }

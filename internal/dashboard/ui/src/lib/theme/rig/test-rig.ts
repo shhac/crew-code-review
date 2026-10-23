@@ -10,8 +10,9 @@ export const flatLayers = (layers: readonly Layer[]): Layer[] => layers.flatMap(
 // limbs in the order it lists them.
 export const legsOf = (pose: RigPose) => pose.skeleton?.limbs.map((l) => l.limb) ?? flatLayers(pose.layers).flatMap((l) => (l.kind === 'legs' && !l.fur ? l.legs.map((d) => d.limb) : []));
 export const lidsOf = (pose: RigPose) => flatLayers(pose.layers).filter((l) => l.kind === 'lid');
-// Every picture drawn, a piece's in each of its draws and variants.
-export const imagesOf = (pose: RigPose) => flatLayers(pose.layers).flatMap((l) => (l.kind === 'image' || l.kind === 'piece' ? [l.src] : []));
+// Every picture drawn besides the legs' (a piece's in each of its draws
+// and variants), as legs drawn by their layers never counted.
+export const imagesOf = (pose: RigPose) => flatLayers(pose.layers).flatMap((l) => (l.kind === 'image' || (l.kind === 'piece' && !l.leg) ? [l.src] : []));
 
 // The first moment in the first four seconds the eye is shut, if any.
 export const firstShut = (poseAt: (now: number) => RigPose) => Array.from({ length: 4000 }, (_, t) => t).find((t) => lidsOf(poseAt(t)).length > 0);

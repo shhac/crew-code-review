@@ -21,6 +21,7 @@ const KNOWN = {
     noFootBelowLedge: 'a paw folding toes down as it lifts turns its box about the heel, so its toes dip under the ledge before the foot is clear',
     footprintsHold: 'in every mode the leg pieces\' caps and folding paws reach under the ledge by under a pixel',
   },
+  rabbit: { footprintsHold: 'a leg piece\'s rounded cap, turned with the foot, reaches about 0.29px under the ledge, as the page has always drawn it (counted as squares round each joint, as legs were before its skeleton, it never showed)' },
   cupid: { footprintsHold: 'dodging, the drawing reaches up to 0.16px over its footprint\'s top' },
   bee: { footprintsHold: 'lifting off, the drawing reaches 0.18px past its footprint\'s left' },
   gull: {

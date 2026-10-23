@@ -10,7 +10,6 @@ import rabbitNudge from '../rabbit-pose-nudge.webp';
 import rabbitSit from '../rabbit-pose-sit.webp';
 import rabbitThump from '../rabbit-pose-thump.webp';
 import rabbitReference from '../rabbit-reference.webp';
-import { mammalHead, mammalLeg, mammalSpine } from './bones';
 import type { Moment, RigCritter } from './critter';
 
 // The lab's labels for what the rabbit does: a bolt is a hop at full tilt.
@@ -32,7 +31,7 @@ const DRAWINGS: Record<string, Drawing> = {
   thump: { src: rabbitThump, width: 18.5, height: 15.58, mode: 'thump' },
 };
 
-const rabbitAt = ({ mode, walked, now }: Moment): RigRabbit => {
+export const rabbitAt = ({ mode, walked, now }: Moment): RigRabbit => {
   const pick = MODES.find((m) => m.label === mode) ?? MODES[0];
   return { pose: pick.pose, walked, since: now, seed: 1, bolting: pick.bolting };
 };
@@ -47,11 +46,8 @@ export const rabbit = {
   pose: (at, look) => rabbitRig(rabbitAt(at), { now: at.now, ...look }),
   box: (at) => POSES[rabbitAt(at).pose],
   drawings: DRAWINGS,
-  // It stands on its hind soles, so no bone rises from the hind toes: the
-  // long hind foot is one picture from the hock forward.
-  bones: {
-    legs: ({ fore }) => (fore ? mammalLeg({ fore }) : { ...mammalLeg({ fore }), foot: 'hind foot (metatarsus and toes)' }),
-    head: mammalHead('ear base', 'eye', 'nose'),
-    spine: mammalSpine(true),
-  },
+  // Before its skeleton was its own, read off the drawing, a hind leg ended
+  // at its toes' tip (J3) after its foot (B2), and the spine numbered only
+  // its own points: the tail root SJ1, the lines neck, back and pelvis.
+  aliases: Object.fromEntries([...['L2', 'L3'].flatMap((l) => [[`${l}J3`, `${l}J4`], [`${l}B2`, `${l}B3`]]), ['SJ1', 'SJ3'], ['SB1', 'SB0'], ['SB2', 'SB1']]),
 } satisfies RigCritter;

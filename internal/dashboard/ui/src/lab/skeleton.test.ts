@@ -7,14 +7,25 @@ import { pigeon } from './critters/pigeon';
 import { gull } from './critters/gull';
 import { hawk } from './critters/hawk';
 import { CRITTERS } from './critters/registry';
-import { rabbit } from './critters/rabbit';
-import { layColumns, legendOf, litBy, parseCode, skeletonFromPosed, skeletonOf, type Skeleton } from './skeleton';
+import { rabbitRig as rabbitDrawnAsBefore } from '../lib/theme/easter/rabbit-rig-legacy';
+import { mammalHead, mammalLeg, mammalSpine } from './critters/bones';
+import { rabbitAt } from './critters/rabbit';
+import { layColumns, legendOf, litBy, parseCode, skeletonFromPosed, skeletonOf, type BoneNames, type Skeleton } from './skeleton';
 
 const at = (mode: string, now = 1300) => ({ mode, now, walked: 1.3 });
 const look = { gaze: 0, still: false };
 const near = (a: Point, b: Point) => Math.hypot(a.x - b.x, a.y - b.y) < 1e-6;
 const joint = (s: Skeleton, code: string) => s.joints.find((j) => j.code === code);
 const bone = (s: Skeleton, code: string) => s.bones.find((b) => b.code === code);
+// The reader's own subject: the rabbit as rigs were drawn before it had its
+// own skeleton, read off its drawing with the names its lab entry gave it,
+// as an animal not yet on a skeleton still is.
+const drawnRabbit = (mode: string) => rabbitDrawnAsBefore(rabbitAt(at(mode)), { now: at(mode).now, ...look });
+const RABBIT_BONES: BoneNames = {
+  legs: ({ fore }) => (fore ? mammalLeg({ fore }) : { ...mammalLeg({ fore }), foot: 'hind foot (metatarsus and toes)' }),
+  head: mammalHead('ear base', 'eye', 'nose'),
+  spine: mammalSpine(true),
+};
 
 const foot = { src: '', fur: '', width: 2, height: 1, heel: { x: 0, y: 0 } };
 const leg = (): DrawnLeg => ({
@@ -65,7 +76,7 @@ describe('skeletonOf', () => {
   });
 
   it("numbers the rabbit's limbs fore to hind, near before far, whatever the rig's order", () => {
-    const s = skeletonOf(rabbit.pose(at('sit'), look), rabbit.bones);
+    const s = skeletonOf(drawnRabbit('sit'), RABBIT_BONES);
     expect(s.groups.map((g) => `${g.code} ${g.title}`)).toEqual(['L0 near foreleg', 'L1 far foreleg', 'L2 near hind leg', 'L3 far hind leg', 'S spine', 'H head']);
     expect(s.joints.filter((j) => j.code.startsWith('L0')).map((j) => j.name)).toEqual(['shoulder', 'elbow', 'wrist (carpus)', 'forepaw', 'toe tip']);
     expect(s.bones.filter((b) => b.code.startsWith('L0')).map((b) => b.name)).toEqual(['humerus', 'radius and ulna', 'metacarpus', 'toes (phalanges)']);
@@ -73,7 +84,7 @@ describe('skeletonOf', () => {
     expect(s.bones.filter((b) => b.code.startsWith('S')).map((b) => [b.code, b.from, b.to])).toEqual([['SB0', 'SJ0', 'L0J0'], ['SB1', 'L0J0', 'L2J0'], ['SB2', 'L2J0', 'SJ1']]);
     expect(s.joints.filter((j) => /^[SH]/.test(j.code)).map((j) => `${j.code} ${j.name}`)).toEqual(['SJ0 head joint (neck)', 'SJ1 tail root', 'HJ0 ear base', 'HJ1 eye', 'HJ2 nose']);
     expect(bone(s, 'HB0')).toMatchObject({ name: 'skull', from: 'SJ0', to: 'HJ2' });
-    const wrist = (rabbit.pose(at('sit'), look).guides ?? []).filter((g) => g.name === 'wrist (carpus)').map((g) => g.at);
+    const wrist = (drawnRabbit('sit').guides ?? []).filter((g) => g.name === 'wrist (carpus)').map((g) => g.at);
     expect(wrist.some((w) => near(w, joint(s, 'L0J2')?.at ?? { x: NaN, y: NaN }))).toBe(true);
   });
 
@@ -133,7 +144,7 @@ describe('skeletonOf', () => {
 });
 
 describe('codes', () => {
-  const s = skeletonOf(rabbit.pose(at('sit'), look), rabbit.bones);
+  const s = skeletonOf(drawnRabbit('sit'), RABBIT_BONES);
 
   it('reads a code back to its part, kind and place', () => {
     expect(parseCode('L0B2')).toEqual({ group: 'L0', kind: 'B', index: 2 });

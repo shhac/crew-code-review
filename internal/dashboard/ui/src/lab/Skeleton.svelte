@@ -66,7 +66,7 @@
   {/each}
   {#each joints as j}
     <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-    <circle class="joint" class:far={j.far} class:lit={lit.has(j.code)} class:dim={dim(j.code)} data-hit={j.code} cx={j.at.x} cy={j.at.y}
+    <circle class="joint" class:far={j.far} class:derived={j.derived} class:lit={lit.has(j.code)} class:dim={dim(j.code)} data-hit={j.code} cx={j.at.x} cy={j.at.y}
       r={(lit.has(j.code) ? 4.5 : 3.2) * u} stroke-width={1.2 * u}
       on:mouseenter={() => hover(j.code)} on:mouseleave={() => hover(null)} on:click|stopPropagation={() => pick(j.code)} />
   {/each}
@@ -93,6 +93,8 @@
   line.leader.lit { stroke: #ffe066; opacity: .9; }
   circle.joint { fill: #ff3d7f; stroke: #14161a; pointer-events: all; cursor: pointer; }
   circle.joint.far { fill: #ffd1e0; }
+  /* Placed by its limb's solve, not authored: an open ring. */
+  circle.joint.derived { fill: none; stroke: #ff3d7f; }
   .lit { opacity: 1; }
   line.bone.lit { stroke: #ffe066; }
   circle.joint.lit { fill: #ffe066; }

@@ -50,9 +50,9 @@ describe('the test animal built on a skeleton', () => {
     const pose = fixtureRig({ mode: 'stand', now: 0, walked: 0, still: false });
     if (!pose.skeleton) throw new Error('no skeleton');
     const skeleton = skeletonFromPosed(pose.skeleton);
-    expect(skeleton.groups.map((g) => [g.code, g.title])).toEqual([['H', 'head'], ['L0', 'near foreleg'], ['L2', 'near hind leg'], ['S', 'spine']]);
-    expect(skeleton.joints.filter((j) => j.code.startsWith('L2')).map((j) => [j.code, j.name])).toEqual([
-      ['L2J0', 'hip'], ['L2J1', 'stifle (derived)'], ['L2J2', 'hock (derived)'], ['L2J3', 'toes (derived)'], ['L2J4', 'toe tip (derived)'],
+    expect(skeleton.groups.map((g) => [g.code, g.title])).toEqual([['L0', 'near foreleg'], ['L2', 'near hind leg'], ['S', 'spine'], ['H', 'head']]);
+    expect(skeleton.joints.filter((j) => j.code.startsWith('L2')).map((j) => [j.code, j.name, !!j.derived])).toEqual([
+      ['L2J0', 'hip', false], ['L2J1', 'stifle', true], ['L2J2', 'hock', true], ['L2J3', 'toes', true], ['L2J4', 'toe tip', true],
     ]);
     expect(skeleton.bones.filter((b) => b.code.startsWith('L2')).map((b) => [b.code, b.from, b.to])).toEqual([['L2B0', 'L2J0', 'L2J1'], ['L2B1', 'L2J1', 'L2J2'], ['L2B2', 'L2J2', 'L2J3'], ['L2B3', 'L2J3', 'L2J4']]);
     expect(legendOf(skeleton).find((g) => g.group.code === 'S')?.rows.map((r) => r.code)).toEqual(['SJ0', 'SJ2', 'SJ3', 'SJ4', 'SB0']);
