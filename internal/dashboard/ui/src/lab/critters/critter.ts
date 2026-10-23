@@ -44,6 +44,9 @@ export type RigCritter = Shown & {
   drawings?: Record<string, Drawing>;
   // What its bones are, for the lab's skeleton view.
   bones?: BoneNames;
+  // Codes its skeleton's joints and bones had before (an old link's
+  // &joint= or &bone=), by the codes they have now.
+  aliases?: Readonly<Record<string, string>>;
 };
 
 // The props a ViewCritter's view takes. `marked` is the big one on the stage,
@@ -96,3 +99,6 @@ export const momentsOf = (rig: RigCritter): Moment[] => rig.modes.flatMap((mode)
 
 // Every pose it takes in those moments.
 export const posesOf = (rig: RigCritter): RigPose[] => momentsOf(rig).map((at) => rig.pose(at, { gaze: 0, still: false }));
+
+// The code a joint or bone has now, for one an old link names.
+export const codeNow = (critter: Critter, code: string): string => (critter.kind === 'rig' ? critter.aliases?.[code] : undefined) ?? code;

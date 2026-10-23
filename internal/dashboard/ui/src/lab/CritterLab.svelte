@@ -14,7 +14,7 @@
   import { GAZE_EASE } from '../lib/theme/rig/gaze';
   import { easeTo } from '../lib/theme/rig/life';
   import Rig from '../lib/theme/rig/Rig.svelte';
-  import { drawingsOf, gazeOf, liftOf, paceOf, posesOf, type Critter } from './critters/critter';
+  import { codeNow, drawingsOf, gazeOf, liftOf, paceOf, posesOf, type Critter } from './critters/critter';
   import { CRITTERS, critterNamed } from './critters/registry';
   import { drawingFor, overlay } from './drawings';
   import { allPartNames, keepParts, partArt } from './rig-parts';
@@ -145,7 +145,8 @@
     reference = q.get('ref') ?? '';
     hidden = q.get('hide')?.split(',') ?? [];
     skeleton = SKELETONS.find((s) => s.value && s.value === q.get('skeleton'))?.value ?? '';
-    pinned = q.get('bone') ?? q.get('joint');
+    const code = q.get('bone') ?? q.get('joint');
+    pinned = code && codeNow(c, code);
     // Opened at a frame, it waits there.
     playing = !q.has('frame');
   }
