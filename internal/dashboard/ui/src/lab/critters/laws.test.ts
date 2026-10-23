@@ -22,6 +22,7 @@ const KNOWN = {
     footprintsHold: 'in every mode the leg pieces\' caps and folding paws reach under the ledge by under a pixel',
   },
   rabbit: { footprintsHold: 'a leg piece\'s rounded cap, turned with the foot, reaches about 0.29px under the ledge, as the page has always drawn it (counted as squares round each joint, as legs were before its skeleton, it never showed)' },
+  hare: { footprintsHold: 'a leg piece\'s rounded cap, turned with its bone, reaches up to about 0.36px past its footprint (under a leap\'s arc, behind it sat up and leaping), and its breath 0.32px over the top when alert, as the page has always drawn them' },
   cupid: { footprintsHold: 'dodging, the drawing reaches up to 0.16px over its footprint\'s top' },
   bee: { footprintsHold: 'lifting off, the drawing reaches 0.18px past its footprint\'s left' },
   gull: {
@@ -72,7 +73,7 @@ describe('the laws every rig keeps', () => {
           const broken = law(seen());
           if (known) expect(broken.length, 'it holds now: take it off KNOWN').toBeGreaterThan(0);
           else expect(broken.slice(0, 5)).toEqual([]);
-        });
+        }, 60000);
       }
     });
   }

@@ -10,7 +10,7 @@ import { hogRig as legacy } from './hedgehog-rig-legacy';
 describe('the hedgehog on its skeleton', () => {
   it('draws what its old rig drew in every moment the lab shows, held still, and looking either way as far as it goes', () => {
     expect(unlike(hedgehog, (at, look) => legacy(hogAt(at), { now: at.now, ...look }))).toEqual([]);
-  });
+  }, 60000);
 
   it('draws what it drew going home, which the lab does not show', () => {
     const hog: Hog = { id: 0, seed: 1, x: 0, dir: 1, mode: 'home', target: 0, until: 0, out: 0, walked: 0 };

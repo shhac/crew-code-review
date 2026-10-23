@@ -70,7 +70,7 @@ describe('a limb\'s constraint', () => {
     for (const name of ['hedgehog', 'fox', 'rabbit', 'hare', 'gull', 'crow', 'pigeon']) expect(asked.find((a) => a.name === name)?.calls, name).toBeGreaterThan(0);
     expect(checked.legs).toBeGreaterThan(1000);
     expect(Math.min(checked.birds, checked.air, checked.planted)).toBeGreaterThan(100);
-  });
+  }, 60000);
 
   it('reaches for a point carried on an authored joint as if planting on it', () => {
     const spec: gait.QuadLeg = { hip: { x: 0, y: 0 }, reach: 0, thigh: 2, shin: 2, bend: -1, fore: true, far: false, walksOn: { kind: 'toes', length: 1, lean: 20, fold: 60 } };

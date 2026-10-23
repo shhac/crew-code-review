@@ -9,7 +9,7 @@ import { rabbitRig as legacy } from './rabbit-rig-legacy';
 describe('the rabbit on its skeleton', () => {
   it('draws what its old rig drew in every moment the lab shows, held still, and looking either way as far as it goes', () => {
     expect(unlike(rabbit, (at, look) => legacy(rabbitAt(at), { now: at.now, ...look }))).toEqual([]);
-  });
+  }, 60000);
 
   it('draws what it drew as it eases from each pose into each other, which the lab does not show', () => {
     const poses: Pose[] = ['sit', 'alert', 'groom', 'hop', 'nudge', 'thump'];

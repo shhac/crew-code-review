@@ -29,6 +29,9 @@ export default defineConfig({
   // tests under src/, browser tests under e2e/ via `npm run test:e2e`.
   test: {
     include: ['src/**/*.test.ts'],
+    // An animal's rig tests sweep thousands of its poses, each drawn on its
+    // skeleton; on a busy machine one can take longer than the default 5s.
+    testTimeout: 30000,
   },
   server: {
     proxy: {

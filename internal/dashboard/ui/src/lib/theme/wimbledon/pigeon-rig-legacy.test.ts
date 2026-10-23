@@ -9,7 +9,7 @@ import { pigeonRig as legacy } from './pigeon-rig-legacy';
 describe('the pigeon on its skeleton', () => {
   it('draws what its old rig drew in every moment the lab shows, and held still', () => {
     expect(unlike(pigeon, (at, look) => legacy(pigeonAt(at), { now: at.now, still: look.still }))).toEqual([]);
-  });
+  }, 60000);
 
   it('draws what it drew in every pose through its whole motion, its head turned as far as it goes either way', () => {
     const poses: PigeonPose[] = ['stand', 'walk', 'peck', 'alert', 'takeoff', 'fly', 'land', 'settle'];

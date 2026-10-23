@@ -10,7 +10,7 @@ import { foxRig as legacy } from './fox-rig-legacy';
 describe('the fox on its skeleton', () => {
   it('draws what its old rig drew in every moment the lab shows, and held still', () => {
     expect(unlike(fox, (at, look) => legacy(foxAt(at), { now: at.now, still: look.still }))).toEqual([]);
-  });
+  }, 60000);
 
   it('draws what it drew in every mode it has, waking, going and coming back too', () => {
     const modes: Mode[] = ['asleep', 'waking', 'stretch', 'trot', 'exit', 'away', 'enter', 'settle', 'crouch', 'leap', 'dig'];

@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { svgMatrix } from '../../christmas/parts-affine';
 import type { Point } from '../../pointer';
-import { hareRig } from '../../hares/hare-rig';
+// The hare as it was drawn before its skeleton: its groups are what FK is
+// held to.
+import { hareRig } from '../../hares/hare-rig-legacy';
 import { transformOf, turnAbout, turned, type Layer } from '../rig';
 import { birdWing, foreshortening, wingLayer, type WingArt } from '../wings';
 import { applied, product, type Affine } from './affine';

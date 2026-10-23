@@ -10,7 +10,6 @@ import hareGraze from '../hare-pose-graze.webp';
 import hareLope from '../hare-pose-lope.webp';
 import hareSit from '../hare-pose-sit.webp';
 import hareReference from '../hare-reference.webp';
-import { mammalHead, mammalLeg, mammalSpine } from './bones';
 import type { Moment, RigCritter } from './critter';
 
 const MODES: HarePose[] = ['bound', 'lope', 'graze', 'sit', 'alert', 'box', 'leap', 'stand'];
@@ -30,7 +29,7 @@ const DRAWINGS: Record<string, Drawing<HarePose>> = {
 };
 
 // A leap replays every 0.6s, from take-off to landing.
-const hareAt = ({ mode, walked, now }: Moment): RigHare => ({ pose: MODES.find((m) => m === mode) ?? 'stand', walked, seed: 1, leapt: (now % 600) / 600 });
+export const hareAt = ({ mode, walked, now }: Moment): RigHare => ({ pose: MODES.find((m) => m === mode) ?? 'stand', walked, seed: 1, leapt: (now % 600) / 600 });
 
 export const hare = {
   kind: 'rig',
@@ -43,5 +42,7 @@ export const hare = {
   box: (at) => POSES[hareAt(at).pose],
   gaze: (dir, cursor) => gazeAt(dir, { x: 0, y: 0 }, cursor),
   drawings: DRAWINGS,
-  bones: { legs: mammalLeg, head: mammalHead('ear base', 'eye', 'nose'), spine: mammalSpine(false) },
+  // Before its skeleton was its own, read off the drawing, its spine's
+  // second line ran from the shoulder to the hip.
+  aliases: { SB1: 'SB0' },
 } satisfies RigCritter;

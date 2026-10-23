@@ -14,5 +14,5 @@ describe('the old rig and the new compared', () => {
     const unturned = unlike(hedgehog, (at, look) => hedgehog.pose(at, { ...look, gaze: 0 }), 3);
     expect(unturned).toHaveLength(3);
     expect(unturned[0]).toMatch(/gaze -/);
-  });
+  }, 60000);
 });

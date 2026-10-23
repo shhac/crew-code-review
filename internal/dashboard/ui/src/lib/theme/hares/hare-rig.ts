@@ -1,8 +1,11 @@
 import type { Point } from '../pointer';
-import { beatsFor, flightAt, flightLift, gaitPhase, legsTo, onSoles, restingFeet, stepping, type Gait, type Landings, type Step } from '../rig/gait';
+import { beatsFor, flightAt, flightLift, gaitPhase, onSoles, restingFeet, stepping, type Gait, type Landings, type Step } from '../rig/gait';
 import { gazeFrom } from '../rig/gaze';
 import { blinking, breath } from '../rig/life';
-import { legsAround, lidLayers, turnAbout, turned, type ArtLeg, type Foot, type Frame, type Fur, type Layer, type LimbArt, type RigPose, type Turn } from '../rig/rig';
+import { lidLayers, turnAbout, type ArtLeg, type Foot, type Frame, type Fur, type LimbArt, type RigPose, type Turn } from '../rig/rig';
+import { compose } from '../rig/skeleton/compose';
+import { head, MAMMAL, picture, spine, tetrapod } from '../rig/skeleton/tetrapod';
+import type { Goal } from '../rig/skeleton/types';
 import { hash } from '../seed';
 import bodyArt from './hare-body.webp';
 import earsArt from './hare-ears.webp';
@@ -27,7 +30,7 @@ import upperArmArt from './hare-upper-arm.webp';
 // The brown hare put together from its parts: a torso with its tail, chest
 // and neck, a head over the neck's soft top, its ears behind the head, and
 // four long legs, each made of furred leg art laid along a leg posed in
-// code. Facing right, on the ledge at ANCHOR. The parts were cut from one
+// code, all hung on its skeleton (rig/skeleton). Facing right, on the ledge at ANCHOR. The parts were cut from one
 // drawing of the hare standing square (design-docs/hares/hare-standing.png),
 // and every size and place below is in that drawing's units, as export.py
 // prints them; every picture is on one scale, its eye's.
@@ -231,31 +234,41 @@ function stance(hare: RigHare, look: HareLook): Stance {
 // keeps time, so the jaw, the ears and the forepaws are held too.
 const MOVING: readonly HarePose[] = ['lope', 'bound', 'leap', 'box'];
 
+// Its skeleton: the body turning about its hips (breathing, sat up or
+// alert, with the head inside it), the head on its neck with the ears, eye
+// and nose on it, and each leg from its hip (or shoulder). Drawn with the
+// far legs behind it, the ears behind the head, the near legs' fur over
+// its edge. Its marks on the head turn with the body but never breathe.
+const HARE = tetrapod(MAMMAL, {
+  frame: FRAME,
+  root: 'body',
+  joints: [
+    { id: 'body', parent: null, role: spine(2), at: HIPS, name: 'pelvis (the body turns about its hips)' },
+    { id: 'skull', parent: 'body', role: spine(0), at: NECK, name: 'head joint (neck)' },
+    { id: 'ears', parent: 'skull', role: head(0), at: EAR_BASE, name: 'ear base' },
+    { id: 'eye', parent: 'skull', role: head(1), at: EYE, name: 'eye' },
+    { id: 'nose', parent: 'skull', role: head(2), at: NOSE, name: 'nose' },
+  ],
+  bones: [{ from: 'skull', to: 'body', name: 'neck line (head joint to the hips)' }, { from: 'nose', to: 'skull', name: 'skull' }],
+  legs: LEGS,
+  ground: () => FEET,
+  order: [picture('body', 'body', bodyArt, BODY), picture('ears', 'ears', earsArt, EARS), picture('head', 'skull', headArt, HEAD), 'eyelid'],
+  shapes: [{ id: 'eyelid', on: 'skull' }],
+  guides: (at) => [
+    { name: 'neck', at: 'skull', unsquashed: true }, { name: 'ear base', at: 'ears', unsquashed: true },
+    { name: 'eye', at: 'eye', unsquashed: true }, { name: 'nose', at: 'nose', unsquashed: true },
+    ...LEGS.map((leg) => ({ name: leg.fore ? 'shoulder' : 'hip', at: at(leg, 0) })),
+    ...LEGS.flatMap((leg) => (leg.fore ? ['elbow', 'wrist (carpus)', 'toes'] : ['stifle (knee)', 'hock (ankle)', 'toes']).map((name, k) => ({ name, at: at(leg, k + 1) }))),
+  ],
+});
+
 export function hareRig(hare: RigHare, look: HareLook): RigPose {
   const held = look.still ? { ...look, now: 0, gaze: 0 } : look;
-  const { body, head, ears, legs: specs, feet, steps } = stance(look.still && MOVING.includes(hare.pose) ? { ...hare, pose: 'alert' } : hare, held);
-  const hips = specs.map((s) => turned(body, s.hip));
-  const legs = legsTo(specs, hips, feet(hips), steps);
-  const nod = turnAbout(head, NECK);
+  const { body, head: angle, ears, legs: specs, feet, steps } = stance(look.still && MOVING.includes(hare.pose) ? { ...hare, pose: 'alert' } : hare, held);
   const breathing = hare.pose === 'sit' || hare.pose === 'alert' ? 1 + (look.still ? 0 : 0.02 * breath(hare.seed, look.now, 2400)) : 1;
-  const headLayer: Layer = {
-    kind: 'group', turn: nod,
-    layers: [
-      { kind: 'group', turn: turnAbout(ears, EAR_BASE), layers: [{ kind: 'image', name: 'ears', src: earsArt, ...EARS }] },
-      { kind: 'image', name: 'head', src: headArt, ...HEAD },
-      ...lidLayers(!look.still && blinking(hare.seed, look.now), EYE, 0.75, FACE),
-    ],
-  };
-  return {
-    ...FRAME,
-    layers: legsAround(specs, legs, { kind: 'group', turn: body, scaleY: breathing, layers: [{ kind: 'image', name: 'body', src: bodyArt, ...BODY }, headLayer] }),
-    guides: [
-      { name: 'stands here', at: ANCHOR }, { name: 'neck', at: turned(body, NECK) }, { name: 'ear base', at: turned(body, turned(nod, EAR_BASE)) },
-      { name: 'eye', at: turned(body, turned(nod, EYE)) }, { name: 'nose', at: turned(body, turned(nod, NOSE)) },
-      ...hips.map((at, i) => ({ name: specs[i].fore ? 'shoulder' : 'hip', at })),
-      ...legs.flatMap((l, i) => (specs[i].fore
-        ? [{ name: 'elbow', at: l.knee }, { name: 'wrist (carpus)', at: l.ankle }, { name: 'toes', at: l.foot }]
-        : [{ name: 'stifle (knee)', at: l.knee }, { name: 'hock (ankle)', at: l.ankle }, { name: 'toes', at: l.foot }])),
-    ],
-  };
+  const joints = { body: { squash: { by: breathing } }, skull: { angle }, ears: { angle: ears } };
+  // Each foot on what this pose stands it on: its sole, its toes.
+  const goals = feet(HARE.hips({ root: body, joints })).map((at, i): Goal => ({ kind: 'plant', at, step: steps[i], walksOn: specs[i].walksOn }));
+  const shapes = { eyelid: lidLayers(!look.still && blinking(hare.seed, look.now), EYE, 0.75, FACE) };
+  return compose(HARE.body, () => ({ root: body, joints, limbs: HARE.limbs(goals), show: {}, z: {}, shapes }), look.now);
 }
