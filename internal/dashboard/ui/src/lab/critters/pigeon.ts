@@ -9,7 +9,6 @@ import pigeonTakeoff from '../pigeon-pose-takeoff.webp';
 import pigeonWalkHold from '../pigeon-pose-walk-hold.webp';
 import pigeonWalkThrust from '../pigeon-pose-walk-thrust.webp';
 import pigeonReference from '../pigeon-reference.webp';
-import { BIRD } from './bones';
 import type { Moment, RigCritter } from './critter';
 
 // The feral pigeon of summer tennis: its ground poses on the stage's floor,
@@ -41,7 +40,7 @@ const DRAWINGS: Record<string, Drawing> = {
   land: byEye(pigeonLand, 23.89, 28.28, { x: 20.11, y: 10.22 }, 'land'),
 };
 
-const pigeonAt = ({ mode, now, walked }: Moment): RigPigeon => {
+export const pigeonAt = ({ mode, now, walked }: Moment): RigPigeon => {
   const pick = MODES.find((m) => m.label === mode) ?? MODES[0];
   const time = pick.every ? now % pick.every : now;
   const beat = ((pick.beats ?? 0) * time) / 1000;
@@ -60,5 +59,7 @@ export const pigeon = {
   pose: (at, { still }) => pigeonRig(pigeonAt(at), { now: at.now, still }),
   box: (at) => FOOTPRINTS[pigeonAt(at).pose],
   drawings: DRAWINGS,
-  bones: BIRD,
+  // Before its skeleton was its own, read off the drawing, its spine ran
+  // through its hip (and in the air its shoulder) on the way to the tail.
+  aliases: { SB3: 'SB2', SB4: 'SB2' },
 } satisfies RigCritter;

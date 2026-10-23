@@ -18,6 +18,7 @@ export const decoded = (page: Page, images: Locator = big(page).locator('image')
 })));
 
 // Each wing picture's group transform and whether it is seen: its arm and
-// hand, each with an underside, named `<wing>-arm` and `<wing>-hand`.
+// hand, each with an underside, named `<wing>-arm` and `<wing>-hand`. A
+// wing on a skeleton places each picture by its own matrix.
 export const wings = (page: Page, wing: string) => big(page).locator(`image[href*="${wing}-arm"], image[href*="${wing}-hand"]`).evaluateAll((els) =>
-  els.map((el) => `${el.closest('g')?.parentElement?.parentElement?.getAttribute('transform')} ${el.getAttribute('visibility') ?? 'visible'}`));
+  els.map((el) => `${el.getAttribute('transform') ?? el.closest('g')?.parentElement?.parentElement?.getAttribute('transform')} ${el.getAttribute('visibility') ?? 'visible'}`));

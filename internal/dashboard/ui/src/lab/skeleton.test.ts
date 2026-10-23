@@ -1,15 +1,16 @@
 import { describe, expect, it } from 'vitest';
+import { rabbitRig as rabbitDrawnAsBefore } from '../lib/theme/easter/rabbit-rig-legacy';
 import type { Point } from '../lib/theme/pointer';
 import { turnAbout, type DrawnLeg, type RigPose } from '../lib/theme/rig/rig';
+import { pigeonRig as pigeonDrawnAsBefore } from '../lib/theme/wimbledon/pigeon-rig-legacy';
 import { bee } from './critters/bee';
+import { BIRD, mammalHead, mammalLeg, mammalSpine } from './critters/bones';
 import { crow } from './critters/crow';
-import { pigeon } from './critters/pigeon';
 import { gull } from './critters/gull';
 import { hawk } from './critters/hawk';
-import { CRITTERS } from './critters/registry';
-import { rabbitRig as rabbitDrawnAsBefore } from '../lib/theme/easter/rabbit-rig-legacy';
-import { mammalHead, mammalLeg, mammalSpine } from './critters/bones';
+import { pigeonAt } from './critters/pigeon';
 import { rabbitAt } from './critters/rabbit';
+import { CRITTERS } from './critters/registry';
 import { layColumns, legendOf, litBy, parseCode, skeletonFromPosed, skeletonOf, type BoneNames, type Skeleton } from './skeleton';
 
 const at = (mode: string, now = 1300) => ({ mode, now, walked: 1.3 });
@@ -108,7 +109,7 @@ describe('skeletonOf', () => {
     expect(s.joints.filter((j) => j.code.startsWith('L0')).map((j) => j.name)).toEqual(['shoulder', 'wrist', 'wingtip']);
     expect(s.bones.filter((b) => b.code.startsWith('S')).map((b) => [b.from, b.to])).toEqual([['SJ0', 'L0J0'], ['L0J0', 'SJ1'], ['SJ1', 'L2J0'], ['L2J0', 'SJ2']]);
     expect(s.joints.filter((j) => /^[SH]/.test(j.code)).map((j) => j.name)).toEqual(['head joint', 'body pivot', 'tail root', 'jaw hinge (lower mandible)']);
-    const walking = skeletonOf(pigeon.pose(at('stand'), look), pigeon.bones);
+    const walking = skeletonOf(pigeonDrawnAsBefore(pigeonAt(at('stand')), { now: at('stand').now, still: false }), BIRD);
     expect(walking.joints.filter((j) => j.code.startsWith('S')).map((j) => j.name)).toEqual(['head joint', 'neck base', 'body pivot', 'tail root']);
     expect(skeletonOf(crow.pose(at('walk'), look), crow.bones).bones.filter((b) => b.code.startsWith('S'))).toHaveLength(3);
     // The hawk's tail is drawn in its body's group, so has no pivot of its own.

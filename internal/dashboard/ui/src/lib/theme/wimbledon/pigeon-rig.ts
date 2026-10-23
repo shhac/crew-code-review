@@ -1,11 +1,15 @@
-import { apart, degrees, mix, smooth } from '../math';
+import { apart, mix, smooth } from '../math';
 import type { Point } from '../pointer';
-import { AIR_LEGS, airLegsTo, birdJointGuides, birdLegsTo, birdWalk, feetLine, headBob, plantedLegs, stepRise, type AirLegs, type BirdLeg } from '../rig/bird';
-import { stepping, type Limb } from '../rig/gait';
+import { AIR_LEGS, BIRD_JOINTS, birdWalk, curledIn, feetLine, headBob, stepRise, type AirLegs, type BirdLeg } from '../rig/bird';
+import { stepping, type Step } from '../rig/gait';
 import { gazeFrom } from '../rig/gaze';
 import { blinking, breath } from '../rig/life';
-import { imageLayer, legsAround, lidLayers, turnAbout, turned, type Frame, type Fur, type Layer, type LimbArt, type RigPose, type Turn } from '../rig/rig';
-import { birdWing, flaring, flapping, settling, takingOff, wingPoint, type Flap, type FlightPose, type WingArt, type WingPose } from '../rig/wings';
+import { lidLayers, turnAbout, type Frame, type Fur, type LimbArt, type RigPose, type Turn } from '../rig/rig';
+import { compose } from '../rig/skeleton/compose';
+import { rootsOf } from '../rig/skeleton/forward';
+import type { Body, Goal, JointPose, JointSpec, LimbSpec, Piece, PoseSpec, Role, Skeleton } from '../rig/skeleton/types';
+import { wingOf } from '../rig/skeleton/wing';
+import { flaring, flapping, settling, takingOff, type Flap, type FlightPose, type WingArt, type WingPose } from '../rig/wings';
 import armUnderArt from './pigeon-arm-under.webp';
 import armArt from './pigeon-arm.webp';
 import bodyArt from './pigeon-body.webp';
@@ -30,7 +34,8 @@ import foldedArt from './pigeon-wing.webp';
 // legs and walk with its head bob, rig/wings.ts's wings and flight poses):
 // a body with the folded wing laid over it, a head over its neck, a tail
 // closed or fanned, two legs posed in code, and in the air two wings each of
-// an arm and a hand. Facing right, on the ledge at ANCHOR.
+// an arm and a hand, all hung on its skeleton (rig/skeleton). Facing
+// right, on the ledge at ANCHOR.
 //
 // The parts were cut from one drawing of the pigeon standing square
 // (design-docs/wimbledon/pigeon-standing-2.png), and the drawing units are
@@ -156,27 +161,23 @@ const NECK_ROOT = { x: 14.5, y: 9.5 };
 // body's cut, which stays where it is as the neck stretches.
 const NECK_TOP = { x: 17.05, y: 4.7 };
 const NECK_FROM = { x: 16.9, y: 7.35 };
-const NECK_LENGTH = apart(NECK_ROOT, NECK_TOP);
-const NECK_HELD = ((NECK_FROM.x - NECK_ROOT.x) * (NECK_TOP.x - NECK_ROOT.x) + (NECK_FROM.y - NECK_ROOT.y) * (NECK_TOP.y - NECK_ROOT.y)) / NECK_LENGTH;
-// How far from straight up the line from a point to another leans.
-const lean = (from: Point, to: Point) => degrees(Math.atan2(to.x - from.x, from.y - to.y));
-// Stood up along the line from its root to its top, stretched along it
-// from the body's cut, and leant over to where the head has gone.
-function neckLayer(head: Turn, fur: boolean): Layer {
-  const top = turned(head, NECK_TOP);
-  const piece = fur ? imageLayer('neck, fur', neckFurArt, NECK_PIECE) : imageLayer('neck', neckArt, NECK_PIECE);
-  const stood: Layer = { kind: 'group', turn: turnAbout(-lean(NECK_ROOT, NECK_TOP), NECK_ROOT), layers: [piece] };
-  const stretched: Layer = {
-    kind: 'group', turn: turnAbout(0, { x: NECK_ROOT.x, y: NECK_ROOT.y - NECK_HELD }),
-    foreshorten: (apart(NECK_ROOT, top) - NECK_HELD) / (NECK_LENGTH - NECK_HELD), layers: [stood],
-  };
-  return { kind: 'group', turn: turnAbout(lean(NECK_ROOT, top), NECK_ROOT), layers: [stretched] };
-}
+const NECK_HELD = ((NECK_FROM.x - NECK_ROOT.x) * (NECK_TOP.x - NECK_ROOT.x) + (NECK_FROM.y - NECK_ROOT.y) * (NECK_TOP.y - NECK_ROOT.y)) / apart(NECK_ROOT, NECK_TOP);
 
-const headLayer = (pigeon: RigPigeon, look: PigeonLook, head: Turn): Layer => ({
-  kind: 'group', turn: head,
-  layers: [imageLayer('head', headArt, HEAD), ...lidLayers(!look.still && blinking(pigeon.seed, look.now), EYE, 0.45, MEMBRANE)],
-});
+// The draw order. The legs start inside the body, the hips high in it: the
+// far leg drawn behind it, outlined then as fur alone, the near outlined
+// behind it too and its fur over its edge (or, tucked up in flight, into
+// the belly feathers, behind it). In the air the far wing is behind it all,
+// the near over it all.
+const Z = { farLegs: 0, farFur: 1, nearLegs: 2, tucked: 2.5, farWing: 3, tail: 4, tailFan: 5, neck: 6, body: 7, neckFur: 8, folded: 9, head: 10, eyelid: 11, nearWing: 12, nearFur: 13 } as const;
+
+// Stood along the line from its root to its top, stretched along it from
+// the body's cut, and turned to where the head has gone: a span from the
+// body to the head.
+const NECK_SPAN: Piece = {
+  id: 'neck', art: { drawn: { src: neckArt, fur: neckFurArt, box: NECK_PIECE } },
+  at: { kind: 'span', from: { on: 'body', at: NECK_ROOT }, to: { on: 'skull', at: NECK_TOP }, art: { from: NECK_ROOT, to: NECK_TOP }, fixed: NECK_HELD },
+  draws: [{ id: 'neck', z: Z.neck }, { id: 'neck, fur', z: Z.neckFur, fur: true }],
+};
 
 // A peck, `t` through it: the head goes down in steps, stopping to fixate,
 // then a last quick thrust to the ground, and back up (Ostheim et al.
@@ -188,8 +189,11 @@ function pecking(t: number): { body: number; head: number; down: number } {
   return { body: 25 * k, head: 45 * k, down: k };
 }
 
-type Ground = { body: Turn; head: Turn; limbs: (hips: readonly Point[]) => Limb[]; tail: number };
-const planted = (hips: readonly Point[]) => plantedLegs(LEGS, hips, FEET);
+// How it stands on the ledge: the body's turn, the head's (at its neck)
+// or, pecking, the head and neck's together (at the neck's base), each
+// foot's goal from where its hip is, and the tail's turn.
+type Ground = { body: Turn; skull: JointPose; neck: JointPose; goals: (hips: readonly Point[]) => Goal[]; tail: number };
+const planted = (hips: readonly Point[]): Goal[] => LEGS.map((leg, i) => ({ kind: 'plant', at: { x: hips[i].x + leg.reach, y: FEET } }));
 
 // On the ledge: standing, walking with the head bob, pecking or alert.
 function onGround(pigeon: RigPigeon, look: PigeonLook): Ground {
@@ -198,18 +202,18 @@ function onGround(pigeon: RigPigeon, look: PigeonLook): Ground {
   // room it has under whatever is above it.
   const gaze = look.still ? 0 : Math.max(-LOOK_UP, pigeon.gaze ?? 0);
   if (look.still || pigeon.pose === 'stand' || pigeon.pose === 'settle') {
-    return { body: turnAbout(0, MIDDLE, 0, -breathe), head: turnAbout(gaze, NECK), limbs: planted, tail: 0 };
+    return { body: turnAbout(0, MIDDLE, 0, -breathe), skull: { angle: gaze }, neck: {}, goals: planted, tail: 0 };
   }
   if (pigeon.pose === 'alert') {
     // Standing tall and sleek, the neck stretched up as far as the ledge's
     // room allows, so it looks only down.
-    return { body: turnAbout(-4, HIPS), head: turnAbout(Math.max(0, gaze) - 4, NECK, 0.3, -1.5), limbs: planted, tail: 0 };
+    return { body: turnAbout(-4, HIPS), skull: { angle: Math.max(0, gaze) - 4, shift: { x: 0.3, y: -1.5 } }, neck: {}, goals: planted, tail: 0 };
   }
   if (pigeon.pose === 'peck') {
     const p = pecking(pigeon.t);
     // The head and its neck swing down together from the base of the neck,
     // the neck stretching to reach the ground.
-    return { body: turnAbout(p.body, HIPS), head: turnAbout(p.head, NECK_BASE, 2.5 * p.down, 2.9 * p.down), limbs: planted, tail: -6 * p.down };
+    return { body: turnAbout(p.body, HIPS), skull: {}, neck: { angle: p.head, shift: { x: 2.5 * p.down, y: 2.9 * p.down } }, goals: planted, tail: -6 * p.down };
   }
   const walked = pigeon.walked / SCALE;
   // The body rides up over each planted leg; the head thrusts forward just
@@ -219,8 +223,9 @@ function onGround(pigeon: RigPigeon, look: PigeonLook): Ground {
   const { feet, steps } = stepping(LEGS, walked, FEET, WALK);
   return {
     body: turnAbout(0, MIDDLE, 0, -rise),
-    head: turnAbout(0, NECK, headBob(walked, WALK, THRUST), rise),
-    limbs: (hips) => birdLegsTo(LEGS, hips, feet(hips), steps, GROUND),
+    skull: { angle: 0, shift: { x: headBob(walked, WALK, THRUST), y: rise } },
+    neck: {},
+    goals: (hips) => feet(hips).map((at, i) => ({ kind: 'plant', at, step: steps[i], ground: GROUND })),
     tail: 0,
   };
 }
@@ -237,61 +242,125 @@ function inAir(pigeon: RigPigeon): FlightPose {
   }
 }
 
-// The tail, closed or fanned; `level` turns it back against the body's
-// pitch (a little more than all of it), so a body swung up to brake keeps
-// its tail out over the ledge rather than through it.
-const tailLayers = (fan: number, level = 0): Layer[] => [
-  { kind: 'group', turn: turnAbout(level, TAIL_ROOT), layers: [imageLayer('tail', tailArt, TAIL, fan >= 0.5)] },
-  { kind: 'group', turn: turnAbout(level - 2 * fan, TAIL_ROOT), layers: [imageLayer('tail, fanned', tailFanArt, TAIL_FAN, fan < 0.5)] },
-];
+// Its skeleton: the body, which turns about its middle or its hips; the
+// neck's base on it, the head on the neck, the eye on the head; the tail
+// at its root, its fanned feathers turning further about the same point;
+// each leg from its hip high in the body; and, in the air, the wings.
+const spine = (index: number): Role => ({ part: 'spine', index });
+const LEG_NAMES = [BIRD_JOINTS.hip, BIRD_JOINTS.knee, BIRD_JOINTS.ankle, BIRD_JOINTS.foot, 'toe tip'] as const;
+const LEG_BONES = ['femur (inside the body)', 'tibiotarsus (drumstick)', 'tarsometatarsus', 'toes'] as const;
+const codeOf = (leg: BirdLeg) => (leg.far ? 'L3' : 'L2');
+function legJoints(leg: BirdLeg): JointSpec[] {
+  const code = codeOf(leg);
+  const role = (index: 0 | 1 | 2 | 3 | 4): Role => ({ part: 'limb', pair: 1, side: leg.far ? 'far' : 'near', index });
+  const tip = { x: leg.hip.x + leg.reach + TOES.width - TOES.heel.x, y: FEET + TOES.height - TOES.heel.y };
+  return ([0, 1, 2, 3, 4] as const).map((k) => ({
+    id: `${code}J${k}`, parent: k ? `${code}J${k - 1}` : 'body', role: role(k), at: k === 4 ? tip : leg.hip, name: LEG_NAMES[k], ...(k ? { derived: true } : {}),
+  }));
+}
+const legBones = (leg: BirdLeg) => LEG_BONES.map((name, k) => ({ from: `${codeOf(leg)}J${k}`, to: `${codeOf(leg)}J${k + 1}`, name }));
+const limbOf = (leg: BirdLeg): LimbSpec => {
+  const code = codeOf(leg);
+  const { hip, far, fore, ...spec } = leg;
+  return { id: code, pair: 1, side: far ? 'far' : 'near', ground: FEET, solve: 'bird', joints: { root: `${code}J0`, middle: `${code}J1`, lower: `${code}J2`, end: `${code}J3`, tip: `${code}J4` }, leg: spec };
+};
+// A leg's pieces from the knee, its femur in the body: the drumstick, the
+// bare tarsus, then the toes over its end, spread or drawn together.
+function legPieces(leg: BirdLeg): Piece[] {
+  const code = codeOf(leg);
+  const side = leg.far ? 'far' : 'near';
+  const [outlined, fur] = leg.far ? [Z.farLegs, Z.farFur] : [Z.nearLegs, Z.nearFur];
+  const draws = (id: string, flush = false) => [{ id, z: outlined, part: `${side} legs` }, { id: `${id}, fur`, z: fur, fur: true, flush, part: `${side} legs, fur` }];
+  const box = (f: typeof TOES) => ({ x: -f.heel.x, y: -f.heel.y, width: f.width, height: f.height });
+  return [
+    { id: `${code}B1`, side, art: { drawn: { src: thighArt, fur: thighFurArt } }, at: { kind: 'bar', from: `${code}J1`, to: `${code}J2`, thick: leg.haunch ?? leg.width }, draws: draws(`${code}B1`, true) },
+    { id: `${code}B2`, side, art: { drawn: { src: shankArt, fur: shankFurArt } }, at: { kind: 'bar', from: `${code}J2`, to: `${code}J3`, thick: leg.width }, draws: draws(`${code}B2`) },
+    {
+      id: `${code} foot`, side, hide: 'opacity', at: { kind: 'joint', to: `${code}J3`, local: true }, draws: draws(`${code} foot`),
+      art: { toes: { src: TOES.src, fur: TOES.fur, box: box(TOES) }, curled: { src: CURLED.src, fur: CURLED.fur, box: box(CURLED) } },
+    },
+  ];
+}
+const NEAR_WING = wingOf({ art: WING, side: 'near', parent: 'body', root: NEAR_SHOULDER, tip: TIP, z: Z.nearWing });
+const FAR_WING = wingOf({ art: WING, side: 'far', parent: 'body', root: FAR_SHOULDER, tip: TIP, z: Z.farWing });
+const skeletonOf = (wings: boolean): Skeleton => ({
+  joints: [
+    { id: 'body', parent: null, role: spine(2), at: MIDDLE, name: 'body pivot (its middle, or its hips)' },
+    { id: 'neck base', parent: 'body', role: spine(1), at: NECK_BASE, name: 'neck base' },
+    { id: 'skull', parent: 'neck base', role: spine(0), at: NECK, name: 'head joint' },
+    { id: 'eye', parent: 'skull', role: { part: 'head', index: 0 }, at: EYE, name: 'eye' },
+    { id: 'tail', parent: 'body', role: spine(3), at: TAIL_ROOT, name: 'tail root' },
+    { id: 'tail fan', parent: 'tail', role: spine(4), at: TAIL_ROOT, name: 'tail, fanned (turned further about its root)' },
+    ...(wings ? [...FAR_WING.joints, ...NEAR_WING.joints] : []),
+    ...LEGS.flatMap(legJoints),
+  ],
+  bones: [
+    { from: 'skull', to: 'neck base', name: 'neck line' }, { from: 'neck base', to: 'body', name: 'back line' }, { from: 'body', to: 'tail', name: 'pelvis line (to the tail root)' },
+    ...(wings ? [...FAR_WING.bones, ...NEAR_WING.bones] : []),
+    ...LEGS.flatMap(legBones),
+  ],
+  limbs: LEGS.map(limbOf),
+});
+// What it is on the ledge, and in the air, its wings out.
+const bodyOf = (wings: boolean): Body => ({
+  frame: FRAME,
+  skeleton: skeletonOf(wings),
+  pieces: [
+    ...LEGS.flatMap(legPieces),
+    ...(wings ? FAR_WING.pieces : []),
+    { id: 'tail', art: { drawn: { src: tailArt, box: TAIL } }, at: { kind: 'joint', to: 'tail' }, draws: [{ id: 'tail', z: Z.tail }] },
+    { id: 'tail, fanned', art: { drawn: { src: tailFanArt, box: TAIL_FAN } }, at: { kind: 'joint', to: 'tail fan' }, draws: [{ id: 'tail, fanned', z: Z.tailFan }] },
+    NECK_SPAN,
+    { id: 'body', art: { drawn: { src: bodyArt, box: BODY } }, at: { kind: 'joint', to: 'body' }, draws: [{ id: 'body', z: Z.body }] },
+    { id: 'folded wing', art: { drawn: { src: foldedArt, box: FOLDED_WING } }, at: { kind: 'joint', to: 'body' }, draws: [{ id: 'folded wing', z: Z.folded }] },
+    { id: 'head', art: { drawn: { src: headArt, box: HEAD } }, at: { kind: 'joint', to: 'skull' }, draws: [{ id: 'head', z: Z.head }] },
+    ...(wings ? NEAR_WING.pieces : []),
+  ],
+  shapes: [{ id: 'eyelid', on: 'skull', z: Z.eyelid }],
+  guides: [
+    ...(wings ? [{ name: 'shoulder', at: NEAR_WING.ids.shoulder }, { name: 'wrist', at: NEAR_WING.ids.wrist }, { name: 'wingtip', at: NEAR_WING.ids.tip }] : [{ name: 'eye', at: 'eye' }]),
+    ...LEGS.flatMap((leg) => [0, 1, 2, 3].map((k) => ({ name: LEG_NAMES[k], at: `${codeOf(leg)}J${k}` }))),
+  ],
+  titles: { L0: 'wing', L1: 'wing', L2: 'leg', L3: 'leg' },
+});
+const ON_GROUND = bodyOf(false);
+const IN_AIR = bodyOf(true);
+// Tucked up in flight, its near leg's fur is drawn behind the body too.
+const TUCKED = Object.fromEntries(legPieces(LEGS[1]).flatMap((p) => p.draws.filter((d) => d.fur).map((d) => [d.id, Z.tucked])));
+
+// Its toes drawn together while a foot swings (bird.ts's curledIn), or
+// while a leg in the air is not reaching to land.
+const curled = (goal: Goal) => (goal.kind === 'air' ? goal.reach < 0.6 : curledIn(goal.kind === 'plant' ? goal.step : undefined));
+const feetShown = (goals: readonly Goal[]) => Object.fromEntries(LEGS.map((leg, i) => [`${codeOf(leg)} foot`, curled(goals[i]) ? 'curled' : 'toes']));
+const eyelid = (pigeon: RigPigeon, look: PigeonLook) => ({ eyelid: lidLayers(!look.still && blinking(pigeon.seed, look.now), EYE, 0.45, MEMBRANE) });
+const limbsOf = (goals: readonly Goal[]) => Object.fromEntries(LEGS.map((leg, i) => [codeOf(leg), goals[i]]));
 
 function flying(pigeon: RigPigeon, look: PigeonLook): RigPose {
   const pose = inAir(pigeon);
   const body = turnAbout(-pose.pitch, HIPS);
-  const hips = LEGS.map((s) => turned(body, s.hip));
-  const limbs = pose.airborne ? airLegsTo(LEGS, hips, pose.legs, PIGEON_AIR) : planted(hips);
   const folded = pose.wings.fold > 120;
-  const bodyLayers: Layer[] = [
-    birdWing(WING, pose.wings, FAR_SHOULDER, true, 0, !folded),
-    ...tailLayers(pose.tail, 1.3 * pose.pitch),
-    neckLayer(turnAbout(0, NECK), false),
-    imageLayer('body', bodyArt, BODY),
-    neckLayer(turnAbout(0, NECK), true),
-    imageLayer('folded wing', foldedArt, FOLDED_WING, !folded),
-    headLayer(pigeon, look, turnAbout(0, NECK)),
-    birdWing(WING, pose.wings, NEAR_SHOULDER, false, 0, !folded),
-  ];
-  const [farLegs, farFur, nearLegs, drawn, nearFur] = legsAround(LEGS, limbs, { kind: 'group', turn: body, layers: bodyLayers });
-  // Tucked up in flight, its feet are drawn into the belly feathers.
+  const [far, near] = [FAR_WING.pose(pose.wings, 0, !folded), NEAR_WING.pose(pose.wings, 0, !folded)];
+  // The tail is turned back against the body's pitch (a little more than
+  // all of it), so a body swung up to brake keeps its tail out over the
+  // ledge rather than through it, and fanned as far as the pose has it.
+  const joints = { ...far.joints, ...near.joints, tail: { angle: 1.3 * pose.pitch }, 'tail fan': { angle: -2 * pose.tail } };
+  const roots = rootsOf(IN_AIR.skeleton, { root: body, joints });
+  const hips = LEGS.map((leg) => roots.get(codeOf(leg)) ?? leg.hip);
+  const goals: Goal[] = pose.airborne ? LEGS.map(() => ({ kind: 'air', reach: pose.legs, legs: PIGEON_AIR })) : planted(hips);
   const tucked = pose.airborne && Math.abs(pose.legs) < 0.25;
-  return {
-    ...FRAME,
-    layers: tucked ? [farLegs, farFur, nearLegs, nearFur, drawn] : [farLegs, farFur, nearLegs, drawn, nearFur],
-    guides: [
-      { name: 'stands here', at: ANCHOR }, { name: 'shoulder', at: turned(body, NEAR_SHOULDER) },
-      { name: 'wrist', at: turned(body, wingPoint(WING, pose.wings, NEAR_SHOULDER, WING.wrist, false)) },
-      { name: 'wingtip', at: turned(body, wingPoint(WING, pose.wings, NEAR_SHOULDER, TIP, true)) }, ...birdJointGuides(limbs),
-    ],
-  };
+  const show: PoseSpec['show'] = { ...far.show, ...near.show, ...feetShown(goals), tail: pose.tail >= 0.5 ? false : 'drawn', 'tail, fanned': pose.tail < 0.5 ? false : 'drawn', 'folded wing': folded ? 'drawn' : false };
+  return compose(IN_AIR, () => ({ root: body, joints, limbs: limbsOf(goals), show, z: tucked ? TUCKED : {}, shapes: eyelid(pigeon, look) }), look.now);
 }
 
 export function pigeonRig(pigeon: RigPigeon, look: PigeonLook): RigPose {
   const grounded = ['stand', 'walk', 'peck', 'alert'].includes(pigeon.pose);
   if (!grounded && !look.still) return flying(pigeon, look);
-  const { body, head, limbs, tail } = onGround(pigeon, look);
-  const hips = LEGS.map((s) => turned(body, s.hip));
-  const legs = limbs(hips);
-  const layers: Layer[] = [
-    { kind: 'group', turn: turnAbout(tail, TAIL_ROOT), layers: tailLayers(0) },
-    neckLayer(head, false), imageLayer('body', bodyArt, BODY), neckLayer(head, true),
-    imageLayer('folded wing', foldedArt, FOLDED_WING), headLayer(pigeon, look, head),
-  ];
-  return {
-    ...FRAME,
-    // The legs start inside the body, the hips high in it.
-    layers: legsAround(LEGS, legs, { kind: 'group', turn: body, layers }),
-    guides: [{ name: 'stands here', at: ANCHOR }, { name: 'eye', at: turned(body, turned(head, EYE)) }, ...birdJointGuides(legs)],
-  };
+  const { body, skull, neck, goals: goalsAt, tail } = onGround(pigeon, look);
+  const joints = { 'neck base': neck, skull, tail: { angle: tail } };
+  const roots = rootsOf(ON_GROUND.skeleton, { root: body, joints });
+  const goals = goalsAt(LEGS.map((leg) => roots.get(codeOf(leg)) ?? leg.hip));
+  const show: PoseSpec['show'] = { ...feetShown(goals), 'tail, fanned': false };
+  return compose(ON_GROUND, () => ({ root: body, joints, limbs: limbsOf(goals), show, z: {}, shapes: eyelid(pigeon, look) }), look.now);
 }
 
 // How far its head turns toward something close by: a cursor, or a ball

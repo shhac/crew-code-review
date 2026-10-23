@@ -19,7 +19,7 @@ function moments(pose: PigeonPose): RigPose[] {
 }
 const most = (rigs: readonly RigPose[], of: (r: RigPose) => number) => Math.max(...rigs.map(of));
 const below = (r: RigPose) => (rigBounds(r).bottom - r.anchor.y) * r.scale;
-const seen = (pose: RigPose, name: string) => flatLayers(pose.layers).some((l: Layer) => l.kind === 'image' && l.name === name && !l.hidden);
+const seen = (pose: RigPose, name: string) => flatLayers(pose.layers).some((l: Layer) => (l.kind === 'image' || l.kind === 'piece') && l.name === name && !l.hidden);
 const at = (pose: RigPose, name: string) => guideAt(pose, name) ?? { x: NaN, y: NaN };
 
 describe('pigeon rig', () => {
