@@ -89,7 +89,10 @@ export const liftOf = (rig: RigCritter, mode: string): number => (typeof rig.lif
 
 export const drawingsOf = (critter: Critter): Record<string, Drawing> => (critter.kind === 'rig' ? critter.drawings : undefined) ?? {};
 
-// Every pose it takes over its modes' first few seconds, so a layer seen
-// only now and then (an eyelid, mid-blink) is among them.
-export const posesOf = (rig: RigCritter): RigPose[] => rig.modes.flatMap((mode) =>
-  Array.from({ length: 120 }, (_, i) => rig.pose({ mode, now: i * 40, walked: i * 0.5 }, { gaze: 0, still: false })));
+// The moments over its modes' first few seconds, so a layer seen only now
+// and then (an eyelid, mid-blink) is drawn in one of them.
+export const momentsOf = (rig: RigCritter): Moment[] => rig.modes.flatMap((mode) =>
+  Array.from({ length: 120 }, (_, i) => ({ mode, now: i * 40, walked: i * 0.5 })));
+
+// Every pose it takes in those moments.
+export const posesOf = (rig: RigCritter): RigPose[] => momentsOf(rig).map((at) => rig.pose(at, { gaze: 0, still: false }));

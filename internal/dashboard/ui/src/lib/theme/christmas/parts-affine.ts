@@ -11,10 +11,12 @@ const multiply = (a: Affine, b: Affine): Affine => [
 // geometric attachment checks use this same interpretation.
 export function svgMatrix(transform: string) {
   let result = identity;
-  for (const [, operation, values] of transform.matchAll(/(translate|rotate|scale)\(([^)]+)\)/g)) {
-    const [x, y = operation === 'scale' ? x : 0, z = 0] = values.trim().split(/[ ,]+/).map(Number);
+  for (const [, operation, values] of transform.matchAll(/(translate|rotate|scale|matrix)\(([^)]+)\)/g)) {
+    const numbers = values.trim().split(/[ ,]+/).map(Number);
+    const [x, y = operation === 'scale' ? x : 0, z = 0] = numbers;
     let next: Affine;
-    if (operation === 'translate') next = [1, 0, 0, 1, x, y];
+    if (operation === 'matrix') next = [numbers[0], numbers[1], numbers[2], numbers[3], numbers[4], numbers[5]];
+    else if (operation === 'translate') next = [1, 0, 0, 1, x, y];
     else if (operation === 'scale') next = [x, 0, 0, y, 0, 0];
     else {
       const c = Math.cos(x * Math.PI / 180), s = Math.sin(x * Math.PI / 180);
