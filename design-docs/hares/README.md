@@ -71,6 +71,23 @@ is lowered and retuned to keep the forefeet reachable and the drawing
 inside its existing footprint. Tests cover all three bone lengths and the
 knees/hocks throughout a whole stride, including the original frame flip.
 
+**The forefoot's slope (2026-10-23).** The forefoot's bone (wrist to the
+toes' piece) asks for a 30 degree forward lean, but the shared hinge kept
+it on the elbow's side of the line from the shoulder to the paw, so
+standing and sitting it stood upright or a degree or two back (2 to -1.5
+degrees) and the wrist sat over or ahead of the toes. A lagomorph stands
+on its fore toes with the metacarpals sloping down and forward from the
+carpus (about 37 degrees in the mounted rabbit skeleton measured for the
+Easter rabbit, design-docs/easter/README.md; no hare mount was found to
+measure), so the hinge now keeps a planted foot's bone behind its toes on
+every leg and folds a lifted paw to the elbow's side, moving over as it
+lifts. The hare's forefeet now stand at their 30 degrees (27 to 30
+standing, sitting, grazing and alert; at least 20 through a lope's or a
+bound's stance) and its hind feet up on their toes at 35 standing, 20 to
+52 through a stance, unchanged: the hind legs kept their sector. Boxing, its forepaws
+are off the ground and are drawn as they were. A rig test holds every
+planted foot's joint above it behind its toes.
+
 The thigh artwork has explicit joint anchors at 25% and 88% of its width:
 the hip inside the rounded haunch and the knee inside the narrow tip.
 Both outline and fur map those centres to the same bone endpoints. The old

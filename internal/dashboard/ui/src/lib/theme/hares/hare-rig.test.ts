@@ -111,6 +111,22 @@ describe('hare rig', () => {
     expect(running.ankle.y).toBeLessThan(running.foot.y - 2);
   });
 
+  // A hare stands on its fore toes as a rabbit does: the metacarpus slopes
+  // down and forward from the wrist (design-docs/hares/README.md), never
+  // back, which would read as a second wrist; a hind foot up on its toes
+  // has its hock behind them too.
+  it('stands each planted foot with the joint above it behind the toes, the bone sloping down and forward', () => {
+    const slope = (leg: { ankle: { x: number; y: number }; foot: { x: number; y: number } }) =>
+      (Math.atan2(leg.foot.x - leg.ankle.x, leg.foot.y - leg.ankle.y) * 180) / Math.PI;
+    for (const pose of POSE_NAMES) for (const rig of moments(pose)) {
+      legsOf(rig).forEach((leg, i) => {
+        if (solesOf(rig)[i] < SOLE - 1e-3) return;
+        expect(leg.ankle.x, `${pose}, leg ${i}`).toBeLessThan(leg.foot.x);
+        expect(slope(leg), `${pose}, leg ${i}`).toBeGreaterThan(i % 2 ? 20 : 10);
+      });
+    }
+  });
+
   it('keeps all three bones the same length through every pose', () => {
     for (const pose of POSE_NAMES) {
       for (const rig of moments(pose)) {
