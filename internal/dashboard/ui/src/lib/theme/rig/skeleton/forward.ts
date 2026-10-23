@@ -28,7 +28,7 @@ export const local = (j: Pick<JointSpec, 'at'>, p: JointPose = {}): Affine => {
 // A limb's root takes its parent's turn and shift but never its squash, as
 // a hip does today, turned by the body's Turn outside its breathing group
 // (hare-rig.ts's hips). `carried` is each joint's frame with every squash
-// above it and its own left out, for its limb roots.
+// and foreshortening above it and its own left out, for its limb roots.
 type Frames = { world: ReadonlyMap<string, Affine>; carried: ReadonlyMap<string, Affine> };
 
 // `trailing`, where a joint lags: what it turns by (a matrix without a
@@ -61,7 +61,7 @@ function framesOf(skeleton: Skeleton, pose: Posing, trailing: (j: JointSpec) => 
     const at = applied(own, j.at);
     const placed = lag ? product(translate(at.x, at.y), lag, translate(-j.at.x, -j.at.y)) : own;
     world.set(j.id, placed);
-    carried.set(j.id, lag ? placed : product(aboveCarried, p.squash ? local(j, { ...p, squash: undefined }) : turned));
+    carried.set(j.id, lag ? placed : product(aboveCarried, p.squash || p.foreshorten !== undefined ? local(j, { ...p, squash: undefined, foreshorten: undefined }) : turned));
   });
   return { world, carried };
 }

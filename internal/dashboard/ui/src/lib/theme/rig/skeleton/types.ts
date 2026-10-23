@@ -152,8 +152,9 @@ export type Body = {
 
 // The skeleton as a pose has it, for the lab and the tests: each joint where
 // it is drawn, coded by its role; each bone, by its joints' ids, and how
-// long it is now with every squash above it taken out; each limb as the solvers posed it, whether it is a
-// foreleg, and how low its foot reaches.
+// long it is now with every squash and foreshortening above it taken out;
+// each limb as the solvers posed it, whether it is a foreleg, and how low
+// its foot reaches.
 export type PosedJoint = { id: string; code: string; name: string; at: Point; derived: boolean; far: boolean; parent: string | null; angle: number; limits?: { min: number; max: number } };
 export type PosedBone = { code: string; name: string; from: string; to: string; far: boolean; length: number; stretch?: { min: number; max: number } };
 export type PosedLimb = { id: string; code: string; limb: Limb; fore: boolean; sole: number };

@@ -37,8 +37,9 @@ const shown = (d: PlanDraw) => d.visible && d.opacity > 0;
 // it); otherwise each leg piece. A skeleton's bones are measured with the
 // squashes of the joints above them taken out: a breath squashes everything
 // hung from the body, the tail's bones with it, but it is not a stretch,
-// and a bone should not have to declare one to breathe. Only a bone that
-// stretches in its own right (a neck span) declares it.
+// and a bone should not have to declare one to breathe; nor is a wing seen
+// edge-on, foreshortened, shorter. Only a bone that stretches in its own
+// right (a neck span) declares it.
 const bonesKeepLength: Law = ({ moving }) => {
   const first = new Map<string, number>();
   const broken = new Map<string, string>();
