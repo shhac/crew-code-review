@@ -107,7 +107,7 @@ export type Art = { src: string; box: Box; fur?: string };
 
 export type Attachment =
   // A joint's frame. Box in rest space, or `local` in the joint's own frame
-  // (a foot's box from its heel).
+  // (a foot's box from its heel, turned with the foot's paw).
   | { kind: 'joint'; to: string; local?: boolean }
   // A bone's frame, rigid: origin at `from`, x along the bone, the art
   // carried from its rest pose without stretching.

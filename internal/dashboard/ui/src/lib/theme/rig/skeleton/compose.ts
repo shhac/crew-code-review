@@ -34,7 +34,9 @@ const apart = (a: Point, b: Point) => Math.hypot(b.x - a.x, b.y - a.y);
 
 // What a skeleton has at rest, worked out once: each joint's rest point
 // (an owned one's from its limb's standing solve) and each limb standing.
-type Rest = { points: ReadonlyMap<string, Point>; limbs: ReadonlyMap<string, Limb> };
+// A limb's foot and its toes' tip have frames of their own turned by the
+// paw they stand at (`turns`), as a foot's box is turned from its heel.
+type Rest = { points: ReadonlyMap<string, Point>; limbs: ReadonlyMap<string, Limb>; turns: ReadonlyMap<string, number> };
 const rests = new WeakMap<Skeleton, Rest>();
 function restOf(skeleton: Skeleton): Rest {
   const had = rests.get(skeleton);
@@ -50,7 +52,11 @@ function restOf(skeleton: Skeleton): Rest {
     ownedPoints(skeleton, limb, stood, stood).forEach((p, id) => points.set(id, p));
     return [limb.id, stood];
   }));
-  const rest = { points, limbs };
+  const turns = new Map(skeleton.limbs.flatMap((limb) => {
+    const paw = limbs.get(limb.id)?.paw ?? 0;
+    return [limb.joints.end, ...(limb.joints.tip ? [limb.joints.tip] : [])].map((id) => [id, paw] as const);
+  }));
+  const rest = { points, limbs, turns };
   rests.set(skeleton, rest);
   return rest;
 }
@@ -107,7 +113,7 @@ function orderOf(body: Body, z: PoseSpec['z']): readonly Slot[] {
   return order;
 }
 
-type Posed = { frame: (id: string) => Affine; point: (id: string) => Point; rest: (id: string) => Point; handle: (h: Handle) => Point };
+type Posed = { frame: (id: string) => Affine; point: (id: string) => Point; rest: (id: string) => Point; turn: (id: string) => number; handle: (h: Handle) => Point };
 
 // Where an attachment puts its art: the matrix from the art's own space (rest
 // space, or a joint's own frame, or a bar's), and the point its extra pose
@@ -118,7 +124,9 @@ function placing(at: Attachment, posed: Posed): Placing {
     case 'joint': {
       const frame = posed.frame(at.to);
       const rest = posed.rest(at.to);
-      return at.local ? { matrix: product(frame, translate(rest.x, rest.y)), anchor: { x: 0, y: 0 } } : { matrix: frame, anchor: rest };
+      if (!at.local) return { matrix: frame, anchor: rest };
+      const turn = posed.turn(at.to);
+      return { matrix: turn ? product(frame, translate(rest.x, rest.y), rotate(turn)) : product(frame, translate(rest.x, rest.y)), anchor: { x: 0, y: 0 } };
     }
     case 'bone': {
       const [from, to, wasFrom, wasTo] = [posed.point(at.from), posed.point(at.to), posed.rest(at.from), posed.rest(at.to)];
@@ -257,7 +265,7 @@ export function compose(body: Body, poseAt: (now: number) => PoseSpec, now: numb
     if (had === undefined) throw new Error(`skeleton: no joint ${id}`);
     return had;
   };
-  const posed: Posed = { frame: found(frameMap), point: found(pointMap), rest: restAt, handle: on((id) => frameMap.get(id)) };
+  const posed: Posed = { frame: found(frameMap), point: found(pointMap), rest: restAt, turn: (id) => rest.turns.get(id) ?? 0, handle: on((id) => frameMap.get(id)) };
   // Where each joint would be with no squash anywhere above it: what a
   // bone's length is measured between (a limb's own joints are posed from
   // its root, which never takes one).

@@ -60,13 +60,13 @@ const restOf = (skeleton: Skeleton, id: string): Point => {
 };
 
 // Where the joints the limb owns are, as it is posed: the toes' tip carried
-// on the foot, turned with the paw from where it is drawn at rest.
+// on the foot, turned with the paw from where it is at rest.
 export function ownedPoints(skeleton: Skeleton, limb: LimbSpec, rest: Limb, now: Limb): Map<string, Point> {
   const { middle, lower, end, tip } = limb.joints;
   const points = new Map<string, Point>([[middle, now.knee], [lower, now.ankle], [end, now.foot]]);
   if (!tip) return points;
   const toes = restOf(skeleton, tip);
-  return points.set(tip, turnPoint(plus(now.foot, { x: toes.x - rest.foot.x, y: toes.y - rest.foot.y }), now.foot, now.paw));
+  return points.set(tip, turnPoint(plus(now.foot, { x: toes.x - rest.foot.x, y: toes.y - rest.foot.y }), now.foot, now.paw - rest.paw));
 }
 
 const SAME = 1e-9;

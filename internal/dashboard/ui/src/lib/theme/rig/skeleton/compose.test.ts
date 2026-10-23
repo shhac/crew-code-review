@@ -3,10 +3,12 @@ import { render } from 'svelte/server';
 import type { Point } from '../../pointer';
 import { legsTo, type QuadLeg } from '../gait';
 import Rig from '../Rig.svelte';
-import { legImages, lidLayers, stillPicture, turnAbout, turned, type DrawnLeg, type Frame, type Layer, type LimbArt, type RigPose } from '../rig';
+import { legImages, lidLayers, stillPicture, turnAbout, turned, type ArtLeg, type DrawnLeg, type Frame, type Layer, type LimbArt, type RigPose } from '../rig';
 import { rigBounds } from '../test-rig';
 import { compose } from './compose';
 import { rootsOf } from './forward';
+import { standing } from './limbs';
+import { limbPieces } from './tetrapod';
 import { wholePicture } from './picture';
 import { planDiff, planOf } from './plan';
 import type { Body, JointSpec, LimbSpec, Piece, PoseSpec, Skeleton } from './types';
@@ -232,5 +234,35 @@ describe('shapes, guides and a whole picture', () => {
     const ball = { name: 'ball', src: 'ball.webp', width: 9, height: 8 };
     const picture = wholePicture(FRAME, ball);
     for (const squash of [1, 1.04]) expect(planDiff(planOf(picture(squash)), planOf(stillPicture(FRAME, ball, squash)))).toEqual([]);
+  });
+});
+
+describe('an arm whose fist is turned at rest', () => {
+  const HAND = { src: 'hand.webp', fur: 'hand-fur.webp', width: 2.4, height: 2, heel: { x: 0.35, y: 1 } };
+  const art: LimbArt = { bone: 'arm.webp', boneFur: 'arm-fur.webp', thigh: { src: 'arm.webp', fur: 'arm-fur.webp' }, knee: true, foot: HAND };
+  const SHOULDER = { x: 10, y: 10 };
+  const limb: LimbSpec = { id: 'L0', pair: 0, side: 'near', joints: { root: 'L0J0', middle: 'L0J1', lower: 'L0J2', end: 'L0J3', tip: 'L0J4' }, ground: 14, solve: 'arm', leg: { thigh: 2.5, shin: 2.4, reach: 1 } };
+  const rest = standing(limb, SHOULDER);
+  const role = (index: 0 | 1 | 2 | 3 | 4) => ({ part: 'limb', pair: 0, side: 'near', index }) as const;
+  const tipAt = { x: rest.foot.x + 1.1 * Math.cos((rest.paw * Math.PI) / 180), y: rest.foot.y + 1.1 * Math.sin((rest.paw * Math.PI) / 180) };
+  const skeleton: Skeleton = {
+    joints: [joint('body', null, { x: 12, y: 12 }), joint('L0J0', 'body', SHOULDER, { role: role(0) }), ...([1, 2, 3] as const).map((k) => joint(`L0J${k}`, `L0J${k - 1}`, SHOULDER, { role: role(k), derived: true })), joint('L0J4', 'L0J3', tipAt, { role: role(4), derived: true })],
+    bones: [], limbs: [limb],
+  };
+  const leg: ArtLeg = { hip: SHOULDER, reach: 1, thigh: 2.5, shin: 2.4, bend: 1, fore: true, far: false, art, width: 1.9, haunch: 1.9 };
+  const body: Body = { frame: FRAME, skeleton, pieces: limbPieces(leg, 'L0', { outlined: 0, fur: 1 }) };
+
+  it('lays its fist turned with it from its wrist, as a foot\'s box is, and carries its grip along the fist', () => {
+    expect(rest.paw).not.toBeCloseTo(0, 1);
+    for (const [at, side] of [[{ x: 13, y: 11 }, 1], [{ x: 8, y: 13.5 }, -1]] as const) {
+      const pose = drawn(body, posing({ limbs: { L0: { kind: 'plant', at, side } } }));
+      const posed = pose.skeleton?.limbs[0].limb;
+      if (!posed) throw new Error('no arm');
+      const old = drawing([false, true].map((fur) => ({ kind: 'legs', name: 'near arm', legs: [{ limb: posed, art, width: 1.9, haunch: 1.9, fore: true, taper: false }], far: false, fur })));
+      expect(same(pose, old)).toEqual([]);
+      const grip = pose.skeleton?.joints.find((j) => j.id === 'L0J4')?.at;
+      const want = { x: posed.foot.x + 1.1 * Math.cos((posed.paw * Math.PI) / 180), y: posed.foot.y + 1.1 * Math.sin((posed.paw * Math.PI) / 180) };
+      expect([grip?.x, grip?.y]).toEqual([expect.closeTo(want.x, 9), expect.closeTo(want.y, 9)]);
+    }
   });
 });
