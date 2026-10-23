@@ -110,24 +110,27 @@ export type Draw = { id: string; z: number; fur?: boolean; flush?: boolean };
 // each of its draws, those not shown unseen (`hide`: at opacity 0, as a
 // curled foot is, rather than hidden), so showing one never reloads it.
 // `extra`: a pose of its own about its anchor (its joint, its bone's or
-// span's root), on top of its attachment.
-export type Piece = {
+// span's root, its bar's start), on top of its attachment. A bar's art has
+// no box of its own: bone() lays it from the bar's ends.
+type PieceOf<A extends Attachment, Arts> = {
   id: string;
-  art: Readonly<Record<string, Art>>;
-  at: Attachment;
+  art: Readonly<Record<string, Arts>>;
+  at: A;
   draws: readonly Draw[];
   side?: Side;
   hide?: 'opacity';
   extra?: (now: number, seed: number) => JointPose;
 };
+export type Piece = PieceOf<Exclude<Attachment, { kind: 'bar' }>, Art> | PieceOf<Extract<Attachment, { kind: 'bar' }>, Omit<Art, 'box'>>;
 
 // An animal built on a skeleton: its frame, its bones, its parts.
 export type Body = { frame: Frame; skeleton: Skeleton; pieces: readonly Piece[] };
 
 // The skeleton as a pose has it, for the lab and the tests: each joint where
-// it is drawn, coded by its role; each bone; each limb as the solvers posed
-// it, whether it is a foreleg, and how low its foot reaches.
-export type PosedJoint = { id: string; code: string; name: string; at: Point; derived: boolean; far: boolean; parent: string | null; angle: number };
-export type PosedBone = { code: string; name: string; from: string; to: string; far: boolean };
+// it is drawn, coded by its role; each bone, by its joints' ids, and how
+// long it is now; each limb as the solvers posed it, whether it is a
+// foreleg, and how low its foot reaches.
+export type PosedJoint = { id: string; code: string; name: string; at: Point; derived: boolean; far: boolean; parent: string | null; angle: number; limits?: { min: number; max: number } };
+export type PosedBone = { code: string; name: string; from: string; to: string; far: boolean; length: number; stretch?: { min: number; max: number } };
 export type PosedLimb = { id: string; code: string; limb: Limb; fore: boolean; sole: number };
 export type PosedSkeleton = { joints: readonly PosedJoint[]; bones: readonly PosedBone[]; limbs: readonly PosedLimb[] };

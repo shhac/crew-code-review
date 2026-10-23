@@ -2,6 +2,8 @@ import { degrees } from '../math';
 import type { Point } from '../pointer';
 import { rotate } from '../spidergait';
 import type { Limb, QuadLeg } from './gait';
+import type { Affine } from './skeleton/affine';
+import type { PosedSkeleton } from './skeleton/types';
 
 // An animal drawn from parts: generated images for the body, head and tail,
 // and for leg pieces stretched along legs posed in code, with eyelids drawn
@@ -78,7 +80,12 @@ export type Layer =
   // turning out of the page's plane is seen at a slant (a wing beating about
   // the body's long axis); negative flips it over. Unlike a breath's
   // `scaleY`, the drawing's bounds count it.
-  | { kind: 'group'; turn: Turn; scaleY?: number; opacity?: number; foreshorten?: number; layers: readonly Layer[] };
+  | { kind: 'group'; turn: Turn; scaleY?: number; opacity?: number; foreshorten?: number; layers: readonly Layer[] }
+  // A part hung from a skeleton (skeleton/compose.ts): its picture in its
+  // box, placed by one matrix, stretched to the box where `aspect` is
+  // 'none'. `id` names its paint slot, which keeps its place in the drawing
+  // from frame to frame.
+  | { kind: 'piece'; id: string; name: string; src: string; box: { x: number; y: number; width: number; height: number }; aspect: 'none' | 'default'; matrix: Affine; far?: boolean; hidden?: boolean; opacity?: number };
 
 // A part's picture laid in its box in the drawing; `hidden`, drawn but
 // unseen (see Layer).
@@ -87,7 +94,8 @@ export const imageLayer = (name: string, src: string, box: { x: number; y: numbe
 
 // Guides: where its joints are, for the lab and the debug overlay to mark.
 export type Guide = { name: string; at: Point };
-export type RigPose = { width: number; height: number; anchor: Point; scale: number; layers: readonly Layer[]; guides?: readonly Guide[] };
+// `skeleton`: where an animal built on one has its joints now.
+export type RigPose = { width: number; height: number; anchor: Point; scale: number; layers: readonly Layer[]; guides?: readonly Guide[]; skeleton?: PosedSkeleton };
 // A rig's box, the point in it standing on the ledge, and its page scale.
 export type Frame = Pick<RigPose, 'width' | 'height' | 'anchor' | 'scale'>;
 
@@ -207,7 +215,7 @@ export function stillPicture(frame: Frame, art: { name: string; src: string; wid
 // rest by what they draw.
 export function layerName(layer: Exclude<Layer, { kind: 'group' }>): string {
   switch (layer.kind) {
-    case 'image': return layer.name;
+    case 'image': case 'piece': return layer.name;
     case 'legs': return `${layer.name}${layer.fur ? ', fur' : ''}`;
     case 'lid': return 'eyelid';
     case 'stroke': return layer.name;

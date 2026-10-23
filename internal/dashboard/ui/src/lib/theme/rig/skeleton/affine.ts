@@ -27,6 +27,13 @@ export const rotate = (angle: number): Affine => {
 };
 export const scale = (x: number, y: number): Affine => [x, 0, 0, y, 0, 0];
 
+// The matrix undoing m.
+export const inverse = (m: Affine): Affine => {
+  const det = m[0] * m[3] - m[1] * m[2];
+  const [a, b, c, d] = [m[3] / det, -m[1] / det, -m[2] / det, m[0] / det];
+  return [a, b, c, d, -(a * m[4] + c * m[5]), -(b * m[4] + d * m[5])];
+};
+
 // What a matrix does without moving anything: the same about the origin.
 export const linear = (m: Affine): Affine => [m[0], m[1], m[2], m[3], 0, 0];
 // How far it turns the x axis (degrees).

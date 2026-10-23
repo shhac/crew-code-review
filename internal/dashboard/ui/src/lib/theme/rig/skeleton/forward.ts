@@ -19,7 +19,7 @@ const squashing = (q?: JointPose['squash']): Affine => {
   return product(rotate(q.axis), scale(1, q.by), rotate(-q.axis));
 };
 
-export const local = (j: JointSpec, p: JointPose = {}): Affine => {
+export const local = (j: Pick<JointSpec, 'at'>, p: JointPose = {}): Affine => {
   const shift = p.shift ?? { x: 0, y: 0 };
   return product(translate(j.at.x + shift.x, j.at.y + shift.y), foreshortening(p.foreshorten), rotate(p.angle ?? 0), squashing(p.squash), translate(-j.at.x, -j.at.y));
 };

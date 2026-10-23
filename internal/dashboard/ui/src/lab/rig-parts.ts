@@ -21,7 +21,7 @@ export const allPartNames = (poses: readonly RigPose[]): string[] => poses.map(p
 // pieces by bone and foot.
 export const partArt = (pose: RigPose): { name: string; src: string }[] => [...new Map(artOf(pose).map((a) => [a.name, a])).values()];
 const artOf = (pose: RigPose): { name: string; src: string }[] => leaves(pose.layers).flatMap((l) => {
-  if (l.kind === 'image') return [{ name: l.name, src: l.src }];
+  if (l.kind === 'image' || l.kind === 'piece') return [{ name: l.name, src: l.src }];
   if (l.kind !== 'legs' || l.far || l.fur) return [];
   return l.legs.flatMap(({ art, fore }) => {
     const thigh = art.thigh ? [{ name: 'upper leg', src: art.thigh.src }, { name: 'upper leg, fur', src: art.thigh.fur }] : [];
