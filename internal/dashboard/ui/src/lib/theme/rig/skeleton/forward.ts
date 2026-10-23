@@ -8,7 +8,7 @@
 //   local(j) = T(at + shift) F(foreshorten) R(angle) Q(squash) T(-at)
 import type { Point } from '../../pointer';
 import { applied, IDENTITY, product, rotate, scale, translate, turnMatrix, type Affine } from './affine';
-import type { JointPose, JointSpec, PoseSpec, Skeleton } from './types';
+import type { Handle, JointPose, JointSpec, PoseSpec, Skeleton } from './types';
 
 const foreshortening = (f?: number): Affine => (f === undefined ? IDENTITY : scale(1, f));
 
@@ -80,4 +80,12 @@ export function rootsOf(skeleton: Skeleton, pose: Posing): ReadonlyMap<string, P
     if (!root || !m) throw new Error(`skeleton: ${limb.id} has no root ${limb.joints.root}`);
     return [limb.id, applied(m, root.at)];
   }));
+}
+
+// Where a handle on an authored joint is, the pose drawn.
+export function handleAt(skeleton: Skeleton, pose: Posing, handle: Handle): Point {
+  const [id, at] = typeof handle === 'string' ? [handle, skeleton.joints.find((j) => j.id === handle)?.at] : [handle.on, handle.at];
+  const m = forward(skeleton, pose).get(id);
+  if (!m || !at) throw new Error(`skeleton: nothing places ${id} before the limbs`);
+  return applied(m, at);
 }

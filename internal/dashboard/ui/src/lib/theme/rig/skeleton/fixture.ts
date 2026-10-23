@@ -136,7 +136,7 @@ export const BODY: Body = {
 };
 
 // Each limb's goal: stepping or standing, its foot curled while it is up.
-function poseOf(at: Moment): PoseSpec {
+export function poseOf(at: Moment): PoseSpec {
   const s = stanceOf(at);
   const hips = LEGS.map((l) => turned(s.body, l.hip));
   const feet = s.feet(hips);
