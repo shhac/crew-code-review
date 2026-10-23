@@ -19,7 +19,7 @@
   import { drawingFor, overlay } from './drawings';
   import { allPartNames, keepParts, partArt } from './rig-parts';
   import Skeleton from './Skeleton.svelte';
-  import { parseCode, skeletonOf, type Placed } from './skeleton';
+  import { parseCode, skeletonFromPosed, skeletonOf, type Placed } from './skeleton';
   import SkeletonLegend from './SkeletonLegend.svelte';
 
   let critter: Critter = CRITTERS[0];
@@ -87,7 +87,7 @@
   $: lift = rig ? liftOf(rig, mode) : 0;
   $: apart = view ? view.apart(mode) : 'pieces';
   $: placed = !skeleton ? null
-    : rig && pose ? { skeleton: skeletonOf(pose, rig.bones ?? {}), view: { x: 0, y: 0, width: pose.width, height: pose.height }, anchor: pose.anchor, scale: pose.scale }
+    : rig && pose ? { skeleton: pose.skeleton ? skeletonFromPosed(pose.skeleton) : skeletonOf(pose, rig.bones ?? {}), view: { x: 0, y: 0, width: pose.width, height: pose.height }, anchor: pose.anchor, scale: pose.scale }
     : viewBones;
 
   function choose(c: Critter) {

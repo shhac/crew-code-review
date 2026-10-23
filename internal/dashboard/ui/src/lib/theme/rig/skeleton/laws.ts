@@ -3,6 +3,7 @@
 // registered rather than given its own copy of each check. A law returns
 // what breaks it, each a line saying where; none when it holds.
 import type { Point } from '../../pointer';
+import type { Limb } from '../gait';
 import { piecesOf, type DrawnLeg, type RigPose } from '../rig';
 import { flatLayers, pageReach, rigBounds, solesOf } from '../test-rig';
 import { planDiff, type Plan, type PlanDraw } from './plan';
@@ -18,27 +19,43 @@ export type Law = (watched: Watched) => string[];
 
 const EPSILON = 1e-6;
 const where = (s: Seen) => `${s.mode} at ${s.now}${s.still ? ', motion reduced' : ''}`;
-const legsIn = (pose: RigPose): DrawnLeg[] => flatLayers(pose.layers).flatMap((l) => (l.kind === 'legs' && !l.fur ? [...l.legs] : []));
 const length = (a: Point, b: Point) => Math.hypot(b.x - a.x, b.y - a.y);
+// Each leg as posed, in the order legsOf and solesOf list them, and whether
+// it stands on its toes, a bone rising from them to the hock or wrist.
+type Leg = { limb: Limb; toes: boolean };
+const drawnLegs = (pose: RigPose): DrawnLeg[] => flatLayers(pose.layers).flatMap((l) => (l.kind === 'legs' && !l.fur ? [...l.legs] : []));
+const legsIn = (pose: RigPose): Leg[] => (pose.skeleton
+  ? pose.skeleton.limbs.map(({ limb }) => ({ limb, toes: length(limb.ankle, limb.foot) > EPSILON }))
+  : drawnLegs(pose).map(({ limb, art }) => ({ limb, toes: art.knee && length(limb.ankle, limb.foot) > EPSILON })));
 const downIn = (s: Seen) => solesOf(s.pose).map((y) => y >= s.pose.anchor.y - EPSILON);
 // The moments of one mode in turn, each with the one before it.
 const pairs = (seen: readonly Seen[]) => seen.slice(1).flatMap((s, i) => (seen[i].mode === s.mode ? [[seen[i], s] as const] : []));
 const shown = (d: PlanDraw) => d.visible && d.opacity > 0;
 
-// Each leg piece keeps its length (no bone declares a stretch yet), from
-// the first moment it is drawn.
+// Each bone keeps its length, from the first moment it is drawn: on a
+// skeleton, every bone not declaring a stretch (one that does stays within
+// it); otherwise each leg piece.
 const bonesKeepLength: Law = ({ moving }) => {
   const first = new Map<string, number>();
   const broken = new Map<string, string>();
-  moving.forEach((s) => legsIn(s.pose).forEach((leg, i) => piecesOf(leg).forEach((p, k) => {
-    const key = `leg ${i} piece ${k} (${p.src.split('/').pop()})`;
-    const now = length(p.from, p.to);
+  const keep = (key: string, now: number, s: Seen, stretch?: { min: number; max: number }) => {
     const was = first.get(key);
     if (was === undefined) first.set(key, now);
-    else if (Math.abs(now - was) > EPSILON && !broken.has(key)) broken.set(key, `${key}: ${was.toFixed(4)} then ${now.toFixed(4)} ${where(s)}`);
-  })));
+    const out = stretch ? now < stretch.min - EPSILON || now > stretch.max + EPSILON : was !== undefined && Math.abs(now - was) > EPSILON;
+    if (out && !broken.has(key)) broken.set(key, `${key}: ${(was ?? now).toFixed(4)} then ${now.toFixed(4)} ${where(s)}`);
+  };
+  moving.forEach((s) => {
+    if (s.pose.skeleton) return s.pose.skeleton.bones.forEach((b) => keep(`${b.code} (${b.name})`, b.length, s, b.stretch));
+    drawnLegs(s.pose).forEach((leg, i) => piecesOf(leg).forEach((p, k) => keep(`leg ${i} piece ${k} (${p.src.split('/').pop()})`, length(p.from, p.to), s)));
+  });
   return [...broken.values()];
 };
+
+// Every joint with limits keeps its turn within them.
+const limitsHold: Law = ({ moving, still }) => [...moving, ...still].flatMap((s) => (s.pose.skeleton?.joints ?? []).flatMap((j) => {
+  if (!j.limits || (j.angle >= j.limits.min && j.angle <= j.limits.max)) return [];
+  return [`${j.code} (${j.name}) turned ${j.angle.toFixed(2)} ${where(s)}`];
+}));
 
 // A foot down and flat in two moments running stays where it is on the
 // ledge, which moves back under the animal by how far it has walked.
@@ -59,8 +76,7 @@ const plantedFeetHold: Law = ({ moving }) => pairs(moving).flatMap(([a, b]) => {
 // has that joint behind the toes and not below them.
 const anklesBehindToes: Law = ({ moving }) => moving.flatMap((s) => {
   const down = downIn(s);
-  return legsIn(s.pose).flatMap(({ limb, art }, i) => {
-    const toes = art.knee && length(limb.ankle, limb.foot) > EPSILON;
+  return legsIn(s.pose).flatMap(({ limb, toes }, i) => {
     if (!toes || !down[i]) return [];
     const behind = limb.ankle.x < limb.foot.x && limb.ankle.y <= limb.foot.y + EPSILON;
     return behind ? [] : [`leg ${i} ankle at (${limb.ankle.x.toFixed(2)}, ${limb.ankle.y.toFixed(2)}), toes at (${limb.foot.x.toFixed(2)}, ${limb.foot.y.toFixed(2)}) ${where(s)}`];
@@ -124,5 +140,5 @@ const stillHolds: Law = ({ still }) => [...new Set(still.map((s) => s.mode))].fl
   return [...(blink ? [`blinks ${where(blink)}`] : []), ...(moved ? [`moves ${where(moved)}`] : [])];
 });
 
-export const LAWS = { bonesKeepLength, plantedFeetHold, anklesBehindToes, noFootBelowLedge, footprintsHold, everyPieceDrawn, oneVariantShows, farBeforeBody, stillHolds } as const satisfies Record<string, Law>;
+export const LAWS = { bonesKeepLength, limitsHold, plantedFeetHold, anklesBehindToes, noFootBelowLedge, footprintsHold, everyPieceDrawn, oneVariantShows, farBeforeBody, stillHolds } as const satisfies Record<string, Law>;
 export type LawName = keyof typeof LAWS;

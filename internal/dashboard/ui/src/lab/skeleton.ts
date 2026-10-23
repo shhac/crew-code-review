@@ -26,6 +26,7 @@
 // by that code.
 import type { Point } from '../lib/theme/pointer';
 import { footInUse, turnAbout, turned, type DrawnLeg, type Guide, type Layer, type RigPose } from '../lib/theme/rig/rig';
+import type { PosedSkeleton } from '../lib/theme/rig/skeleton/types';
 
 export type Joint = { code: string; name: string; at: Point; far: boolean };
 // From joint to joint, by their codes.
@@ -282,6 +283,27 @@ export function skeletonOf(pose: RigPose, names: BoneNames): Skeleton {
   const used = (g: Guide) => withWings.joints.some((j) => same(j.at, g.at));
   const left = found.marks.filter((g) => !used(g));
   return chain(withWings, { ...found, marks: left }, { joints: left.map((g) => ({ mark: g.name })) }, 'O', 'other marks');
+}
+
+const TITLES: Readonly<Record<string, string>> = { S: 'spine', H: 'head', W0: 'near wing', W1: 'far wing', O: 'other marks' };
+
+// An animal built on a skeleton says where its joints are itself
+// (RigPose's `skeleton`), coded by what each is, so nothing is read off the
+// drawing: its parts by their codes, a joint its limb's constraint placed
+// marked as derived.
+export function skeletonFromPosed(posed: PosedSkeleton): Skeleton {
+  const groupOf = (code: string) => code.replace(/[JB]\d+$/, '');
+  const codes = new Map(posed.joints.map((j) => [j.id, j.code]));
+  const joints = posed.joints.map((j) => ({ code: j.code, name: j.derived ? `${j.name} (derived)` : j.name, at: j.at, far: j.far }));
+  const bones = posed.bones.map((b) => ({ code: b.code, name: b.name, from: codes.get(b.from) ?? b.from, to: codes.get(b.to) ?? b.to, far: b.far }));
+  const title = (code: string) => {
+    const limb = posed.limbs.find((l) => l.code === code);
+    if (limb) return `${side(Number(code.slice(1)) % 2 === 1)} ${limb.fore ? 'foreleg' : 'hind leg'}`;
+    return TITLES[code] ?? code;
+  };
+  const order = [...new Set(joints.map((j) => groupOf(j.code)))].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+  const groups = order.map((code) => ({ code, title: title(code), far: joints.filter((j) => groupOf(j.code) === code).every((j) => j.far) }));
+  return { groups, joints, bones };
 }
 
 // A code's part and kind, and its place: L0B2 is limb L0's bone 2.
