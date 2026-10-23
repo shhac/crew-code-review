@@ -4,10 +4,11 @@
 // limb owns. FK never places those. Each owned joint's frame turns with its
 // bone from where the limb stands at rest (its standing solve), the foot's
 // with the paw, so a part hung on one follows it.
-import { degrees } from '../../math';
+import { degrees, rad } from '../../math';
 import type { Point } from '../../pointer';
 import { rotate as turnPoint } from '../../spidergait';
 import { airLegsTo, birdLegsTo, type BirdLeg } from '../bird';
+import { jointBeside } from '../limb';
 import { legsTo, type Limb, type QuadLeg } from '../gait';
 import { product, rotate, translate, type Affine } from './affine';
 import type { Goal, Handle, LimbSpec, Skeleton } from './types';
@@ -22,12 +23,26 @@ const plus = (p: Point, by: Point = { x: 0, y: 0 }): Point => ({ x: p.x + by.x, 
 
 // The limb posed from `root` (its J0 now) toward its goal; `handle` finds
 // a reach's target, which may only be an authored joint or a point on one.
+const direction = (from: Point, to: Point) => degrees(Math.atan2(to.y - from.y, to.x - from.x));
+const along = (from: Point, deg: number, length: number): Point => ({ x: from.x + Math.cos(rad(deg)) * length, y: from.y + Math.sin(rad(deg)) * length });
+
 export function solveLimb(limb: LimbSpec, root: Point, goal: Goal, handle: (h: Handle) => Point): Limb {
+  if (limb.solve === 'angles') {
+    if (goal.kind !== 'angles') throw new Error(`skeleton: ${limb.id} is posed by angles`);
+    const knee = along(root, 90 - goal.swing, limb.leg.thigh);
+    const foot = along(knee, 90 - (goal.swing - goal.bend), limb.leg.shin);
+    return { hip: root, knee, ankle: foot, foot, paw: goal.paw };
+  }
+  if (goal.kind === 'angles') throw new Error(`skeleton: ${limb.id} is not posed by angles`);
   if (goal.kind === 'air') {
     if (limb.solve !== 'bird') throw new Error(`skeleton: ${limb.id} has no legs in the air`);
     return airLegsTo([birdOf(limb, root)], [root], goal.reach, goal.legs)[0];
   }
   const at = goal.kind === 'plant' ? goal.at : plus(handle(goal.to), goal.by);
+  if (limb.solve === 'arm') {
+    const knee = jointBeside(root, at, limb.leg.thigh, limb.leg.shin, goal.side ?? 1);
+    return { hip: root, knee, ankle: at, foot: at, paw: direction(knee, at) };
+  }
   const steps = goal.step ? [goal.step] : [];
   if (limb.solve === 'bird') return birdLegsTo([birdOf(limb, root)], [root], [at], steps, goal.kind === 'plant' ? goal.ground : undefined)[0];
   const quad = quadOf(limb, root);
@@ -36,7 +51,7 @@ export function solveLimb(limb: LimbSpec, root: Point, goal: Goal, handle: (h: H
 
 // Standing at rest: its foot down `reach` ahead of its root, on its ground.
 export const standing = (limb: LimbSpec, root: Point): Limb =>
-  solveLimb(limb, root, { kind: 'plant', at: { x: root.x + limb.leg.reach, y: limb.ground } }, () => root);
+  solveLimb(limb, root, limb.solve === 'angles' ? { kind: 'angles', swing: 0, bend: 0, paw: 0 } : { kind: 'plant', at: { x: root.x + limb.leg.reach, y: limb.ground } }, () => root);
 
 const restOf = (skeleton: Skeleton, id: string): Point => {
   const joint = skeleton.joints.find((j) => j.id === id);
@@ -54,7 +69,6 @@ export function ownedPoints(skeleton: Skeleton, limb: LimbSpec, rest: Limb, now:
   return points.set(tip, turnPoint(plus(now.foot, { x: toes.x - rest.foot.x, y: toes.y - rest.foot.y }), now.foot, now.paw));
 }
 
-const direction = (from: Point, to: Point) => degrees(Math.atan2(to.y - from.y, to.x - from.x));
 const SAME = 1e-9;
 
 // Each owned joint's frame, mapping rest space (as the limb stands) to the

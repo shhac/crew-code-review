@@ -18,6 +18,7 @@ import { pigeonRig } from '../../wimbledon/pigeon-rig-legacy';
 import type { Point } from '../../pointer';
 import * as bird from '../bird';
 import * as gait from '../gait';
+import { jointBeside } from '../limb';
 import { applied, translate } from './affine';
 import { ownedFrames, ownedPoints, solveLimb, standing } from './limbs';
 import type { LimbSpec, Skeleton } from './types';
@@ -110,6 +111,29 @@ describe('a limb standing otherwise in one pose', () => {
     const goal = { kind: 'plant', at: { x: 0.5, y: 5 }, step: { down: false, t: 0.3 }, walksOn: soles.walksOn } as const;
     expect(solveLimb(quad(spec), { x: 0, y: 0 }, goal, nowhere)).toEqual(gait.legsTo([soles], [{ x: 0, y: 0 }], [goal.at], [goal.step])[0]);
     expect(solveLimb(quad(spec), { x: 0, y: 0 }, goal, nowhere)).not.toEqual(solveLimb(quad(spec), { x: 0, y: 0 }, { ...goal, walksOn: undefined }, nowhere));
+  });
+});
+
+describe('an arm, and a limb posed by angles', () => {
+  const limb = (solve: 'arm' | 'angles'): LimbSpec => ({ id: 'L0', pair: 0, side: 'near', joints: OWNED, ground: 10, solve, leg: { thigh: 2.5, shin: 2.4, reach: 1 } });
+  const along = (from: Point, deg: number, length: number): Point => ({ x: from.x + Math.cos((deg * Math.PI) / 180) * length, y: from.y + Math.sin((deg * Math.PI) / 180) * length });
+
+  it('bends an arm\'s elbow to the side it is asked to, as jointBeside does, its fist along the forearm', () => {
+    for (const side of [1, -1] as const) {
+      const root = { x: 1, y: 2 }, at = { x: 4, y: 3.5 };
+      const knee = jointBeside(root, at, 2.5, 2.4, side);
+      const arm = solveLimb(limb('arm'), root, { kind: 'plant', at, side }, nowhere);
+      expect(arm).toEqual({ hip: root, knee, ankle: at, foot: at, paw: (Math.atan2(at.y - knee.y, at.x - knee.x) * 180) / Math.PI });
+    }
+  });
+
+  it('swings a limb from its root and bends its lower bone back, as the cupid\'s legs are, hanging straight down at rest', () => {
+    const root = { x: 1, y: 2 };
+    const knee = along(root, 90 - 20, 2.5);
+    expect(solveLimb(limb('angles'), root, { kind: 'angles', swing: 20, bend: 45, paw: 85 }, nowhere)).toEqual({ hip: root, knee, ankle: along(knee, 90 - (20 - 45), 2.4), foot: along(knee, 90 - (20 - 45), 2.4), paw: 85 });
+    const rest = standing(limb('angles'), root);
+    expect([rest.foot.x, rest.foot.y]).toEqual([expect.closeTo(1, 9), expect.closeTo(2 + 4.9, 9)]);
+    expect(() => solveLimb(limb('angles'), root, { kind: 'plant', at: root }, nowhere)).toThrow(/angles/);
   });
 });
 

@@ -320,7 +320,7 @@ export function rabbitRig(rabbit: RigRabbit, look: RabbitLook): RigPose {
     const pose = eased(rabbit, at);
     const stamp = at.still ? [] : stamping(rabbit);
     // Thumping, the hind heels stamp whatever each foot is easing from.
-    const stamped = (goal: Goal | undefined, i: number): Goal | undefined => (goal && goal.kind !== 'air' && stamp.length ? { ...goal, step: stamp[i] } : goal);
+    const stamped = (goal: Goal | undefined, i: number): Goal | undefined => (goal && (goal.kind === 'plant' || goal.kind === 'reach') && stamp.length ? { ...goal, step: stamp[i] } : goal);
     const limbs = Object.fromEntries(RABBIT.codes.map((code, i) => [code, stamped(pose.limbs[code], i)]));
     return { ...pose, limbs, shapes: { eyelid: lidLayers(!at.still && blinking(rabbit.seed, now), EYE, 0.8, FACE) } };
   };

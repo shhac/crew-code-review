@@ -241,11 +241,16 @@ export function compose(body: Body, poseAt: (now: number) => PoseSpec, now: numb
     const root = authored(limb.joints.root);
     const stood = rest.limbs.get(limb.id);
     if (!stood) throw new Error(`skeleton: ${limb.id} never stood`);
-    const goal = pose.limbs[limb.id] ?? { kind: 'plant', at: { x: root.x + limb.leg.reach, y: limb.ground } };
+    const goal = pose.limbs[limb.id] ?? (limb.solve === 'angles' ? { kind: 'angles', swing: 0, bend: 0, paw: 0 } : { kind: 'plant', at: { x: root.x + limb.leg.reach, y: limb.ground } });
     const limbNow = solveLimb(limb, root, goal, authored);
     return { limb, now: limbNow, points: ownedPoints(skeleton, limb, stood, limbNow), frames: ownedFrames(skeleton, limb, stood, limbNow) };
   });
   const frameMap = new Map([...world, ...limbs.flatMap((l) => [...l.frames])]);
+  const limbOf = (id: string): Limb => {
+    const posedLimb = limbs.find((l) => l.limb.id === id);
+    if (!posedLimb) throw new Error(`skeleton: no limb ${id}`);
+    return posedLimb.now;
+  };
   const pointMap = new Map([...[...world].map(([id, m]): [string, Point] => [id, applied(m, restAt(id))]), ...limbs.flatMap((l) => [...l.points])]);
   const found = <T>(map: ReadonlyMap<string, T>) => (id: string): T => {
     const had = map.get(id);
@@ -268,7 +273,10 @@ export function compose(body: Body, poseAt: (now: number) => PoseSpec, now: numb
   const painted = orderOf(body, pose.z).map((slot): { piece?: number; layers: readonly Layer[] } => {
     if ('shape' in slot) {
       const shape = (body.shapes ?? [])[slot.shape];
-      const frame: Layer = { kind: 'frame', id: shape.id, matrix: posed.frame(shape.on), layers: pose.shapes?.[shape.id] ?? [] };
+      const matrix = posed.frame(shape.on);
+      const drawn = pose.shapes?.[shape.id] ?? [];
+      const layers = typeof drawn === 'function' ? drawn({ limb: limbOf, local: (p) => applied(inverse(matrix), p) }) : drawn;
+      const frame: Layer = { kind: 'frame', id: shape.id, matrix, layers };
       return { layers: [frame] };
     }
     const p = body.pieces[slot.piece];

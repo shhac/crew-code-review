@@ -109,6 +109,26 @@ function barsOf(leg: ArtLeg): Bar[] {
 
 const boxOf = (foot: Foot) => ({ src: foot.src, fur: foot.fur, box: { x: -foot.heel.x, y: -foot.heel.y, width: foot.width, height: foot.height } });
 
+// One limb's pieces, as legImages lays them, its limb coded `code` (its
+// joints `${code}J0` to J4), outlined at one z and as fur alone at another:
+// for an animal that sets its limbs among its other parts itself (a cupid's
+// arms and legs, each its own pair of draws, as rig.ts's limbLayers).
+export function limbPieces(leg: ArtLeg, code: string, z: { outlined: number; fur: number }): Piece[] {
+  const side: Side = leg.far ? 'far' : 'near';
+  const at = (k: number) => `${code}J${k}`;
+  const draws = (id: string, flush: boolean): Draw[] => [{ id, z: z.outlined, part: `${side} legs` }, { id: `${id}, fur`, z: z.fur, fur: true, flush, part: `${side} legs, fur` }];
+  const bars = barsOf(leg).map((b, i): Piece => ({
+    id: `${code}B${b.from}`, side, art: { drawn: { src: b.art.src, fur: b.art.fur } },
+    at: { kind: 'bar', from: at(b.from), to: at(b.to), thick: b.thick, anchors: b.art.anchors }, draws: draws(`${code}B${b.from}`, i === 0),
+  }));
+  const { curled } = leg.art;
+  const foot: Piece = {
+    id: `${code} foot`, side, at: { kind: 'joint', to: at(3), local: true }, draws: draws(`${code} foot`, false),
+    ...(curled ? { art: { toes: boxOf(leg.art.foot), curled: boxOf(curled) }, hide: 'opacity' } : { art: { drawn: boxOf(leg.art.foot) } }),
+  };
+  return leg.art.overFoot ? [foot, ...bars] : [...bars, foot];
+}
+
 export function tetrapod<L extends ArtLeg>(preset: Preset, m: Measured<L>): Tetrapod<L> {
   const codeOf = (leg: L) => `L${(leg.fore ? 0 : 2) + (leg.far ? 1 : 0)}`;
   const at = (leg: L, k: number) => `${codeOf(leg)}J${k}`;
@@ -145,20 +165,7 @@ export function tetrapod<L extends ArtLeg>(preset: Preset, m: Measured<L>): Tetr
   };
 
   const nearFur = Z.parts + m.order.length;
-  const legPieces = (leg: L): Piece[] => {
-    const [outlined, fur] = leg.far ? [Z.farLegs, Z.farFur] : [Z.nearLegs, nearFur];
-    const draws = (id: string, flush: boolean): Draw[] => [{ id, z: outlined, part: `${side(leg)} legs` }, { id: `${id}, fur`, z: fur, fur: true, flush, part: `${side(leg)} legs, fur` }];
-    const bars = barsOf(leg).map((b, i): Piece => ({
-      id: `${codeOf(leg)}B${b.from}`, side: side(leg), art: { drawn: { src: b.art.src, fur: b.art.fur } },
-      at: { kind: 'bar', from: at(leg, b.from), to: at(leg, b.to), thick: b.thick, anchors: b.art.anchors }, draws: draws(`${codeOf(leg)}B${b.from}`, i === 0),
-    }));
-    const { curled } = leg.art;
-    const foot: Piece = {
-      id: `${codeOf(leg)} foot`, side: side(leg), at: { kind: 'joint', to: at(leg, 3), local: true }, draws: draws(`${codeOf(leg)} foot`, false),
-      ...(curled ? { art: { toes: boxOf(leg.art.foot), curled: boxOf(curled) }, hide: 'opacity' } : { art: { drawn: boxOf(leg.art.foot) } }),
-    };
-    return leg.art.overFoot ? [foot, ...bars] : [...bars, foot];
-  };
+  const legPieces = (leg: L) => limbPieces(leg, codeOf(leg), leg.far ? { outlined: Z.farLegs, fur: Z.farFur } : { outlined: Z.nearLegs, fur: nearFur });
   const legs = drawn.flatMap(legPieces);
 
   // The animal's own parts, each at its place in the order; the near legs'

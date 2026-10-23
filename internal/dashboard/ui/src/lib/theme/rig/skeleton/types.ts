@@ -49,7 +49,14 @@ export type Handle = string | { on: string; at: Point };
 // `ground` is where its foot stands at rest, `leg.reach` ahead of its root.
 type Owned = { root: string; middle: string; lower: string; end: string; tip?: string };
 type LimbOf<S extends string, L extends QuadLeg> = { id: string; pair: number; side: Side; joints: Owned; ground: number; solve: S; leg: Omit<L, 'hip' | 'far' | 'fore'> };
-export type LimbSpec = LimbOf<'quad', QuadLeg> | LimbOf<'bird', BirdLeg>;
+// An arm (a cupid's): two bones from the shoulder to the wrist, the elbow to
+// one side of the line between, the fist along the forearm (limb.ts's
+// jointBeside, `arm`); or a limb swung and bent by angles alone (a cupid's
+// legs, `angles`). At rest an arm reaches `reach` ahead of its shoulder down
+// to its ground; a swung limb hangs straight down.
+type Bones = { thigh: number; shin: number; reach: number };
+type Simple<S extends string> = { id: string; pair: number; side: Side; joints: Owned; ground: number; solve: S; leg: Bones };
+export type LimbSpec = LimbOf<'quad', QuadLeg> | LimbOf<'bird', BirdLeg> | Simple<'arm'> | Simple<'angles'>;
 
 export type Skeleton = { joints: readonly JointSpec[]; bones: readonly BoneSpec[]; limbs: readonly LimbSpec[] };
 
@@ -61,14 +68,18 @@ export type JointPose = { angle?: number; squash?: { by: number; axis?: number }
 
 // What a limb's constraint reaches for: a foot planted (or stepping, with
 // its step; a bird's kept clear of `ground`), a handle reached, or a bird's
-// legs in the air (bird.ts's airLegsTo `reach`). `walksOn`: what the foot
-// stands on in this pose, where that is not the limb's own (a hare sat on
-// its long hind soles, gait.ts's onSoles).
-type Stands = { walksOn?: NonNullable<QuadLeg['walksOn']> };
+// legs in the air (bird.ts's airLegsTo `reach`), or a limb swung `swing`
+// degrees forward of straight down and its lower bone bent `bend` back from
+// it, its end turned to `paw`. `walksOn`: what the foot stands on in this
+// pose, where that is not the limb's own (a hare sat on its long hind
+// soles, gait.ts's onSoles); `side`: which side of the line from shoulder
+// to wrist an arm's elbow is (limb.ts's jointBeside).
+type Stands = { walksOn?: NonNullable<QuadLeg['walksOn']>; side?: 1 | -1 };
 export type Goal =
   | ({ kind: 'plant'; at: Point; step?: Step; ground?: number } & Stands)
   | ({ kind: 'reach'; to: Handle; by?: Point; step?: Step } & Stands)
-  | { kind: 'air'; reach: number; legs?: AirLegs };
+  | { kind: 'air'; reach: number; legs?: AirLegs }
+  | { kind: 'angles'; swing: number; bend: number; paw: number };
 
 // One moment's pose: the root's turn (the one joint that may turn about a
 // different point in each pose), each authored joint's pose, each limb's
@@ -81,8 +92,13 @@ export type PoseSpec = {
   limbs: Readonly<Partial<Record<string, Goal>>>;
   show: Readonly<Partial<Record<string, string | false>>>;
   z: Readonly<Partial<Record<string, number>>>;
-  shapes?: Readonly<Partial<Record<string, readonly Layer[]>>>;
+  shapes?: Readonly<Partial<Record<string, Drawn>>>;
 };
+
+// What a shape draws: layers in its joint's rest space, or drawn from where
+// the limbs are (a bow in one fist, its string to the other), `local`
+// bringing a point of the drawing into that rest space.
+export type Drawn = readonly Layer[] | ((posed: { limb: (id: string) => Limb; local: (p: Point) => Point }) => readonly Layer[]);
 
 // A variant of a piece's picture, its box in rest space (or in its joint's
 // own frame), and the same picture as fur alone, outline taken out, if it

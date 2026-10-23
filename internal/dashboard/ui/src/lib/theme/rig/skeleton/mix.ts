@@ -27,24 +27,26 @@ function mixJoint(a: JointPose = {}, b: JointPose = {}, f: number): JointPose {
 }
 
 // Where a goal puts the foot, in its own pose; a foot in the air has none.
-type Planted = { at: Point; step?: Step; ground?: number; walksOn?: Extract<Goal, { kind: 'plant' }>['walksOn'] };
+type Planted = Pick<Extract<Goal, { kind: 'plant' }>, 'at' | 'step' | 'ground' | 'walksOn' | 'side'>;
 function planted(skeleton: Skeleton, pose: PoseSpec, goal: Goal): Planted | null {
   if (goal.kind === 'plant') return goal;
-  if (goal.kind === 'air') return null;
+  if (goal.kind === 'air' || goal.kind === 'angles') return null;
   const to = handleAt(skeleton, pose, goal.to);
-  return { at: { x: to.x + (goal.by?.x ?? 0), y: to.y + (goal.by?.y ?? 0) }, step: goal.step, walksOn: goal.walksOn };
+  return { at: { x: to.x + (goal.by?.x ?? 0), y: to.y + (goal.by?.y ?? 0) }, step: goal.step, walksOn: goal.walksOn, side: goal.side };
 }
 
 function mixGoal(skeleton: Skeleton, a: PoseSpec, b: PoseSpec, id: string, f: number, mixer?: StepMixer): Goal | undefined {
   const [ga, gb] = [a.limbs[id], b.limbs[id]];
   if (!ga || !gb) return gb ?? ga;
   if (ga.kind === 'air' && gb.kind === 'air') return { ...gb, reach: mix(ga.reach, gb.reach, f) };
+  if (ga.kind === 'angles' && gb.kind === 'angles') return { kind: 'angles', swing: mix(ga.swing, gb.swing, f), bend: mix(ga.bend, gb.bend, f), paw: mix(ga.paw, gb.paw, f) };
   const [pa, pb] = [planted(skeleton, a, ga), planted(skeleton, b, gb)];
   if (!pa || !pb) return gb;
   const step = mixer ? mixer(pa.step, pb.step, f) : pb.step ?? pa.step;
   const ground = pb.ground ?? pa.ground;
   const walksOn = pb.walksOn ?? pa.walksOn;
-  return { kind: 'plant', at: mixPoint(pa.at, pb.at, f), ...(step ? { step } : {}), ...(ground === undefined ? {} : { ground }), ...(walksOn ? { walksOn } : {}) };
+  const side = pb.side ?? pa.side;
+  return { kind: 'plant', at: mixPoint(pa.at, pb.at, f), ...(step ? { step } : {}), ...(ground === undefined ? {} : { ground }), ...(walksOn ? { walksOn } : {}), ...(side ? { side } : {}) };
 }
 
 export function mixPose(skeleton: Skeleton, a: PoseSpec, b: PoseSpec, f: number, mixers: Mixers = {}): PoseSpec {
