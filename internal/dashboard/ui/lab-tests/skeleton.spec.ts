@@ -61,11 +61,23 @@ test("the spider's skeleton is read off its drawn legs, and follows them as it w
   await expect.poll(claws).not.toEqual(first);
 });
 
-test('the robin, whole pictures each turning about its pivot, shows those as its joints', async ({ page }) => {
+test('the robin, whole pictures each turning about its pivot, shows those as its joints, its spine through them head to tail', async ({ page }) => {
   await page.goto('/lab/critters.html#animal=robin&mode=alive&frame=0&skeleton=only');
-  await expect(skeleton(page).locator('text[data-code="HJ0"]')).toHaveCount(1);
-  await expect(page.locator('[data-legend] [data-row="HJ0"]')).toContainText('neck (head turns here)');
-  await expect(skeleton(page).locator('line.bone')).toHaveCount(0);
+  await expect(page.locator('[data-legend] [data-row="SJ0"]')).toContainText('head joint');
+  await expect(page.locator('[data-legend] [data-row="SJ2"]')).toContainText('tail root');
+  await expect(skeleton(page).locator('text[data-code="SB0"]')).toHaveCount(1);
+});
+
+test('every code stands outside the animal, tied to its point by a leader', async ({ page }) => {
+  await page.goto('/lab/critters.html#animal=rabbit&mode=hop&frame=0&skeleton=faded&zoom=16');
+  const outside = await skeleton(page).evaluate((svg) => {
+    const box = (sel: string) => [...svg.querySelectorAll(sel)].map((el) => el.getBoundingClientRect());
+    const joints = box('circle.joint');
+    const left = Math.min(...joints.map((r) => r.left)), right = Math.max(...joints.map((r) => r.right));
+    return box('text.code').every((r) => r.right <= left || r.left >= right);
+  });
+  expect(outside).toBe(true);
+  await expect(skeleton(page).locator('line.leader')).toHaveCount(await skeleton(page).locator('text.code').count());
 });
 
 test('pointing at a code names it; a click pins it, in the address and the legend, and a click on the stage lets it go', async ({ page }) => {

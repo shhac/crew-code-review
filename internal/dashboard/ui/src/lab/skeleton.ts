@@ -12,14 +12,18 @@
 //       its; six or eight legs run front to back the same way, a pair at a
 //       time (L0 near front, L1 far front, L2 near second...).
 //   Wn  a wing that is not a limb (a cupid's, an insect's): W0 near, W1 far.
-//   H   the head, from the joint it turns about outward.
-//   S   the spine, from the tail forward.
+//   S   the spine, from the head to the tail: SJ0 the head joint (where the
+//       head turns on the neck), then the neck, the shoulders, the hips,
+//       the tail's root and tip, as far as the rig has points for them.
+//   H   the head's own features (an ear's base, an eye, the nose, a bill's
+//       hinge), from the head joint outward.
 //   O   any other mark the rig makes (a cupid's grip on its bow).
 // Within each, Jk is a joint and Bk a bone: a limb's joints run from the
-// body outward (J0 its shoulder or hip), and its Bk from Jk to Jk+1. A
-// point that is two things keeps the code it was given first (a hip is
-// L2J0, never also a joint of the spine), and a spine or head bone ending
-// there refers to it by that code.
+// body outward (J0 its shoulder or hip), and its Bk from Jk to Jk+1; the
+// spine's SBk from one of its points to the next. A point that is two
+// things keeps the code it was given first (a hip is L2J0, never also a
+// joint of the spine), and a spine or head bone ending there refers to it
+// by that code.
 import type { Point } from '../lib/theme/pointer';
 import { footInUse, turnAbout, turned, type DrawnLeg, type Guide, type Layer, type RigPose } from '../lib/theme/rig/rig';
 
@@ -46,16 +50,24 @@ export type LegBones = { pair: number; limb: string; upper: string; middle?: str
 // and the bones' between them. A run's pair is given, or else counted from
 // the front.
 export type Marked = { joints: readonly string[]; bones: readonly string[]; limb: (pair: number) => string; pair?: number };
-// The marks a part of the body owns, by name, and its bones from one mark
-// to another, which may be another part's (the spine's hip is a leg's).
-export type Chain = { joints: readonly string[]; bones?: readonly (readonly [from: string, to: string, name: string])[] };
+// A point of the body: one of the rig's joint marks by its name (shown as
+// `name`, where that says more), or the pivot a group of its layers turns
+// about, by the picture it turns (a bird's head turns on its head joint).
+// A mark already a limb's joint (a shoulder, a hip) is that joint.
+export type Spot = { mark: string; name?: string } | { pivot: string; name: string };
+// The points a part of the body owns, and its bones by their points'
+// names, which may be another part's.
+export type Chain = { joints: readonly Spot[]; bones?: readonly (readonly [from: string, to: string, name: string])[] };
+// The spine, head to tail, with a line from each point found to the next,
+// named for what it stands for.
+export type Spine = readonly (Spot & { line?: string })[];
 export type BoneNames = {
   // By the leg's layer ('near legs', 'far arm') and whether it is a foreleg.
   legs?: (leg: { layer: string; fore: boolean }) => LegBones;
   marked?: readonly Marked[];
+  spine?: Spine;
   head?: Chain;
   wings?: Chain;
-  spine?: Chain;
 };
 
 type Place = (p: Point) => Point;
@@ -87,6 +99,16 @@ const farPoints = (layers: readonly Layer[], place: Place): Point[] => layers.fl
 });
 
 const same = (a: Point, b: Point) => Math.hypot(a.x - b.x, a.y - b.y) < 1e-3;
+
+// Where each group of layers turns, by the pictures it turns itself (not
+// those of groups inside it).
+type Pivot = { name: string; at: Point };
+const pivotsIn = (layers: readonly Layer[], place: Place): Pivot[] => layers.flatMap((l) => {
+  if (l.kind !== 'group') return [];
+  const at = place(turned(l.turn, l.turn.pivot));
+  const own = l.layers.flatMap((c) => (c.kind === 'image' ? [{ name: c.name, at }] : []));
+  return [...own, ...pivotsIn(l.layers, within(l, place))];
+});
 
 // How far forward the foot's picture reaches: the front of its box at the
 // sole, turned with it about the leg's end.
@@ -145,23 +167,62 @@ const byName = <T extends { name: string; far: boolean }>(all: readonly T[], nam
   all.find((j) => j.name === name && !j.far) ?? all.find((j) => j.name === name);
 
 type Built = { groups: Group[]; joints: Joint[]; bones: Bone[] };
+type Found = { marks: readonly Guide[]; pivots: readonly Pivot[]; isFar: (p: Point) => boolean };
 
-// A part of the body that owns the marks named so, numbered as its spec
-// lists them (one missing now leaves a gap, so the rest keep their codes),
-// with its bones between any joints already coded.
-function chain(built: Built, marks: readonly Guide[], spec: Chain | undefined, code: string, title: string, isFar: (p: Point) => boolean): Built {
+// A point already coded (a limb's), or else where the rig puts it now.
+type Spotted = { joint?: Joint; name: string; at: Point; far: boolean };
+function spotted(built: Built, found: Found, spot: Spot): Spotted | null {
+  if ('pivot' in spot) {
+    const pivot = found.pivots.find((p) => p.name === spot.pivot);
+    return pivot ? { name: spot.name, at: pivot.at, far: false } : null;
+  }
+  const joint = byName(built.joints, spot.mark);
+  if (joint) return { joint, name: joint.name, at: joint.at, far: joint.far };
+  const mark = byName(found.marks.map((g) => ({ ...g, far: found.isFar(g.at) })), spot.mark);
+  return mark ? { name: spot.name ?? mark.name, at: mark.at, far: mark.far } : null;
+}
+
+const withGroup = (built: Built, group: Group, joints: Joint[], bones: Bone[]): Built => (joints.length || bones.length
+  ? { groups: [...built.groups, group], joints: [...built.joints, ...joints], bones: [...built.bones, ...bones] }
+  : built);
+
+// A part of the body owning the points its spec lists that are found now,
+// numbered in turn, with its bones between any joints already coded.
+function chain(built: Built, found: Found, spec: Chain | undefined, code: string, title: string): Built {
   if (!spec) return built;
-  const owned = spec.joints.flatMap((name, k) => {
-    const mark = byName(marks.map((g) => ({ ...g, far: isFar(g.at) })), name);
-    return mark ? [{ code: `${code}J${k}`, name, at: mark.at, far: mark.far }] : [];
+  const seen = spec.joints.flatMap((spot) => {
+    const at = spotted(built, found, spot);
+    return at && !at.joint ? [at] : [];
   });
+  const owned = seen.map((j, k) => ({ code: `${code}J${k}`, name: j.name, at: j.at, far: j.far }));
   const joints = [...built.joints, ...owned];
   const bones = (spec.bones ?? []).flatMap(([from, to, name], k) => {
     const a = byName(joints, from), b = byName(joints, to);
     return a && b ? [{ code: `${code}B${k}`, name, from: a.code, to: b.code, far: a.far && b.far }] : [];
   });
-  if (!owned.length && !bones.length) return built;
-  return { groups: [...built.groups, { code, title, far: false }], joints, bones: [...built.bones, ...bones] };
+  return withGroup(built, { code, title, far: false }, owned, bones);
+}
+
+// The spine's points found now, head to tail, its own numbered in turn and
+// a limb's kept as that limb's, and a line from each to the next. A point
+// where an earlier one already is (a tail drawn in the body's own group,
+// turning about the body's pivot) is not one of its own.
+function spineOf(built: Built, found: Found, spec: Spine | undefined): Built {
+  if (!spec) return built;
+  const seen = spec.reduce<(Spotted & { line?: string })[]>((all, spot) => {
+    const at = spotted(built, found, spot);
+    return at && !all.some((a) => same(a.at, at.at)) ? [...all, { ...at, line: spot.line }] : all;
+  }, []);
+  const coded = seen.reduce<{ joints: Joint[]; own: Joint[] }>(({ joints, own }, j) => {
+    if (j.joint) return { joints: [...joints, j.joint], own };
+    const joint = { code: `SJ${own.length}`, name: j.name, at: j.at, far: j.far };
+    return { joints: [...joints, joint], own: [...own, joint] };
+  }, { joints: [], own: [] });
+  const bones = coded.joints.slice(1).map((to, k) => {
+    const from = coded.joints[k];
+    return { code: `SB${k}`, name: `${seen[k].line ?? 'line'} (${from.name} to ${to.name})`, from: from.code, to: to.code, far: from.far && to.far };
+  });
+  return withGroup(built, { code: 'S', title: 'spine', far: false }, coded.own, bones);
 }
 
 export function skeletonOf(pose: RigPose, names: BoneNames): Skeleton {
@@ -176,12 +237,13 @@ export function skeletonOf(pose: RigPose, names: BoneNames): Skeleton {
   const limbs = drafts.map(coded).sort((a, b) => a.group.code.localeCompare(b.group.code, undefined, { numeric: true }));
   const built: Built = { groups: limbs.map((l) => l.group), joints: limbs.flatMap((l) => l.joints), bones: limbs.flatMap((l) => l.bones) };
   const onLimbs = (g: Guide) => built.joints.some((j) => same(j.at, g.at));
-  const free = marks.filter((g) => !onLimbs(g));
-  const withHead = chain(built, free, names.head, 'H', 'head', isFar);
-  const withWings = chain(withHead, free, names.wings, 'W0', 'near wing', isFar);
-  const withSpine = chain(withWings, free, names.spine, 'S', 'spine', isFar);
-  const left = free.filter((g) => !withSpine.joints.some((j) => same(j.at, g.at) && j.name === g.name));
-  return chain(withSpine, left, { joints: left.map((g) => g.name) }, 'O', 'other marks', isFar);
+  const found: Found = { marks: marks.filter((g) => !onLimbs(g)), pivots: pivotsIn(pose.layers, top), isFar };
+  const withSpine = spineOf(built, found, names.spine);
+  const withHead = chain(withSpine, found, names.head, 'H', 'head');
+  const withWings = chain(withHead, found, names.wings, 'W0', 'near wing');
+  const used = (g: Guide) => withWings.joints.some((j) => same(j.at, g.at));
+  const left = found.marks.filter((g) => !used(g));
+  return chain(withWings, { ...found, marks: left }, { joints: left.map((g) => ({ mark: g.name })) }, 'O', 'other marks');
 }
 
 // A code's part and kind, and its place: L0B2 is limb L0's bone 2.
@@ -198,61 +260,68 @@ export function litBy(skeleton: Skeleton, code: string | null): Set<string> {
   return new Set(bone ? [bone.code, bone.from, bone.to] : [code]);
 }
 
-// A legend's rows, part by part: a limb's joints and bones in turn along
-// it, the rest joints first.
+// A legend's rows, part by part, in the order of their codes: a limb's
+// joints and bones in turn along it, the rest joints first.
 export function legendOf(skeleton: Skeleton): { group: Group; rows: (Joint | Bone)[] }[] {
   return skeleton.groups.map((group) => {
     const mine = <T extends { code: string }>(all: readonly T[]) => all.filter((x) => parseCode(x.code)?.group === group.code);
     const joints = mine(skeleton.joints), bones = mine(skeleton.bones);
-    // Along a limb: J0, B0, J1, B1...
-    const along = (x: { code: string }) => {
+    const limb = group.code.startsWith('L');
+    // Along a limb J0, B0, J1, B1...; elsewhere J0, J1..., then B0, B1...
+    const order = (x: { code: string }) => {
       const c = parseCode(x.code);
-      return c ? 2 * c.index + (c.kind === 'B' ? 1 : 0) : 0;
+      if (!c) return 0;
+      return limb ? 2 * c.index + (c.kind === 'B' ? 1 : 0) : c.index + (c.kind === 'B' ? 1000 : 0);
     };
-    const rows = group.code.startsWith('L') ? [...joints, ...bones].sort((a, b) => along(a) - along(b)) : [...joints, ...bones];
+    const rows = [...joints, ...bones].sort((a, b) => order(a) - order(b));
     return { group, rows };
   });
 }
 
-// A label to lay beside what it names, in the drawing's units: its point,
-// the way from it to go (a unit vector) and its size in page pixels.
-export type Label = { text: string; at: Point; toward: Point; px: number };
-// `moved`: nudged off its own line, to be tied back to its point.
-export type Laid = { x: number; y: number; anchor: 'start' | 'middle' | 'end'; moved: boolean };
-type Box = { left: number; right: number; top: number; bottom: number };
+// A label to lay out of the way of the skeleton, tied to what it names by
+// a leader: its point, and its size in page pixels.
+export type Label = { text: string; at: Point; px: number };
+export type Laid = { x: number; y: number; anchor: 'start' | 'end' };
 
-const GAP = 5;
-// About how wide a character of the lab's sans-serif is, against its size.
-const CHAR = 0.56;
+// How far beyond the skeleton the columns stand, and the line between
+// labels, in page pixels against a label's size.
+const MARGIN = 22;
+const LINE = 1.35;
 
-const boxOf = (l: Label & Laid, u: number): Box => {
-  const width = l.text.length * CHAR * l.px * u;
-  const left = l.anchor === 'start' ? l.x : l.anchor === 'end' ? l.x - width : l.x - width / 2;
-  const half = 0.6 * l.px * u;
-  return { left, right: left + width, top: l.y - half, bottom: l.y + half };
-};
-// How much of one box lies over another.
-const overlap = (a: Box, b: Box) =>
-  Math.max(0, Math.min(a.right, b.right) - Math.max(a.left, b.left)) * Math.max(0, Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top));
+type Stack<L> = { top: number; items: L[] };
 
-// Each label a gap from its point, its way or else the other way, nudged a
-// line at a time up or down off the joints and the labels laid before it:
-// the nearest place clear of them all, or failing that the least covered.
-// `u` is units to a page pixel at the lab's zoom, so labels keep one size
-// on screen.
-export function layLabels<L extends Label>(labels: readonly L[], u: number, dots: readonly Point[] = []): (L & Laid)[] {
-  const taken = dots.map((d) => ({ left: d.x - 4 * u, right: d.x + 4 * u, top: d.y - 4 * u, bottom: d.y + 4 * u }));
-  return labels.reduce<{ laid: (L & Laid)[]; boxes: Box[] }>(({ laid, boxes }, l) => {
-    const line = 1.25 * l.px * u;
-    const toward = (way: Point) => ({
-      ...l, x: l.at.x + way.x * GAP * u, y: l.at.y + way.y * GAP * u,
-      anchor: way.x > 0.3 ? 'start' : way.x < -0.3 ? 'end' : 'middle', moved: false,
-    } satisfies L & Laid);
-    const ways = [toward(l.toward), toward({ x: -l.toward.x, y: -l.toward.y })];
-    const tries = [0, 1, -1, 2, -2, 3, -3, 4, -4].flatMap((k) => ways.map((t) => ({ ...t, y: t.y + k * line, moved: k !== 0 })));
-    const covered = tries.map((t) => boxes.reduce((sum, b) => sum + overlap(b, boxOf(t, u)), 0));
-    const clear = covered.findIndex((c) => c === 0);
-    const best = clear >= 0 ? clear : covered.indexOf(Math.min(...covered));
-    return { laid: [...laid, tries[best]], boxes: [...boxes, boxOf(tries[best], u)] };
-  }, { laid: [], boxes: taken }).laid;
+// Labels stacked a line apart, as near the heights of their points as they
+// can be without overlapping: a run that would overlap is one stack,
+// centred on where its labels would each rather be.
+function stacked<L extends Label>(labels: readonly L[], line: number): Stack<L>[] {
+  const settle = (stacks: Stack<L>[]): Stack<L>[] => {
+    if (stacks.length < 2) return stacks;
+    const a = stacks[stacks.length - 2], b = stacks[stacks.length - 1];
+    if (a.top + a.items.length * line <= b.top) return stacks;
+    const items = [...a.items, ...b.items];
+    const top = items.reduce((sum, l, k) => sum + l.at.y - k * line, 0) / items.length;
+    return settle([...stacks.slice(0, -2), { top, items }]);
+  };
+  return [...labels].sort((a, b) => a.at.y - b.at.y).reduce<Stack<L>[]>((stacks, l) => settle([...stacks, { top: l.at.y, items: [l] }]), []);
+}
+
+// Every label in one of two columns, left and right of the skeleton's box
+// (`around`, its points) with a margin, on the side its point is: in each,
+// in the order of its points' heights, so leaders seldom cross, and a line
+// apart, and none lower than `lowest`, where the stage ends (each pushed up
+// only as far as the one under it needs). `u` is units to a page pixel at
+// the lab's zoom, so labels keep one size on screen.
+export function layColumns<L extends Label>(labels: readonly L[], u: number, around: readonly Point[], lowest = Infinity): (L & Laid)[] {
+  if (!labels.length) return [];
+  const xs = (around.length ? around : labels.map((l) => l.at)).map((p) => p.x);
+  const left = Math.min(...xs), right = Math.max(...xs), middle = (left + right) / 2;
+  const line = LINE * Math.max(...labels.map((l) => l.px)) * u;
+  const column = (items: readonly L[], x: number, anchor: Laid['anchor']) => {
+    const laid = stacked(items, line).flatMap((stack) => stack.items.map((l, k) => ({ ...l, x, y: stack.top + k * line, anchor })));
+    return laid.reduceRight<(L & Laid)[]>((below, l) => [{ ...l, y: Math.min(l.y, (below[0]?.y ?? lowest + line) - line) }, ...below], []);
+  };
+  return [
+    ...column(labels.filter((l) => l.at.x < middle), left - MARGIN * u, 'end'),
+    ...column(labels.filter((l) => l.at.x >= middle), right + MARGIN * u, 'start'),
+  ];
 }

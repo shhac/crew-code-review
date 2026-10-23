@@ -56,8 +56,8 @@ export const cupid = {
     legs: ({ layer }) => (layer.endsWith('arm')
       ? { pair: 0, limb: 'arm', upper: 'humerus', middle: 'radius and ulna', foot: 'hand', tip: 'fingertips' }
       : { pair: 1, limb: 'leg', upper: 'femur', middle: 'tibia and fibula', foot: 'foot' }),
-    head: { joints: ['neck', 'eye'], bones: [['neck', 'eye', 'skull']] },
-    wings: { joints: ['wing root'] },
-    spine: { joints: [], bones: [['hip', 'shoulder', 'back line (hip to shoulder)'], ['shoulder', 'neck', 'neck line (shoulder to head pivot)']] },
+    spine: [{ mark: 'neck', name: 'head joint (neck)', line: 'neck line' }, { mark: 'shoulder', line: 'back line' }, { mark: 'hip' }],
+    head: { joints: [{ mark: 'eye' }], bones: [['head joint (neck)', 'eye', 'skull']] },
+    wings: { joints: [{ mark: 'wing root' }] },
   },
 } satisfies RigCritter;

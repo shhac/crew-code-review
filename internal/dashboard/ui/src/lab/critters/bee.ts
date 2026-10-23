@@ -94,8 +94,8 @@ export const bee = {
   drawings: DRAWINGS,
   bones: {
     marked: [INSECT_LEGS],
-    head: { joints: ['neck', 'antenna socket'], bones: [['neck', 'antenna socket', 'head']] },
-    wings: { joints: ['wing hinge (tegula)'] },
-    spine: { joints: ['waist (petiole)', 'thorax (moves here)'], bones: [['waist (petiole)', 'neck', 'thorax line (waist to neck)']] },
+    spine: [{ mark: 'neck', name: 'head joint (neck)', line: 'thorax line' }, { mark: 'thorax (moves here)', line: 'thorax line' }, { mark: 'waist (petiole)' }],
+    head: { joints: [{ mark: 'antenna socket' }], bones: [['head joint (neck)', 'antenna socket', 'head']] },
+    wings: { joints: [{ mark: 'wing hinge (tegula)' }] },
   },
 } satisfies RigCritter;

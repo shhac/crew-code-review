@@ -2,10 +2,13 @@ import { describe, expect, it } from 'vitest';
 import type { Point } from '../lib/theme/pointer';
 import { turnAbout, type DrawnLeg, type RigPose } from '../lib/theme/rig/rig';
 import { bee } from './critters/bee';
+import { crow } from './critters/crow';
+import { pigeon } from './critters/pigeon';
 import { gull } from './critters/gull';
+import { hawk } from './critters/hawk';
 import { CRITTERS } from './critters/registry';
 import { rabbit } from './critters/rabbit';
-import { layLabels, legendOf, litBy, parseCode, skeletonOf, type Skeleton } from './skeleton';
+import { layColumns, legendOf, litBy, parseCode, skeletonOf, type Skeleton } from './skeleton';
 
 const at = (mode: string, now = 1300) => ({ mode, now, walked: 1.3 });
 const look = { gaze: 0, still: false };
@@ -42,28 +45,34 @@ describe('skeletonOf', () => {
     expect(joint(s, 'L3J1')?.at.y).toBeCloseTo(0);
   });
 
-  it("keeps a part's codes where its spec lists them, and its bones join any part's joints, near first", () => {
+  it('runs the spine from the head joint to the tail through the limbs\' roots, and the head\'s features from the head joint out', () => {
     const guides = [{ name: 'hip', at: { x: 0, y: 0 } }, { name: 'neck', at: { x: 6, y: 0 } }, { name: 'eye', at: { x: 7, y: -1 } }, { name: 'grip', at: { x: 9, y: 2 } }, { name: 'stands here', at: { x: 5, y: 9 } }];
-    const s = skeletonOf(pose([legs(false)], guides), {
+    const tail = { kind: 'group' as const, turn: turnAbout(0, { x: -3, y: 1 }, 0.5, 0), layers: [{ kind: 'image' as const, name: 'tail', src: '', x: 0, y: 0, width: 1, height: 1 }] };
+    const s = skeletonOf(pose([legs(false), tail], guides), {
       ...HIND,
-      head: { joints: ['neck', 'ear base', 'eye'], bones: [['neck', 'eye', 'skull']] },
-      spine: { joints: ['tail root'], bones: [['tail root', 'hip', 'pelvis'], ['hip', 'neck', 'back']] },
+      spine: [{ mark: 'neck', name: 'head joint', line: 'neck line' }, { mark: 'shoulder' }, { mark: 'hip', line: 'pelvis line' }, { pivot: 'tail', name: 'tail root' }],
+      head: { joints: [{ mark: 'ear base' }, { mark: 'eye' }], bones: [['head joint', 'eye', 'skull']] },
     });
-    expect(s.groups.map((g) => g.code)).toEqual(['L2', 'H', 'S', 'O']);
-    expect(s.joints.filter((j) => !j.code.startsWith('L')).map((j) => [j.code, j.name])).toEqual([['HJ0', 'neck'], ['HJ2', 'eye'], ['OJ0', 'grip']]);
+    expect(s.groups.map((g) => g.code)).toEqual(['L2', 'S', 'H', 'O']);
+    expect(s.joints.filter((j) => !j.code.startsWith('L')).map((j) => [j.code, j.name, j.at])).toEqual([
+      ['SJ0', 'head joint', { x: 6, y: 0 }], ['SJ1', 'tail root', { x: -2.5, y: 1 }], ['HJ0', 'eye', { x: 7, y: -1 }], ['OJ0', 'grip', { x: 9, y: 2 }],
+    ]);
     expect(s.bones.filter((b) => !b.code.startsWith('L'))).toEqual([
-      { code: 'HB0', name: 'skull', from: 'HJ0', to: 'HJ2', far: false }, { code: 'SB1', name: 'back', from: 'L2J0', to: 'HJ0', far: false },
+      { code: 'SB0', name: 'neck line (head joint to hip)', from: 'SJ0', to: 'L2J0', far: false },
+      { code: 'SB1', name: 'pelvis line (hip to tail root)', from: 'L2J0', to: 'SJ1', far: false },
+      { code: 'HB0', name: 'skull', from: 'SJ0', to: 'HJ0', far: false },
     ]);
   });
 
   it("numbers the rabbit's limbs fore to hind, near before far, whatever the rig's order", () => {
     const s = skeletonOf(rabbit.pose(at('sit'), look), rabbit.bones);
-    expect(s.groups.map((g) => `${g.code} ${g.title}`)).toEqual(['L0 near foreleg', 'L1 far foreleg', 'L2 near hind leg', 'L3 far hind leg', 'H head', 'S spine']);
+    expect(s.groups.map((g) => `${g.code} ${g.title}`)).toEqual(['L0 near foreleg', 'L1 far foreleg', 'L2 near hind leg', 'L3 far hind leg', 'S spine', 'H head']);
     expect(s.joints.filter((j) => j.code.startsWith('L0')).map((j) => j.name)).toEqual(['shoulder', 'elbow', 'wrist (carpus)', 'forepaw', 'toe tip']);
     expect(s.bones.filter((b) => b.code.startsWith('L0')).map((b) => b.name)).toEqual(['humerus', 'radius and ulna', 'metacarpus', 'toes (phalanges)']);
     expect(s.bones.filter((b) => b.code.startsWith('L2')).map((b) => b.name)).toEqual(['femur', 'tibia and fibula', 'hind foot (metatarsus and toes)']);
-    expect(bone(s, 'SB1')).toMatchObject({ from: 'L2J0', to: 'L0J0' });
-    expect(bone(s, 'SB2')).toMatchObject({ from: 'L0J0', to: 'HJ0' });
+    expect(s.bones.filter((b) => b.code.startsWith('S')).map((b) => [b.code, b.from, b.to])).toEqual([['SB0', 'SJ0', 'L0J0'], ['SB1', 'L0J0', 'L2J0'], ['SB2', 'L2J0', 'SJ1']]);
+    expect(s.joints.filter((j) => /^[SH]/.test(j.code)).map((j) => `${j.code} ${j.name}`)).toEqual(['SJ0 head joint (neck)', 'SJ1 tail root', 'HJ0 ear base', 'HJ1 eye', 'HJ2 nose']);
+    expect(bone(s, 'HB0')).toMatchObject({ name: 'skull', from: 'SJ0', to: 'HJ2' });
     const wrist = (rabbit.pose(at('sit'), look).guides ?? []).filter((g) => g.name === 'wrist (carpus)').map((g) => g.at);
     expect(wrist.some((w) => near(w, joint(s, 'L0J2')?.at ?? { x: NaN, y: NaN }))).toBe(true);
   });
@@ -78,11 +87,17 @@ describe('skeletonOf', () => {
     expect(s.groups.some((g) => g.code === 'W0')).toBe(true);
   });
 
-  it("makes a bird's marked wing its near forelimb, the back joining it to the near hip", () => {
+  it("makes a bird's marked wing its near forelimb, its spine from the pivots its pictures turn about", () => {
     const s = skeletonOf(gull.pose(at('flap'), look), gull.bones);
-    expect(s.groups.map((g) => g.code)).toEqual(['L0', 'L2', 'L3', 'S']);
+    expect(s.groups.map((g) => g.code)).toEqual(['L0', 'L2', 'L3', 'S', 'H']);
     expect(s.joints.filter((j) => j.code.startsWith('L0')).map((j) => j.name)).toEqual(['shoulder', 'wrist', 'wingtip']);
-    expect(bone(s, 'SB0')).toMatchObject({ from: 'L2J0', to: 'L0J0' });
+    expect(s.bones.filter((b) => b.code.startsWith('S')).map((b) => [b.from, b.to])).toEqual([['SJ0', 'L0J0'], ['L0J0', 'SJ1'], ['SJ1', 'L2J0'], ['L2J0', 'SJ2']]);
+    expect(s.joints.filter((j) => /^[SH]/.test(j.code)).map((j) => j.name)).toEqual(['head joint', 'body pivot', 'tail root', 'jaw hinge (lower mandible)']);
+    const walking = skeletonOf(pigeon.pose(at('stand'), look), pigeon.bones);
+    expect(walking.joints.filter((j) => j.code.startsWith('S')).map((j) => j.name)).toEqual(['head joint', 'neck base', 'body pivot', 'tail root']);
+    expect(skeletonOf(crow.pose(at('walk'), look), crow.bones).bones.filter((b) => b.code.startsWith('S'))).toHaveLength(3);
+    // The hawk's tail is drawn in its body's group, so has no pivot of its own.
+    expect(skeletonOf(hawk.pose(at('glide'), look), hawk.bones).joints.filter((j) => j.code.startsWith('S')).map((j) => j.name)).toEqual(['head joint', 'body pivot']);
   });
 
   it('finds bones for every animal drawn from parts, in every mode it has joints in (not one picture, asleep or curled up)', () => {
@@ -122,17 +137,19 @@ describe('codes', () => {
   });
 });
 
-describe('layLabels', () => {
-  const label = (text: string, x: number) => ({ text, at: { x, y: 0 }, toward: { x: 1, y: 0 }, px: 10 });
+describe('layColumns', () => {
+  const label = (text: string, x: number, y: number) => ({ text, at: { x, y }, px: 10 });
+  const around = [{ x: 0, y: 0 }, { x: 100, y: 0 }];
 
-  it('lays a label beside its point, its way', () => {
-    expect(layLabels([label('knee', 0)], 1)).toEqual([{ ...label('knee', 0), x: 5, y: 0, anchor: 'start', moved: false }]);
+  it('stands each label beyond the skeleton on its own side, at its point\'s height while there is room', () => {
+    expect(layColumns([label('L0J0', 90, 5), label('L2J0', 10, 40)], 1, around)).toEqual([
+      { ...label('L2J0', 10, 40), x: -22, y: 40, anchor: 'end' }, { ...label('L0J0', 90, 5), x: 122, y: 5, anchor: 'start' },
+    ]);
   });
 
-  it('moves a label off one laid before it, and marks it moved off its own line', () => {
-    const [first, second] = layLabels([label('stifle', 0), label('stifle', 0)], 1);
-    expect(second.anchor === 'end' || Math.abs(second.y - first.y) >= 12).toBe(true);
-    const crowded = layLabels([label('a', 0), label('a', 0), label('a', 0)], 1);
-    expect(crowded[2].moved).toBe(true);
+  it('stacks crowded labels a line apart, in their points\' order, centred where they would be', () => {
+    const laid = layColumns([label('b', 80, 1), label('a', 80, 0), label('c', 80, 2)], 1, around);
+    expect(laid.map((l) => l.text)).toEqual(['a', 'b', 'c']);
+    expect(laid.map((l) => l.y)).toEqual([-12.5, 1, 14.5]);
   });
 });

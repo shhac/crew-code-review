@@ -237,7 +237,7 @@
       {#if shown && drawings[reference]}
         <Rig pose={overlay(shown, drawings[reference])} x={0} y={-lift} {dir} opacity={0.45} />
       {/if}
-      {#if placed}<Skeleton {placed} y={rig ? -lift : 0} {dir} {zoom} {selected} {hover} {pick} />{/if}
+      {#if placed}<Skeleton {placed} y={rig ? -lift : 0} {dir} {zoom} room={52} {selected} {hover} {pick} />{/if}
     </div>
   </div>
   {#if placed}<SkeletonLegend skeleton={placed.skeleton} {selected} {pinned} {hover} {pick} />{/if}
@@ -311,6 +311,8 @@
   .timeline output { font-variant-numeric: tabular-nums; }
   .hint { font-size: 12px; opacity: .65; }
   .stage { position: relative; height: 380px; background: var(--paper-2); border-radius: 12px; overflow: hidden; }
+  /* The floor stands 60px up the stage; the skeleton's codes keep 52px of
+     that (Skeleton's room). */
   .floor { position: absolute; left: 0; right: 0; bottom: 60px; border-top: 2px solid var(--line-strong); }
   .big { position: absolute; left: 50%; bottom: 60px; width: 0; height: 0; transform-origin: 0 0; }
   .footprint { position: absolute; outline: .2px dashed var(--accent); opacity: .6; }

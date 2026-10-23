@@ -59,8 +59,8 @@ export const wasp = {
   drawings: DRAWINGS,
   bones: {
     marked: [INSECT_LEGS],
-    head: { joints: ['neck', 'scape'], bones: [['neck', 'scape', 'head']] },
-    wings: { joints: ['wing hinge (tegula)'] },
-    spine: { joints: ['petiole', 'body (moves here)'], bones: [['petiole', 'neck', 'thorax line (petiole to neck)']] },
+    spine: [{ mark: 'neck', name: 'head joint (neck)', line: 'thorax line' }, { mark: 'body (moves here)', line: 'thorax line' }, { mark: 'petiole' }],
+    head: { joints: [{ mark: 'scape' }], bones: [['head joint (neck)', 'scape', 'head']] },
+    wings: { joints: [{ mark: 'wing hinge (tegula)' }] },
   },
 } satisfies RigCritter;

@@ -1,25 +1,28 @@
 <script lang="ts">
   // An animal's skeleton (skeleton.ts) over or instead of its drawing, its
   // anchor at (0, y) on the lab's stage and facing dir: a line for each bone,
-  // the far side's dashed, each joint and bone marked by its code alone so
-  // the stage stays readable. Pointing at one names it in full and lights it
-  // (a bone with its two joints), dimming the rest; clicking pins it. Sizes
-  // are in page pixels at the lab's zoom, so they read the same however
-  // close.
+  // the far side's dashed, each joint and bone marked by its code alone, in
+  // columns either side of it with a faint leader to each, so the skeleton
+  // stays the clearest thing on the stage. Pointing at one names it in full
+  // and lights it (a bone with its two joints, and their leaders), dimming
+  // the rest; clicking pins it. Sizes are in page pixels at the lab's zoom,
+  // so they read the same however close.
   import type { Point } from '../lib/theme/pointer';
-  import { layLabels, litBy, type Placed } from './skeleton';
+  import { layColumns, litBy, type Placed } from './skeleton';
 
   export let placed: Placed;
   export let y: number;
   export let dir: 1 | -1;
   export let zoom: number;
+  // How far the stage reaches below the anchor's floor, page px, which the
+  // codes keep above.
+  export let room = Infinity;
   // What is lit: the code pointed at, or else the one pinned.
   export let selected: string | null;
   export let hover: (code: string | null) => void;
   export let pick: (code: string) => void;
 
-  const CODE_PX = 9;
-  const NAME_PX = 12;
+  const CODE_PX = 10;
 
   $: ({ skeleton, view, anchor, scale } = placed);
   $: u = 1 / (scale * zoom);
@@ -35,27 +38,11 @@
   $: lit = litBy(skeleton, selected);
   $: dim = (code: string) => lit.size > 0 && !lit.has(code);
 
-  // Square to the bone: a near one's code to its right (or below it), a far
-  // one's to its left, so twins either side of the body keep apart.
-  function side(a: Point, b: Point, far: boolean): Point {
-    const dx = b.x - a.x, dy = b.y - a.y;
-    const length = Math.hypot(dx, dy) || 1;
-    const n = { x: -dy / length, y: dx / length };
-    const right = n.x > 0 || (n.x === 0 && n.y > 0) ? n : { x: -n.x, y: -n.y };
-    return far ? { x: -right.x, y: -right.y } : right;
-  }
-  $: labels = layLabels([
-    ...joints.map((j) => ({ text: j.code, at: j.at, toward: { x: j.far ? -1 : 1, y: 0 }, px: CODE_PX, far: j.far, joint: true })),
-    ...bones.map((b) => ({ text: b.code, at: b.middle, toward: side(b.a, b.b, b.far), px: CODE_PX, far: b.far, joint: false })),
-  ], u, joints.map((j) => j.at));
-
-  // The selected one's full name, beside it.
-  $: chosen = (() => {
-    const joint = joints.find((j) => j.code === selected);
-    if (joint) return { text: `${joint.code} ${joint.name}`, at: joint.at };
-    const bone = bones.find((b) => b.code === selected);
-    return bone ? { text: `${bone.code} ${bone.name}`, at: bone.middle } : null;
-  })();
+  $: names = new Map([...joints, ...bones].map((x) => [x.code, x.name]));
+  $: labels = layColumns([
+    ...joints.map((j) => ({ text: j.code, at: j.at, px: CODE_PX, far: j.far, joint: true })),
+    ...bones.map((b) => ({ text: b.code, at: b.middle, px: CODE_PX, far: b.far, joint: false })),
+  ], u, joints.map((j) => j.at), anchor.y + (room / zoom - y) / scale);
 </script>
 
 <!-- Pointing and clicking here is for the mouse; the legend's rows are the
@@ -84,17 +71,17 @@
       on:mouseenter={() => hover(j.code)} on:mouseleave={() => hover(null)} on:click|stopPropagation={() => pick(j.code)} />
   {/each}
   {#each labels as l}
-    {#if l.moved}<line class="leader" class:dim={dim(l.text)} x1={l.at.x} y1={l.at.y} x2={l.x} y2={l.y} stroke-width={0.8 * u} />{/if}
+    <line class="leader" class:lit={lit.has(l.text)} x1={l.at.x} y1={l.at.y} x2={l.x + (l.anchor === 'start' ? -3 : 3) * u} y2={l.y}
+      stroke-width={(lit.has(l.text) ? 1.2 : 0.6) * u} />
   {/each}
   {#each labels as l}
     <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
     <text class="code" class:joint={l.joint} class:far={l.far} class:lit={lit.has(l.text)} class:dim={dim(l.text)} data-code={l.text}
       x={l.x} y={l.y} font-size={l.px * u} stroke-width={3 * u} text-anchor={l.anchor}
-      on:mouseenter={() => hover(l.text)} on:mouseleave={() => hover(null)} on:click|stopPropagation={() => pick(l.text)}>{l.text}</text>
+      data-name={l.text === selected ? `${l.text} ${names.get(l.text)}` : undefined}
+      on:mouseenter={() => hover(l.text)} on:mouseleave={() => hover(null)} on:click|stopPropagation={() => pick(l.text)}
+      >{l.text === selected ? `${l.text} ${names.get(l.text)}` : l.text}</text>
   {/each}
-  {#if chosen}
-    <text class="name" data-name={chosen.text} x={chosen.at.x + 10 * u} y={chosen.at.y - 12 * u} font-size={NAME_PX * u} stroke-width={4 * u}>{chosen.text}</text>
-  {/if}
 </svg>
 
 <style>
@@ -102,7 +89,8 @@
   line.bone { stroke: #19c3d6; stroke-linecap: round; }
   line.bone.far { stroke: #8fdbe4; opacity: .75; }
   line.hit { stroke: transparent; stroke-linecap: round; pointer-events: stroke; cursor: pointer; }
-  line.leader { stroke: #a8f2fa; opacity: .5; }
+  line.leader { stroke: #a8f2fa; opacity: .18; }
+  line.leader.lit { stroke: #ffe066; opacity: .9; }
   circle.joint { fill: #ff3d7f; stroke: #14161a; pointer-events: all; cursor: pointer; }
   circle.joint.far { fill: #ffd1e0; }
   .lit { opacity: 1; }
@@ -115,5 +103,4 @@
   text.code.joint { fill: #fff; }
   text.code.far:not(.lit):not(.dim) { opacity: .8; }
   text.code.lit { fill: #ffe066; }
-  text.name { fill: #ffe066; font-weight: 700; }
 </style>
