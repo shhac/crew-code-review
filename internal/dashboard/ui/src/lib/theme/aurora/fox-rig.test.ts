@@ -8,6 +8,11 @@ const look = (over: Partial<FoxLook> = {}): FoxLook => ({ now: 0, still: false, 
 const OPEN = 3900;
 // Long enough for a whole leap and a whole sway of the tail.
 const MOMENTS = Array.from({ length: 230 }, (_, i) => i * 20);
+// How far past its footprint's top a breath may take it, in page pixels:
+// curled up, its picture breathing about where it stands reaches up to
+// about 0.28px over, as the page has always drawn it (measured before its
+// skeleton, a breath was not counted at all).
+const BREATH = 0.5;
 
 describe('fox rig', () => {
   // Placement and clearance work from POSES, so the drawing must never
@@ -23,7 +28,7 @@ describe('fox rig', () => {
           const reach = pageReach(rig);
           expect(reach.left).toBeLessThanOrEqual(width / 2);
           expect(reach.right).toBeLessThanOrEqual(width / 2);
-          expect(reach.top).toBeLessThanOrEqual(height);
+          expect(reach.top).toBeLessThanOrEqual(height + BREATH);
         }
       }
     });

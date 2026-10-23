@@ -1,7 +1,10 @@
 import type { Point } from '../pointer';
-import { gaitPhase, legsTo, restingFeet, stepping, type Gait, type Step } from '../rig/gait';
+import { gaitPhase, restingFeet, stepping, type Gait, type Step } from '../rig/gait';
 import { blinking, breath } from '../rig/life';
-import { legsAround, lidLayers, stillPicture, turnAbout, turned, type ArtLeg, type Frame, type Fur, type LimbArt, type RigPose, type Turn } from '../rig/rig';
+import { lidLayers, turnAbout, type ArtLeg, type Frame, type Fur, type LimbArt, type RigPose, type Turn } from '../rig/rig';
+import { compose } from '../rig/skeleton/compose';
+import { wholePicture } from '../rig/skeleton/picture';
+import { head, MAMMAL, picture, spine, tetrapod } from '../rig/skeleton/tetrapod';
 import { leapt, poseOf, type Fox } from './fox';
 import alertArt from './fox-alert.webp';
 import curledArt from './fox-curled.webp';
@@ -17,7 +20,7 @@ import torsoArt from './fox-torso.webp';
 
 // The fox put together from its parts: a tail, a torso and a head over its
 // chest, on four legs, each made of furred leg art laid along a leg posed in
-// code. Facing right, on the ledge at ANCHOR. Curled up asleep, or looking
+// code, all hung on its skeleton (rig/skeleton). Facing right, on the ledge at ANCHOR. Curled up asleep, or looking
 // up from there, it is one picture. Every picture is on one scale, its
 // eye's, so curled up it is the same fox.
 //
@@ -140,38 +143,46 @@ function stance(fox: RigFox, look: FoxLook): Stance {
   }
 }
 
+// Its skeleton: the body turning about its hips, the tail at its root, the
+// head on its neck with the eye on it, and each leg from its hip (or
+// shoulder), the legs starting inside the body, its hips high in the rump
+// and its shoulders in the chest. Drawn with the far legs behind it, then
+// the tail, the torso and the head, the near legs' fur over its edge.
+const FOX = tetrapod(MAMMAL, {
+  frame: FRAME,
+  root: 'body',
+  joints: [
+    { id: 'body', parent: null, role: spine(2), at: HIND, name: 'pelvis (the body turns about its hips)' },
+    { id: 'skull', parent: 'body', role: spine(0), at: NECK, name: 'head joint (neck)' },
+    { id: 'tail', parent: 'body', role: spine(3), at: TAIL_ROOT, name: 'tail root' },
+    { id: 'eye', parent: 'skull', role: head(0), at: EYE, name: 'eye' },
+  ],
+  bones: [
+    { from: 'skull', to: 'body', name: 'neck line (head joint to the hips)' }, { from: 'body', to: 'tail', name: 'pelvis line (hips to tail root)' },
+    { from: 'eye', to: 'skull', name: 'skull' },
+  ],
+  legs: LEGS,
+  ground: () => FEET,
+  order: [picture('tail', 'tail', tailArt, TAIL), picture('torso', 'body', torsoArt, TORSO), picture('head', 'skull', headArt, HEAD), 'eyelid'],
+  shapes: [{ id: 'eyelid', on: 'skull' }],
+  guides: (at) => [
+    { name: 'tail root', at: 'tail' }, { name: 'neck', at: 'skull' }, { name: 'eye', at: 'eye' },
+    ...LEGS.map((leg) => ({ name: leg.fore ? 'shoulder' : 'hip', at: at(leg, 0) })),
+    ...LEGS.flatMap((leg) => (leg.fore ? ['elbow', 'wrist (carpus)', 'toes'] : ['stifle (knee)', 'hock (ankle)', 'toes']).map((name, k) => ({ name, at: at(leg, k + 1) }))),
+  ],
+});
+// Curled up asleep, or looking up from there, it is one picture.
+const CURLED = wholePicture(FRAME, PICTURES.curled);
+const LOOKING_UP = wholePicture(FRAME, PICTURES.alert);
+
 export function foxRig(fox: RigFox, look: FoxLook): RigPose {
   const pose = poseOf(fox, look.now);
   // Curled up asleep, or looking up from there, breathing slowly.
-  if (pose === 'curled' || pose === 'alert') return stillPicture(FRAME, PICTURES[pose], look.still ? 1 : 1 + 0.035 * breath(fox.seed, look.now, 3400));
-  const { body, head, tail, feet, steps } = stance(fox, look);
-  const hips = LEGS.map((s) => turned(body, s.hip));
-  const legs = legsTo(LEGS, hips, feet(hips), steps);
-  const nod = turnAbout(head, NECK);
-  return {
-    ...FRAME,
-    // The legs start inside the body, its hips high in the rump and its
-    // shoulders in the chest.
-    layers: legsAround(LEGS, legs, {
-      kind: 'group', turn: body,
-      layers: [
-        { kind: 'group', turn: turnAbout(tail, TAIL_ROOT), layers: [{ kind: 'image', name: 'tail', src: tailArt, ...TAIL }] },
-        { kind: 'image', name: 'torso', src: torsoArt, ...TORSO },
-        {
-          kind: 'group', turn: nod,
-          layers: [
-            { kind: 'image', name: 'head', src: headArt, ...HEAD },
-            ...lidLayers(!look.still && blinking(fox.seed, look.now), EYE, 0.85, FACE),
-          ],
-        },
-      ],
-    }),
-    guides: [
-      { name: 'stands here', at: ANCHOR }, { name: 'tail root', at: turned(body, TAIL_ROOT) }, { name: 'neck', at: turned(body, NECK) },
-      { name: 'eye', at: turned(body, turned(nod, EYE)) }, ...hips.map((at, i) => ({ name: LEGS[i].fore ? 'shoulder' : 'hip', at })),
-      ...legs.flatMap((l, i) => (LEGS[i].fore
-        ? [{ name: 'elbow', at: l.knee }, { name: 'wrist (carpus)', at: l.ankle }, { name: 'toes', at: l.foot }]
-        : [{ name: 'stifle (knee)', at: l.knee }, { name: 'hock (ankle)', at: l.ankle }, { name: 'toes', at: l.foot }])),
-    ],
-  };
+  if (pose === 'curled' || pose === 'alert') return (pose === 'curled' ? CURLED : LOOKING_UP)(look.still ? 1 : 1 + 0.035 * breath(fox.seed, look.now, 3400));
+  const { body, head: angle, tail, feet, steps = [] } = stance(fox, look);
+  const joints = { skull: { angle }, tail: { angle: tail } };
+  const at = feet(FOX.hips({ root: body, joints }));
+  const limbs = FOX.limbs(at.map((p, i) => ({ kind: 'plant', at: p, step: steps[i] })));
+  const shapes = { eyelid: lidLayers(!look.still && blinking(fox.seed, look.now), EYE, 0.85, FACE) };
+  return compose(FOX.body, () => ({ root: body, joints, limbs, show: {}, z: {}, shapes }), look.now);
 }

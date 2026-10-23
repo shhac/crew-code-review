@@ -8,7 +8,6 @@ import foxPounce from '../fox-pose-pounce.webp';
 import foxTrotPass from '../fox-pose-trot-pass.webp';
 import foxTrotReach from '../fox-pose-trot-reach.webp';
 import foxReference from '../fox-reference.webp';
-import { mammalHead, mammalLeg, mammalSpine } from './bones';
 import type { Moment, RigCritter } from './critter';
 
 // The lab's labels for what the fox does, not the fox's own modes: its
@@ -30,7 +29,7 @@ const DRAWINGS: Record<string, Drawing> = {
   dig: { src: foxDig, width: 27.08, height: 18.5, mode: 'dig' },
 };
 
-const foxAt = ({ mode, walked, now }: Moment): RigFox => {
+export const foxAt = ({ mode, walked, now }: Moment): RigFox => {
   const pick = MODES.find((f) => f.label === mode) ?? MODES[0];
   // A leap replays every 0.9s: its flight, then a moment landed.
   return { mode: pick.mode, walked, seed: 1, until: now - (now % 900) + LEAP, ear: 0, look: pick.look ?? 0 };
@@ -45,5 +44,8 @@ export const fox = {
   pose: (at, { still }) => foxRig(foxAt(at), { now: at.now, still }),
   box: (at) => POSES[poseOf(foxAt(at), at.now)],
   drawings: DRAWINGS,
-  bones: { legs: mammalLeg, head: mammalHead('eye'), spine: mammalSpine(true) },
+  // Before its skeleton was its own, read off the drawing, its spine
+  // numbered only its own points (the tail root SJ1) and ran through the
+  // shoulder and the hip.
+  aliases: { SJ1: 'SJ3', SB1: 'SB0', SB2: 'SB1' },
 } satisfies RigCritter;
