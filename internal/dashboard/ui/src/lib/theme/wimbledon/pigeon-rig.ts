@@ -1,4 +1,4 @@
-import { mix, smooth } from '../math';
+import { apart, degrees, mix, smooth } from '../math';
 import type { Point } from '../pointer';
 import { AIR_LEGS, airLegsTo, birdJointGuides, birdLegsTo, birdWalk, feetLine, headBob, plantedLegs, stepRise, type AirLegs, type BirdLeg } from '../rig/bird';
 import { stepping, type Limb } from '../rig/gait';
@@ -16,6 +16,7 @@ import footArt from './pigeon-foot.webp';
 import handUnderArt from './pigeon-hand-under.webp';
 import handArt from './pigeon-hand.webp';
 import headArt from './pigeon-head.webp';
+import neckFurArt from './pigeon-neck-fur.webp';
 import neckArt from './pigeon-neck.webp';
 import shankFurArt from './pigeon-shank-fur.webp';
 import shankArt from './pigeon-shank.webp';
@@ -53,8 +54,10 @@ const TAIL_FAN = { x: 1, y: 7.64, width: 7.92, height: 8.92 };
 const TAIL_ROOT = { x: 8.6, y: 12.1 };
 const HEAD = { x: 13.45, y: 1, width: 7.67, height: 6.67 };
 export const EYE = { x: 18.11, y: 2.94 };
-// Where the head meets the neck, what it nods and pecks about.
+// Where the head meets the neck, what it nods about, and the base of the
+// neck, what it swings down from in a peck.
 const NECK = { x: 16.4, y: 5.6 };
+const NECK_BASE = { x: 15.8, y: 7.2 };
 const MIDDLE = { x: 12.5, y: 10 };
 const HIPS = { x: 13.1, y: 12.6 };
 // The blink is the nictitating membrane, pale across the eye.
@@ -135,22 +138,39 @@ export type PigeonPose = 'stand' | 'walk' | 'peck' | 'alert' | 'takeoff' | 'fly'
 export type RigPigeon = { pose: PigeonPose; walked: number; seed: number; beat: number; t: number; gaze?: number };
 type PigeonLook = { now: number; still: boolean };
 
-// The neck: a piece of its feathers laid from the base of the neck in the
-// body to where it meets the head, wherever the head has gone, so the head
-// thrust out in a walk or down in a peck stays joined to the body. It runs
-// under the body's soft top and the head's soft lower edge, so no outline
-// crosses either join.
-const NECK_BASE = { x: 15.8, y: 7.2 };
-const NECK_TOP = { x: 16.2, y: 6.2 };
-const NECK_THICK = 3.6;
-function neckLayer(head: Turn): Layer {
+// The neck: the feathers between the body's shoulders and the head, cut
+// from where they sat (the body and the head are each cut short of them),
+// and stretched to the head wherever it has gone, so the head thrust out in
+// a walk or down in a peck stays joined to the body by its own neck. Like a
+// leg piece it is drawn twice: outlined under the body, its base outlined
+// where it ends there, and as fur alone over the body's outlined cut, so
+// standing it is the drawing as it was, and turned out from under the body
+// its base is outlined and no line crosses the join. It runs under the
+// head's soft lower edge.
+const NECK_PIECE = { x: 13.5, y: 4.1, width: 7, height: 5.25 };
+// It turns about a root deep in the body behind the shoulders, not at
+// them: swung down to peck it then turns nearer as far as the head does, and
+// its base stays down on the body rather than rising over the back.
+const NECK_ROOT = { x: 14.5, y: 9.5 };
+// Where it meets the head (in the head's drawing), and the middle of the
+// body's cut, which stays where it is as the neck stretches.
+const NECK_TOP = { x: 17.05, y: 4.7 };
+const NECK_FROM = { x: 16.9, y: 7.35 };
+const NECK_LENGTH = apart(NECK_ROOT, NECK_TOP);
+const NECK_HELD = ((NECK_FROM.x - NECK_ROOT.x) * (NECK_TOP.x - NECK_ROOT.x) + (NECK_FROM.y - NECK_ROOT.y) * (NECK_TOP.y - NECK_ROOT.y)) / NECK_LENGTH;
+// How far from straight up the line from a point to another leans.
+const lean = (from: Point, to: Point) => degrees(Math.atan2(to.x - from.x, from.y - to.y));
+// Stood up along the line from its root to its top, stretched along it
+// from the body's cut, and leant over to where the head has gone.
+function neckLayer(head: Turn, fur: boolean): Layer {
   const top = turned(head, NECK_TOP);
-  const length = Math.hypot(top.x - NECK_BASE.x, top.y - NECK_BASE.y);
-  const angle = (Math.atan2(top.y - NECK_BASE.y, top.x - NECK_BASE.x) * 180) / Math.PI;
-  return {
-    kind: 'group', turn: turnAbout(angle, { x: 0, y: 0 }, NECK_BASE.x, NECK_BASE.y),
-    layers: [imageLayer('neck', neckArt, { x: -NECK_THICK / 2, y: -NECK_THICK / 2, width: length + NECK_THICK, height: NECK_THICK })],
+  const piece = fur ? imageLayer('neck, fur', neckFurArt, NECK_PIECE) : imageLayer('neck', neckArt, NECK_PIECE);
+  const stood: Layer = { kind: 'group', turn: turnAbout(-lean(NECK_ROOT, NECK_TOP), NECK_ROOT), layers: [piece] };
+  const stretched: Layer = {
+    kind: 'group', turn: turnAbout(0, { x: NECK_ROOT.x, y: NECK_ROOT.y - NECK_HELD }),
+    foreshorten: (apart(NECK_ROOT, top) - NECK_HELD) / (NECK_LENGTH - NECK_HELD), layers: [stood],
   };
+  return { kind: 'group', turn: turnAbout(lean(NECK_ROOT, top), NECK_ROOT), layers: [stretched] };
 }
 
 const headLayer = (pigeon: RigPigeon, look: PigeonLook, head: Turn): Layer => ({
@@ -234,8 +254,9 @@ function flying(pigeon: RigPigeon, look: PigeonLook): RigPose {
   const bodyLayers: Layer[] = [
     birdWing(WING, pose.wings, FAR_SHOULDER, true, 0, !folded),
     ...tailLayers(pose.tail, 1.3 * pose.pitch),
-    neckLayer(turnAbout(0, NECK)),
+    neckLayer(turnAbout(0, NECK), false),
     imageLayer('body', bodyArt, BODY),
+    neckLayer(turnAbout(0, NECK), true),
     imageLayer('folded wing', foldedArt, FOLDED_WING, !folded),
     headLayer(pigeon, look, turnAbout(0, NECK)),
     birdWing(WING, pose.wings, NEAR_SHOULDER, false, 0, !folded),
@@ -262,7 +283,8 @@ export function pigeonRig(pigeon: RigPigeon, look: PigeonLook): RigPose {
   const legs = limbs(hips);
   const layers: Layer[] = [
     { kind: 'group', turn: turnAbout(tail, TAIL_ROOT), layers: tailLayers(0) },
-    neckLayer(head), imageLayer('body', bodyArt, BODY), imageLayer('folded wing', foldedArt, FOLDED_WING), headLayer(pigeon, look, head),
+    neckLayer(head, false), imageLayer('body', bodyArt, BODY), neckLayer(head, true),
+    imageLayer('folded wing', foldedArt, FOLDED_WING), headLayer(pigeon, look, head),
   ];
   return {
     ...FRAME,

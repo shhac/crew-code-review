@@ -661,10 +661,14 @@ frame for anything drawn over content.
   fanned, tucks under it with no gap; the first body stopped short there,
   where the reference's folded wing hid it.
 - **Head and neck as two parts**: the head (with its soft, unoutlined back
-  edge, as the hedgehog's has) and a neck piece laid along a bone from the
-  upper breast to the back of the head, drawn twice (outlined, then fur alone)
-  like a leg piece, so it stretches in the thrust and shortens in the hold
-  without a line across it. The head is placed in world space during the hold
+  edge, as the hedgehog's has) and a neck piece from the shoulders to the
+  head, drawn twice (outlined, then fur alone) like a leg piece, so it
+  stretches in the thrust and shortens in the hold without a line across it.
+  Neither the body nor the head carries the neck itself: the first build
+  left the green and violet of the neck on both, so the neck piece lay
+  hidden under the body and, pecking, the body's own neck stood up as a ruff
+  behind a head that seemed to float clear of it (the owner's lab review,
+  2026-10-22). The head is placed in world space during the hold
   (it stays put while the body moves) and thrust forward on the step; this is
   what makes it a pigeon.
 - **The folded wing as its own part** too, so take-off can lift it away and
@@ -740,7 +744,7 @@ were checked by laying them at their printed places over their drawing.
 | --- | --- | --- |
 | `pigeon-parts.png` | the body (legs, folded wing and tail off, belly and back closed, a soft unoutlined top where the head and neck go), the folded wing, the closed tail, the head with the green of the upper neck and a soft lower edge | `pigeon-standing-2.png` |
 | `pigeon-body-3.png` | the body redrawn with its rear intact (2026-10-22): the rump and the darker grey vent and undertail coverts run back and down over the tail's root, ending soft and unoutlined where the tail comes out; the head beside it, to measure its scale by | `pigeon-parts.png`, in two rounds with the reference: the first ran the rear back but kept it high, so the tail's cut root still showed below it; the second was given a guide with the closed and fanned tails laid where the rig puts them and the outline to reach |
-| `pigeon-limbs.png` | the neck piece (green over violet), the feathered tibiotarsus piece, the bare coral tarsometatarsus, a foot flat (three toes forward, the hallux back) and a foot curled | `pigeon-standing-2.png` |
+| `pigeon-limbs.png` | a neck piece (green over violet; no longer used, see below), the feathered tibiotarsus piece, the bare coral tarsometatarsus, a foot flat (three toes forward, the hallux back) and a foot curled | `pigeon-standing-2.png` |
 | `pigeon-wings.png` | the near wing's arm and hand, each as upper side and underside, root at the left with a soft end; the fanned tail | `pigeon-standing-2.png`, with the flight and take-off poses as guides |
 | `hawk-parts.png` | the gliding body (wing, head and tail off, the feet tucked under the tail painted on), the head with a soft back edge, the closed tail | `hawk-pose-glide-2.png` |
 | `hawk-wings.png` | the near wing's arm and hand, upper side and underside | `hawk-pose-glide-2.png`, with the flap poses as guides |
@@ -767,9 +771,22 @@ by overlay. Where each part sat (units, the reference's top left at 1, 1):
 | `hawk-head` | 8.67x6.42 | 24.62, 1.00 |
 | `hawk-tail` | 10.67x4.67 | 1.03, 3.11 |
 
-The limb pieces are exported at measured thicknesses (neck 3.6 units,
-tibiotarsus 1.7, tarsometatarsus 0.45) with their fur alone beside them
-(`-fur`), the flat foot 4.7 units long and the curled one 2.8. The wings are
+The neck is not drawn as a piece of its own but cut (2026-10-23): with the
+body and the head laid together where they sat, `export.py` parts the neck
+from each along a line across it (`NECK_BODY` at the shoulders, from where
+the back meets the nape to the front of the breast; `NECK_HEAD` just under
+the skull), and the neck piece is what lies between, so standing the bird
+is the drawing as it was, the iridescent band running on unbroken from
+breast to head. The body is cut off at its line and outlined along it in
+the drawings' ink; the head fades out past its line. The neck piece's fur
+runs back over the body's new outline, hiding it while the neck stands over
+it; outlined, the piece runs back further as its own feathers mirrored in
+the line, outlined where it ends, so a neck turned out from under the body
+has an outlined base and its fur never spreads past it. art.py's
+`fill_only` would also take out the neck's dark violet and slate, so its
+fur takes out only the ink. The limb pieces are exported at measured
+thicknesses (tibiotarsus 1.7 units, tarsometatarsus 0.45) with their fur
+alone beside them (`-fur`), the flat foot 4.7 units long and the curled one 2.8. The wings are
 placed by hand in the rig, so they are scaled by length: the hand-wing is
 half the bird's length (10 units on the pigeon, 15.3 on the hawk), the arm
 on the same scale, each stood span up as the bird kit draws a wing piece
@@ -792,8 +809,11 @@ reach through a stride), the toes pressing the ledge 3.1 ahead of the
 metatarsophalangeal joint. The walk is the kit's two-beat bird walk
 (stride 3 units, stance 0.6) with its head bob, the thrust 0.45 of a step,
 the head held still over the ground through the rest (the test checks it
-never slides back). The head rides on a neck piece laid from the base of
-the neck to where the head sits, so a thrust or a peck never parts them.
+never slides back). The head rides on the neck piece, stretched from the
+shoulders to where the head sits, so a thrust or a peck never parts them;
+it turns about a root deep behind the shoulders, so swung down to peck it
+turns nearer as far as the head does and its base stays down on the body
+rather than rising over the back.
 A peck tips the body 25 degrees and swings the head and neck down 45 from
 the base of the neck, the neck stretching, the bill to the ledge. The
 alert stands 4 degrees up with the neck stretched 1.5 units.
