@@ -261,14 +261,27 @@ the eye that blinks and aims), no halo, no torch.
   art along posed bones (shoulder, elbow, wrist) with the fist at the end,
   drawn twice like the legs (outlined, then fur alone) so no line crosses
   the elbow. Posed in code rather than baked into pictures, so the bow arm
-  can point along any arc.
+  can point along any arc. At full draw the drawing wrist sits under the
+  jaw just close enough to its shoulder that the forearm lies level back
+  from the string, so the elbow points straight back behind the shoulder at
+  the hand's height; the bow arm reaches, straight but for a soft elbow,
+  from its shoulder to where the arrow's line crosses it, so the arrow runs
+  from the string at the jaw over the bow fist. Aiming up or down, the body
+  bends toward the aim about its chest as an archer bends at the waist
+  (all the way for a shot upward, 0.6 of the aim downward, at most 30
+  degrees), and the arms turn about their shoulders for the rest. (The
+  first rig anchored the hand far forward under the eye, almost an arm's
+  length ahead of the shoulder: the elbow could only sit between them,
+  pointing forward and up, and the bow arm was posed on its own line from
+  the chest, bent, and missed the arrow.)
 - **The bow, string and arrow** are drawn in code, in drawing units, over
   the far hand: a gold stave that bends deeper as it is drawn, a thin dark
   string from tip to tip through the drawing hand, and the nocked arrow
   (gold shaft, rose heart-shaped fletching and a small heart head) lying
-  from the string along the bow arm. A stroke layer (`kind: 'stroke'`, a
-  polyline in drawing units with a colour and a width) is added to the
-  shared rig for this; the existing animals do not use it.
+  from the string over the bow fist, resting on it, the bow square to it.
+  A stroke layer (`kind: 'stroke'`, a polyline in drawing units with a
+  colour and a width) is added to the shared rig for this; the existing
+  animals do not use it.
 - **Head**: the eye blinks on a seeded schedule (`rig/life.ts`); the head
   turns a little toward a cursor within 160px (eased, at most 12 degrees),
   and toward the target while aiming.
