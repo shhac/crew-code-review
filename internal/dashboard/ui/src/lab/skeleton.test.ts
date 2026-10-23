@@ -88,8 +88,12 @@ describe('skeletonOf', () => {
   });
 
   it("makes a bird's marked wing its near forelimb, its spine from the pivots its pictures turn about", () => {
-    const s = skeletonOf(gull.pose(at('flap'), look), gull.bones);
-    expect(s.groups.map((g) => g.code)).toEqual(['L0', 'L2', 'L3', 'S', 'H']);
+    const p = gull.pose(at('flap'), look);
+    const s = skeletonOf(p, gull.bones);
+    expect(s.groups.map((g) => g.code)).toEqual(['L0', 'L1', 'L2', 'L3', 'S', 'H']);
+    expect(s.joints.filter((j) => j.code.startsWith('L1')).map((j) => [j.name, j.far])).toEqual([['shoulder', true], ['wrist', true], ['wingtip', true]]);
+    // The far wing's shoulder is its group's root, posed by the rig: where the far wing joins the body.
+    expect(joint(s, 'L1J0')?.at.x).not.toBeCloseTo(joint(s, 'L0J0')?.at.x ?? 0);
     expect(s.joints.filter((j) => j.code.startsWith('L0')).map((j) => j.name)).toEqual(['shoulder', 'wrist', 'wingtip']);
     expect(s.bones.filter((b) => b.code.startsWith('S')).map((b) => [b.from, b.to])).toEqual([['SJ0', 'L0J0'], ['L0J0', 'SJ1'], ['SJ1', 'L2J0'], ['L2J0', 'SJ2']]);
     expect(s.joints.filter((j) => /^[SH]/.test(j.code)).map((j) => j.name)).toEqual(['head joint', 'body pivot', 'tail root', 'jaw hinge (lower mandible)']);
@@ -98,6 +102,18 @@ describe('skeletonOf', () => {
     expect(skeletonOf(crow.pose(at('walk'), look), crow.bones).bones.filter((b) => b.code.startsWith('S'))).toHaveLength(3);
     // The hawk's tail is drawn in its body's group, so has no pivot of its own.
     expect(skeletonOf(hawk.pose(at('glide'), look), hawk.bones).joints.filter((j) => j.code.startsWith('S')).map((j) => j.name)).toEqual(['head joint', 'body pivot']);
+  });
+
+  it("carries a near wing's marks to the far wing drawn the same, by the far wing's own group, never a fanned tail's", () => {
+    const wing = (far: boolean, dx: number) => ({
+      kind: 'group' as const, turn: turnAbout(0, { x: 0, y: 0 }, dx, 0), foreshorten: 0.5,
+      layers: [{ kind: 'image' as const, name: 'wing arm', src: '', x: 0, y: 0, width: 1, height: 1, far }],
+    });
+    const tail = { ...wing(false, 9), layers: [{ kind: 'image' as const, name: 'tail, fanned', src: '', x: 0, y: 0, width: 1, height: 1 }] };
+    const marks = [{ name: 'shoulder', at: { x: 1, y: 0 } }, { name: 'wrist', at: { x: 1, y: -2 } }, { name: 'wingtip', at: { x: 2, y: -4 } }];
+    const s = skeletonOf(pose([wing(true, 4), tail, wing(false, 1)], marks), { marked: [{ joints: ['shoulder', 'wrist', 'wingtip'], bones: ['arm', 'hand'], limb: () => 'wing', pair: 0, twin: true }] });
+    expect(s.groups.map((g) => `${g.code} ${g.title}`)).toEqual(['L0 near wing', 'L1 far wing']);
+    expect(s.joints.filter((j) => j.code.startsWith('L1')).map((j) => j.at)).toEqual([{ x: 4, y: 0 }, { x: 4, y: -2 }, { x: 5, y: -4 }]);
   });
 
   it('finds bones for every animal drawn from parts, in every mode it has joints in (not one picture, asleep or curled up)', () => {

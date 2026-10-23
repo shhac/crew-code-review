@@ -30,13 +30,14 @@ export const mammalHead = (...marks: string[]): Chain =>
 // ankle the tarsometatarsus, then the toes. Its wing is marked at the
 // shoulder, the wrist and the wingtip, with no elbow between: the arm piece
 // is the humerus and the forearm together, the hand piece the hand bones
-// with the primaries on them. Only the near wing is marked. The rigs mark
+// with the primaries on them. Only the near wing is marked; the far one is
+// posed the same, so its joints are carried over from the near's. The rigs mark
 // no spine, but their pictures turn about its points: the head on its
 // joint, a pigeon's neck at its base, the body about its middle, the tail
 // at its root; none has the tail's tip.
 export const BIRD: BoneNames = {
   legs: () => ({ pair: 1, limb: 'leg', upper: 'femur (inside the body)', middle: 'tibiotarsus (drumstick)', lower: 'tarsometatarsus', foot: 'toes' }),
-  marked: [{ joints: ['shoulder', 'wrist', 'wingtip'], bones: ['arm (humerus, radius and ulna; no elbow)', 'hand and primaries'], limb: () => 'wing', pair: 0 }],
+  marked: [{ joints: ['shoulder', 'wrist', 'wingtip'], bones: ['arm (humerus, radius and ulna; no elbow)', 'hand and primaries'], limb: () => 'wing', pair: 0, twin: true }],
   spine: [
     { pivot: 'head', name: 'head joint', line: 'neck line' }, { pivot: 'neck', name: 'neck base', line: 'back line' },
     { mark: 'shoulder', line: 'back line' }, { pivot: 'body', name: 'body pivot', line: 'back line' },

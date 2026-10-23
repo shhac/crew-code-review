@@ -48,8 +48,10 @@ export type LegBones = { pair: number; limb: string; upper: string; middle?: str
 // Limbs drawn without a posed leg (an insect's strokes, a bird's wing) run
 // through the rig's joint marks: the marks' names in order along one limb,
 // and the bones' between them. A run's pair is given, or else counted from
-// the front.
-export type Marked = { joints: readonly string[]; bones: readonly string[]; limb: (pair: number) => string; pair?: number };
+// the front. `twin`: the far one is drawn but not marked, as a bird's far
+// wing is, posed as the near one is (rig/wings.ts), so its joints are the
+// near one's marks carried from the near wing's drawing to the far's.
+export type Marked = { joints: readonly string[]; bones: readonly string[]; limb: (pair: number) => string; pair?: number; twin?: boolean };
 // A point of the body: one of the rig's joint marks by its name (shown as
 // `name`, where that says more), or the pivot a group of its layers turns
 // about, by the picture it turns (a bird's head turns on its head joint).
@@ -139,17 +141,52 @@ function legDraft({ leg, far, place }: SeenLeg, names: LegBones, marks: readonly
 
 // Each run of marks named as one limb's joints, in order, is one limb; one
 // without a pair given is counted from the front, side by side.
-function markedDrafts(marks: readonly Guide[], spec: Marked, isFar: (p: Point) => boolean): Draft[] {
+// A plane map, as three points sampled from it say it is, and its inverse.
+type Affine = { a: number; b: number; c: number; d: number; e: number; f: number };
+const affineOf = (place: Place): Affine => {
+  const o = place({ x: 0, y: 0 }), i = place({ x: 1, y: 0 }), j = place({ x: 0, y: 1 });
+  return { a: i.x - o.x, b: i.y - o.y, c: j.x - o.x, d: j.y - o.y, e: o.x, f: o.y };
+};
+const undo = (m: Affine): Place => {
+  const det = m.a * m.d - m.b * m.c;
+  return ({ x, y }) => ({ x: (m.d * (x - m.e) - m.c * (y - m.f)) / det, y: (m.a * (y - m.f) - m.b * (x - m.e)) / det });
+};
+
+// Each bird wing as drawn (rig/wings.ts's birdWing: a foreshortened group
+// with its arm's pictures in it, where a fanned tail is foreshortened too):
+// where its own flat drawing lands in the pose, and whether it is the far
+// one.
+type Wing = { far: boolean; place: Place };
+const imagesIn = (layers: readonly Layer[]): Extract<Layer, { kind: 'image' }>[] =>
+  layers.flatMap((l) => (l.kind === 'group' ? imagesIn(l.layers) : l.kind === 'image' ? [l] : []));
+const wingsIn = (layers: readonly Layer[], place: Place): Wing[] => layers.flatMap((l) => {
+  if (l.kind !== 'group') return [];
+  const arm = imagesIn(l.layers).find((i) => / arm(, underside)?$/.test(i.name));
+  if (l.foreshorten !== undefined && arm) return [{ far: !!arm.far, place: within(l, place) }];
+  return wingsIn(l.layers, within(l, place));
+});
+
+// The far twin of a marked near limb: each of its marks taken back into
+// the near wing's own drawing, then out through the far wing's.
+function twinOf(near: Draft, wings: readonly Wing[]): Draft[] {
+  const nearWing = wings.find((w) => !w.far), farWing = wings.find((w) => w.far);
+  if (!nearWing || !farWing) return [];
+  const back = undo(affineOf(nearWing.place));
+  return [{ ...near, far: true, joints: near.joints.map((j) => ({ ...j, at: farWing.place(back(j.at)) })) }];
+}
+
+function markedDrafts(marks: readonly Guide[], spec: Marked, isFar: (p: Point) => boolean, wings: readonly Wing[]): Draft[] {
   const { joints } = spec;
   const runs = marks.flatMap((g, i) => {
     const run = marks.slice(i, i + joints.length);
     return run.length === joints.length && run.every((r, k) => r.name === joints[k]) ? [{ run, far: isFar(g.at) }] : [];
   });
   const rank = (r: (typeof runs)[number]) => runs.filter((o) => o.far === r.far && o.run[0].at.x > r.run[0].at.x).length;
-  return runs.map((r) => {
+  const drafts = runs.map((r) => {
     const pair = spec.pair ?? rank(r);
     return { pair, far: r.far, title: spec.limb(pair), joints: r.run.map((g) => ({ at: g.at, name: g.name })), bones: [...spec.bones] };
   });
+  return spec.twin ? [...drafts, ...drafts.filter((d) => !d.far).flatMap((d) => twinOf(d, wings))] : drafts;
 }
 
 const side = (far: boolean) => (far ? 'far' : 'near');
@@ -233,7 +270,8 @@ export function skeletonOf(pose: RigPose, names: BoneNames): Skeleton {
   const marks = (pose.guides ?? []).filter((g) => !same(g.at, pose.anchor));
   const legNames = names.legs;
   const legs = legNames ? legsIn(pose.layers, top).map((s) => legDraft(s, legNames({ layer: s.layer, fore: s.leg.fore }), marks)) : [];
-  const drafts = [...legs, ...(names.marked ?? []).flatMap((m) => markedDrafts(marks, m, isFar))];
+  const wings = wingsIn(pose.layers, top);
+  const drafts = [...legs, ...(names.marked ?? []).flatMap((m) => markedDrafts(marks, m, isFar, wings))];
   const limbs = drafts.map(coded).sort((a, b) => a.group.code.localeCompare(b.group.code, undefined, { numeric: true }));
   const built: Built = { groups: limbs.map((l) => l.group), joints: limbs.flatMap((l) => l.joints), bones: limbs.flatMap((l) => l.bones) };
   const onLimbs = (g: Guide) => built.joints.some((j) => same(j.at, g.at));
