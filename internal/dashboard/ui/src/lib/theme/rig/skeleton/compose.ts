@@ -194,7 +194,7 @@ export function compose(body: Body, poseAt: (now: number) => PoseSpec, now: numb
   const { skeleton } = body;
   const pose = poseAt(now);
   const rest = restOf(skeleton);
-  const { world } = frames(skeleton, pose, trailing(skeleton, poseAt, now));
+  const { world, carried } = frames(skeleton, pose, trailing(skeleton, poseAt, now));
   const restAt = (id: string) => {
     const p = rest.points.get(id);
     if (!p) throw new Error(`skeleton: no joint ${id}`);
@@ -223,6 +223,10 @@ export function compose(body: Body, poseAt: (now: number) => PoseSpec, now: numb
     return had;
   };
   const posed: Posed = { frame: found(frameMap), point: found(pointMap), rest: restAt, handle: on((id) => frameMap.get(id)) };
+  // Where each joint would be with no squash anywhere above it: what a
+  // bone's length is measured between (a limb's own joints are posed from
+  // its root, which never takes one).
+  const unsquashed = found(new Map([...[...carried].map(([id, m]): [string, Point] => [id, applied(m, restAt(id))]), ...limbs.flatMap((l) => [...l.points])]));
 
   const placings = body.pieces.map((piece) => {
     const place = placing(piece.at, posed);
@@ -251,6 +255,6 @@ export function compose(body: Body, poseAt: (now: number) => PoseSpec, now: numb
     ...body.frame,
     layers,
     guides: [{ name: 'stands here', at: body.frame.anchor }, ...joints.map((j) => ({ name: j.name, at: j.at }))],
-    skeleton: { joints, bones: posedBones(skeleton, posed.point), limbs: posedLimbs },
+    skeleton: { joints, bones: posedBones(skeleton, unsquashed), limbs: posedLimbs },
   };
 }

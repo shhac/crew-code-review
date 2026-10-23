@@ -97,8 +97,7 @@ const SKELETON = {
     ...limbJoints('L2', 1, HIND.hip, ['hip', 'stifle', 'hock', 'toes'], toeTip(HIND)),
   ],
   bones: [
-    // Under the breathing pelvis, its tip breathes with the body.
-    { from: 'tail', to: 'tail tip', name: 'tail', stretch: { min: 4.55, max: 4.7 } },
+    { from: 'tail', to: 'tail tip', name: 'tail' },
     ...['L0', 'L2'].flatMap((code) => [
       { from: `${code}J0`, to: `${code}J1`, name: 'upper' }, { from: `${code}J1`, to: `${code}J2`, name: 'middle' },
       { from: `${code}J2`, to: `${code}J3`, name: 'lower' }, { from: `${code}J3`, to: `${code}J4`, name: 'toes' },

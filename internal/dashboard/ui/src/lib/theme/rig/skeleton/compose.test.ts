@@ -87,6 +87,13 @@ describe('a piece hung on a bone, or stretched between two handles', () => {
     expect(same({ ...drawn(body, pose), layers: drawn(body, pose).layers.slice(0, 1) }, groups)).toEqual([]);
   });
 
+  it('measures a bone with the breath above it taken out, though its joints are drawn breathing', () => {
+    const breathing = drawn(body, posing({ root: turnAbout(8, { x: 12, y: 9 }), joints: { body: { squash: { by: 1.2 } }, tail: { angle: -25 } } }));
+    const tip = breathing.skeleton?.joints.find((j) => j.id === 'tail tip')?.at;
+    expect(tip && turned(turnAbout(8, { x: 12, y: 9 }), turned(turnAbout(-25, tailRoot), { x: 2, y: 6 })).y - tip.y).not.toBeCloseTo(0, 3);
+    expect(breathing.skeleton?.bones.map((b) => b.length)).toEqual([expect.closeTo(Math.hypot(4, 3), 9)]);
+  });
+
   it('stretches a span as the pigeon\'s neck is stood up, stretched from where it is held and leant to the head, breath and all', () => {
     const lean = (from: Point, to: Point) => (Math.atan2(to.x - from.x, from.y - to.y) * 180) / Math.PI;
     const length = Math.hypot(TOP.x - ROOT.x, TOP.y - ROOT.y);
