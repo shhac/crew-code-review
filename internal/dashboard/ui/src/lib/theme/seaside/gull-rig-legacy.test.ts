@@ -7,9 +7,9 @@ import { gullRig as legacy } from './gull-rig-legacy';
 
 // The gull moved onto its skeleton draws exactly what its old rig drew.
 describe('the gull on its skeleton', () => {
-  it('draws what its old rig drew in every moment the lab shows, and held still', () => {
-    expect(unlike(gull, (at, look) => legacy(gullAt(at), { now: at.now, still: look.still }))).toEqual([]);
-  });
+  it('draws what its old rig drew in every moment the lab shows, held still, and looking either way as far as it goes', () => {
+    expect(unlike(gull, (at, look) => legacy(gullAt(at), { now: at.now, ...look }))).toEqual([]);
+  }, 60000);
 
   it('draws what it drew in every pose through its whole motion, eyeing things as far up and down as it looks', () => {
     const poses: GullPose[] = ['stand', 'strut', 'forage', 'eye', 'call', 'takeoff', 'flap', 'glide', 'stoop', 'flare', 'settle'];

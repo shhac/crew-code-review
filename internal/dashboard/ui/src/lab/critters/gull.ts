@@ -1,4 +1,4 @@
-import { FOOTPRINTS, FORAGE_SPEED, gullRig, EYE, REFERENCE, STRUT_SPEED, type GullPose, type RigGull } from '../../lib/theme/seaside/gull-rig';
+import { FOOTPRINTS, FORAGE_SPEED, gazeAt, gullRig, EYE, REFERENCE, STRUT_SPEED, type GullPose, type RigGull } from '../../lib/theme/seaside/gull-rig';
 import type { Drawing } from '../drawings';
 import gullCall from '../gull-pose-call.webp';
 import gullEye from '../gull-pose-eye.webp';
@@ -61,7 +61,9 @@ export const gull = {
   walking: ['strut', 'forage'],
   pace: (mode, speed) => (mode === 'forage' ? (speed * FORAGE_SPEED) / STRUT_SPEED : speed),
   lift: (mode) => (AIRBORNE.includes(mode) ? 16 : 0),
-  pose: (at, { still }) => gullRig(gullAt(at), { now: at.now, still }),
+  pose: (at, { still, gaze }) => gullRig(gullAt(at), { now: at.now, still, gaze }),
+  // Standing or eyeing something, its head turns toward the cursor.
+  gaze: (dir, cursor) => gazeAt(dir, { x: 0, y: 0 }, cursor),
   box: (at) => FOOTPRINTS[gullAt(at).pose],
   drawings: DRAWINGS,
   // Before its skeleton was its own, read off the drawing, its spine had no
