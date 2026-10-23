@@ -8,7 +8,7 @@ import foxPounce from '../fox-pose-pounce.webp';
 import foxTrotPass from '../fox-pose-trot-pass.webp';
 import foxTrotReach from '../fox-pose-trot-reach.webp';
 import foxReference from '../fox-reference.webp';
-import { mammalLeg, mammalTrunk } from './bones';
+import { mammalHead, mammalLeg, mammalSpine } from './bones';
 import type { Moment, RigCritter } from './critter';
 
 // The lab's labels for what the fox does, not the fox's own modes: its
@@ -45,5 +45,5 @@ export const fox = {
   pose: (at, { still }) => foxRig(foxAt(at), { now: at.now, still }),
   box: (at) => POSES[poseOf(foxAt(at), at.now)],
   drawings: DRAWINGS,
-  bones: { legs: mammalLeg, between: mammalTrunk('eye') },
+  bones: { legs: mammalLeg, head: mammalHead('eye'), spine: mammalSpine(true) },
 } satisfies RigCritter;

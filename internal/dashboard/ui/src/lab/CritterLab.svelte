@@ -3,7 +3,8 @@
   // judging them: what each is doing, speed, zoom, a timeline of numbered
   // frames to inspect a single pose and talk about it, and for those drawn from parts, the parts: hide
   // any, see each alone, mark the joints and the footprint placement allows;
-  // and its skeleton, over the drawing faded or instead of it.
+  // and its skeleton, over the drawing faded or instead of it, each joint
+  // and bone coded on the stage and named in a legend under it.
   // The cursor over the big stage is passed on, so heads turning toward it
   // can be checked. The animals are those in critters/registry.ts, each
   // known here only by what it says of itself there. Each keeps its own lab
@@ -18,7 +19,8 @@
   import { drawingFor, overlay } from './drawings';
   import { allPartNames, keepParts, partArt } from './rig-parts';
   import Skeleton from './Skeleton.svelte';
-  import { skeletonOf, type Placed } from './skeleton';
+  import { parseCode, skeletonOf, type Placed } from './skeleton';
+  import SkeletonLegend from './SkeletonLegend.svelte';
 
   let critter: Critter = CRITTERS[0];
   let mode = critter.modes[0];
@@ -48,6 +50,13 @@
   const FADED = 0.22;
   // A view draws its own animal, so it hands its skeleton back.
   let viewBones: Placed | null = null;
+  // The joint or bone pointed at, and the one pinned by a click, by code:
+  // what is pointed at is lit over what is pinned.
+  let hovered: string | null = null;
+  let pinned: string | null = null;
+  $: selected = hovered ?? pinned;
+  const hover = (code: string | null) => (hovered = code);
+  const pick = (code: string) => (pinned = pinned === code ? null : code);
   // The drawing laid over the animal to compare, by name; none is ''.
   let reference = '';
   function setMode(m: string) {
@@ -87,6 +96,7 @@
     speed = c.speed;
     hidden = [];
     reference = '';
+    pinned = null;
   }
   function track(e: PointerEvent) {
     const r = stage.getBoundingClientRect();
@@ -113,6 +123,7 @@
     ...(reference ? { ref: reference } : {}),
     ...(hidden.length ? { hide: hidden.join(',') } : {}),
     ...(skeleton ? { skeleton } : {}),
+    ...(pinned ? { [parseCode(pinned)?.kind === 'J' ? 'joint' : 'bone']: pinned } : {}),
   });
   // Written while paused, or as it plays without the ever-changing frame.
   $: if (ready && !playing) history.replaceState(null, '', `#${state}`);
@@ -134,6 +145,7 @@
     reference = q.get('ref') ?? '';
     hidden = q.get('hide')?.split(',') ?? [];
     skeleton = SKELETONS.find((s) => s.value && s.value === q.get('skeleton'))?.value ?? '';
+    pinned = q.get('bone') ?? q.get('joint');
     // Opened at a frame, it waits there.
     playing = !q.has('frame');
   }
@@ -208,8 +220,8 @@
     {#if !playing}<span class="hint">paused: arrow keys step a frame, shift for ten; the address bar links here</span>{/if}
   </div>
 
-  <!-- svelte-ignore a11y_no_static_element_interactions -->
-  <div class="stage" bind:this={stage} on:pointermove={track} on:pointerleave={() => (cursor = null)} data-stage>
+  <!-- svelte-ignore a11y_no_static_element_interactions, a11y_click_events_have_key_events -->
+  <div class="stage" bind:this={stage} on:pointermove={track} on:pointerleave={() => (cursor = null)} on:click={() => (pinned = null)} data-stage>
     <div class="floor"></div>
     <div class="big" style="scale: {zoom}">
       {#if box && footprint && pose}
@@ -225,9 +237,10 @@
       {#if shown && drawings[reference]}
         <Rig pose={overlay(shown, drawings[reference])} x={0} y={-lift} {dir} opacity={0.45} />
       {/if}
-      {#if placed}<Skeleton {placed} y={rig ? -lift : 0} {dir} {zoom} />{/if}
+      {#if placed}<Skeleton {placed} y={rig ? -lift : 0} {dir} {zoom} {selected} {hover} {pick} />{/if}
     </div>
   </div>
+  {#if placed}<SkeletonLegend skeleton={placed.skeleton} {selected} {pinned} {hover} {pick} />{/if}
 
   <section class="parts">
     <p>Layers, back to front (untick to hide):</p>

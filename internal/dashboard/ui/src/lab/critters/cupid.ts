@@ -51,11 +51,13 @@ export const cupid = {
   },
   drawings: DRAWINGS,
   // A child's limbs: the hand and foot are each one picture, from the
-  // wrist and the ankle.
+  // wrist and the ankle. Its feathered wings are marked at their root.
   bones: {
     legs: ({ layer }) => (layer.endsWith('arm')
-      ? { upper: 'humerus', middle: 'radius and ulna', foot: 'hand' }
-      : { upper: 'femur', middle: 'tibia and fibula', foot: 'foot' }),
-    between: [['hip', 'shoulder', 'back line (hip to shoulder)'], ['shoulder', 'neck', 'neck line (shoulder to head pivot)'], ['neck', 'eye', 'skull']],
+      ? { pair: 0, limb: 'arm', upper: 'humerus', middle: 'radius and ulna', foot: 'hand', tip: 'fingertips' }
+      : { pair: 1, limb: 'leg', upper: 'femur', middle: 'tibia and fibula', foot: 'foot' }),
+    head: { joints: ['neck', 'eye'], bones: [['neck', 'eye', 'skull']] },
+    wings: { joints: ['wing root'] },
+    spine: { joints: [], bones: [['hip', 'shoulder', 'back line (hip to shoulder)'], ['shoulder', 'neck', 'neck line (shoulder to head pivot)']] },
   },
 } satisfies RigCritter;

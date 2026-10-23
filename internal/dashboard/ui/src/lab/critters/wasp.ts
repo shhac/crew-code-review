@@ -57,5 +57,10 @@ export const wasp = {
   },
   gaze: (dir, cursor) => gaze(dir, { x: 0, y: -(GROUND - ANCHOR.y) * SCALE }, cursor),
   drawings: DRAWINGS,
-  bones: { marked: INSECT_LEGS, between: [['petiole', 'neck', 'thorax line (petiole to neck)'], ['neck', 'scape', 'head']] },
+  bones: {
+    marked: [INSECT_LEGS],
+    head: { joints: ['neck', 'scape'], bones: [['neck', 'scape', 'head']] },
+    wings: { joints: ['wing hinge (tegula)'] },
+    spine: { joints: ['petiole', 'body (moves here)'], bones: [['petiole', 'neck', 'thorax line (petiole to neck)']] },
+  },
 } satisfies RigCritter;

@@ -93,7 +93,9 @@ export const bee = {
   gaze: (dir, cursor) => gaze(dir, { x: 0, y: -(GROUND - ANCHOR.y) * SCALE }, cursor),
   drawings: DRAWINGS,
   bones: {
-    marked: INSECT_LEGS,
-    between: [['waist (petiole)', 'neck', 'thorax line (waist to neck)'], ['neck', 'antenna socket', 'head']],
+    marked: [INSECT_LEGS],
+    head: { joints: ['neck', 'antenna socket'], bones: [['neck', 'antenna socket', 'head']] },
+    wings: { joints: ['wing hinge (tegula)'] },
+    spine: { joints: ['waist (petiole)', 'thorax (moves here)'], bones: [['waist (petiole)', 'neck', 'thorax line (waist to neck)']] },
   },
 } satisfies RigCritter;

@@ -10,7 +10,7 @@ import rabbitNudge from '../rabbit-pose-nudge.webp';
 import rabbitSit from '../rabbit-pose-sit.webp';
 import rabbitThump from '../rabbit-pose-thump.webp';
 import rabbitReference from '../rabbit-reference.webp';
-import { mammalLeg, mammalTrunk } from './bones';
+import { mammalHead, mammalLeg, mammalSpine } from './bones';
 import type { Moment, RigCritter } from './critter';
 
 // The lab's labels for what the rabbit does: a bolt is a hop at full tilt.
@@ -51,6 +51,7 @@ export const rabbit = {
   // long hind foot is one picture from the hock forward.
   bones: {
     legs: ({ fore }) => (fore ? mammalLeg({ fore }) : { ...mammalLeg({ fore }), foot: 'hind foot (metatarsus and toes)' }),
-    between: mammalTrunk('nose'),
+    head: mammalHead('ear base', 'eye', 'nose'),
+    spine: mammalSpine(true),
   },
 } satisfies RigCritter;

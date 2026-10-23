@@ -3,6 +3,8 @@ import { big } from './critter';
 
 // The critters lab's skeleton view: three states, the drawing alone, the
 // skeleton over it faded, and the skeleton alone, each kept in the address;
+// codes on the stage, a name shown on pointing and a joint or bone pinned
+// by a click, in the address too, with the legend under the stage in step;
 // and the skeleton drawn for an animal with its own view as well as for one
 // drawn by a rig.
 
@@ -21,15 +23,15 @@ test('the skeleton view goes from the drawing alone, to over it faded, to alone,
   await expect(skeleton(page)).toHaveCount(0);
 
   await page.getByText('skeleton over art', { exact: true }).click();
-  await expect(skeleton(page).locator('text[data-bone="metacarpus"]')).toHaveCount(2);
-  await expect(skeleton(page).locator('text[data-joint="wrist (carpus)"]')).toHaveCount(2);
+  await expect(skeleton(page).locator('text[data-code="L0B2"]')).toHaveCount(1);
+  await expect(skeleton(page).locator('text[data-code="L1J2"]')).toHaveCount(1);
   await expect(big(page)).toBeVisible();
   expect(Number(await art(page).evaluate((el) => getComputedStyle(el).opacity))).toBeCloseTo(0.22);
   await expect.poll(() => hash(page)).toContain('skeleton=faded');
 
   await page.getByText('skeleton only', { exact: true }).click();
   await expect(big(page)).toBeHidden();
-  await expect(skeleton(page).locator('text[data-bone="humerus"]')).toHaveCount(2);
+  await expect(skeleton(page).locator('text[data-code="L0B0"]')).toHaveCount(1);
   await expect.poll(() => hash(page)).toContain('skeleton=only');
 
   await page.getByText('art', { exact: true }).click();
@@ -42,16 +44,16 @@ test('a link to the skeleton alone opens on it', async ({ page }) => {
   await page.goto('/lab/critters.html#animal=hare&mode=sit&frame=0&skeleton=only');
   await expect(page.getByLabel('skeleton only')).toBeChecked();
   await expect(big(page)).toBeHidden();
-  await expect(skeleton(page).locator('text[data-bone="radius and ulna"]')).toHaveCount(2);
+  await expect(skeleton(page).locator('text[data-code="L1B1"]')).toHaveCount(1);
   await page.reload();
   await expect(page.getByLabel('skeleton only')).toBeChecked();
-  await expect(skeleton(page).locator('text[data-joint="elbow"]')).toHaveCount(2);
+  await expect(skeleton(page).locator('text[data-code="L0J1"]')).toHaveCount(1);
 });
 
 test("the spider's skeleton is read off its drawn legs, and follows them as it walks", async ({ page }) => {
   await page.goto('/lab/critters.html#animal=spider&mode=walk&frame=0&skeleton=faded');
-  const femurs = skeleton(page).locator('text[data-bone="femur (with coxa and trochanter)"]');
-  await expect(femurs).toHaveCount(8);
+  await expect(skeleton(page).locator('text[data-code$="B0"]')).toHaveCount(8);
+  await expect(page.locator('[data-legend] [data-row="L7B0"]')).toContainText('femur');
   const claws = () => skeleton(page).locator('line.bone').evaluateAll((els) => els.map((el) => `${el.getAttribute('x2')} ${el.getAttribute('y2')}`));
   const first = await claws();
   await page.getByRole('button', { name: 'forward a frame' }).click();
@@ -61,6 +63,35 @@ test("the spider's skeleton is read off its drawn legs, and follows them as it w
 
 test('the robin, whole pictures each turning about its pivot, shows those as its joints', async ({ page }) => {
   await page.goto('/lab/critters.html#animal=robin&mode=alive&frame=0&skeleton=only');
-  await expect(skeleton(page).locator('text[data-joint="neck (head turns here)"]')).toHaveCount(1);
-  await expect(skeleton(page).locator('text[data-bone]')).toHaveCount(0);
+  await expect(skeleton(page).locator('text[data-code="HJ0"]')).toHaveCount(1);
+  await expect(page.locator('[data-legend] [data-row="HJ0"]')).toContainText('neck (head turns here)');
+  await expect(skeleton(page).locator('line.bone')).toHaveCount(0);
+});
+
+test('pointing at a code names it; a click pins it, in the address and the legend, and a click on the stage lets it go', async ({ page }) => {
+  await page.goto('/lab/critters.html#animal=rabbit&mode=sit&frame=0&skeleton=faded&zoom=16');
+  const name = skeleton(page).locator('text[data-name]');
+  await expect(name).toHaveCount(0);
+  await skeleton(page).locator('text[data-code="L0B2"]').hover();
+  await expect(name).toHaveText('L0B2 metacarpus');
+  await expect(page.locator('[data-legend] [data-row="L0B2"]')).toHaveClass(/lit/);
+  await expect(page.locator('[data-legend] [data-row="L0J3"]')).toHaveClass(/lit/);
+  await expect(skeleton(page).locator('line.bone.dim').first()).toBeAttached();
+
+  await skeleton(page).locator('text[data-code="L0B2"]').click();
+  await expect.poll(() => hash(page)).toContain('bone=L0B2');
+  await expect(page.locator('[data-legend] [data-row="L0B2"]')).toHaveAttribute('aria-pressed', 'true');
+  await page.mouse.move(5, 5);
+  await expect(name).toHaveText('L0B2 metacarpus');
+
+  await page.reload();
+  await expect(name).toHaveText('L0B2 metacarpus');
+  await page.locator('[data-legend] [data-row="L2J1"]').click();
+  await expect.poll(() => hash(page)).toContain('joint=L2J1');
+  await page.mouse.move(5, 5);
+  await expect(name).toHaveText('L2J1 stifle (knee)');
+
+  await page.locator('[data-stage]').click({ position: { x: 20, y: 20 } });
+  await expect(name).toHaveCount(0);
+  await expect.poll(() => hash(page)).not.toContain('joint=');
 });
