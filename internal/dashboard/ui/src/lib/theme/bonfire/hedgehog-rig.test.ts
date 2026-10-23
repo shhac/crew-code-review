@@ -7,12 +7,8 @@ import { gazeAt, hogRig, type HogLook } from './hedgehog-rig';
 const hog = (mode: Mode, walked = 0): Hog => ({ id: 0, seed: 1, x: 0, dir: 1, mode, target: 0, until: 0, out: 0, walked });
 const look = (over: Partial<HogLook> = {}): HogLook => ({ now: 0, gaze: 0, still: false, ...over });
 
-// The head's group: the one holding the eyelid's place, nested in the body's.
-const headTurn = (pose: RigPose) => {
-  const body = pose.layers.find((l) => l.kind === 'group');
-  const head = body?.kind === 'group' ? body.layers.find((l) => l.kind === 'group') : undefined;
-  return head?.kind === 'group' ? head.turn.angle : NaN;
-};
+// How far the head is turned on its neck, by its skeleton.
+const headTurn = (pose: RigPose) => pose.skeleton?.joints.find((j) => j.id === 'skull')?.angle ?? NaN;
 // Legs are listed (legsOf, solesOf) far hind, far fore, near hind, near fore.
 // Whether each leg is lifted, at each of `count` moments through `distance`.
 const lifts = (mode: Mode, distance: number, count = 400) => Array.from({ length: count }, (_, i) => {
@@ -135,8 +131,8 @@ describe('hedgehog rig', () => {
     expect(legsOf(pose)).toHaveLength(0);
     expect(imagesOf(pose)).toHaveLength(1);
     const squash = (now: number) => {
-      const g = hogRig(hog('curled'), look({ now })).layers[0];
-      return g.kind === 'group' ? g.scaleY : NaN;
+      const ball = hogRig(hog('curled'), look({ now })).layers[0];
+      return ball.kind === 'piece' ? ball.matrix[3] : NaN;
     };
     expect(squash(0)).not.toBe(squash(1300));
   });

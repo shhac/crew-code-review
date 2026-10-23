@@ -10,9 +10,9 @@ import { CRITTERS } from './registry';
 // it comes off this list then.
 const KNOWN = {
   hedgehog: {
-    bonesKeepLength: 'its legs are one piece over two bones (knee: false), stretched from the hip to wherever the heel is solved',
+    bonesKeepLength: 'its legs are one piece over two bones (knee: false): out of reach, the shin from the solved knee to the heel stretches, and the piece from hip to heel with it',
     plantedFeetHold: 'each planted foot is placed from its hip, which the body\'s rock and bob carry (stepping\'s footOf from the turned hips)',
-    footprintsHold: 'sniffing, the head\'s box turned nose down reaches under the ledge, though its art does not',
+    footprintsHold: 'sniffing, the head\'s box turned nose down reaches under the ledge, though its art does not; and the corners of its leg pieces\' boxes, turned along each leg, reach a little under it, as the page measures them (counted before its skeleton as squares round each joint, they did not)',
   },
   fox: {
     bonesKeepLength: 'trotting, a foot beyond thigh and shin straightens the leg and the shank stretches to the hock (spidergait\'s knees)',

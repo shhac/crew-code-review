@@ -7,7 +7,6 @@ import hogSniff from '../hedgehog-pose-sniff.webp';
 import hogWalkContact from '../hedgehog-pose-walk-contact.webp';
 import hogWalkPass from '../hedgehog-pose-walk-pass.webp';
 import hogReference from '../hedgehog-reference.webp';
-import { mammalHead, mammalSpine } from './bones';
 import type { Moment, RigCritter } from './critter';
 
 const MODES: Mode[] = ['walk', 'flee', 'sniff', 'peek', 'curled'];
@@ -24,7 +23,7 @@ const DRAWINGS: Record<string, Drawing<Mode>> = {
 };
 
 // The rig draws it facing right whichever way it is going; the lab turns it.
-const hogAt = ({ mode, walked }: Moment): Hog => ({ id: 0, seed: 1, x: 0, dir: 1, mode: MODES.find((m) => m === mode) ?? 'walk', target: 0, until: 0, out: 0, walked });
+export const hogAt = ({ mode, walked }: Moment): Hog => ({ id: 0, seed: 1, x: 0, dir: 1, mode: MODES.find((m) => m === mode) ?? 'walk', target: 0, until: 0, out: 0, walked });
 
 export const hedgehog = {
   kind: 'rig',
@@ -37,13 +36,11 @@ export const hedgehog = {
   box: () => HOG,
   gaze: (dir, cursor) => gazeAt({ dir }, { x: 0, y: 0 }, cursor),
   drawings: DRAWINGS,
-  // Its legs are too short to show a knee: one piece from the hip (or
-  // shoulder) to the ankle (or wrist), and the foot flat on its sole.
-  bones: {
-    legs: ({ fore }) => (fore
-      ? { pair: 0, limb: 'foreleg', upper: 'leg (humerus to forearm, one piece)', foot: 'forefoot (metacarpus and toes)' }
-      : { pair: 1, limb: 'hind leg', upper: 'leg (femur to shin, one piece)', foot: 'hind foot (metatarsus and toes)' }),
-    head: mammalHead('eye', 'nose'),
-    spine: mammalSpine(false),
-  },
+  // Before its skeleton was its own, read off the drawing, each leg was one
+  // bone to its foot (J1) and the foot to its toes' tip (J2), and the
+  // spine's second line ran from the shoulder to the hip.
+  aliases: Object.fromEntries([
+    ...['L0', 'L1', 'L2', 'L3'].flatMap((l) => [[`${l}J1`, `${l}J3`], [`${l}J2`, `${l}J4`], [`${l}B1`, `${l}B3`]]),
+    ['SB1', 'SB0'],
+  ]),
 } satisfies RigCritter;

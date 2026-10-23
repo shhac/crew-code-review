@@ -50,6 +50,14 @@ test('a link to the skeleton alone opens on it', async ({ page }) => {
   await expect(skeleton(page).locator('text[data-code="L0J1"]')).toHaveCount(1);
 });
 
+test('an old link to a joint or bone whose code has moved pins it under its code now', async ({ page }) => {
+  await page.goto('/lab/critters.html#animal=hedgehog&mode=sniff&frame=0&skeleton=faded&joint=L0J1');
+  await expect(page.locator('[data-legend] [data-row="L0J3"]')).toHaveAttribute('aria-pressed', 'true');
+  await expect.poll(() => hash(page)).toContain('joint=L0J3');
+  await page.goto('/lab/critters.html#animal=hedgehog&mode=sniff&frame=0&skeleton=faded&bone=L2B1');
+  await expect(page.locator('[data-legend] [data-row="L2B3"]')).toHaveAttribute('aria-pressed', 'true');
+});
+
 test("the spider's skeleton is read off its drawn legs, and follows them as it walks", async ({ page }) => {
   await page.goto('/lab/critters.html#animal=spider&mode=walk&frame=0&skeleton=faded');
   await expect(skeleton(page).locator('text[data-code$="B0"]')).toHaveCount(8);

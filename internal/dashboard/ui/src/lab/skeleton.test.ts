@@ -8,7 +8,7 @@ import { gull } from './critters/gull';
 import { hawk } from './critters/hawk';
 import { CRITTERS } from './critters/registry';
 import { rabbit } from './critters/rabbit';
-import { layColumns, legendOf, litBy, parseCode, skeletonOf, type Skeleton } from './skeleton';
+import { layColumns, legendOf, litBy, parseCode, skeletonFromPosed, skeletonOf, type Skeleton } from './skeleton';
 
 const at = (mode: string, now = 1300) => ({ mode, now, walked: 1.3 });
 const look = { gaze: 0, still: false };
@@ -122,7 +122,8 @@ describe('skeletonOf', () => {
       for (const mode of c.modes) {
         const p = c.pose(at(mode), look);
         if ((p.guides ?? []).length < 2) continue;
-        const s = skeletonOf(p, c.bones ?? {});
+        // As the lab draws it: from its own skeleton where it is built on one.
+        const s = p.skeleton ? skeletonFromPosed(p.skeleton) : skeletonOf(p, c.bones ?? {});
         expect(s.bones.length, `${c.name} ${mode}`).toBeGreaterThan(0);
         expect(new Set(s.joints.map((j) => j.code)).size, `${c.name} ${mode}`).toBe(s.joints.length);
         expect(s.bones.every((b) => joint(s, b.from) && joint(s, b.to)), `${c.name} ${mode}`).toBe(true);

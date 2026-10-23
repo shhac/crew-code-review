@@ -4,8 +4,9 @@ import type { Locator, Page } from '@playwright/test';
 
 export const big = (page: Page) => page.locator('[data-stage] [data-critter]');
 
-// Each leg bone's transform: they change as the legs step.
-export const legBones = (page: Page) => big(page).locator('[data-legs] image').evaluateAll((els) => els.map((el) => el.getAttribute('transform')));
+// Each leg bone's transform: they change as the legs step. An animal built
+// on a skeleton marks each of its legs' pieces itself.
+export const legBones = (page: Page) => big(page).locator('[data-legs] image, image[data-leg]').evaluateAll((els) => els.map((el) => el.getAttribute('transform')));
 
 // Each picture's decoded size in pixels (the animal's parts unless other
 // pictures are given): nought for one that drew nothing.
