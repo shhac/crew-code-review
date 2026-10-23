@@ -1,13 +1,13 @@
 import { clamp, smooth } from '../math';
 import type { Point } from '../pointer';
-import { beatsFor, flightLift, gaitPhase, stepping, type Gait, type QuadLeg, type Step } from '../rig/gait';
+import { beatsFor, flightLift, gaitPhase, stepping, type Gait, type Step } from '../rig/gait';
 import { gazeFrom } from '../rig/gaze';
 import { blinking, snuffle } from '../rig/life';
-import { lidLayers, turnAbout, type Foot, type Frame, type Fur, type RigPose, type Turn } from '../rig/rig';
+import { lidLayers, turnAbout, type ArtLeg, type Foot, type Frame, type Fur, type LimbArt, type RigPose, type Turn } from '../rig/rig';
 import { compose } from '../rig/skeleton/compose';
-import { rootsOf } from '../rig/skeleton/forward';
 import { mixPose } from '../rig/skeleton/mix';
-import type { Body, Goal, JointSpec, LimbSpec, Piece, PoseSpec, Role } from '../rig/skeleton/types';
+import { head, LEPORID, picture, spine, tetrapod } from '../rig/skeleton/tetrapod';
+import type { Goal, PoseSpec } from '../rig/skeleton/types';
 import bodyArt from './rabbit-body.webp';
 import earsArt from './rabbit-ears.webp';
 import footFurArt from './rabbit-foot-fur.webp';
@@ -57,12 +57,12 @@ const FACE: Fur = { fill: '#a89273', outline: '#120d09' };
 // forepaw; each with where its leg comes down onto it.
 const FOOT: Foot = { src: footArt, fur: footFurArt, width: 4.42, height: 2.17, heel: { x: 0.62, y: 0.69 } };
 const PAW: Foot = { src: pawArt, fur: pawFurArt, width: 1.92, height: 1.17, heel: { x: 0.46, y: 0.35 } };
-// Each leg's pieces, hip down: a hind leg's haunch and its tapering shank
-// both drawn with the haunch's art, standing over its long foot, whose back
-// the shank's rounded end hides; a foreleg's upper arm, forearm and
-// metacarpus with the foreleg's, over its forepaw.
-const HIND_ART = { bone: { src: haunchArt, fur: haunchFurArt }, foot: FOOT } as const;
-const FORE_ART = { bone: { src: forelegArt, fur: forelegFurArt }, foot: PAW } as const;
+const HIND_ART: LimbArt = {
+  bone: legArt, boneFur: legFurArt, knee: true, overFoot: true,
+  thigh: { src: haunchArt, fur: haunchFurArt },
+  foot: FOOT,
+};
+const FORE_ART: LimbArt = { bone: forelegArt, boneFur: forelegFurArt, knee: true, foot: PAW };
 // Where each leg ends: the hind leg on its heel, as high as the foot under it
 // stands; a foreleg's toes on the ledge.
 const HEEL = GROUND - (FOOT.height - FOOT.heel.y);
@@ -93,14 +93,11 @@ const HIND_LEG = {
   walksOn: { kind: 'sole', toes: { x: FOOT.width - FOOT.heel.x, y: FOOT.height - FOOT.heel.y }, peel: 62 },
 } as const;
 const FORE_LEG = { art: FORE_ART, width: 1.45, thigh: 2.6, shin: 2.6, bend: -1, bendFrame: 'limb', jointLimits: { min: 30, max: 175 }, fore: true, haunch: 1.7, reach: 1.8, walksOn: { kind: 'toes', length: 0.8, lean: 35, fold: 89 } } as const;
-// Each leg by the code its limb has (lab/skeleton.ts's), in the order the
-// gait's beats, the feet and the steps list them, and the legs are drawn.
-type Leg = QuadLeg & { code: string; art: typeof HIND_ART | typeof FORE_ART; width: number; haunch: number };
-const LEGS: readonly Leg[] = [
-  { ...HIND_LEG, hip: { x: 7.6, y: 11.4 }, far: true, code: 'L3' },
-  { ...FORE_LEG, hip: { x: 15.8, y: 12.8 }, far: true, code: 'L1' },
-  { ...HIND_LEG, hip: { x: 6.4, y: 11.6 }, far: false, code: 'L2' },
-  { ...FORE_LEG, hip: { x: 15, y: 13 }, far: false, code: 'L0' },
+const LEGS: ArtLeg[] = [
+  { ...HIND_LEG, hip: { x: 7.6, y: 11.4 }, far: true },
+  { ...FORE_LEG, hip: { x: 15.8, y: 12.8 }, far: true },
+  { ...HIND_LEG, hip: { x: 6.4, y: 11.6 }, far: false },
+  { ...FORE_LEG, hip: { x: 15, y: 13 }, far: false },
 ];
 
 // The slow half-bound (design-docs/easter/README.md): the hind feet land
@@ -260,30 +257,12 @@ function foldBetween(a: Step | undefined, b: Step | undefined, f: number): Step 
 // Its skeleton: the body turning about its hips, the tail at its root,
 // the head on its neck with the ears, eye and nose on it, and each leg from
 // its hip (or shoulder). A hind leg stands on its sole: its hock is its
-// heel, where the long foot starts.
-const spine = (index: number): Role => ({ part: 'spine', index });
-const head = (index: number): Role => ({ part: 'head', index });
-const NAMES = {
-  fore: { joints: ['shoulder', 'elbow', 'wrist (carpus)', 'forepaw'], bones: ['humerus', 'radius and ulna', 'metacarpus', 'toes (phalanges)'] },
-  hind: { joints: ['hip', 'stifle (knee)', 'hock (heel)', 'hind foot (its heel)'], bones: ['femur', 'tibia and fibula', '', 'hind foot (metatarsus and toes)'] },
-} as const;
-const ground = (leg: Leg) => (leg.fore ? TOES : HEEL);
-const legJoints = (leg: Leg): JointSpec[] => {
-  const role = (index: 0 | 1 | 2 | 3 | 4): Role => ({ part: 'limb', pair: leg.fore ? 0 : 1, side: leg.far ? 'far' : 'near', index });
-  const names = NAMES[leg.fore ? 'fore' : 'hind'].joints;
-  const { foot } = leg.art;
-  const toes = { x: leg.hip.x + leg.reach + foot.width - foot.heel.x, y: ground(leg) + foot.height - foot.heel.y };
-  const owned = ([1, 2, 3] as const).map((k): JointSpec => ({ id: `${leg.code}J${k}`, parent: `${leg.code}J${k - 1}`, role: role(k), at: leg.hip, name: names[k], derived: true }));
-  return [{ id: `${leg.code}J0`, parent: 'body', role: role(0), at: leg.hip, name: names[0] }, ...owned, { id: `${leg.code}J4`, parent: `${leg.code}J3`, role: role(4), at: toes, name: 'toe tip', derived: true }];
-};
-// Each bone of a leg; a hind leg has none from its hock to its heel.
-const legBones = (leg: Leg) => NAMES[leg.fore ? 'fore' : 'hind'].bones.flatMap((name, k) => (name ? [{ from: `${leg.code}J${k}`, to: `${leg.code}J${k + 1}`, name }] : []));
-const limbOf = (leg: Leg): LimbSpec => ({
-  id: leg.code, pair: leg.fore ? 0 : 1, side: leg.far ? 'far' : 'near', ground: ground(leg), solve: 'quad',
-  joints: { root: `${leg.code}J0`, middle: `${leg.code}J1`, lower: `${leg.code}J2`, end: `${leg.code}J3`, tip: `${leg.code}J4` },
-  leg: { reach: leg.reach, thigh: leg.thigh, shin: leg.shin, bend: leg.bend, bendFrame: leg.bendFrame, jointLimits: leg.jointLimits, walksOn: leg.walksOn },
-});
-const SKELETON = {
+// heel, where the long foot starts. Drawn with the far legs behind it, then
+// the tail, the body, the ears behind the head, the near legs' fur over its
+// edge.
+const RABBIT = tetrapod(LEPORID, {
+  frame: FRAME,
+  root: 'body',
   joints: [
     { id: 'body', parent: null, role: spine(2), at: HIND, name: 'pelvis (the body turns about its hips)' },
     { id: 'skull', parent: 'body', role: spine(0), at: NECK, name: 'head joint (neck)' },
@@ -291,67 +270,33 @@ const SKELETON = {
     { id: 'ears', parent: 'skull', role: head(0), at: EAR_BASE, name: 'ear base' },
     { id: 'eye', parent: 'skull', role: head(1), at: EYE, name: 'eye' },
     { id: 'nose', parent: 'skull', role: head(2), at: NOSE, name: 'nose' },
-    ...LEGS.flatMap(legJoints),
   ],
   bones: [
     { from: 'skull', to: 'body', name: 'neck line (head joint to the hips)' }, { from: 'body', to: 'tail', name: 'pelvis line (hips to tail root)' },
-    { from: 'nose', to: 'skull', name: 'skull' }, ...LEGS.flatMap(legBones),
+    { from: 'nose', to: 'skull', name: 'skull' },
   ],
-  limbs: LEGS.map(limbOf),
-};
-
-// The draw order, as the legs go round the body: they start inside it, so
-// the far legs are drawn behind it, outlined, then as fur alone so no line
-// crosses where their pieces meet; the near legs outlined behind it too,
-// their fur then over its edge. A hind foot is drawn under its leg's
-// rounded end, a forepaw over its leg's.
-const Z = { farLegs: 0, farFur: 1, nearLegs: 2, tail: 3, body: 4, ears: 5, head: 6, eyelid: 7, nearFur: 8 } as const;
-function legPieces(leg: Leg): Piece[] {
-  const side = leg.far ? 'far' : 'near';
-  const [outlined, fur] = leg.far ? [Z.farLegs, Z.farFur] : [Z.nearLegs, Z.nearFur];
-  const draws = (id: string, flush = false) => [{ id, z: outlined, part: `${side} legs` }, { id: `${id}, fur`, z: fur, fur: true, flush, part: `${side} legs, fur` }];
-  const bar = (k: number, thick: number, flush = false): Piece => ({
-    id: `${leg.code}B${k}`, side, art: { drawn: leg.art.bone }, at: { kind: 'bar', from: `${leg.code}J${k}`, to: `${leg.code}J${k + 1}`, thick }, draws: draws(`${leg.code}B${k}`, flush),
-  });
-  const { foot } = leg.art;
-  const footPiece: Piece = {
-    id: `${leg.code} foot`, side, art: { drawn: { src: foot.src, fur: foot.fur, box: { x: -foot.heel.x, y: -foot.heel.y, width: foot.width, height: foot.height } } },
-    at: { kind: 'joint', to: `${leg.code}J3`, local: true }, draws: draws(`${leg.code} foot`),
-  };
-  // A hind shank tapers to a narrow hock.
-  if (!leg.fore) return [footPiece, bar(0, leg.haunch, true), bar(1, leg.width * 1.15)];
-  return [bar(0, leg.haunch, true), bar(1, leg.width), bar(2, leg.width), footPiece];
-}
-const RABBIT: Body = {
-  frame: FRAME,
-  skeleton: SKELETON,
-  pieces: [
-    ...LEGS.flatMap(legPieces),
-    { id: 'tail', art: { drawn: { src: tailArt, box: TAIL } }, at: { kind: 'joint', to: 'tail' }, draws: [{ id: 'tail', z: Z.tail }] },
-    { id: 'body', art: { drawn: { src: bodyArt, box: BODY } }, at: { kind: 'joint', to: 'body' }, draws: [{ id: 'body', z: Z.body }] },
-    { id: 'ears', art: { drawn: { src: earsArt, box: EARS } }, at: { kind: 'joint', to: 'ears' }, draws: [{ id: 'ears', z: Z.ears }] },
-    { id: 'head', art: { drawn: { src: headArt, box: HEAD } }, at: { kind: 'joint', to: 'skull' }, draws: [{ id: 'head', z: Z.head }] },
-  ],
-  shapes: [{ id: 'eyelid', on: 'skull', z: Z.eyelid }],
-  guides: [
+  legs: LEGS,
+  ground: (leg) => (leg.fore ? TOES : HEEL),
+  order: [picture('tail', 'tail', tailArt, TAIL), picture('body', 'body', bodyArt, BODY), picture('ears', 'ears', earsArt, EARS), picture('head', 'skull', headArt, HEAD), 'eyelid'],
+  shapes: [{ id: 'eyelid', on: 'skull' }],
+  guides: (at) => [
     { name: 'tail root', at: 'tail' }, { name: 'neck', at: 'skull' }, { name: 'ear base', at: 'ears' }, { name: 'eye', at: 'eye' }, { name: 'nose', at: 'nose' },
-    ...LEGS.map((leg) => ({ name: leg.fore ? 'shoulder' : 'hip', at: `${leg.code}J0` })),
+    ...LEGS.map((leg) => ({ name: leg.fore ? 'shoulder' : 'hip', at: at(leg, 0) })),
     ...LEGS.flatMap((leg) => (leg.fore
-      ? [{ name: 'elbow', at: `${leg.code}J1` }, { name: 'wrist (carpus)', at: `${leg.code}J2` }, { name: 'forepaw', at: `${leg.code}J3` }]
-      : [{ name: 'stifle (knee)', at: `${leg.code}J1` }, { name: 'hock (heel)', at: `${leg.code}J2` }])),
+      ? [{ name: 'elbow', at: at(leg, 1) }, { name: 'wrist (carpus)', at: at(leg, 2) }, { name: 'forepaw', at: at(leg, 3) }]
+      : [{ name: 'stifle (knee)', at: at(leg, 1) }, { name: 'hock (heel)', at: at(leg, 2) }])),
   ],
-};
+});
 
 // A stance as a pose: each foot set from where its hip is in it, a washing
 // forepaw reaching for the muzzle.
 function poseOf(s: Stance): PoseSpec {
   const joints = { skull: { angle: s.head }, ears: { angle: -s.ears }, tail: { angle: s.tail } };
-  const roots = rootsOf(SKELETON, { root: s.body, joints });
-  const feet = s.feet(LEGS.map((leg) => roots.get(leg.code) ?? leg.hip));
-  const goal = (leg: Leg, i: number): Goal => (s.groom && leg.fore
+  const feet = s.feet(RABBIT.hips({ root: s.body, joints }));
+  const goals = LEGS.map((leg, i): Goal => (s.groom && leg.fore
     ? { kind: 'reach', to: { on: 'skull', at: MUZZLE }, by: s.groom, step: s.steps[i] }
-    : { kind: 'plant', at: feet[i], step: s.steps[i] });
-  return { root: s.body, joints, limbs: Object.fromEntries(LEGS.map((leg, i) => [leg.code, goal(leg, i)])), show: {}, z: {} };
+    : { kind: 'plant', at: feet[i], step: s.steps[i] }));
+  return { root: s.body, joints, limbs: RABBIT.limbs(goals), show: {}, z: {} };
 }
 
 // From one pose into the next: the body, head, ears and tail turn, and the
@@ -361,12 +306,12 @@ function poseOf(s: Stance): PoseSpec {
 // between, a paw held to the chest would sink into the ledge as they drop
 // into a nudge; and it folds between its two steps (foldBetween).
 const EASE = 260;
-const FOLDING = { steps: Object.fromEntries(LEGS.flatMap((leg) => (leg.fore ? [[leg.code, foldBetween]] : []))) };
+const FOLDING = { steps: Object.fromEntries(RABBIT.codes.flatMap((code, i) => (LEGS[i].fore ? [[code, foldBetween]] : []))) };
 function eased(rabbit: RigRabbit, look: RabbitLook): PoseSpec {
   const next = poseOf(stance(rabbit, look));
   if (look.still || !rabbit.was || rabbit.was === rabbit.pose || rabbit.since >= EASE) return next;
   const before = poseOf(stance({ ...rabbit, pose: rabbit.was }, look));
-  return mixPose(SKELETON, before, next, smooth(rabbit.since / EASE), FOLDING);
+  return mixPose(RABBIT.body.skeleton, before, next, smooth(rabbit.since / EASE), FOLDING);
 }
 
 export function rabbitRig(rabbit: RigRabbit, look: RabbitLook): RigPose {
@@ -376,8 +321,8 @@ export function rabbitRig(rabbit: RigRabbit, look: RabbitLook): RigPose {
     const stamp = at.still ? [] : stamping(rabbit);
     // Thumping, the hind heels stamp whatever each foot is easing from.
     const stamped = (goal: Goal | undefined, i: number): Goal | undefined => (goal && goal.kind !== 'air' && stamp.length ? { ...goal, step: stamp[i] } : goal);
-    const limbs = Object.fromEntries(LEGS.map((leg, i) => [leg.code, stamped(pose.limbs[leg.code], i)]));
+    const limbs = Object.fromEntries(RABBIT.codes.map((code, i) => [code, stamped(pose.limbs[code], i)]));
     return { ...pose, limbs, shapes: { eyelid: lidLayers(!at.still && blinking(rabbit.seed, now), EYE, 0.8, FACE) } };
   };
-  return compose(RABBIT, posed, look.now);
+  return compose(RABBIT.body, posed, look.now);
 }
