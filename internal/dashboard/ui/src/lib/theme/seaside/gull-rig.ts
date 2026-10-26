@@ -86,7 +86,7 @@ const FACE: Fur = { fill: '#e9edf0', outline: '#1a1a1a' };
 // picture keeps of the tarsus only a knob round it (design-docs/art.py's
 // knobbed), so it turns there without a stub standing out from the bar.
 const TOES = { src: toesArt, fur: toesFurArt, width: 4.08, height: 1.92, heel: { x: 0.82, y: 0.57 } };
-const CURLED = { src: curledArt, fur: curledFurArt, width: 2.17, height: 2.5, heel: { x: 0.48, y: 0.45 } };
+const CURLED = { src: curledArt, fur: curledFurArt, width: 2.17, height: 2.5, heel: { x: 0.48, y: 0.5 } };
 const LEG_ART: LimbArt = {
   bone: tarsusArt, boneFur: tarsusFurArt, knee: true, inBody: true,
   thigh: { src: drumstickArt, fur: drumstickFurArt }, foot: TOES, curled: CURLED,

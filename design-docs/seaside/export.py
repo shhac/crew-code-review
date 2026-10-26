@@ -57,7 +57,9 @@ WING_LENGTH = {'gull-arm': 10.5, 'gull-hand': 11.5, 'gull-arm-under': 10.5, 'gul
 # about 50px, the tarsus 38px, at 51.7px to a unit); the feet by their
 # length (the flat foot 4.1 units from the hallux to the claws' tips,
 # the curled one on the same pixel scale) and where the leg comes down onto
-# each, as fractions of its box, where the toes part. Each keeps of the
+# each, as fractions of its box, where the toes part (on the curled foot,
+# at the foot of the parting, so the picture, unseen on a planted foot,
+# never reaches a pixel under the ledge). Each keeps of the
 # tarsus drawn above that only a knob round it (art.py's knobbed), KNOB
 # across in drawing units, outlined KNOB_LINE thick: the tarsus's own bar
 # draws the rest.
@@ -65,7 +67,7 @@ LIMBS = ['gull-drumstick', 'gull-tarsus', 'gull-toes', 'gull-toes-curled']
 DRUMSTICK = 0.95
 TARSUS = 0.74
 TOES = (4.1, (0.2, 0.3))
-CURLED = (0.22, 0.18)
+CURLED = (0.22, 0.2)
 KNOB = 0.36
 KNOB_LINE = 0.06
 # The shelf kit's height on the shelf, in page pixels.

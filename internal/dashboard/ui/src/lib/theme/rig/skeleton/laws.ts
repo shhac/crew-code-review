@@ -6,7 +6,7 @@ import { degrees } from '../../math';
 import type { Point } from '../../pointer';
 import { intertarsalTurn } from '../bird';
 import type { Limb } from '../gait';
-import { piecesOf, type DrawnLeg, type RigPose } from '../rig';
+import { piecesOf, type DrawnLeg, type Layer, type RigPose } from '../rig';
 import { flatLayers, pageReach, rigBounds, solesOf } from '../test-rig';
 import { kneeAngle, pawAngle, wrap } from './hinge';
 import { planDiff, type Plan, type PlanDraw } from './plan';
@@ -140,6 +140,21 @@ const noFootBelowLedge: Law = ({ moving }) => moving.flatMap((s) => {
   return lowest > floor + EPSILON ? [`a foot ${(lowest - floor).toFixed(4)} below the ledge ${where(s)}`] : [];
 });
 
+// A picture drawn unseen (a curled foot at opacity 0 while the toes are
+// spread) still has a box on the page, which the page's content check
+// measures as it measures a seen one, with a pixel's slack: so it reaches
+// no more than that under the ledge (or past what a flier's box allows).
+const UNSEEN_SLACK = 1;
+const unseenStaysClear: Law = ({ moving }) => moving.flatMap((s) => {
+  // Only the unseen pictures, each as if seen.
+  const unseen = (layers: readonly Layer[]): Layer[] => layers.flatMap((l): Layer[] => {
+    if (l.kind === 'group' || l.kind === 'frame') return [{ ...l, layers: unseen(l.layers) }];
+    return l.kind === 'piece' && l.opacity === 0 && !l.hidden ? [{ ...l, opacity: 1 }] : [];
+  });
+  const below = (rigBounds({ ...s.pose, layers: unseen(s.pose.layers) }).bottom - s.pose.anchor.y) * s.pose.scale - (s.box.down ?? 0);
+  return below > UNSEEN_SLACK ? [`an unseen picture ${below.toFixed(3)}px below the ledge ${where(s)}`] : [];
+});
+
 // The drawing stays inside the footprint placement allows it. Only as the
 // lab plays it: with motion reduced the page shows another pose than the
 // lab's mode (every rabbit sits), and places it by that one's footprint.
@@ -189,5 +204,5 @@ const stillHolds: Law = ({ still }) => [...new Set(still.map((s) => s.mode))].fl
   return [...(blink ? [`blinks ${where(blink)}`] : []), ...(moved ? [`moves ${where(moved)}`] : [])];
 });
 
-export const LAWS = { bonesKeepLength, limitsHold, hingesHold, toesNeverFoldBack, intertarsalHolds, plantedFeetHold, anklesBehindToes, noFootBelowLedge, footprintsHold, everyPieceDrawn, oneVariantShows, farBeforeBody, stillHolds } as const satisfies Record<string, Law>;
+export const LAWS = { bonesKeepLength, limitsHold, hingesHold, toesNeverFoldBack, intertarsalHolds, plantedFeetHold, anklesBehindToes, noFootBelowLedge, unseenStaysClear, footprintsHold, everyPieceDrawn, oneVariantShows, farBeforeBody, stillHolds } as const satisfies Record<string, Law>;
 export type LawName = keyof typeof LAWS;
