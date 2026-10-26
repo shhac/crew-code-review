@@ -206,11 +206,13 @@ export function solveHinged(leg: HingedLeg, hip: Point, goal: Goal, target: () =
   // On its sole: the long foot from the heel to the toes is the bone up
   // from them, its toes where they go. Planted, the heel peels up about
   // them as it pushes off (legsTo's roll); free, the foot hangs from the
-  // shin at its rest.
+  // shin at its rest, opened from it as far as its step or its pose folds
+  // it, its toes then where a foot so opened from the heel would put them.
   const flat = dir({ x: 0, y: 0 }, on.toes);
   const tips = { x: to.x + on.toes.x, y: to.y + on.toes.y };
+  const opened = (on.fold ?? 0) * fold;
   const soled = (l: Omit<Limb, 'paw'>): Limb => ({ hip, knee: l.knee, ankle: l.ankle, foot: l.ankle, paw: wrap(dir(l.ankle, l.foot) - flat) });
-  const free = bentTo(leg, side, hip, tips, within(paw, paw.rest) + flat, Math.hypot(on.toes.x, on.toes.y));
+  const free = bentTo(leg, side, hip, opened ? rotate(tips, to, opened) : tips, within(paw, paw.rest + opened) + flat, Math.hypot(on.toes.x, on.toes.y));
   if (!contact) return soled(free);
   const peel = on.peel * roll(goal.step);
   const heel = peel ? rotate(to, tips, peel) : to;

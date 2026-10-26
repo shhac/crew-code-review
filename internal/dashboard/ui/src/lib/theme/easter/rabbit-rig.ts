@@ -95,11 +95,11 @@ const TOES = GROUND - (PAW.height - PAW.heel.y);
 // within its limits (a hind leg straightens as it pushes off), the wrist
 // from the forearm back as far as its paw folds and forward as far as it
 // stands planted (bearing little fold, so a forearm brought low lays the
-// paw down flat along it), the long hind foot from the shank as far as its heel
-// peels up as it pushes off.
+// paw down flat along it), the long hind foot from the shank as far as its
+// heel peels up as it pushes off, and open from it again as the leg trails.
 const HIND_LEG = {
   art: HIND_ART, width: 1.9, thigh: 3.3, shin: 3.6, bend: 1, jointLimits: { min: 25, max: 180 }, fore: false, haunch: 3.2, taper: true, reach: -3.1,
-  walksOn: { kind: 'sole', toes: { x: FOOT.width - FOOT.heel.x, y: FOOT.height - FOOT.heel.y }, peel: 62 }, paw: { limits: { min: -15, max: 135 } },
+  walksOn: { kind: 'sole', toes: { x: FOOT.width - FOOT.heel.x, y: FOOT.height - FOOT.heel.y }, peel: 62, fold: 90 }, paw: { limits: { min: -15, max: 135 } },
 } as const;
 const FORE_LEG = { art: FORE_ART, width: 1.45, thigh: 2.6, shin: 2.6, bend: -1, jointLimits: { min: 30, max: 175 }, fore: true, haunch: 1.7, reach: 1.8, walksOn: { kind: 'toes', length: 0.8, lean: 35, fold: 89 }, paw: { limits: { min: -70, max: 95 }, planted: { min: -70, max: -12 } }, digits: -15 } as const;
 const LEGS: HingedArtLeg[] = [
@@ -147,7 +147,7 @@ export const gazeAt = gazeFrom({ eye: EYE, anchor: ANCHOR, scale: SCALE, look: L
 // where each is in its step; its forepaws held up off the ledge, folded at
 // the wrist; washing, how far from the muzzle they are held; and how far its
 // head nods at the back of its skull (positive nose down).
-type Stance = { body: Turn; head: number; ears: number; tail: number; feet: (hips: readonly Point[]) => Point[]; steps: Step[]; held?: boolean; groom?: Point; nod?: number };
+type Stance = { body: Turn; head: number; ears: number; tail: number; feet: (hips: readonly Point[]) => Point[]; steps: Step[]; held?: boolean; groom?: Point; nod?: number; opens?: (i: number) => number | undefined };
 
 const fore = (i: number) => LEGS[i].fore;
 // The feet as they stand at rest between hops: every pose that is not a hop
@@ -158,6 +158,10 @@ const restSteps = (() => {
   return s.feet(hips).map((f, i) => (fore(i) ? { x: f.x, y: TOES } : f));
 })();
 const resting = () => restSteps;
+
+// Pushed off, how far back and up a hind foot trails at most: lifted well
+// clear, so the foot opened out behind it never drags on the ledge.
+const TRAIL = { x: 0, y: 2.6 };
 
 // How far a forepaw is lifted in its swing, besides the gait's arc: a
 // little more all the way, and enough as it tips its toes up to land that
@@ -180,12 +184,13 @@ function hopping(walked: number): Stance {
   const pitch = -7 * Math.sin(Math.PI * clamp((p - 0.15) / 0.45, 0, 1)) + 8 * Math.sin(Math.PI * clamp((p - 0.55) / 0.4, 0, 1));
   const air = Math.sin(Math.PI * clamp((p - 0.1) / 0.8, 0, 1));
   // Pushed off, the hind legs stay stretched out behind for the first of
-  // their swing before they fold and come forward under the body.
+  // their swing, the hock opened so the long foot streams out after the
+  // shank, before they fold and come forward under the body.
   const trail = (step: Step) => (step.down ? 0 : Math.sin(Math.PI * clamp(step.t / 0.6, 0, 1)));
   const foot = (f: Point, i: number): Point => {
     if (fore(i)) return { x: f.x, y: f.y - HEEL + TOES - paws(s.steps[i]) };
     const k = trail(s.steps[i]);
-    return { x: f.x - 1.4 * k, y: f.y - 0.8 * k };
+    return { x: f.x - TRAIL.x * k, y: f.y - TRAIL.y * k };
   };
   return {
     body: turnAbout(pitch, HIND, 0, -lift - 0.4 * air),
@@ -194,6 +199,7 @@ function hopping(walked: number): Stance {
     // carries them, so a planted foot stays put as the body rocks over it.
     feet: () => s.feet(LEGS.map((l) => l.hip)).map(foot),
     steps: s.steps,
+    opens: (i) => (fore(i) ? undefined : trail(s.steps[i])),
   };
 }
 
@@ -295,10 +301,14 @@ const RABBIT = tetrapod(LEPORID, {
 function poseOf(s: Stance): PoseSpec {
   const joints = { skull: { angle: s.head }, occiput: { angle: s.nod ?? 0 }, ears: { angle: -s.ears }, tail: { angle: s.tail } };
   const feet = s.feet(RABBIT.hips({ root: s.body, joints }));
-  const held = (leg: HingedArtLeg) => (s.held && leg.fore ? { contact: 0, fold: 1 } : {});
+  const held = (leg: HingedArtLeg, i: number) => {
+    if (s.held && leg.fore) return { contact: 0, fold: 1 };
+    const opens = s.opens?.(i);
+    return opens === undefined ? {} : { fold: opens };
+  };
   const goals = LEGS.map((leg, i): Goal => (s.groom && leg.fore
-    ? { kind: 'reach', to: { on: 'occiput', at: MUZZLE }, by: s.groom, step: s.steps[i], ...held(leg) }
-    : { kind: 'plant', at: feet[i], step: s.steps[i], ...held(leg) }));
+    ? { kind: 'reach', to: { on: 'occiput', at: MUZZLE }, by: s.groom, step: s.steps[i], ...held(leg, i) }
+    : { kind: 'plant', at: feet[i], step: s.steps[i], ...held(leg, i) }));
   return { root: s.body, joints, limbs: RABBIT.limbs(goals), show: {}, z: {} };
 }
 

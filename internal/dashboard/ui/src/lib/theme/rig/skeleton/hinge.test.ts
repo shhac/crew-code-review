@@ -127,5 +127,10 @@ describe('a leg bent at hinges', () => {
     // Its toes go where a flat foot's would.
     const toes = rotate({ x: free.foot.x + 3.8, y: free.foot.y + 1.5 }, free.foot, free.paw);
     expect([toes.x, toes.y]).toEqual([expect.closeTo(at.x + 3.8, 9), expect.closeTo(at.y + 1.5, 9)]);
+    // One that opens off the ground opens from the shank as far as it is
+    // folded, within its limits.
+    const opening: HingedLeg = { ...sole, walksOn: { kind: 'sole', toes: { x: 3.8, y: 1.5 }, peel: 62, fold: 40 } };
+    expect(pawAngle(pose(opening, { x: 7, y: 11 }, { kind: 'plant', at, contact: 0, fold: 0.5 }), false)).toBeCloseTo(-50, 9);
+    expect(pawAngle(pose(opening, { x: 7, y: 11 }, { kind: 'plant', at, contact: 0, fold: 1 }), false)).toBeCloseTo(-40, 9);
   });
 });
