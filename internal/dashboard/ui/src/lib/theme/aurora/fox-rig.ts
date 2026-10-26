@@ -68,18 +68,18 @@ const LEG_WIDTH = 2.1;
 // chest, the upper arm back to the elbow at the chest's foot, the forearm
 // near straight down to the wrist (the carpus) just off the ground, and the
 // short metacarpus to the toes. Those bottom bones fold back as the paw lifts,
-// each turning against the bone above it (rig/skeleton/hinge.ts), as far as
-// a trot folds it back and its planted lean tips it forward; a planted wrist
-// bears little fold, so with the forearm low (a play bow, a stalk) the paw
-// comes down flat along it. The far pair a little behind and above the
-// near, as they would be seen.
+// each turning against the bone above it (rig/skeleton/hinge.ts), as far as a
+// trot folds it back and its planted lean tips it forward, a hock never opening
+// past straight, lifted or planted; a planted wrist bears little fold, so with
+// the forearm low (a play bow, a stalk) the paw comes down flat along it. The
+// far pair a little behind and above the near, as they would be seen.
 // Trotting, diagonal pairs move together: near fore with far hind, far fore
 // with near hind.
 // A trot's diagonal pairs never land quite together: the hind foot of each
 // pair lands this much of a stride before its fore foot, as a trotter's
 // tends to.
 const HIND_FIRST = 0.06;
-const HIND_LEG = { art: LEG_ART, width: LEG_WIDTH, thigh: 2.3, shin: 2.1, bend: 1, fore: false, haunch: 2.6, taper: true, reach: -1, walksOn: { kind: 'toes', length: 1.5, lean: 10, fold: 70 }, paw: { limits: { min: -90, max: 75 } } } as const;
+const HIND_LEG = { art: LEG_ART, width: LEG_WIDTH, thigh: 2.3, shin: 2.1, bend: 1, fore: false, haunch: 2.6, taper: true, reach: -1, walksOn: { kind: 'toes', length: 1.5, lean: 10, fold: 70 }, paw: { limits: { min: -90, max: 35 }, planted: { min: -90, max: 35 } } } as const;
 const FORE_LEG = { art: LEG_ART, width: LEG_WIDTH, thigh: 2.3, shin: 3.6, bend: -1, fore: true, haunch: 2.4, reach: 0.3, walksOn: { kind: 'toes', length: 0.7, lean: 8, fold: 100 }, paw: { limits: { min: -55, max: 105 }, planted: { min: -50, max: 10 } } } as const;
 const LEGS: HingedArtLeg[] = [
   { ...HIND_LEG, hip: { x: 12.2, y: 11 }, far: true },

@@ -95,20 +95,20 @@ const FEET = GROUND - LEG_WIDTH / 2 - 0.7;
 // tibia/femur 148.2/132.4 = 1.12 (Fostowicz-Frelik 2007, Table 3),
 // radius/humerus 102/113 = 0.90 (Williams et al. 2007, Table 4).
 // Sources and the projected pose tuning are in design-docs/hares/README.md.
-// Each joint turns against the bone above it (rig/skeleton/hinge.ts): the
-// knee within its limits; the forefoot from the forearm as far as it folds
-// back off the ground and its planted lean tips it, though planted the wrist
-// bears little fold, so a forearm brought down low (grazing, crouched) lays
-// the forefoot flat along it; the long hind foot from
-// the shank, folding the other way as it swings (a negative fold), up
-// against the shank, so the foot tucks up under the body, as a bounding
-// hare's do, where the gait aims it close under the hip. Its own reach
-// could not take it there. Off the ground the toes ease out of their
-// planted turn: a hind foot's to near its line, still lifted a little to
-// clear the ground as it swings low, a forepaw's a little curled under.
+// Each joint turns against the bone above it (rig/skeleton/hinge.ts): the knee
+// within its limits; the forefoot from the forearm as far as it folds back off
+// the ground and its planted lean tips it, though planted the wrist bears
+// little fold, so a forearm brought down low (grazing, crouched) lays the
+// forefoot flat along it; the long hind foot from the shank, folding the other
+// way as it swings (a negative fold), up against the shank as far as a hock
+// folds, never through it, so the foot tucks up under the body, as a bounding
+// hare's do, where the gait aims it close under the hip. Its own reach could
+// not take it there. Off the ground the toes ease out of their planted turn: a
+// hind foot's to near its line, still lifted a little to clear the ground as it
+// swings low, a forepaw's a little curled under.
 const HIND_LEG = {
   art: HIND_ART, width: LEG_WIDTH, thigh: 4.2, shin: 4.7, bend: 1, jointLimits: { min: 40, max: 175 }, fore: false, haunch: 3.8, taper: true, reach: 0.5,
-  walksOn: { kind: 'toes', length: 3.5, lean: 35, fold: -100 }, paw: { limits: { min: -120, max: 65 } }, digits: -20,
+  walksOn: { kind: 'toes', length: 3.5, lean: 35, fold: -100 }, paw: { limits: { min: -75, max: 65 } }, digits: -20,
 } as const;
 const FORE_LEG = {
   art: FORE_ART, width: LEG_WIDTH, thigh: 4.4, shin: 4, bend: -1, jointLimits: { min: 30, max: 175 }, fore: true, haunch: 1.6, reach: -0.2,
