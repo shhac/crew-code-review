@@ -313,11 +313,14 @@ function limbJoints(l: Member): JointSpec[] {
   }));
 }
 const limbBones = (l: Member) => NAMES[l.arm ? 'arm' : 'leg'].bones.flatMap((name, k) => (name ? [{ from: `${l.code}J${k}`, to: `${l.code}J${k + 1}`, name }] : []));
-const limbSpec = (l: Member): LimbSpec => ({
-  id: l.code, pair: l.arm ? 0 : 1, side: l.far ? 'far' : 'near', ground: restEnd(l).y, solve: l.arm ? 'arm' : 'angles',
-  joints: { root: `${l.code}J0`, middle: `${l.code}J1`, lower: `${l.code}J2`, end: `${l.code}J3`, tip: `${l.code}J4` },
-  leg: l.arm ? { thigh: ARM.upper, shin: ARM.fore, reach: 0 } : { thigh: LEG.thigh, shin: LEG.shin, reach: 0 },
-});
+// A leg's knee bends back, never past straight nor tighter than its
+// deepest kick; its foot keeps its turn from the shin.
+const LEG_HINGES = { side: -1, knee: { min: 60, max: 180 }, paw: { rest: -30, limits: { min: 0, max: 0 } } } as const;
+function limbSpec(l: Member): LimbSpec {
+  const limb = { id: l.code, pair: l.arm ? 0 : 1, side: l.far ? 'far' : 'near', ground: restEnd(l).y, joints: { root: `${l.code}J0`, middle: `${l.code}J1`, lower: `${l.code}J2`, end: `${l.code}J3`, tip: `${l.code}J4` } } as const;
+  if (l.arm) return { ...limb, solve: 'arm', leg: { thigh: ARM.upper, shin: ARM.fore, reach: 0, side: 1 } };
+  return { ...limb, solve: 'hinged', leg: { thigh: LEG.thigh, shin: LEG.shin, reach: 0, ...LEG_HINGES } };
+}
 // Each limb's art as rigs lay it (tetrapod.ts's limbPieces): an arm's or a
 // leg's two pieces and its fist or foot.
 const artLeg = (l: Member): ArtLeg => (l.arm
@@ -397,7 +400,7 @@ export function cupidRig(cupid: RigCupid, look: CupidLook): RigPose {
   };
   const swung = (offset: number): Goal => {
     const swing = h.legs.swing + offset + 0.3 * h.body.angle;
-    return { kind: 'angles', swing, bend: h.legs.bend, paw: 60 - (swing - h.legs.bend) };
+    return { kind: 'angles', swing, bend: h.legs.bend };
   };
   const limbs = { L0: reach('L0', h.near), L1: reach('L1', h.far), L2: swung(0), L3: swung(-16) };
   // The bow in the far fist, its string through the drawing fist; drawing,

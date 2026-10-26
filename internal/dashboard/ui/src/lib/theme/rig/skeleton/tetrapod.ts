@@ -11,7 +11,8 @@ import type { Point } from '../../pointer';
 import { BIRD_JOINTS, type BirdLeg } from '../bird';
 import type { ArtLeg, Foot, Frame } from '../rig';
 import { rootsOf } from './forward';
-import type { Body, BoneSpec, Draw, Goal, Handle, JointSpec, LimbSpec, Piece, Role, Shape, Side, Skeleton } from './types';
+import { restingPaw } from './hinge';
+import type { Body, BoneSpec, Draw, Goal, Handle, Hinge, JointSpec, LimbSpec, Piece, Role, Shape, Side, Skeleton } from './types';
 
 // What each joint of a leg is called, hip (or shoulder) to the toes' tip,
 // and each bone from one to the next; a bone with no name is not one (a
@@ -60,7 +61,8 @@ export type Measured<L extends ArtLeg> = {
   bones?: readonly BoneSpec[];
   root: string;
   // Its legs, in the order its gait, feet and steps list them; each
-  // standing at rest on `ground`.
+  // standing at rest on `ground`; a leg with a `paw` hinge bent at
+  // relative hinges (hinge.ts), its knee within its jointLimits.
   legs: readonly L[];
   ground: (leg: L) => number;
   order: readonly Slot[];
@@ -155,6 +157,11 @@ export function tetrapod<L extends ArtLeg>(preset: Preset, m: Measured<L>): Tetr
       const { hip, far, fore, ...bird } = leg;
       return { ...limb, solve: 'bird', leg: bird };
     }
+    if (isHinged(leg)) {
+      const { hip, far, fore, bend, bendFrame, jointLimits, paw, ...bones } = leg;
+      const bent = { ...bones, side: bend === 1 ? -1 : 1, ...(jointLimits ? { knee: jointLimits } : {}) } as const;
+      return { ...limb, solve: 'hinged', leg: { ...bent, paw: { rest: paw.rest ?? restingPaw(bent, hip, m.ground(leg)), limits: paw.limits } } };
+    }
     const { hip, far, fore, ...quad } = leg;
     return { ...limb, solve: 'quad', leg: quad };
   };
@@ -208,5 +215,6 @@ export function tetrapod<L extends ArtLeg>(preset: Preset, m: Measured<L>): Tetr
   };
 }
 
+const isHinged = <L extends ArtLeg>(leg: L): leg is L & { paw: Hinge } => 'paw' in leg;
 const isBird = (leg: ArtLeg): leg is BirdLeg => 'toes' in leg && 'peel' in leg && leg.walksOn?.kind === 'toes';
 const isPieces = (slot: Slot): slot is readonly Piece[] => Array.isArray(slot);

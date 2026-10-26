@@ -27,7 +27,7 @@ export type Toes = { kind: 'toes'; length: number; lean: number; fold: number };
 // A sole walker's foot: where its toes press the ground, from the heel
 // (where the leg comes down), and how far (degrees) the heel peels up over
 // them as the foot pushes off.
-type Sole = { kind: 'sole'; toes: Point; peel: number };
+export type Sole = { kind: 'sole'; toes: Point; peel: number };
 
 // When each leg steps is the gait's (a walk and a trot move the same legs in
 // different orders), so a leg has no beat of its own.
@@ -109,7 +109,7 @@ export function roll(step?: Step): number {
 
 // How far a foot is off the ground in its step, for which way its bone up
 // from the toes folds: soon after it lifts, until just before it lands.
-const liftedBy = (step?: Step) => (!step || step.down ? 0 : smooth(step.t / 0.2) * smooth((1 - step.t) / 0.15));
+export const liftedBy = (step?: Step) => (!step || step.down ? 0 : smooth(step.t / 0.2) * smooth((1 - step.t) / 0.15));
 
 // Where the bone up from the toes starts, folded `fold` degrees back from
 // standing: rotating it that way swings the paw back behind the joint.

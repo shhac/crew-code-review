@@ -49,14 +49,26 @@ export type Handle = string | { on: string; at: Point };
 // `ground` is where its foot stands at rest, `leg.reach` ahead of its root.
 type Owned = { root: string; middle: string; lower: string; end: string; tip?: string };
 type LimbOf<S extends string, L extends QuadLeg> = { id: string; pair: number; side: Side; joints: Owned; ground: number; solve: S; leg: Omit<L, 'hip' | 'far' | 'fore'> };
+// How far a hinge may turn, in degrees.
+export type Limits = { min: number; max: number };
+// A hinge's turn at rest and how far it may turn from there.
+export type Hinge = { rest?: number; limits: Limits };
+// A leg bent at relative hinges: its knee within `knee`, its interior angle
+// (180 straight), bent to `side` of the line from root to end (limb.ts's
+// jointBeside; a quad's from its `bend`); and what hangs below the shin
+// (the bone up from the toes, or the paw itself where there is none) turned
+// from the shin by the `paw` hinge, which rests where the leg stands at rest
+// unless it says. With nothing to stand on (`walksOn`), it hangs straight
+// down at rest and is posed by angles (a cupid's legs).
+export type HingedLeg = Omit<QuadLeg, 'hip' | 'far' | 'fore' | 'bend' | 'bendFrame' | 'jointLimits'> & { side: 1 | -1; knee?: Limits; paw: Hinge };
 // An arm (a cupid's): two bones from the shoulder to the wrist, the elbow to
-// one side of the line between, the fist along the forearm (limb.ts's
-// jointBeside, `arm`); or a limb swung and bent by angles alone (a cupid's
-// legs, `angles`). At rest an arm reaches `reach` ahead of its shoulder down
-// to its ground; a swung limb hangs straight down.
-type Bones = { thigh: number; shin: number; reach: number };
-type Simple<S extends string> = { id: string; pair: number; side: Side; joints: Owned; ground: number; solve: S; leg: Bones };
-export type LimbSpec = LimbOf<'quad', QuadLeg> | LimbOf<'bird', BirdLeg> | Simple<'arm'> | Simple<'angles'>;
+// `side` of the line between unless its goal says otherwise, the fist along
+// the forearm (limb.ts's jointBeside). At rest it reaches `reach` ahead of
+// its shoulder down to its ground.
+type Arm = { thigh: number; shin: number; reach: number; side?: 1 | -1 };
+type Member<S extends string, L> = { id: string; pair: number; side: Side; joints: Owned; ground: number; solve: S; leg: L };
+export type LimbSpec = LimbOf<'quad', QuadLeg> | LimbOf<'bird', BirdLeg> | Member<'hinged', HingedLeg> | Member<'arm', Arm>;
+export type LimbKind = LimbSpec['solve'];
 
 export type Skeleton = { joints: readonly JointSpec[]; bones: readonly BoneSpec[]; limbs: readonly LimbSpec[] };
 
@@ -70,16 +82,20 @@ export type JointPose = { angle?: number; squash?: { by: number; axis?: number }
 // its step; a bird's kept clear of `ground`), a handle reached, or a bird's
 // legs in the air (bird.ts's airLegsTo `reach`), or a limb swung `swing`
 // degrees forward of straight down and its lower bone bent `bend` back from
-// it, its end turned to `paw`. `walksOn`: what the foot stands on in this
-// pose, where that is not the limb's own (a hare sat on its long hind
-// soles, gait.ts's onSoles); `side`: which side of the line from shoulder
-// to wrist an arm's elbow is (limb.ts's jointBeside).
-type Stands = { walksOn?: NonNullable<QuadLeg['walksOn']>; side?: 1 | -1 };
+// it. `walksOn`: what the foot stands on in this pose, where that is not
+// the limb's own (a hare sat on its long hind soles, gait.ts's onSoles);
+// `side`: which side of the line from root to end the middle joint is,
+// where that is not the limb's own. On a hinged leg, `contact`: how firmly
+// the toes are pinned where they go, 1 planted to 0 held free (by default
+// a planted foot's as its step lifts it, a reaching paw's 0); `fold`: how
+// far through its fold the paw is, as a share of the leg's (by default as
+// its step swings it).
+type Stands = { walksOn?: NonNullable<QuadLeg['walksOn']>; side?: 1 | -1; contact?: number; fold?: number };
 export type Goal =
   | ({ kind: 'plant'; at: Point; step?: Step; ground?: number } & Stands)
   | ({ kind: 'reach'; to: Handle; by?: Point; step?: Step } & Stands)
   | { kind: 'air'; reach: number; legs?: AirLegs }
-  | { kind: 'angles'; swing: number; bend: number; paw: number };
+  | { kind: 'angles'; swing: number; bend: number };
 
 // One moment's pose: the root's turn (the one joint that may turn about a
 // different point in each pose), each authored joint's pose, each limb's
@@ -171,9 +187,12 @@ export type Body = {
 // The skeleton as a pose has it, for the lab and the tests: each joint where
 // it is drawn, coded by its role; each bone, by its joints' ids, and how
 // long it is now with every squash and foreshortening above it taken out;
-// each limb as the solvers posed it, whether it is a foreleg, and how low
-// its foot reaches.
+// each limb as the solvers posed it, whether it is a foreleg, how low its
+// foot reaches, and, bent at hinges, the side its knee bends to, how far
+// its knee and its paw may turn (the paw's from the shin, absolute) and
+// whether a bone rises from its toes.
 export type PosedJoint = { id: string; code: string; name: string; at: Point; derived: boolean; far: boolean; parent: string | null; angle: number; limits?: { min: number; max: number } };
 export type PosedBone = { code: string; name: string; from: string; to: string; far: boolean; length: number; stretch?: { min: number; max: number } };
-export type PosedLimb = { id: string; code: string; limb: Limb; fore: boolean; sole: number };
+export type PosedHinges = { side: 1 | -1; knee: Limits; paw: Limits; toes: boolean };
+export type PosedLimb = { id: string; code: string; limb: Limb; fore: boolean; sole: number; hinges?: PosedHinges };
 export type PosedSkeleton = { joints: readonly PosedJoint[]; bones: readonly PosedBone[]; limbs: readonly PosedLimb[]; titles?: Readonly<Record<string, string>> };

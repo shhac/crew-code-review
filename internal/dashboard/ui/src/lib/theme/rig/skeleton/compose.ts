@@ -10,8 +10,9 @@ import type { Limb } from '../gait';
 import { bone, type Layer, type RigPose } from '../rig';
 import { angleOf, applied, inverse, linear, product, rotate, scale, translate, type Affine } from './affine';
 import { frames, local } from './forward';
+import { STRAIGHT } from './hinge';
 import { ownedBy, ownedFrames, ownedPoints, solveLimb, standing } from './limbs';
-import type { Attachment, Body, Draw, Handle, JointSpec, Piece, PosedBone, PosedJoint, PosedLimb, PoseSpec, Role, Skeleton } from './types';
+import type { Attachment, Body, Draw, Goal, Handle, HingedLeg, JointSpec, Piece, PosedBone, PosedHinges, PosedJoint, PosedLimb, PoseSpec, Role, Skeleton } from './types';
 
 type PieceLayer = Extract<Layer, { kind: 'piece' }>;
 
@@ -37,6 +38,17 @@ const apart = (a: Point, b: Point) => Math.hypot(b.x - a.x, b.y - a.y);
 // A limb's foot and its toes' tip have frames of their own turned by the
 // paw they stand at (`turns`), as a foot's box is turned from its heel.
 type Rest = { points: ReadonlyMap<string, Point>; limbs: ReadonlyMap<string, Limb>; turns: ReadonlyMap<string, number> };
+// The hinges a leg was posed with, for the laws: its paw's limits as turns
+// from the shin.
+function hingesOf(leg: HingedLeg, goal: Goal): PosedHinges {
+  const rest = leg.paw.rest ?? 0;
+  const stands = goal.kind === 'plant' || goal.kind === 'reach' ? goal : undefined;
+  return {
+    side: stands?.side ?? leg.side, knee: leg.knee ?? STRAIGHT, paw: { min: rest + leg.paw.limits.min, max: rest + leg.paw.limits.max },
+    toes: (stands?.walksOn ?? leg.walksOn)?.kind === 'toes',
+  };
+}
+
 const rests = new WeakMap<Skeleton, Rest>();
 function restOf(skeleton: Skeleton): Rest {
   const had = rests.get(skeleton);
@@ -249,9 +261,9 @@ export function compose(body: Body, poseAt: (now: number) => PoseSpec, now: numb
     const root = authored(limb.joints.root);
     const stood = rest.limbs.get(limb.id);
     if (!stood) throw new Error(`skeleton: ${limb.id} never stood`);
-    const goal = pose.limbs[limb.id] ?? (limb.solve === 'angles' ? { kind: 'angles', swing: 0, bend: 0, paw: 0 } : { kind: 'plant', at: { x: root.x + limb.leg.reach, y: limb.ground } });
+    const goal = pose.limbs[limb.id] ?? (limb.solve === 'hinged' && !limb.leg.walksOn ? { kind: 'angles', swing: 0, bend: 0 } : { kind: 'plant', at: { x: root.x + limb.leg.reach, y: limb.ground } });
     const limbNow = solveLimb(limb, root, goal, authored);
-    return { limb, now: limbNow, points: ownedPoints(skeleton, limb, stood, limbNow), frames: ownedFrames(skeleton, limb, stood, limbNow) };
+    return { limb, goal, now: limbNow, points: ownedPoints(skeleton, limb, stood, limbNow), frames: ownedFrames(skeleton, limb, stood, limbNow) };
   });
   const frameMap = new Map([...world, ...limbs.flatMap((l) => [...l.frames])]);
   const limbOf = (id: string): Limb => {
@@ -298,11 +310,11 @@ export function compose(body: Body, poseAt: (now: number) => PoseSpec, now: numb
   }));
   // How low a limb's foot reaches: its foot's pictures as seen, or the foot
   // itself where nothing is hung on it.
-  const posedLimbs: PosedLimb[] = limbs.map(({ limb, now: l }, n) => {
+  const posedLimbs: PosedLimb[] = limbs.map(({ limb, goal, now: l }, n) => {
     const feet = layout.feet[n];
     const onFoot = painted.flatMap(({ piece, layers: drawn }) => (piece !== undefined && feet.includes(piece) ? drawn.flatMap((d) => (d.kind === 'piece' && seenLayer(d) ? [d] : [])) : []));
     const sole = onFoot.length ? Math.max(...onFoot.flatMap(corners).map((c) => c.y)) : l.foot.y;
-    return { id: limb.id, code: `L${2 * limb.pair + sideCode(limb.side)}`, limb: l, fore: limb.pair === 0, sole };
+    return { id: limb.id, code: `L${2 * limb.pair + sideCode(limb.side)}`, limb: l, fore: limb.pair === 0, sole, ...(limb.solve === 'hinged' ? { hinges: hingesOf(limb.leg, goal) } : {}) };
   });
   return {
     ...body.frame,

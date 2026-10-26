@@ -1,17 +1,19 @@
 // A limb's constraint: given where FK put its root and what it reaches
-// for, today's solvers (gait.ts's legsTo, bird.ts's birdLegsTo and
-// airLegsTo) pose it, unchanged, and their answer places the joints the
-// limb owns. FK never places those. Each owned joint's frame turns with its
+// for, a solver for its kind poses it (gait.ts's legsTo, bird.ts's
+// birdLegsTo and airLegsTo, unchanged; hinge.ts's for a leg bent at
+// relative hinges; an arm's), and its answer places the joints the limb
+// owns. FK never places those. Each owned joint's frame turns with its
 // bone from where the limb stands at rest (its standing solve), the foot's
 // with the paw, so a part hung on one follows it.
-import { degrees, rad } from '../../math';
+import { degrees } from '../../math';
 import type { Point } from '../../pointer';
 import { rotate as turnPoint } from '../../spidergait';
 import { airLegsTo, birdLegsTo, type BirdLeg } from '../bird';
 import { jointBeside } from '../limb';
 import { legsTo, type Limb, type QuadLeg } from '../gait';
 import { product, rotate, translate, type Affine } from './affine';
-import type { Goal, Handle, LimbSpec, Skeleton } from './types';
+import { solveHinged } from './hinge';
+import type { Goal, Handle, LimbKind, LimbSpec, Skeleton } from './types';
 
 // The whole leg each solver takes, its hip the root where it is now (the
 // solvers pose from their `hip` argument; the spec's is read only to set
@@ -21,37 +23,47 @@ const birdOf = (limb: Extract<LimbSpec, { solve: 'bird' }>, root: Point): BirdLe
 
 const plus = (p: Point, by: Point = { x: 0, y: 0 }): Point => ({ x: p.x + by.x, y: p.y + by.y });
 
+const direction = (from: Point, to: Point) => degrees(Math.atan2(to.y - from.y, to.x - from.x));
+
 // The limb posed from `root` (its J0 now) toward its goal; `handle` finds
 // a reach's target, which may only be an authored joint or a point on one.
-const direction = (from: Point, to: Point) => degrees(Math.atan2(to.y - from.y, to.x - from.x));
-const along = (from: Point, deg: number, length: number): Point => ({ x: from.x + Math.cos(rad(deg)) * length, y: from.y + Math.sin(rad(deg)) * length });
+type Solver<K extends LimbKind> = (limb: Extract<LimbSpec, { solve: K }>, root: Point, goal: Goal, handle: (h: Handle) => Point) => Limb;
+const target = (goal: Goal, handle: (h: Handle) => Point): Point => {
+  if (goal.kind === 'plant') return goal.at;
+  if (goal.kind === 'reach') return plus(handle(goal.to), goal.by);
+  throw new Error(`skeleton: a ${goal.kind} goal has no target`);
+};
+const SOLVERS: { [K in LimbKind]: Solver<K> } = {
+  quad: (limb, root, goal, handle) => {
+    if (goal.kind === 'plant' || goal.kind === 'reach') {
+      const quad = quadOf(limb, root);
+      return legsTo([goal.walksOn ? { ...quad, walksOn: goal.walksOn } : quad], [root], [target(goal, handle)], goal.step ? [goal.step] : [])[0];
+    }
+    throw new Error(`skeleton: ${limb.id} is not posed by a ${goal.kind} goal`);
+  },
+  bird: (limb, root, goal, handle) => {
+    if (goal.kind === 'air') return airLegsTo([birdOf(limb, root)], [root], goal.reach, goal.legs)[0];
+    if (goal.kind === 'plant' || goal.kind === 'reach') return birdLegsTo([birdOf(limb, root)], [root], [target(goal, handle)], goal.step ? [goal.step] : [], goal.kind === 'plant' ? goal.ground : undefined)[0];
+    throw new Error(`skeleton: ${limb.id} is not posed by a ${goal.kind} goal`);
+  },
+  hinged: (limb, root, goal, handle) => solveHinged(limb.leg, root, goal, () => target(goal, handle)),
+  arm: (limb, root, goal, handle) => {
+    if (goal.kind !== 'plant' && goal.kind !== 'reach') throw new Error(`skeleton: ${limb.id} is not posed by a ${goal.kind} goal`);
+    const at = target(goal, handle);
+    const knee = jointBeside(root, at, limb.leg.thigh, limb.leg.shin, goal.side ?? limb.leg.side ?? 1);
+    return { hip: root, knee, ankle: at, foot: at, paw: direction(knee, at) };
+  },
+};
+const solverOf = <K extends LimbKind>(limb: Extract<LimbSpec, { solve: K }>): Solver<K> => SOLVERS[limb.solve];
 
 export function solveLimb(limb: LimbSpec, root: Point, goal: Goal, handle: (h: Handle) => Point): Limb {
-  if (limb.solve === 'angles') {
-    if (goal.kind !== 'angles') throw new Error(`skeleton: ${limb.id} is posed by angles`);
-    const knee = along(root, 90 - goal.swing, limb.leg.thigh);
-    const foot = along(knee, 90 - (goal.swing - goal.bend), limb.leg.shin);
-    return { hip: root, knee, ankle: foot, foot, paw: goal.paw };
-  }
-  if (goal.kind === 'angles') throw new Error(`skeleton: ${limb.id} is not posed by angles`);
-  if (goal.kind === 'air') {
-    if (limb.solve !== 'bird') throw new Error(`skeleton: ${limb.id} has no legs in the air`);
-    return airLegsTo([birdOf(limb, root)], [root], goal.reach, goal.legs)[0];
-  }
-  const at = goal.kind === 'plant' ? goal.at : plus(handle(goal.to), goal.by);
-  if (limb.solve === 'arm') {
-    const knee = jointBeside(root, at, limb.leg.thigh, limb.leg.shin, goal.side ?? 1);
-    return { hip: root, knee, ankle: at, foot: at, paw: direction(knee, at) };
-  }
-  const steps = goal.step ? [goal.step] : [];
-  if (limb.solve === 'bird') return birdLegsTo([birdOf(limb, root)], [root], [at], steps, goal.kind === 'plant' ? goal.ground : undefined)[0];
-  const quad = quadOf(limb, root);
-  return legsTo([goal.walksOn ? { ...quad, walksOn: goal.walksOn } : quad], [root], [at], steps)[0];
+  return solverOf(limb)(limb, root, goal, handle);
 }
 
-// Standing at rest: its foot down `reach` ahead of its root, on its ground.
+// Standing at rest: its foot down `reach` ahead of its root, on its ground;
+// a hinged leg with nothing to stand on hanging straight down.
 export const standing = (limb: LimbSpec, root: Point): Limb =>
-  solveLimb(limb, root, limb.solve === 'angles' ? { kind: 'angles', swing: 0, bend: 0, paw: 0 } : { kind: 'plant', at: { x: root.x + limb.leg.reach, y: limb.ground } }, () => root);
+  solveLimb(limb, root, limb.solve === 'hinged' && !limb.leg.walksOn ? { kind: 'angles', swing: 0, bend: 0 } : { kind: 'plant', at: { x: root.x + limb.leg.reach, y: limb.ground } }, () => root);
 
 const restOf = (skeleton: Skeleton, id: string): Point => {
   const joint = skeleton.joints.find((j) => j.id === id);

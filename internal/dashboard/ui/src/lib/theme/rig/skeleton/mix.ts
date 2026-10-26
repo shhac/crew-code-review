@@ -5,11 +5,14 @@
 // linear mix, so a limb's step is the next pose's (the last's where the
 // next has none) unless the animal gives a mixer for that limb's steps (the
 // rabbit's forepaws fold between two steps). A foot reaching for a handle
-// is mixed from where it reaches in its own pose.
+// is mixed from where it reaches in its own pose; how firmly a hinged
+// leg's toes are pinned, and how far its paw is folded, from what each
+// pose has them.
 import { mix, mixPoint } from '../../math';
 import type { Point } from '../../pointer';
 import type { Step } from '../gait';
 import { handleAt } from './forward';
+import { held } from './hinge';
 import type { Goal, JointPose, PoseSpec, Skeleton } from './types';
 
 export type StepMixer = (a: Step | undefined, b: Step | undefined, f: number) => Step | undefined;
@@ -39,14 +42,18 @@ function mixGoal(skeleton: Skeleton, a: PoseSpec, b: PoseSpec, id: string, f: nu
   const [ga, gb] = [a.limbs[id], b.limbs[id]];
   if (!ga || !gb) return gb ?? ga;
   if (ga.kind === 'air' && gb.kind === 'air') return { ...gb, reach: mix(ga.reach, gb.reach, f) };
-  if (ga.kind === 'angles' && gb.kind === 'angles') return { kind: 'angles', swing: mix(ga.swing, gb.swing, f), bend: mix(ga.bend, gb.bend, f), paw: mix(ga.paw, gb.paw, f) };
+  if (ga.kind === 'angles' && gb.kind === 'angles') return { kind: 'angles', swing: mix(ga.swing, gb.swing, f), bend: mix(ga.bend, gb.bend, f) };
   const [pa, pb] = [planted(skeleton, a, ga), planted(skeleton, b, gb)];
-  if (!pa || !pb) return gb;
+  if (!pa || !pb || (ga.kind !== 'plant' && ga.kind !== 'reach') || (gb.kind !== 'plant' && gb.kind !== 'reach')) return gb;
+  const [ha, hb] = [held(ga), held(gb)];
   const step = mixer ? mixer(pa.step, pb.step, f) : pb.step ?? pa.step;
   const ground = pb.ground ?? pa.ground;
   const walksOn = pb.walksOn ?? pa.walksOn;
   const side = pb.side ?? pa.side;
-  return { kind: 'plant', at: mixPoint(pa.at, pb.at, f), ...(step ? { step } : {}), ...(ground === undefined ? {} : { ground }), ...(walksOn ? { walksOn } : {}), ...(side ? { side } : {}) };
+  return {
+    kind: 'plant', at: mixPoint(pa.at, pb.at, f), ...(step ? { step } : {}), ...(ground === undefined ? {} : { ground }), ...(walksOn ? { walksOn } : {}), ...(side ? { side } : {}),
+    contact: mix(ha.contact, hb.contact, f), fold: mix(ha.fold, hb.fold, f),
+  };
 }
 
 export function mixPose(skeleton: Skeleton, a: PoseSpec, b: PoseSpec, f: number, mixers: Mixers = {}): PoseSpec {

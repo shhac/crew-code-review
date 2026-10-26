@@ -6,6 +6,7 @@ import type { Point } from '../../pointer';
 import type { Limb } from '../gait';
 import { piecesOf, type DrawnLeg, type RigPose } from '../rig';
 import { flatLayers, pageReach, rigBounds, solesOf } from '../test-rig';
+import { kneeAngle, pawAngle } from './hinge';
 import { planDiff, type Plan, type PlanDraw } from './plan';
 
 // The box placement allows (rig critters' `box`), in page pixels.
@@ -60,6 +61,19 @@ const bonesKeepLength: Law = ({ moving }) => {
 const limitsHold: Law = ({ moving, still }) => [...moving, ...still].flatMap((s) => (s.pose.skeleton?.joints ?? []).flatMap((j) => {
   if (!j.limits || (j.angle >= j.limits.min && j.angle <= j.limits.max)) return [];
   return [`${j.code} (${j.name}) turned ${j.angle.toFixed(2)} ${where(s)}`];
+}));
+
+// Every leg bent at hinges keeps its knee and its paw within their limits
+// (types.ts's HingedLeg), whatever its toes are doing.
+const hingesHold: Law = ({ moving, still }) => [...moving, ...still].flatMap((s) => (s.pose.skeleton?.limbs ?? []).flatMap(({ code, limb, hinges }) => {
+  if (!hinges) return [];
+  const knee = kneeAngle(limb, hinges.side);
+  const paw = pawAngle(limb, hinges.toes);
+  const out = (turn: number, limits: { min: number; max: number }) => turn < limits.min - EPSILON || turn > limits.max + EPSILON;
+  return [
+    ...(out(knee, hinges.knee) ? [`${code} knee at ${knee.toFixed(2)} ${where(s)}`] : []),
+    ...(out(paw, hinges.paw) ? [`${code} paw at ${paw.toFixed(2)} from its shin ${where(s)}`] : []),
+  ];
 }));
 
 // A foot down and flat in two moments running stays where it is on the
@@ -145,5 +159,5 @@ const stillHolds: Law = ({ still }) => [...new Set(still.map((s) => s.mode))].fl
   return [...(blink ? [`blinks ${where(blink)}`] : []), ...(moved ? [`moves ${where(moved)}`] : [])];
 });
 
-export const LAWS = { bonesKeepLength, limitsHold, plantedFeetHold, anklesBehindToes, noFootBelowLedge, footprintsHold, everyPieceDrawn, oneVariantShows, farBeforeBody, stillHolds } as const satisfies Record<string, Law>;
+export const LAWS = { bonesKeepLength, limitsHold, hingesHold, plantedFeetHold, anklesBehindToes, noFootBelowLedge, footprintsHold, everyPieceDrawn, oneVariantShows, farBeforeBody, stillHolds } as const satisfies Record<string, Law>;
 export type LawName = keyof typeof LAWS;
