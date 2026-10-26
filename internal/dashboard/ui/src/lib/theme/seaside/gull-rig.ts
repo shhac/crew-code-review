@@ -81,16 +81,19 @@ const FACE: Fur = { fill: '#e9edf0', outline: '#1a1a1a' };
 // the tarsus leaning its foot end a little forward to the toes. Measured on
 // the reference's near leg: drumstick 1.42 and tarsus 2.43 drawing units,
 // the tarsus leaning 14 degrees; the femur, never seen, is as long as the
-// legs need to reach through a stride.
-const TOES = { src: toesArt, fur: toesFurArt, width: 4.08, height: 1.92, heel: { x: 0.69, y: 0.33 } };
-const CURLED = { src: curledArt, fur: curledFurArt, width: 2.17, height: 2.5, heel: { x: 0.43, y: 0.25 } };
+// legs need to reach through a stride. The tarsus bar runs on 0.25 units
+// into the toes' picture, to where the toes part, which is its joint; the
+// picture keeps of the tarsus only a knob round it (design-docs/art.py's
+// knobbed), so it turns there without a stub standing out from the bar.
+const TOES = { src: toesArt, fur: toesFurArt, width: 4.08, height: 1.92, heel: { x: 0.82, y: 0.57 } };
+const CURLED = { src: curledArt, fur: curledFurArt, width: 2.17, height: 2.5, heel: { x: 0.48, y: 0.45 } };
 const LEG_ART: LimbArt = {
   bone: tarsusArt, boneFur: tarsusFurArt, knee: true, inBody: true,
   thigh: { src: drumstickArt, fur: drumstickFurArt }, foot: TOES, curled: CURLED,
 };
 const LEG = {
   art: LEG_ART, width: 0.75, haunch: 0.92, thigh: 1.7, shin: 1.42, bend: 1, fore: false,
-  walksOn: { kind: 'toes', length: 2.43, lean: 14, fold: 40 }, toes: { x: 3.39, y: 1.59 }, peel: 22,
+  walksOn: { kind: 'toes', length: 2.68, lean: 14, fold: 40 }, toes: { x: 3.26, y: 1.35 }, peel: 22,
 } as const;
 const LEGS: BirdLeg[] = [
   { ...LEG, hip: { x: 16.5, y: 11.8 }, reach: -0.8, far: true },

@@ -31,7 +31,7 @@ from PIL import Image
 from scipy import ndimage
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from art import MARGIN, EyeScale, crop, crop_origin, cut, export, export_with_fur, keyed, lum, opaque, place, poses, rescaled, rows, span_up  # noqa: E402
+from art import MARGIN, EyeScale, crop, crop_origin, cut, export, export_with_fur, keyed, knobbed, lum, opaque, place, poses, rescaled, rows, span_up  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
 OUT = HERE.parents[1] / 'internal/dashboard/ui/src/lib/theme/harvest'
@@ -73,14 +73,21 @@ RUMP_OVERLAP = 0.25
 WING_LENGTH = 0.95
 # The legs, measured off the reference: the bare tarsus's thickness, outline
 # included, and the foot's length, claws included, in drawing units; and
-# where on the foot (fractions of its box) the tarsus comes down.
+# where on the foot (fractions of its box) the tarsus comes down, where the
+# toes part.
 TARSUS = 0.85
 # The feathered drumstick (crow-drumstick.png, its feathered end at the
 # knee, its bare end at the intertarsal joint), as thick as the trousers
 # where they leave the belly in the reference (about 52px).
 DRUMSTICK = 1.6
 FOOT = 5.6
-HEEL = (0.34, 0.12)
+HEEL = (0.39, 0.34)
+# Where the tarsus comes down on the curled foot, and how wide a knob of it
+# each foot keeps round that joint (art.py's knobbed), and its outline, in
+# drawing units: the tarsus's own bar draws the rest.
+CURLED_HEEL = (0.35, 0.26)
+KNOB = 0.4
+KNOB_LINE = 0.06
 
 
 def brown(rgb: np.ndarray) -> np.ndarray:
@@ -327,9 +334,11 @@ def crow(check: Path | None) -> None:
     # length, the curled one on the same scale as the open one.
     tarsus, foot, curled = (crop(p) for p in poses(keyed(HERE / 'crow-limbs.png'), 3))
     scale.bar('crow-tarsus', tarsus, OUT, TARSUS)
-    scale.foot('crow-foot', foot, OUT, FOOT, HEEL)
-    w, h = export_with_fur(curled, OUT, 'crow-foot-curled', FOOT * RES / foot.shape[1])
-    print(f'crow-foot-curled: {w / RES:.2f}x{h / RES:.2f} units')
+    per_unit = foot.shape[1] / FOOT
+    knob = (KNOB * per_unit, KNOB_LINE * per_unit)
+    scale.foot('crow-foot', knobbed(foot, HEEL, *knob), OUT, FOOT, HEEL)
+    w, h = export_with_fur(knobbed(curled, CURLED_HEEL, *knob), OUT, 'crow-foot-curled', FOOT * RES / foot.shape[1])
+    print(f'crow-foot-curled: {w / RES:.2f}x{h / RES:.2f} units, heel {w * CURLED_HEEL[0] / RES:.2f}, {h * CURLED_HEEL[1] / RES:.2f}')
     if check:
         laid = []
         for name in ['crow-tail', 'crow-body', 'crow-wing-folded', 'crow-head']:

@@ -209,6 +209,27 @@ def export_with_fur(rgba: np.ndarray, out: Path, name: str, scale: float) -> tup
     return size
 
 
+def knobbed(rgba: np.ndarray, heel: tuple[float, float], radius: float, line: float) -> np.ndarray:
+    """A foot with the stub of leg drawn above its joint taken off, all but
+    a knob round the joint itself: heel (fractions of its box) is the joint,
+    radius and line (pixels) the knob's and its outline's. The leg's own bar
+    comes down to the joint, so a stub left on the foot, turning with the
+    toes, would stand out from it at another angle; a round knob looks the
+    same however they turn. It is outlined where it was cut, in the
+    drawing's own ink (its darkest pixels' middle colour)."""
+    h, w = rgba.shape[:2]
+    ys, xs = np.mgrid[0:h, 0:w].astype(np.float32) + 0.5
+    hx, hy = heel[0] * w, heel[1] * h
+    past = np.where(ys < hy, np.hypot(xs - hx, ys - hy) - radius, -np.inf)
+    dark = (lum(rgba) < 60) & (rgba[..., 3] > 200)
+    ink = np.median(rgba[dark][:, :3], axis=0)
+    out = rgba.astype(np.float32)
+    out[..., 3] *= np.clip(0.5 - past, 0, 1)
+    band = np.clip(past + line + 0.5, 0, 1) * (out[..., 3] > 0)
+    out[..., :3] = out[..., :3] * (1 - band[..., None]) + ink * band[..., None]
+    return out.astype(np.uint8)
+
+
 def span_up(piece: np.ndarray) -> np.ndarray:
     """A wing piece drawn lying down, root left and leading edge on top,
     stood up as the bird kit draws one: span up the picture, root at the

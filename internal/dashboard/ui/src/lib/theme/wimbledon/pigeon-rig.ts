@@ -75,9 +75,12 @@ const MEMBRANE: Fur = { fill: '#dfe6ea', outline: '#5b6670' };
 // the toes, three forward and the hallux back. Measured on the reference's
 // near leg (53 source pixels to a unit): the tarsus 1.25 units, leaning
 // 6 degrees, its top 1.7 units below the hips; the femur, never seen, as
-// long as the legs need to reach through a stride.
+// long as the legs need to reach through a stride. The feet's pictures keep
+// of the tarsus only a knob round the joint where the toes part
+// (design-docs/art.py's knobbed), so the toes turn there without a stub
+// standing out from the bar.
 const TOES = { src: footArt, fur: footFurArt, width: 4.67, height: 2.42, heel: { x: 1.59, y: 0.72 } };
-const CURLED = { src: curledArt, fur: curledFurArt, width: 2.83, height: 2.75, heel: { x: 1.13, y: 0.41 } };
+const CURLED = { src: curledArt, fur: curledFurArt, width: 2.83, height: 2.75, heel: { x: 1.28, y: 0.71 } };
 const LEG_ART: LimbArt = {
   bone: shankArt, boneFur: shankFurArt, knee: true, inBody: true,
   thigh: { src: thighArt, fur: thighFurArt }, foot: TOES, curled: CURLED,

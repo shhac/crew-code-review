@@ -25,7 +25,7 @@ from pathlib import Path
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from art import EyeScale, crop, cut, export, keyed, opaque  # noqa: E402
+from art import EyeScale, crop, cut, export, keyed, knobbed, opaque  # noqa: E402
 import numpy as np  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
@@ -57,12 +57,17 @@ WING_LENGTH = {'gull-arm': 10.5, 'gull-hand': 11.5, 'gull-arm-under': 10.5, 'gul
 # about 50px, the tarsus 38px, at 51.7px to a unit); the feet by their
 # length (the flat foot 4.1 units from the hallux to the claws' tips,
 # the curled one on the same pixel scale) and where the leg comes down onto
-# each, as fractions of its box.
+# each, as fractions of its box, where the toes part. Each keeps of the
+# tarsus drawn above that only a knob round it (art.py's knobbed), KNOB
+# across in drawing units, outlined KNOB_LINE thick: the tarsus's own bar
+# draws the rest.
 LIMBS = ['gull-drumstick', 'gull-tarsus', 'gull-toes', 'gull-toes-curled']
 DRUMSTICK = 0.95
 TARSUS = 0.74
-TOES = (4.1, (0.17, 0.17))
-CURLED = (0.2, 0.1)
+TOES = (4.1, (0.2, 0.3))
+CURLED = (0.22, 0.18)
+KNOB = 0.36
+KNOB_LINE = 0.06
 # The shelf kit's height on the shelf, in page pixels.
 KIT_HEIGHT = 64
 
@@ -113,9 +118,11 @@ def main() -> None:
     for name, thick in [('gull-drumstick', DRUMSTICK), ('gull-tarsus', TARSUS)]:
         gull.bar(name, limbs[name], OUT, thick)
     length, heel = TOES
-    gull.foot('gull-toes', limbs['gull-toes'], OUT, length, heel)
+    per_unit = limbs['gull-toes'].shape[1] / length
+    knob = (KNOB * per_unit, KNOB_LINE * per_unit)
+    gull.foot('gull-toes', knobbed(limbs['gull-toes'], heel, *knob), OUT, length, heel)
     curled = limbs['gull-toes-curled']
-    gull.foot('gull-toes-curled', curled, OUT, length * curled.shape[1] / limbs['gull-toes'].shape[1], CURLED)
+    gull.foot('gull-toes-curled', knobbed(curled, CURLED, *knob), OUT, curled.shape[1] / per_unit, CURLED)
 
 
 if __name__ == '__main__':

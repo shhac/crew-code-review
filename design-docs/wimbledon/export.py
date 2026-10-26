@@ -24,7 +24,7 @@ from pathlib import Path
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from art import EyeScale, by_colour, crop, cut, export, feature, keyed, lum, rescaled, span_up  # noqa: E402
+from art import EyeScale, by_colour, crop, cut, export, feature, keyed, knobbed, lum, rescaled, span_up  # noqa: E402
 import numpy as np  # noqa: E402
 from PIL import Image  # noqa: E402
 
@@ -84,8 +84,12 @@ INK = (22, 24, 30)
 WORK = 48
 # Feet: length in drawing units (the reference's near foot, hallux tip to
 # middle claw), and where on them (fractions of their box) the shank comes
-# down.
-FEET = {'pigeon-foot': (4.7, (0.34, 0.3)), 'pigeon-foot-curled': (2.8, (0.4, 0.15))}
+# down, where the toes part. Each keeps of the shank drawn above that only a
+# knob round it (art.py's knobbed), KNOB across in drawing units, outlined
+# KNOB_LINE thick: the shank's own bar draws the rest.
+FEET = {'pigeon-foot': (4.7, (0.34, 0.3)), 'pigeon-foot-curled': (2.8, (0.45, 0.26))}
+KNOB = 0.3
+KNOB_LINE = 0.06
 WINGS = ['arm', 'hand', 'arm-under', 'hand-under']
 # A wing's hand (wrist to tip) is about half the bird's length: a pigeon's
 # wing (31 to 34cm of its 62 to 68cm span) is as long as the bird, a Harris's
@@ -230,7 +234,8 @@ def main() -> None:
     for name, thick in THICK.items():
         pigeon.bar(name, limbs[name], OUT, thick)
     for name, (length, heel) in FEET.items():
-        pigeon.foot(name, limbs[name], OUT, length, heel)
+        per_unit = limbs[name].shape[1] / length
+        pigeon.foot(name, knobbed(limbs[name], heel, KNOB * per_unit, KNOB_LINE * per_unit), OUT, length, heel)
     flight = wings('pigeon-wings.png', 'pigeon', PIGEON_HAND, [*WINGS, 'tail-fan'])
     # The fanned tail as long as the closed one.
     closed = parts['pigeon-tail']
