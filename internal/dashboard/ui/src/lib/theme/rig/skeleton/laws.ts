@@ -69,7 +69,12 @@ const hingesHold: Law = ({ moving, still }) => [...moving, ...still].flatMap((s)
   if (!hinges) return [];
   const knee = kneeAngle(limb, hinges.side);
   const paw = pawAngle(limb, hinges.toes);
-  const out = (turn: number, limits: { min: number; max: number }) => turn < limits.min - EPSILON || turn > limits.max + EPSILON;
+  // A turn is the same turn a whole turn round, so it is read within a
+  // turn of its least.
+  const out = (turn: number, limits: { min: number; max: number }) => {
+    const read = limits.min + ((((turn - limits.min) % 360) + 360) % 360);
+    return read > limits.max + EPSILON && read < limits.min + 360 - EPSILON;
+  };
   return [
     ...(out(knee, hinges.knee) ? [`${code} knee at ${knee.toFixed(2)} ${where(s)}`] : []),
     ...(out(paw, hinges.paw) ? [`${code} paw at ${paw.toFixed(2)} from its shin ${where(s)}`] : []),

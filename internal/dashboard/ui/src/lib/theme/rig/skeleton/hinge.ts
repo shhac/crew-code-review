@@ -10,7 +10,7 @@
 // fold it, and a planted one never slides.
 import { clamp, degrees, rad, smooth } from '../../math';
 import type { Point } from '../../pointer';
-import { knees, rotate } from '../../spidergait';
+import { rotate } from '../../spidergait';
 import { flexion, liftedBy, roll, type Limb, type Step, type Toes } from '../gait';
 import { jointBeside } from '../limb';
 import type { Goal, Hinge, HingedLeg, Limits } from './types';
@@ -72,11 +72,9 @@ function pinned(leg: HingedLeg, hip: Point, target: Point, on: Toes): { ankle: P
 
 // The leg from its hip to its toes with the bone up from them turned `turn`
 // from the shin: the shin and that bone one rigid bone from the knee to
-// the toes, so the knee is where that bone and the thigh meet, on whichever
-// side bends it the way it bends (with a long bone up from the toes, that
-// need not be `side` of the line from hip to toes), and the ankle is read
-// back. A target out of reach, or one only reached by bending the knee past
-// its limits, is moved toward or away from the hip until it is reached.
+// the toes, so jointBeside sets the knee, and the ankle is read back. A
+// target out of reach, or one only reached by bending the knee past its
+// limits, is moved toward or away from the hip until it is reached.
 function bentTo(leg: HingedLeg, side: 1 | -1, hip: Point, target: Point, turn: number, c: number): Omit<Limb, 'paw'> {
   const { thigh: a, shin: b } = leg;
   const rigid = { x: b + c * Math.cos(rad(turn)), y: c * Math.sin(rad(turn)) };
@@ -85,29 +83,22 @@ function bentTo(leg: HingedLeg, side: 1 | -1, hip: Point, target: Point, turn: n
   // As spidergait.ts's knees clamps it, so the knee it finds is on the
   // foot's circle.
   const reachable = (d: number) => clamp(d, Math.abs(a - span) + 1e-3, a + span - 1e-6);
-  const toward = dir(hip, target);
   const distance = Math.hypot(target.x - hip.x, target.y - hip.y);
-  const footAt = (d: number) => (d === distance ? target : along(hip, toward, d));
-  const chainOf = (knee: Point, foot: Point) => ({ hip, knee, ankle: along(knee, dir(knee, foot) - shinOff, b), foot });
-  const bentRight = (chain: Omit<Limb, 'paw'>) => kneeAngle({ ...chain, paw: 0 }, side) <= 180;
-  // Which of the two places for the knee (q: jointBeside's side for it).
-  const posed = (foot: Point, q?: 1 | -1) => {
-    const [left, right] = knees(hip, foot, a, span);
-    const at = (k: 1 | -1) => ({ chain: chainOf(k === 1 ? right : left, foot), q: k });
-    if (q) return at(q);
-    const first = at(side);
-    if (bentRight(first.chain)) return first;
-    const second = at(side === 1 ? -1 : 1);
-    return bentRight(second.chain) ? second : first;
+  const posed = (d: number) => {
+    const foot = d === distance ? target : along(hip, dir(hip, target), d);
+    const knee = jointBeside(hip, foot, a, span, side);
+    return { hip, knee, ankle: along(knee, dir(knee, foot) - shinOff, b), foot };
   };
-  const first = posed(footAt(reachable(distance)));
+  // The angle at the knee between the hip and the toes, less the rigid
+  // bone's offset from the shin (which a fixed turn keeps), is the knee's
+  // own angle.
+  const opening = (d: number) => degrees(Math.acos(clamp((a * a + span * span - d * d) / (2 * a * span), -1, 1)));
+  const d = reachable(distance);
   const limits = leg.knee ?? STRAIGHT;
-  const bent = kneeAngle({ ...first.chain, paw: 0 }, side);
-  if (bent >= limits.min && bent <= limits.max) return first.chain;
-  // The knee's angle is the angle at the knee between the hip and the toes
-  // less the rigid bone's offset from the shin, which a fixed turn keeps.
-  const opening = clamp((clamp(bent, limits.min, limits.max) + side * shinOff) * side * first.q, 0, 180);
-  return posed(footAt(reachable(Math.sqrt(a * a + span * span - 2 * a * span * Math.cos(rad(opening))))), first.q).chain;
+  const bent = opening(d) - side * shinOff;
+  if (bent >= limits.min && bent <= limits.max) return posed(d);
+  const meets = rad(clamp(clamp(bent, limits.min, limits.max) + side * shinOff, 0, 180));
+  return posed(reachable(Math.sqrt(a * a + span * span - 2 * a * span * Math.cos(meets))));
 }
 
 // Part way from one pose of the leg to another, `by` of the way, in the
