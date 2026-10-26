@@ -9,6 +9,7 @@ import { hogRig } from '../../bonfire/hedgehog-rig-legacy';
 import { rabbitRig } from '../../easter/rabbit-rig-legacy';
 import { hareRig } from '../../hares/hare-rig-legacy';
 import type { Point } from '../../pointer';
+import { rotate } from '../../spidergait';
 import * as gait from '../gait';
 import { held, kneeAngle, pawAngle, restingPaw, solveHinged } from './hinge';
 import { planDiff } from './plan';
@@ -92,6 +93,8 @@ describe('a leg bent at hinges', () => {
     expect(pushing.paw).toBeCloseTo(62 * gait.roll({ down: true, t: 0.9 }), 9);
     const free = pose(sole, { x: 7, y: 11 }, { kind: 'plant', at, contact: 0 });
     expect(pawAngle(free, false)).toBeCloseTo(-70, 9);
-    expect(free.foot).toEqual(at);
+    // Its toes go where a flat foot's would.
+    const toes = rotate({ x: free.foot.x + 3.8, y: free.foot.y + 1.5 }, free.foot, free.paw);
+    expect([toes.x, toes.y]).toEqual([expect.closeTo(at.x + 3.8, 9), expect.closeTo(at.y + 1.5, 9)]);
   });
 });

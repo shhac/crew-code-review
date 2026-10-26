@@ -54,6 +54,10 @@ export const picture = (id: string, on: string, src: string, box: { x: number; y
 // or a draw or shape by its id (a neck drawn twice, its fur further on).
 export type Slot = Piece | readonly Piece[] | string;
 
+// A rig's leg bent at relative hinges (hinge.ts): its knee within its
+// jointLimits, its paw on this hinge.
+export type HingedArtLeg = ArtLeg & { paw: Hinge };
+
 export type Measured<L extends ArtLeg> = {
   frame: Frame;
   // Its spine and head, the root first; legs hang from `root`.

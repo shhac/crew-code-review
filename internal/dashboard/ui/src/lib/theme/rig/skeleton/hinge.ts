@@ -8,10 +8,10 @@
 // folds it. Between, as a paw lifts and lands, the two answers mix in
 // relative angles, so a lifted paw never needs a step it is not taking to
 // fold it, and a planted one never slides.
-import { clamp, degrees, rad } from '../../math';
+import { clamp, degrees, rad, smooth } from '../../math';
 import type { Point } from '../../pointer';
 import { knees, rotate } from '../../spidergait';
-import { flexion, liftedBy, roll, type Limb, type Toes } from '../gait';
+import { flexion, liftedBy, roll, type Limb, type Step, type Toes } from '../gait';
 import { jointBeside } from '../limb';
 import type { Goal, Hinge, HingedLeg, Limits } from './types';
 
@@ -33,9 +33,17 @@ export function kneeAngle(limb: Limb, side: 1 | -1): number {
 // toes, or the paw.
 export const pawAngle = (limb: Limb, toes: boolean) => wrap((toes ? dir(limb.ankle, limb.foot) : limb.paw) - dir(limb.knee, limb.ankle));
 
+// How far a foot is its own free self through its step: as it is off the
+// ground (gait.ts's liftedBy); a sole, which roll lays flat again by 0.8
+// of its swing to land, back on its planted answer by then.
+const freed = (step: Step | undefined, sole: boolean) => {
+  if (!sole) return liftedBy(step);
+  return !step || step.down ? 0 : smooth(step.t / 0.2) * smooth((0.8 - step.t) / 0.15);
+};
+
 // How firmly a goal pins the toes, and how far through its fold the paw is.
-export function held(goal: Extract<Goal, { kind: 'plant' | 'reach' }>): { contact: number; fold: number } {
-  return { contact: clamp(goal.contact ?? (goal.kind === 'reach' ? 0 : 1 - liftedBy(goal.step)), 0, 1), fold: goal.fold ?? flexion(goal.step) };
+export function held(goal: Extract<Goal, { kind: 'plant' | 'reach' }>, sole = false): { contact: number; fold: number } {
+  return { contact: clamp(goal.contact ?? (goal.kind === 'reach' ? 0 : 1 - freed(goal.step, sole)), 0, 1), fold: goal.fold ?? flexion(goal.step) };
 }
 
 const within = (hinge: Required<Hinge>, turn: number) => clamp(turn, hinge.rest + hinge.limits.min, hinge.rest + hinge.limits.max);
@@ -146,9 +154,9 @@ export function solveHinged(leg: HingedLeg, hip: Point, goal: Goal, target: () =
     return { hip, knee, ankle: foot, foot, paw: shin + within(paw, paw.rest) };
   }
   if (goal.kind === 'air') throw new Error('hinge: a leg in the air is a bird\'s');
-  const { contact, fold } = held(goal);
   const side = goal.side ?? leg.side;
   const on = goal.walksOn ?? leg.walksOn;
+  const { contact, fold } = held(goal, on?.kind === 'sole');
   const to = target();
   if (on?.kind === 'toes') {
     const free = bentTo(leg, side, hip, to, within(paw, paw.rest + on.fold * fold), on.length);
@@ -160,13 +168,22 @@ export function solveHinged(leg: HingedLeg, hip: Point, goal: Goal, target: () =
     if (contact === 1) return { ...planted, paw: 0 };
     return hung(between(free, planted, contact), 1 - contact, on);
   }
-  // On its sole, its heel peels up about its toes, which stay planted, by
-  // as much as it is planted; free, it hangs at its rest from the shin.
-  const peel = on ? on.peel * roll(goal.step) : 0;
-  const toes = on ? { x: to.x + on.toes.x, y: to.y + on.toes.y } : to;
-  const heel = peel && contact ? rotate(to, toes, peel * contact) : to;
+  if (on?.kind !== 'sole') {
+    const knee = jointBeside(hip, to, leg.thigh, leg.shin, side);
+    return { hip, knee, ankle: to, foot: to, paw: dir(knee, to) + within(paw, paw.rest) };
+  }
+  // On its sole: the long foot from the heel to the toes is the bone up
+  // from them, its toes where they go. Planted, the heel peels up about
+  // them as it pushes off (legsTo's roll); free, the foot hangs from the
+  // shin at its rest.
+  const flat = dir({ x: 0, y: 0 }, on.toes);
+  const tips = { x: to.x + on.toes.x, y: to.y + on.toes.y };
+  const soled = (l: Omit<Limb, 'paw'>): Limb => ({ hip, knee: l.knee, ankle: l.ankle, foot: l.ankle, paw: wrap(dir(l.ankle, l.foot) - flat) });
+  const free = bentTo(leg, side, hip, tips, within(paw, paw.rest) + flat, Math.hypot(on.toes.x, on.toes.y));
+  if (!contact) return soled(free);
+  const peel = on.peel * roll(goal.step);
+  const heel = peel ? rotate(to, tips, peel) : to;
   const knee = jointBeside(hip, heel, leg.thigh, leg.shin, side);
-  const hanging = dir(knee, heel) + within(paw, paw.rest);
-  const turned = !on || contact === 0 ? hanging : contact === 1 ? peel : peel + wrap(hanging - peel) * (1 - contact);
-  return { hip, knee, ankle: heel, foot: heel, paw: turned };
+  if (contact === 1) return { hip, knee, ankle: heel, foot: heel, paw: peel };
+  return soled(between(free, { hip, knee, ankle: heel, foot: tips }, contact));
 }

@@ -38,6 +38,12 @@ function planted(skeleton: Skeleton, pose: PoseSpec, goal: Goal): Planted | null
   return { at: { x: to.x + (goal.by?.x ?? 0), y: to.y + (goal.by?.y ?? 0) }, step: goal.step, walksOn: goal.walksOn, side: goal.side };
 }
 
+// What a limb stands on, if it is a quad's or a hinged leg's.
+function soleOf(skeleton: Skeleton, id: string) {
+  const limb = skeleton.limbs.find((l) => l.id === id);
+  return limb && (limb.solve === 'quad' || limb.solve === 'hinged') ? limb.leg.walksOn : undefined;
+}
+
 function mixGoal(skeleton: Skeleton, a: PoseSpec, b: PoseSpec, id: string, f: number, mixer?: StepMixer): Goal | undefined {
   const [ga, gb] = [a.limbs[id], b.limbs[id]];
   if (!ga || !gb) return gb ?? ga;
@@ -45,7 +51,8 @@ function mixGoal(skeleton: Skeleton, a: PoseSpec, b: PoseSpec, id: string, f: nu
   if (ga.kind === 'angles' && gb.kind === 'angles') return { kind: 'angles', swing: mix(ga.swing, gb.swing, f), bend: mix(ga.bend, gb.bend, f) };
   const [pa, pb] = [planted(skeleton, a, ga), planted(skeleton, b, gb)];
   if (!pa || !pb || (ga.kind !== 'plant' && ga.kind !== 'reach') || (gb.kind !== 'plant' && gb.kind !== 'reach')) return gb;
-  const [ha, hb] = [held(ga), held(gb)];
+  const sole = (goal: Goal) => (goal.kind === 'plant' || goal.kind === 'reach') && (goal.walksOn ?? soleOf(skeleton, id))?.kind === 'sole';
+  const [ha, hb] = [held(ga, sole(ga)), held(gb, sole(gb))];
   const step = mixer ? mixer(pa.step, pb.step, f) : pb.step ?? pa.step;
   const ground = pb.ground ?? pa.ground;
   const walksOn = pb.walksOn ?? pa.walksOn;
