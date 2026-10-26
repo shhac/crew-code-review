@@ -80,9 +80,9 @@ export type JointPose = { angle?: number; squash?: { by: number; axis?: number }
 
 // What a limb's constraint reaches for: a foot planted (or stepping, with
 // its step; a bird's kept clear of `ground`), a handle reached, or a bird's
-// legs in the air (bird.ts's airLegsTo `reach`; `carried`, tucked or
-// trailing held as the body holds them, turning with it, reaching to land
-// as the ground lies), or a limb
+// legs in the air (bird.ts's airLegsTo `reach`; `carried`, tucked up held
+// as the body holds them, turning with it, trailing or reaching set
+// against the ground as they were), or a limb
 // swung `swing`
 // degrees forward of straight down and its lower bone bent `bend` back from
 // it. `walksOn`: what the foot stands on in this pose, where that is not

@@ -5,7 +5,7 @@
 // owns. FK never places those. Each owned joint's frame turns with its
 // bone from where the limb stands at rest (its standing solve), the foot's
 // with the paw, so a part hung on one follows it.
-import { clamp, degrees } from '../../math';
+import { degrees } from '../../math';
 import type { Point } from '../../pointer';
 import { rotate as turnPoint } from '../../spidergait';
 import { airLegsTo, birdLegsTo, type BirdLeg } from '../bird';
@@ -44,9 +44,10 @@ const SOLVERS: { [K in LimbKind]: Solver<K> } = {
   bird: (limb, root, goal, handle, turn) => {
     if (goal.kind === 'air') {
       const air = airLegsTo([birdOf(limb, root)], [root], goal.reach, goal.legs)[0];
-      // Reaching to land, they meet the ground as it lies; tucked up or
-      // trailing, they are held as the body holds them.
-      return goal.carried ? turnedAbout(air, root, turn * (1 - clamp(goal.reach, 0, 1))) : air;
+      // Tucked up into the belly, they are held as the body holds them;
+      // stretched back pushing off, or reaching to land, they are set
+      // against the ground they push from or meet, by as far as they reach.
+      return goal.carried ? turnedAbout(air, root, turn * (1 - Math.min(1, Math.abs(goal.reach)))) : air;
     }
     if (goal.kind === 'plant' || goal.kind === 'reach') return birdLegsTo([birdOf(limb, root)], [root], [target(goal, handle)], goal.step ? [goal.step] : [], goal.kind === 'plant' ? goal.ground : undefined)[0];
     throw new Error(`skeleton: ${limb.id} is not posed by a ${goal.kind} goal`);

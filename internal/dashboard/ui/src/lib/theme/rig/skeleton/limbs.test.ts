@@ -181,13 +181,14 @@ describe('a bird\'s legs carried in the air', () => {
     return { x: root.x + (p.x - root.x) * Math.cos(a) - (p.y - root.y) * Math.sin(a), y: root.y + (p.x - root.x) * Math.sin(a) + (p.y - root.y) * Math.cos(a) };
   };
 
-  it('tucked up, turn with the body as it holds them; reaching to land, meet the ground as it lies', () => {
+  it('tucked up, turn with the body as it holds them; trailing or reaching, meet the ground as it lies', () => {
     const page = (reach: number) => solveLimb(birdLimb(spec), root, { kind: 'air', reach }, nowhere, -20);
     const carried = (reach: number) => solveLimb(birdLimb(spec), root, { kind: 'air', reach, carried: true }, nowhere, -20);
     const tucked = page(0);
     expect(planDiff(carried(0), { ...tucked, knee: turned(tucked.knee, -20), ankle: turned(tucked.ankle, -20), foot: turned(tucked.foot, -20), paw: tucked.paw - 20 }, 1e-9)).toEqual([]);
     expect(planDiff(carried(1), page(1), 1e-9)).toEqual([]);
-    expect(planDiff(carried(-1), page(-1), 1e-9)).not.toEqual([]);
+    expect(planDiff(carried(-1), page(-1), 1e-9)).toEqual([]);
+    expect(planDiff(carried(0.5), page(0.5), 1e-9)).not.toEqual([]);
   });
 });
 
