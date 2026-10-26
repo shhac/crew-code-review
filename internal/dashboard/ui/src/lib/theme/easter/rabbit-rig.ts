@@ -44,6 +44,9 @@ const HEAD = { x: 13.78, y: 4.27, width: 7.67, height: 6.33 };
 const EARS = { x: 13.67, y: 1, width: 4.58, height: 6.17 };
 const TAIL_ROOT = { x: 4.4, y: 10.2 };
 const NECK = { x: 15.8, y: 9.4 };
+// The head nods at the back of its skull, where it meets the neck: turned
+// far nose down about the throat, its back would swing out off the body.
+const OCCIPUT = { x: 14, y: 7.3 };
 const EAR_BASE = { x: 16.2, y: 6 };
 const EYE = { x: 18.33, y: 6.98 };
 const NOSE = { x: 21.2, y: 8.1 };
@@ -140,8 +143,9 @@ export const gazeAt = gazeFrom({ eye: EYE, anchor: ANCHOR, scale: SCALE, look: L
 // How the rabbit stands: its body's turn, its head's (positive nose down),
 // its ears' (positive back), its tail's (positive up), where its feet go and
 // where each is in its step; its forepaws held up off the ledge, folded at
-// the wrist; and, washing, how far from the muzzle they are held.
-type Stance = { body: Turn; head: number; ears: number; tail: number; feet: (hips: readonly Point[]) => Point[]; steps: Step[]; held?: boolean; groom?: Point };
+// the wrist; washing, how far from the muzzle they are held; and how far its
+// head nods at the back of its skull (positive nose down).
+type Stance = { body: Turn; head: number; ears: number; tail: number; feet: (hips: readonly Point[]) => Point[]; steps: Step[]; held?: boolean; groom?: Point; nod?: number };
 
 const fore = (i: number) => LEGS[i].fore;
 // The feet as they stand at rest between hops: every pose that is not a hop
@@ -202,6 +206,8 @@ const MUZZLE = { x: 19.6, y: 9.6 };
 
 // Sitting: the rump down on its heels, the back curved, the chest up.
 const SIT = still(turnAbout(-20, HIND, 0.4, 1.7), 18, 6, -6);
+// Nudging an egg, how far its head nods: its nose down at the egg.
+const NOD = 32;
 
 function stance(rabbit: RigRabbit, look: RabbitLook): Stance {
   if (look.still) return SIT;
@@ -225,9 +231,10 @@ function stance(rabbit: RigRabbit, look: RabbitLook): Stance {
       return { ...still(turnAbout(-24, HIND, 0.6, 1.4), 22 + 10 * stroke, 10, 0), groom: { x: -0.4, y: 0.6 - 0.8 * stroke }, held: true };
     }
     case 'nudge': {
-      // Head down to the ledge, nose pushing the egg along, rump up.
+      // Head down to the ledge, nose pushing the egg along, rump up; the
+      // head nodded down at the back of its skull, so it stays on its neck.
       const push = Math.max(0, Math.sin((Math.PI * rabbit.since) / 300));
-      return still(turnAbout(20, HIND, 0.5 * push, -1.2), 52, 2, -4);
+      return { ...still(turnAbout(20, HIND, 0.5 * push, -1.2), 0, 2, -4), nod: NOD };
     }
     case 'thump': {
       // Crouched and tense, ears up, the hind feet stamping.
@@ -257,22 +264,23 @@ const RABBIT = tetrapod(LEPORID, {
   root: 'body',
   joints: [
     { id: 'body', parent: null, role: spine(2), at: HIND, name: 'pelvis (the body turns about its hips)' },
-    { id: 'skull', parent: 'body', role: spine(0), at: NECK, name: 'head joint (neck)' },
+    { id: 'skull', parent: 'body', role: spine(0), at: NECK, name: 'neck (the head turns on it)' },
     { id: 'tail', parent: 'body', role: spine(3), at: TAIL_ROOT, name: 'tail root' },
-    { id: 'ears', parent: 'skull', role: head(0), at: EAR_BASE, name: 'ear base' },
-    { id: 'eye', parent: 'skull', role: head(1), at: EYE, name: 'eye' },
-    { id: 'nose', parent: 'skull', role: head(2), at: NOSE, name: 'nose' },
+    { id: 'occiput', parent: 'skull', role: head(3), at: OCCIPUT, name: 'head joint (back of the skull)' },
+    { id: 'ears', parent: 'occiput', role: head(0), at: EAR_BASE, name: 'ear base' },
+    { id: 'eye', parent: 'occiput', role: head(1), at: EYE, name: 'eye' },
+    { id: 'nose', parent: 'occiput', role: head(2), at: NOSE, name: 'nose' },
   ],
   bones: [
-    { from: 'skull', to: 'body', name: 'neck line (head joint to the hips)' }, { from: 'body', to: 'tail', name: 'pelvis line (hips to tail root)' },
-    { from: 'nose', to: 'skull', name: 'skull' },
+    { from: 'skull', to: 'body', name: 'neck line (neck to the hips)' }, { from: 'body', to: 'tail', name: 'pelvis line (hips to tail root)' },
+    { from: 'nose', to: 'occiput', name: 'skull' }, { from: 'occiput', to: 'skull', name: 'nape (head joint to neck)' },
   ],
   legs: LEGS,
   ground: (leg) => (leg.fore ? TOES : HEEL),
-  order: [picture('tail', 'tail', tailArt, TAIL), picture('body', 'body', bodyArt, BODY), picture('ears', 'ears', earsArt, EARS), picture('head', 'skull', headArt, HEAD), 'eyelid'],
-  shapes: [{ id: 'eyelid', on: 'skull' }],
+  order: [picture('tail', 'tail', tailArt, TAIL), picture('body', 'body', bodyArt, BODY), picture('ears', 'ears', earsArt, EARS), picture('head', 'occiput', headArt, HEAD), 'eyelid'],
+  shapes: [{ id: 'eyelid', on: 'occiput' }],
   guides: (at) => [
-    { name: 'tail root', at: 'tail' }, { name: 'neck', at: 'skull' }, { name: 'ear base', at: 'ears' }, { name: 'eye', at: 'eye' }, { name: 'nose', at: 'nose' },
+    { name: 'tail root', at: 'tail' }, { name: 'neck', at: 'skull' }, { name: 'head joint', at: 'occiput' }, { name: 'ear base', at: 'ears' }, { name: 'eye', at: 'eye' }, { name: 'nose', at: 'nose' },
     ...LEGS.map((leg) => ({ name: leg.fore ? 'shoulder' : 'hip', at: at(leg, 0) })),
     ...LEGS.flatMap((leg) => (leg.fore
       ? [{ name: 'elbow', at: at(leg, 1) }, { name: 'wrist (carpus)', at: at(leg, 2) }, { name: 'forepaw', at: at(leg, 3) }]
@@ -283,11 +291,11 @@ const RABBIT = tetrapod(LEPORID, {
 // A stance as a pose: each foot set from where its hip is in it, a washing
 // forepaw reaching for the muzzle, a held one free of the ledge and folded.
 function poseOf(s: Stance): PoseSpec {
-  const joints = { skull: { angle: s.head }, ears: { angle: -s.ears }, tail: { angle: s.tail } };
+  const joints = { skull: { angle: s.head }, occiput: { angle: s.nod ?? 0 }, ears: { angle: -s.ears }, tail: { angle: s.tail } };
   const feet = s.feet(RABBIT.hips({ root: s.body, joints }));
   const held = (leg: HingedArtLeg) => (s.held && leg.fore ? { contact: 0, fold: 1 } : {});
   const goals = LEGS.map((leg, i): Goal => (s.groom && leg.fore
-    ? { kind: 'reach', to: { on: 'skull', at: MUZZLE }, by: s.groom, step: s.steps[i], ...held(leg) }
+    ? { kind: 'reach', to: { on: 'occiput', at: MUZZLE }, by: s.groom, step: s.steps[i], ...held(leg) }
     : { kind: 'plant', at: feet[i], step: s.steps[i], ...held(leg) }));
   return { root: s.body, joints, limbs: RABBIT.limbs(goals), show: {}, z: {} };
 }
