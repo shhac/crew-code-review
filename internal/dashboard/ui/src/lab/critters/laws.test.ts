@@ -110,6 +110,16 @@ describe('the laws themselves', () => {
       .toEqual(['blinks test at 80, motion reduced', 'moves test at 40, motion reduced']);
   });
 
+  it('finds toes doubled back over the bone up to them', () => {
+    const hinges = { side: 1, knee: { min: 0, max: 180 }, paw: { min: -180, max: 180 }, toes: true } as const;
+    const paw = (turn: number): RigPose => {
+      const limb = { hip: { x: 5, y: 2 }, knee: { x: 6, y: 5 }, ankle: { x: 5, y: 8 }, foot: { x: 5, y: 9 }, paw: 90 + turn };
+      return { ...frame, layers: [], skeleton: { joints: [], bones: [], limbs: [{ id: 'leg', code: 'L2', limb, fore: false, sole: 10, hinges }] } };
+    };
+    expect(LAWS.toesNeverFoldBack({ moving: [seenOf(paw(-90), 0), seenOf(paw(30), 40)], still: [] })).toEqual([]);
+    expect(LAWS.toesNeverFoldBack({ moving: [seenOf(paw(-160), 0)], still: [] })).toEqual(['L2 toes turned -160.00 from the bone up to them test at 0']);
+  });
+
   it('finds a far part drawn over the body', () => {
     const over: RigPose = { ...frame, layers: [{ ...image('body', 3), width: 4 }, { ...image('far leg', 3), far: true }] };
     expect(LAWS.farBeforeBody({ moving: [seenOf(over, 0)], still: [] })).toHaveLength(1);

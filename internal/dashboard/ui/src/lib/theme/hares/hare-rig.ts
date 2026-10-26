@@ -101,14 +101,16 @@ const FEET = GROUND - LEG_WIDTH / 2 - 0.7;
 // the shank, folding the other way as it swings (a negative fold), up
 // against the shank, so the foot tucks up under the body, as a bounding
 // hare's do, where the gait aims it close under the hip. Its own reach
-// could not take it there.
+// could not take it there. Off the ground the toes ease out of their
+// planted turn: a hind foot's to near its line, still lifted a little to
+// clear the ground as it swings low, a forepaw's a little curled under.
 const HIND_LEG = {
   art: HIND_ART, width: LEG_WIDTH, thigh: 4.2, shin: 4.7, bend: 1, jointLimits: { min: 40, max: 175 }, fore: false, haunch: 3.8, taper: true, reach: 0.5,
-  walksOn: { kind: 'toes', length: 3.5, lean: 35, fold: -100 }, paw: { limits: { min: -120, max: 65 } },
+  walksOn: { kind: 'toes', length: 3.5, lean: 35, fold: -100 }, paw: { limits: { min: -120, max: 65 } }, digits: -20,
 } as const;
 const FORE_LEG = {
   art: FORE_ART, width: LEG_WIDTH, thigh: 4.4, shin: 4, bend: -1, jointLimits: { min: 30, max: 175 }, fore: true, haunch: 1.6, reach: -0.2,
-  walksOn: { kind: 'toes', length: 1, lean: 30, fold: 45 }, paw: { limits: { min: -80, max: 75 } },
+  walksOn: { kind: 'toes', length: 1, lean: 30, fold: 45 }, paw: { limits: { min: -80, max: 75 } }, digits: 20,
 } as const;
 const LEGS: HingedArtLeg[] = [
   { ...HIND_LEG, hip: { x: 5.8, y: 13.1 }, far: true },
@@ -153,7 +155,7 @@ export const gazeAt = gazeFrom({ eye: EYE, anchor: ANCHOR, scale: SCALE, look: L
 // down), its ears' (negative lays them back), which legs (on their soles or
 // toes), where its feet go, where each is in its step, and how its paws
 // are held off the ground (free, and how far folded), where they are.
-type Held = { contact?: number; fold?: number };
+type Held = { contact?: number; fold?: number; digits?: number };
 type Stance = { body: Turn; head: number; ears: number; legs: readonly HingedArtLeg[]; feet: (hips: readonly Point[]) => Point[]; steps: Step[]; held?: (leg: HingedArtLeg) => Held | undefined };
 
 // Feet planted on the ledge, fore and hind each set this far from its hip.
@@ -188,12 +190,19 @@ function stretched(feet: readonly Point[], hips: readonly Point[], phase: number
   });
 }
 
+// How far a boxing forepaw's toes curl under from the bone up to them.
+const FIST = 75;
+
 // How far through its tuck a hind foot folds in a lope's low swing.
 const LOPE_TUCK = 0.6;
 
-// Flying between ledges, the hind legs stream out behind, the long foot in
-// line with the shank rather than standing up from the toes.
-const TRAILING: HingedArtLeg[] = LEGS.map((s) => (s.fore || s.walksOn?.kind !== 'toes' ? s : { ...s, walksOn: { ...s.walksOn, lean: -70 } }));
+// Flying between ledges, the hind legs stream out behind, the hock opened
+// so the long foot runs on near in line with the shank, its toes trailing
+// after it.
+const TRAILING_FOLD = -0.65;
+const TRAILING_TOES = 10;
+// Reaching to land, the forepaws' toes tipped down for the ground.
+const REACHING_TOES = 50;
 
 // Each tuned against its key pose (design-docs/hares/hare-pose-*.png, laid
 // over the rig in the critters lab).
@@ -215,9 +224,11 @@ function stance(hare: RigHare, look: HareLook): Stance {
     case 'lope': {
       const phase = gaitPhase(walked, LOPE);
       const arch = Math.sin(2 * Math.PI * phase);
-      // Its low swings tuck a hind foot only part way up.
+      // Its low swings tuck a hind foot only part way up, and skim the
+      // grass with the toes held as they stand, which hung would catch it.
       const { feet, steps } = stepping(LEGS, walked, FEET, LOPE);
-      const held = (leg: HingedArtLeg): Held | undefined => (leg.fore ? undefined : { fold: LOPE_TUCK * flexion(steps[LEGS.indexOf(leg)]) });
+      const skimming = (leg: HingedArtLeg) => (leg.walksOn?.kind === 'toes' ? leg.walksOn.lean - 90 : undefined);
+      const held = (leg: HingedArtLeg): Held => (leg.fore ? { digits: skimming(leg) } : { fold: LOPE_TUCK * flexion(steps[LEGS.indexOf(leg)]), digits: skimming(leg) });
       return { body: turnAbout(3 * arch, HIPS, 0, 2.2 - 0.4 * Math.abs(arch)), head: 6 - 3 * arch, ears: -80, legs: LEGS, feet, steps, held };
     }
     case 'bound': {
@@ -238,11 +249,10 @@ function stance(hare: RigHare, look: HareLook): Stance {
       const t = hare.leapt ?? 0.5;
       const reach = (h: Point, i: number): Point => (LEGS[i].fore
         ? { x: h.x + 4.5 - 2 * t, y: h.y + 4.6 - 1.2 * t }
-        : { x: h.x - 10 + 5 * t, y: h.y + 3.5 - t });
-      // The hind feet held at the lean TRAILING gives them, the forepaws
-      // free, tipped toes up to land.
-      const held = (leg: HingedArtLeg): Held => (leg.fore ? { contact: 0, fold: -0.2 } : { contact: 1 });
-      return { body: turnAbout(-8 + 16 * t, HIPS, 0, CROUCH - 0.1), head: 6 - 10 * t, ears: -88, legs: TRAILING, feet: (hips) => hips.map(reach), steps: [], held };
+        : { x: h.x - 8.5 + 5 * t, y: h.y + 3.5 - t });
+      // Both pairs free: the hind feet trailing, the forepaws reaching.
+      const held = (leg: HingedArtLeg): Held => (leg.fore ? { contact: 0, fold: -0.2, digits: REACHING_TOES } : { contact: 0, fold: TRAILING_FOLD, digits: TRAILING_TOES });
+      return { body: turnAbout(-8 + 16 * t, HIPS, 0, CROUCH - 0.1), head: 6 - 10 * t, ears: -88, legs: LEGS, feet: (hips) => hips.map(reach), steps: [], held };
     }
     case 'box': {
       // Reared up on the long hind feet, forepaws striking in turn.
@@ -250,8 +260,9 @@ function stance(hare: RigHare, look: HareLook): Stance {
       const paw = (h: Point, i: number): Point => (LEGS[i].fore
         ? { x: h.x + 1.5 + 3 * beat(i), y: h.y + 0.5 - 1.5 * beat(i) }
         : { x: h.x + 2.6, y: FEET });
-      // Its forepaws are off the ground, hanging from the wrist unfolded.
-      return { ...still(turnAbout(-70, HIPS, 0, 2.2), 62, -55, onSoles(LEGS, 1), (hips) => hips.map(paw)), held: (leg) => (leg.fore ? { contact: 0, fold: 0 } : undefined) };
+      // Its forepaws are off the ground, hanging from the wrist unfolded,
+      // the toes curled into fists.
+      return { ...still(turnAbout(-70, HIPS, 0, 2.2), 62, -55, onSoles(LEGS, 1), (hips) => hips.map(paw)), held: (leg) => (leg.fore ? { contact: 0, fold: 0, digits: FIST } : undefined) };
     }
     default:
       return still(turnAbout(0, HIPS), look.gaze, 0);

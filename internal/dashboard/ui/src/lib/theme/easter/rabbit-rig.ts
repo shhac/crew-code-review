@@ -79,7 +79,8 @@ const TOES = GROUND - (PAW.height - PAW.heel.y);
 // its toes). A foreleg's shoulder in the chest, the upper arm back to the
 // elbow, the forearm down to the wrist (the carpus), and a short bone, the
 // metacarpus, sloping down and forward from it to the forepaw (35 degrees,
-// as the standing skeleton's), which folds back as it swings. The far pair
+// as the standing skeleton's), which folds back as it swings, its toes
+// then hanging on from it near in line, as a held-up paw droops. The far pair
 // a little apart.
 //
 // Placed against the skeleton (design-docs/easter/README.md): the shoulder
@@ -99,7 +100,7 @@ const HIND_LEG = {
   art: HIND_ART, width: 1.9, thigh: 3.3, shin: 3.6, bend: 1, jointLimits: { min: 25, max: 180 }, fore: false, haunch: 3.2, taper: true, reach: -3.1,
   walksOn: { kind: 'sole', toes: { x: FOOT.width - FOOT.heel.x, y: FOOT.height - FOOT.heel.y }, peel: 62 }, paw: { limits: { min: -15, max: 135 } },
 } as const;
-const FORE_LEG = { art: FORE_ART, width: 1.45, thigh: 2.6, shin: 2.6, bend: -1, jointLimits: { min: 30, max: 175 }, fore: true, haunch: 1.7, reach: 1.8, walksOn: { kind: 'toes', length: 0.8, lean: 35, fold: 89 }, paw: { limits: { min: -70, max: 95 } } } as const;
+const FORE_LEG = { art: FORE_ART, width: 1.45, thigh: 2.6, shin: 2.6, bend: -1, jointLimits: { min: 30, max: 175 }, fore: true, haunch: 1.7, reach: 1.8, walksOn: { kind: 'toes', length: 0.8, lean: 35, fold: 89 }, paw: { limits: { min: -70, max: 95 } }, digits: -15 } as const;
 const LEGS: HingedArtLeg[] = [
   { ...HIND_LEG, hip: { x: 7.6, y: 11.4 }, far: true },
   { ...FORE_LEG, hip: { x: 15.8, y: 12.8 }, far: true },

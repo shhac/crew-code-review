@@ -2,9 +2,10 @@ import { describe, expect, it } from 'vitest';
 import { apart } from '../math';
 import type { Point } from '../pointer';
 import { cycleLength, rotate } from '../spidergait';
-import { airFoot, airLegsTo, BIRD_JOINTS, BIRD_STANCE, birdJointGuides, birdLegsTo, birdWalk, curledIn, feetLine, headBob, peeled, plantedLegs, stepLength, stepPhase, stepRise, type BirdLeg } from './bird';
+import { AIR_LEGS, airFoot, airLegsTo, BIRD_JOINTS, BIRD_STANCE, birdJointGuides, birdLegsTo, birdWalk, curledIn, feetLine, headBob, peeled, plantedLegs, stepLength, stepPhase, stepRise, type BirdLeg } from './bird';
 import { restingFeet, stepping, stepsOf } from './gait';
 import { legImages, piecesOf, type LimbArt } from './rig';
+import { wrap } from './skeleton/hinge';
 
 const GROUND = 20;
 const foot = { src: 'toes.webp', fur: 'toes-fur.webp', width: 3, height: 1, heel: { x: 0.8, y: 0.3 } };
@@ -203,6 +204,17 @@ describe('legs in the air', () => {
     bones(airLegsTo([LEG], hips, -1)[0]);
     // Still a bird's: the ankle behind the line from the knee to the toes.
     expect(ahead(landing.knee, landing.foot, landing.ankle)).toBeLessThan(0);
+  });
+
+  it('holds its toes as it stands unless the pose turns them, as it reaches to land', () => {
+    const turnOf = (leg: { ankle: Point; foot: Point; paw: number }) => wrap(leg.paw - (Math.atan2(leg.foot.y - leg.ankle.y, leg.foot.x - leg.ankle.x) * 180) / Math.PI);
+    const standing = LEG.walksOn.lean - 90;
+    expect(turnOf(airLegsTo([LEG], hips, 0)[0])).toBeCloseTo(standing, 9);
+    expect(turnOf(airLegsTo([LEG], hips, 1)[0])).toBeCloseTo(standing, 9);
+    const dropped = { ...AIR_LEGS, reaching: { ...AIR_LEGS.reaching, toes: -10 } };
+    expect(turnOf(airLegsTo([LEG], hips, 1, dropped)[0])).toBeCloseTo(-10, 9);
+    expect(turnOf(airLegsTo([LEG], hips, 0.5, dropped)[0])).toBeCloseTo((standing - 10) / 2, 9);
+    expect(turnOf(airLegsTo([LEG], hips, -1, dropped)[0])).toBeCloseTo(standing, 9);
   });
 
   it('moves smoothly from trailing through tucked to reaching', () => {

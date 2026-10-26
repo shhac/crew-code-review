@@ -59,8 +59,12 @@ export type Hinge = { rest?: number; limits: Limits };
 // (the bone up from the toes, or the paw itself where there is none) turned
 // from the shin by the `paw` hinge, which rests where the leg stands at rest
 // unless it says. With nothing to stand on (`walksOn`), it hangs straight
-// down at rest and is posed by angles (a cupid's legs).
-export type HingedLeg = Omit<QuadLeg, 'hip' | 'far' | 'fore' | 'bend' | 'bendFrame' | 'jointLimits'> & { side: 1 | -1; knee?: Limits; paw: Hinge };
+// down at rest and is posed by angles (a cupid's legs). `digits`: how far
+// a toe walker's toes turn from the bone up to them once nothing pins them
+// (positive curls them under), which they ease into as the paw lifts;
+// where it does not say, they keep the turn they had planted, so a lifted
+// paw keeps its planted shape.
+export type HingedLeg = Omit<QuadLeg, 'hip' | 'far' | 'fore' | 'bend' | 'bendFrame' | 'jointLimits'> & { side: 1 | -1; knee?: Limits; paw: Hinge; digits?: number };
 // An arm (a cupid's): two bones from the shoulder to the wrist, the elbow to
 // `side` of the line between unless its goal says otherwise, the fist along
 // the forearm (limb.ts's jointBeside). At rest it reaches `reach` ahead of
@@ -92,8 +96,9 @@ export type JointPose = { angle?: number; squash?: { by: number; axis?: number }
 // the toes are pinned where they go, 1 planted to 0 held free (by default
 // a planted foot's as its step lifts it, a reaching paw's 0); `fold`: how
 // far through its fold the paw is, as a share of the leg's (by default as
-// its step swings it).
-type Stands = { walksOn?: NonNullable<QuadLeg['walksOn']>; side?: 1 | -1; contact?: number; fold?: number };
+// its step swings it); `digits`: the toes' free turn from the bone up to
+// them, where this pose holds them otherwise than the leg does (a fist).
+type Stands = { walksOn?: NonNullable<QuadLeg['walksOn']>; side?: 1 | -1; contact?: number; fold?: number; digits?: number };
 export type Goal =
   | ({ kind: 'plant'; at: Point; step?: Step; ground?: number } & Stands)
   | ({ kind: 'reach'; to: Handle; by?: Point; step?: Step } & Stands)

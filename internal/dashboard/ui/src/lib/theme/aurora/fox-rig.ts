@@ -96,8 +96,12 @@ export type FoxLook = { now: number; still: boolean };
 export type RigFox = Pick<Fox, 'mode' | 'walked' | 'seed' | 'until' | 'ear' | 'look'>;
 
 type Feet = (hips: readonly Point[]) => Point[];
-// steps: where each foot is in its step, when stepping (stepsOf).
-type Stance = { body: Turn; head: number; tail: number; feet: Feet; steps?: Step[] };
+// Leaping, as the pounce drawing holds its paws.
+const LEAPING = { fore: { contact: 0, fold: 0, digits: 15 }, hind: { contact: 0, fold: 0.45, digits: 0 } } as const;
+// steps: where each foot is in its step, when stepping (stepsOf); held:
+// how a paw off the ground is held (free, how far folded, its toes).
+type Held = { contact: number; fold: number; digits: number };
+type Stance = { body: Turn; head: number; tail: number; feet: Feet; steps?: Step[]; held?: (leg: HingedArtLeg) => Held };
 
 // Feet planted on the ledge, fore and hind each set this far from its hip.
 const planted = (foreBy: number, hindBy: number): Feet => (hips) => hips.map((h, i) => ({ x: h.x + (LEGS[i].fore ? foreBy : hindBy), y: FEET }));
@@ -132,9 +136,10 @@ function stance(fox: RigFox, look: FoxLook): Stance {
       // the forelegs reach for the snow.
       const t = leapt(fox, look.now);
       const reach = (h: Point, i: number): Point => (LEGS[i].fore ? { x: h.x + 2 + 1.5 * t, y: h.y + 3.5 + 1.5 * t } : { x: h.x - 3 - 3 * t, y: h.y + 4.5 - 3 * t });
-      // Its paws held flat, as it lands on them: let hang from the wrist and
-      // hock, they would reach down past the snow it leaps over.
-      return { body: turnAbout(-8 + 20 * t, HIND), head: 8 * t, tail: 10 - 15 * t, feet: (hips) => hips.map(reach) };
+      // Its paws free in the air: the forepaws reaching on from straight
+      // wrists, toes tipped down for the snow, the hind paws trailing out
+      // behind from opened hocks, toes in line.
+      return { body: turnAbout(-8 + 20 * t, HIND), head: 8 * t, tail: 10 - 15 * t, feet: (hips) => hips.map(reach), held: (leg) => (leg.fore ? LEAPING.fore : LEAPING.hind) };
     }
     case 'dig': {
       // Nose in the snow, forepaws scrabbling turn about.
@@ -183,10 +188,10 @@ export function foxRig(fox: RigFox, look: FoxLook): RigPose {
   const pose = poseOf(fox, look.now);
   // Curled up asleep, or looking up from there, breathing slowly.
   if (pose === 'curled' || pose === 'alert') return (pose === 'curled' ? CURLED : LOOKING_UP)(look.still ? 1 : 1 + 0.035 * breath(fox.seed, look.now, 3400));
-  const { body, head: angle, tail, feet, steps = [] } = stance(fox, look);
+  const { body, head: angle, tail, feet, steps = [], held } = stance(fox, look);
   const joints = { skull: { angle }, tail: { angle: tail } };
   const at = feet(FOX.hips({ root: body, joints }));
-  const limbs = FOX.limbs(at.map((p, i) => ({ kind: 'plant', at: p, step: steps[i] })));
+  const limbs = FOX.limbs(at.map((p, i) => ({ kind: 'plant', at: p, step: steps[i], ...held?.(LEGS[i]) })));
   const shapes = { eyelid: lidLayers(!look.still && blinking(fox.seed, look.now), EYE, 0.85, FACE) };
   return compose(FOX.body, () => ({ root: body, joints, limbs, show: {}, z: {}, shapes }), look.now);
 }

@@ -125,11 +125,12 @@ const UPRIGHT = 34;
 const STOOP: WingPose = { lift: 25, sweep: 75, fold: 40 };
 const SOAR: WingPose = { lift: 6, sweep: 0, fold: 8 };
 // Pushing off, a gull's legs are stretched down and back, not trailed out
-// behind as a raptor's.
+// behind as a raptor's; reaching to land, its webbed toes spread forward and
+// down to meet the ground (the flare drawing).
 const GULL_AIR: AirLegs = {
   tucked: { ankle: { x: -0.25, y: 0.65 }, lean: 105 },
   trailing: { ankle: { x: -0.35, y: 0.85 }, lean: -30 },
-  reaching: { ankle: { x: 0.25, y: 0.85 }, lean: 45 },
+  reaching: { ankle: { x: 0.25, y: 0.85 }, lean: 45, toes: -10 },
 };
 
 export type GullPose = 'stand' | 'strut' | 'forage' | 'eye' | 'call' | 'takeoff' | 'flap' | 'glide' | 'stoop' | 'flare' | 'settle';

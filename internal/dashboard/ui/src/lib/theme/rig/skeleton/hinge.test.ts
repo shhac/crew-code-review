@@ -72,6 +72,22 @@ describe('a leg bent at hinges', () => {
     expect(free.paw).toBeCloseTo((Math.atan2(free.foot.y - free.ankle.y, free.foot.x - free.ankle.x) * 180) / Math.PI - (90 - 35), 9);
   });
 
+  it('eases its toes into their own free turn from the bone up to them as the paw lifts, and lays them flat planted', () => {
+    const toed = { ...leg, digits: 10 };
+    const at = { x: hip.x + 1, y: hip.y + 3 };
+    const palm = (limb: ReturnType<typeof pose>) => (Math.atan2(limb.foot.y - limb.ankle.y, limb.foot.x - limb.ankle.x) * 180) / Math.PI;
+    const toes = (limb: ReturnType<typeof pose>) => limb.paw - palm(limb);
+    expect(toes(pose(toed, hip, { kind: 'plant', at, contact: 0, fold: 0.5 }))).toBeCloseTo(10, 9);
+    // A pose may hold them otherwise (a fist).
+    expect(toes(pose(toed, hip, { kind: 'plant', at, contact: 0, digits: 75 }))).toBeCloseTo(75, 9);
+    expect(pose(toed, hip, { kind: 'plant', at: { x: hip.x + leg.reach, y: 16.8 } }).paw).toBe(0);
+    // Part way down, part way between flat and free, the toes keeping their
+    // planted turn the longer.
+    const landing = pose(toed, hip, { kind: 'plant', at, contact: 0.25 });
+    const standing = 35 - 90;
+    expect(landing.paw).toBeCloseTo(0.75 * (palm(landing) + standing + (10 - standing) * 0.75 * 0.75), 9);
+  });
+
   it('reaches its toes where they go, the knee bent its own way within its limits, or as near as it can', () => {
     const reach = (at: Point) => pose(leg, hip, { kind: 'plant', at, contact: 0 });
     const near = reach({ x: hip.x + 1.2, y: hip.y + 3.4 });

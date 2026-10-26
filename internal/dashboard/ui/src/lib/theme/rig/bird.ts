@@ -173,8 +173,10 @@ export const stepRise = (walked: number, gait: Gait): number => (1 - Math.cos(2 
 // where the ankle goes from the hip, in shares of the two bones above it,
 // and the tarsus's lean (degrees from straight down, its foot end ahead):
 // tucked, folded forward along the belly; trailing, laid out behind;
-// reaching, angled forward to the ground.
-type AirLeg = { ankle: Point; lean: number };
+// reaching, angled forward to the ground. `toes`: how far the toes turn
+// from the tarsus (positive curls them under) where they are not held as
+// they stand: reaching, spread and dropped to meet the ground.
+type AirLeg = { ankle: Point; lean: number; toes?: number };
 export type AirLegs = { tucked: AirLeg; trailing: AirLeg; reaching: AirLeg };
 export const AIR_LEGS: AirLegs = {
   tucked: { ankle: { x: -0.25, y: 0.65 }, lean: 105 },
@@ -183,22 +185,24 @@ export const AIR_LEGS: AirLegs = {
 };
 
 // The leg's place in the air, `reach` from -1 (trailing) through 0
-// (tucked) to 1 (reaching).
-function airLeg(reach: number, at: AirLegs): AirLeg {
+// (tucked) to 1 (reaching); its toes' turn from the tarsus, `standing`
+// where neither says.
+function airLeg(reach: number, at: AirLegs, standing: number): Required<AirLeg> {
   const to = reach < 0 ? at.trailing : at.reaching;
   const t = Math.min(1, Math.abs(reach));
-  return { ankle: mixPoint(at.tucked.ankle, to.ankle, t), lean: at.tucked.lean + (to.lean - at.tucked.lean) * t };
+  const [from, toes] = [at.tucked.toes ?? standing, to.toes ?? standing];
+  return { ankle: mixPoint(at.tucked.ankle, to.ankle, t), lean: at.tucked.lean + (to.lean - at.tucked.lean) * t, toes: from + (toes - from) * t };
 }
 
 // One leg in the air, the knee forward of it, the toes drawn together until
-// it reaches to land, their picture turned with the tarsus from where it
-// stands.
+// it reaches to land, their picture turned with the tarsus: as it stands,
+// or as far as the pose turns them.
 function airLimb(spec: BirdLeg, hip: Point, reach: number, at: AirLegs): Limb {
-  const { ankle: share, lean } = airLeg(reach, at);
+  const { ankle: share, lean, toes } = airLeg(reach, at, spec.walksOn.lean - 90);
   const above = spec.thigh + spec.shin;
   const ankle = { x: hip.x + share.x * above, y: hip.y + share.y * above };
   const foot = { x: ankle.x + spec.walksOn.length * Math.sin(rad(lean)), y: ankle.y + spec.walksOn.length * Math.cos(rad(lean)) };
-  return { hip, knee: kneeOf(spec, hip, ankle), ankle, foot, paw: spec.walksOn.lean - lean, curled: reach < 0.6 };
+  return { hip, knee: kneeOf(spec, hip, ankle), ankle, foot, paw: 90 - lean + toes, curled: reach < 0.6 };
 }
 
 // Where a foot in the air is.

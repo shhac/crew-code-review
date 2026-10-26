@@ -5,7 +5,7 @@
 // (1), the toes stay where they are put and the bone up from them stands
 // at its lean, as gait.ts's legsTo stood it; free (0), the paw hangs from
 // its wrist at its hinge's rest, folded as far as its step or its pose
-// folds it. Between, as a paw lifts and lands, the two answers mix in
+// folds it, and its toes at their own free turn from it. Between, as a paw lifts and lands, the two answers mix in
 // relative angles, so a lifted paw never needs a step it is not taking to
 // fold it, and a planted one never slides.
 import { clamp, degrees, rad, smooth } from '../../math';
@@ -119,9 +119,14 @@ function between(from: Omit<Limb, 'paw'>, to: Omit<Limb, 'paw'>, by: number): Om
   return { hip: from.hip, knee: kneeAt, ankle, foot: along(ankle, thigh + knee + paw, toes) };
 }
 
-// Its paw turned with the bone up from its toes from how it stands, by as
-// much as it hangs free.
-const hung = (limb: Omit<Limb, 'paw'>, free: number, on: Toes): Limb => ({ ...limb, paw: free * wrap(dir(limb.ankle, limb.foot) - (90 - on.lean)) });
+// Its toes turned from the bone up to them by as much as it hangs free:
+// flat on the ground, planted; free, `digits`. The toes are the last of
+// the paw to leave the ground and the first to meet it, so they keep their
+// planted turn `standing` until the paw is well clear.
+function hung(limb: Omit<Limb, 'paw'>, free: number, digits: number, standing: number): Limb {
+  const turn = standing + (digits - standing) * free * free;
+  return { ...limb, paw: free * wrap(dir(limb.ankle, limb.foot) + turn) };
+}
 
 // Its paw's rest where none is given: its turn from the shin as the leg
 // stands at rest, `reach` ahead of `hip` down on `ground`.
@@ -150,14 +155,18 @@ export function solveHinged(leg: HingedLeg, hip: Point, goal: Goal, target: () =
   const { contact, fold } = held(goal, on?.kind === 'sole');
   const to = target();
   if (on?.kind === 'toes') {
+    // Planted, the toes lie flat however the bone up to them leans: turned
+    // from it as far as it stands from upright.
+    const standing = on.lean - 90;
+    const digits = goal.digits ?? leg.digits ?? standing;
     const free = bentTo(leg, side, hip, to, within(paw, paw.rest + on.fold * fold), on.length);
-    if (!contact) return hung(free, 1, on);
+    if (!contact) return hung(free, 1, digits, standing);
     // Planted, as gait.ts's legsTo stood it; lifting or landing, each joint's
     // turn part way between the two.
     const pin = pinned(leg, hip, to, on);
     const planted = { hip, knee: jointBeside(hip, pin.ankle, leg.thigh, leg.shin, side), ankle: pin.ankle, foot: pin.foot };
     if (contact === 1) return { ...planted, paw: 0 };
-    return hung(between(free, planted, contact), 1 - contact, on);
+    return hung(between(free, planted, contact), 1 - contact, digits, standing);
   }
   if (on?.kind !== 'sole') {
     const knee = jointBeside(hip, to, leg.thigh, leg.shin, side);
