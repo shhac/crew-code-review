@@ -83,6 +83,9 @@ const LOOK_REACH = 160;
 const DIP = 26;
 const TEST_AIR = -8;
 const STRETCH = 1.2;
+// Peeking, how far ahead of its shoulder and above where it stands the
+// raised forefoot's heel is held.
+const RAISED = { x: 0.7, y: 0.7 };
 
 // What the drawing needs besides the hedgehog: the time, how far its head is
 // turned toward the cursor (eased by the caller, see gazeAt), and whether
@@ -123,10 +126,12 @@ function stance(hog: Hog, look: HogLook): Stance {
   }
   if (hog.mode === 'peek') {
     // Low and wary at the pile's mouth, its neck stretched out and nose
-    // lifted to test the air, a forefoot raised to creep out.
+    // lifted to test the air, a forefoot raised out ahead to creep out, a
+    // little above level, the paw hanging from it toes down (the peek
+    // drawing), as it does just off the ground in a step.
     const creep: Stance = resting(turnAbout(0, ANCHOR, 0, 0.3), TEST_AIR + look.gaze, STRETCH);
-    const raise = (hips: readonly Point[]) => restingFeet(LEGS, hips, FEET).map((at, i) => (i === CREEPING ? { x: hips[i].x + 0.9, y: FEET - 0.5 } : at));
-    return { ...creep, feet: raise, steps: LEGS.map((_, i) => (i === CREEPING ? { down: false, t: 0.35 } : { down: true, t: 0 })) };
+    const raise = (hips: readonly Point[]) => restingFeet(LEGS, hips, FEET).map((at, i) => (i === CREEPING ? { x: hips[i].x + RAISED.x, y: FEET - RAISED.y } : at));
+    return { ...creep, feet: raise, steps: LEGS.map((_, i) => (i === CREEPING ? { down: false, t: 0.05 } : { down: true, t: 0 })) };
   }
   return resting(turnAbout(0, ANCHOR), look.gaze);
 }
