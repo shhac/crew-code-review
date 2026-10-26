@@ -1,10 +1,10 @@
 import type { Point } from '../pointer';
-import { beatsFor, flightAt, flightLift, gaitPhase, onSoles, restingFeet, stepping, type Gait, type Landings, type Step } from '../rig/gait';
+import { beatsFor, flexion, flightAt, flightLift, gaitPhase, onSoles, restingFeet, stepping, type Gait, type Landings, type Step } from '../rig/gait';
 import { gazeFrom } from '../rig/gaze';
 import { blinking, breath } from '../rig/life';
-import { lidLayers, turnAbout, type ArtLeg, type Foot, type Frame, type Fur, type LimbArt, type RigPose, type Turn } from '../rig/rig';
+import { lidLayers, turnAbout, type Foot, type Frame, type Fur, type LimbArt, type RigPose, type Turn } from '../rig/rig';
 import { compose } from '../rig/skeleton/compose';
-import { head, MAMMAL, picture, spine, tetrapod } from '../rig/skeleton/tetrapod';
+import { head, MAMMAL, picture, spine, tetrapod, type HingedArtLeg } from '../rig/skeleton/tetrapod';
 import type { Goal } from '../rig/skeleton/types';
 import { hash } from '../seed';
 import bodyArt from './hare-body.webp';
@@ -95,9 +95,22 @@ const FEET = GROUND - LEG_WIDTH / 2 - 0.7;
 // tibia/femur 148.2/132.4 = 1.12 (Fostowicz-Frelik 2007, Table 3),
 // radius/humerus 102/113 = 0.90 (Williams et al. 2007, Table 4).
 // Sources and the projected pose tuning are in design-docs/hares/README.md.
-const HIND_LEG = { art: HIND_ART, width: LEG_WIDTH, thigh: 4.2, shin: 4.7, bend: 1, bendFrame: 'limb', jointLimits: { min: 40, max: 175 }, fore: false, haunch: 3.8, taper: true, reach: 0.5, walksOn: { kind: 'toes', length: 3.5, lean: 35, fold: 40 } } as const;
-const FORE_LEG = { art: FORE_ART, width: LEG_WIDTH, thigh: 4.4, shin: 4, bend: -1, bendFrame: 'limb', jointLimits: { min: 30, max: 175 }, fore: true, haunch: 1.6, reach: -0.2, walksOn: { kind: 'toes', length: 1, lean: 30, fold: 45 } } as const;
-const LEGS: ArtLeg[] = [
+// Each joint turns against the bone above it (rig/skeleton/hinge.ts): the
+// knee within its limits; the forefoot from the forearm as far as it folds
+// back off the ground and its planted lean tips it; the long hind foot from
+// the shank, folding the other way as it swings (a negative fold), up
+// against the shank, so the foot tucks up under the body, as a bounding
+// hare's do, where the gait aims it close under the hip. Its own reach
+// could not take it there.
+const HIND_LEG = {
+  art: HIND_ART, width: LEG_WIDTH, thigh: 4.2, shin: 4.7, bend: 1, jointLimits: { min: 40, max: 175 }, fore: false, haunch: 3.8, taper: true, reach: 0.5,
+  walksOn: { kind: 'toes', length: 3.5, lean: 35, fold: -100 }, paw: { limits: { min: -120, max: 65 } },
+} as const;
+const FORE_LEG = {
+  art: FORE_ART, width: LEG_WIDTH, thigh: 4.4, shin: 4, bend: -1, jointLimits: { min: 30, max: 175 }, fore: true, haunch: 1.6, reach: -0.2,
+  walksOn: { kind: 'toes', length: 1, lean: 30, fold: 45 }, paw: { limits: { min: -80, max: 75 } },
+} as const;
+const LEGS: HingedArtLeg[] = [
   { ...HIND_LEG, hip: { x: 5.8, y: 13.1 }, far: true },
   { ...FORE_LEG, hip: { x: 18.2, y: 13.9 }, far: true },
   { ...HIND_LEG, hip: { x: 7.4, y: 13.6 }, far: false },
@@ -138,12 +151,14 @@ export const gazeAt = gazeFrom({ eye: EYE, anchor: ANCHOR, scale: SCALE, look: L
 
 // How the hare stands: its body's turn, its head's (positive turns the nose
 // down), its ears' (negative lays them back), which legs (on their soles or
-// toes), where its feet go, and where each is in its step.
-type Stance = { body: Turn; head: number; ears: number; legs: readonly ArtLeg[]; feet: (hips: readonly Point[]) => Point[]; steps: Step[] };
+// toes), where its feet go, where each is in its step, and how its paws
+// are held off the ground (free, and how far folded), where they are.
+type Held = { contact?: number; fold?: number };
+type Stance = { body: Turn; head: number; ears: number; legs: readonly HingedArtLeg[]; feet: (hips: readonly Point[]) => Point[]; steps: Step[]; held?: (leg: HingedArtLeg) => Held | undefined };
 
 // Feet planted on the ledge, fore and hind each set this far from its hip.
 const planted = (foreBy: number, hindBy: number) => (hips: readonly Point[]) => hips.map((h, i) => ({ x: h.x + (LEGS[i].fore ? foreBy : hindBy), y: FEET }));
-const still = (body: Turn, head: number, ears: number, legs: readonly ArtLeg[] = LEGS, feet = (hips: readonly Point[]) => restingFeet(LEGS, hips, FEET)): Stance =>
+const still = (body: Turn, head: number, ears: number, legs: readonly HingedArtLeg[] = LEGS, feet = (hips: readonly Point[]) => restingFeet(LEGS, hips, FEET)): Stance =>
   ({ body, head, ears, legs, feet, steps: [] });
 
 // An ear flick now and then, grazing: a quick twitch at a seeded moment in
@@ -160,21 +175,25 @@ function flick(seed: number, now: number): number {
 // feet are drawn toward that, most at mid-flight.
 const TRAIL = { x: -8, y: 5 };
 const REACH = { x: 6, y: 6 };
-function stretched(feet: readonly Point[], hips: readonly Point[], phase: number): Point[] {
+const stretchOf = (phase: number) => {
   const flight = flightAt(phase, BOUND);
-  if (!flight || flight.length < 0.2) return [...feet];
-  const w = Math.sin(Math.PI * flight.t);
+  return !flight || flight.length < 0.2 ? 0 : Math.sin(Math.PI * flight.t);
+};
+function stretched(feet: readonly Point[], hips: readonly Point[], phase: number): Point[] {
+  const w = stretchOf(phase);
+  if (!w) return [...feet];
   return feet.map((f, i) => {
     const to = LEGS[i].fore ? REACH : TRAIL;
     return { x: f.x + (hips[i].x + to.x - f.x) * w, y: f.y + (hips[i].y + to.y - f.y) * w };
   });
 }
 
+// How far through its tuck a hind foot folds in a lope's low swing.
+const LOPE_TUCK = 0.6;
+
 // Flying between ledges, the hind legs stream out behind, the long foot in
 // line with the shank rather than standing up from the toes.
-const TRAILING: ArtLeg[] = LEGS.map((s) => (s.fore || s.walksOn?.kind !== 'toes' ? s : { ...s, walksOn: { ...s.walksOn, lean: -70 } }));
-
-const LIFTED: Step[] = LEGS.map((s) => (s.fore ? { down: false, t: 0.75 } : { down: true, t: 0 }));
+const TRAILING: HingedArtLeg[] = LEGS.map((s) => (s.fore || s.walksOn?.kind !== 'toes' ? s : { ...s, walksOn: { ...s.walksOn, lean: -70 } }));
 
 // Each tuned against its key pose (design-docs/hares/hare-pose-*.png, laid
 // over the rig in the critters lab).
@@ -196,7 +215,10 @@ function stance(hare: RigHare, look: HareLook): Stance {
     case 'lope': {
       const phase = gaitPhase(walked, LOPE);
       const arch = Math.sin(2 * Math.PI * phase);
-      return { body: turnAbout(3 * arch, HIPS, 0, 2.2 - 0.4 * Math.abs(arch)), head: 6 - 3 * arch, ears: -80, legs: LEGS, ...stepping(LEGS, walked, FEET, LOPE) };
+      // Its low swings tuck a hind foot only part way up.
+      const { feet, steps } = stepping(LEGS, walked, FEET, LOPE);
+      const held = (leg: HingedArtLeg): Held | undefined => (leg.fore ? undefined : { fold: LOPE_TUCK * flexion(steps[LEGS.indexOf(leg)]) });
+      return { body: turnAbout(3 * arch, HIPS, 0, 2.2 - 0.4 * Math.abs(arch)), head: 6 - 3 * arch, ears: -80, legs: LEGS, feet, steps, held };
     }
     case 'bound': {
       // Nose down as the forefeet take the landing, up as the hind feet
@@ -204,7 +226,11 @@ function stance(hare: RigHare, look: HareLook): Stance {
       const phase = gaitPhase(walked, BOUND);
       const pitch = 5 * Math.sin(2 * Math.PI * (phase - 0.1));
       const { feet, steps } = stepping(LEGS, walked, FEET, BOUND);
-      return { body: turnAbout(pitch, HIPS, 0, CROUCH - flightLift(phase, BOUND, FLIGHT)), head: -0.7 * pitch, ears: -88, legs: LEGS, feet: (hips) => stretched(feet(hips), hips, phase), steps };
+      // Stretched out behind, a hind leg's hock opens as far as it trails,
+      // and folds again to tuck the foot up under the body.
+      const open = 1 - stretchOf(phase);
+      const held = (leg: HingedArtLeg): Held | undefined => (leg.fore ? undefined : { fold: flexion(steps[LEGS.indexOf(leg)]) * open });
+      return { body: turnAbout(pitch, HIPS, 0, CROUCH - flightLift(phase, BOUND, FLIGHT)), head: -0.7 * pitch, ears: -88, legs: LEGS, feet: (hips) => stretched(feet(hips), hips, phase), steps, held };
     }
     case 'leap': {
       // Stretched out through the flight: nose up as it leaves, down as it
@@ -213,7 +239,10 @@ function stance(hare: RigHare, look: HareLook): Stance {
       const reach = (h: Point, i: number): Point => (LEGS[i].fore
         ? { x: h.x + 4.5 - 2 * t, y: h.y + 4.6 - 1.2 * t }
         : { x: h.x - 10 + 5 * t, y: h.y + 3.5 - t });
-      return { body: turnAbout(-8 + 16 * t, HIPS, 0, CROUCH - 0.1), head: 6 - 10 * t, ears: -88, legs: TRAILING, feet: (hips) => hips.map(reach), steps: LEGS.map((s) => ({ down: !s.fore, t: s.fore ? 0.9 : 0 })) };
+      // The hind feet held at the lean TRAILING gives them, the forepaws
+      // free, tipped toes up to land.
+      const held = (leg: HingedArtLeg): Held => (leg.fore ? { contact: 0, fold: -0.2 } : { contact: 1 });
+      return { body: turnAbout(-8 + 16 * t, HIPS, 0, CROUCH - 0.1), head: 6 - 10 * t, ears: -88, legs: TRAILING, feet: (hips) => hips.map(reach), steps: [], held };
     }
     case 'box': {
       // Reared up on the long hind feet, forepaws striking in turn.
@@ -221,9 +250,8 @@ function stance(hare: RigHare, look: HareLook): Stance {
       const paw = (h: Point, i: number): Point => (LEGS[i].fore
         ? { x: h.x + 1.5 + 3 * beat(i), y: h.y + 0.5 - 1.5 * beat(i) }
         : { x: h.x + 2.6, y: FEET });
-      // Its forepaws are off the ground (gait.ts folds a lifted paw's wrist
-      // to the elbow's side), held flat, as a paw is just before it lands.
-      return { ...still(turnAbout(-70, HIPS, 0, 2.2), 62, -55, onSoles(LEGS, 1), (hips) => hips.map(paw)), steps: LIFTED };
+      // Its forepaws are off the ground, hanging from the wrist unfolded.
+      return { ...still(turnAbout(-70, HIPS, 0, 2.2), 62, -55, onSoles(LEGS, 1), (hips) => hips.map(paw)), held: (leg) => (leg.fore ? { contact: 0, fold: 0 } : undefined) };
     }
     default:
       return still(turnAbout(0, HIPS), look.gaze, 0);
@@ -264,11 +292,11 @@ const HARE = tetrapod(MAMMAL, {
 
 export function hareRig(hare: RigHare, look: HareLook): RigPose {
   const held = look.still ? { ...look, now: 0, gaze: 0 } : look;
-  const { body, head: angle, ears, legs: specs, feet, steps } = stance(look.still && MOVING.includes(hare.pose) ? { ...hare, pose: 'alert' } : hare, held);
+  const { body, head: angle, ears, legs: specs, feet, steps, held: holds } = stance(look.still && MOVING.includes(hare.pose) ? { ...hare, pose: 'alert' } : hare, held);
   const breathing = hare.pose === 'sit' || hare.pose === 'alert' ? 1 + (look.still ? 0 : 0.02 * breath(hare.seed, look.now, 2400)) : 1;
   const joints = { body: { squash: { by: breathing } }, skull: { angle }, ears: { angle: ears } };
   // Each foot on what this pose stands it on: its sole, its toes.
-  const goals = feet(HARE.hips({ root: body, joints })).map((at, i): Goal => ({ kind: 'plant', at, step: steps[i], walksOn: specs[i].walksOn }));
+  const goals = feet(HARE.hips({ root: body, joints })).map((at, i): Goal => ({ kind: 'plant', at, step: steps[i], walksOn: specs[i].walksOn, ...holds?.(LEGS[i]) }));
   const shapes = { eyelid: lidLayers(!look.still && blinking(hare.seed, look.now), EYE, 0.75, FACE) };
   return compose(HARE.body, () => ({ root: body, joints, limbs: HARE.limbs(goals), show: {}, z: {}, shapes }), look.now);
 }
