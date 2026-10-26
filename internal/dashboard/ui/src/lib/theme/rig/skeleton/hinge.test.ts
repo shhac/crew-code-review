@@ -88,6 +88,21 @@ describe('a leg bent at hinges', () => {
     expect(landing.paw).toBeCloseTo(0.75 * (palm(landing) + standing + (10 - standing) * 0.75 * 0.75), 9);
   });
 
+  it('bears only so much turn at a planted wrist, laying the paw down along a low forearm rather than kinking it', () => {
+    // Its shoulder brought down low over a paw set out ahead.
+    const at = { x: hip.x + 2, y: hip.y + 1.5 };
+    const kinked = pose(leg, hip, { kind: 'plant', at });
+    expect(pawAngle(kinked, true) - leg.paw.rest).toBeGreaterThan(20);
+    const bearing = { ...leg, paw: { ...leg.paw, planted: { min: -40, max: 10 } } };
+    const borne = pose(bearing, hip, { kind: 'plant', at });
+    expect(pawAngle(borne, true) - leg.paw.rest).toBeLessThanOrEqual(10 + 1e-9);
+    expect(pawAngle(borne, true) - leg.paw.rest).toBeGreaterThan(10 - 1e-3);
+    expect([borne.foot.x, borne.foot.y, borne.paw]).toEqual([expect.closeTo(at.x, 9), expect.closeTo(at.y, 9), 0]);
+    // A stance it bears stands as it always did.
+    const standing = { kind: 'plant', at: { x: hip.x + leg.reach, y: 16.8 } } as const;
+    expect(planDiff(pose(bearing, hip, standing), pose(leg, hip, standing), 0)).toEqual([]);
+  });
+
   it('reaches its toes where they go, the knee bent its own way within its limits, or as near as it can', () => {
     const reach = (at: Point) => pose(leg, hip, { kind: 'plant', at, contact: 0 });
     const near = reach({ x: hip.x + 1.2, y: hip.y + 3.4 });

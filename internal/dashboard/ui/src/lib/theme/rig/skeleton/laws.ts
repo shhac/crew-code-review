@@ -65,7 +65,8 @@ const limitsHold: Law = ({ moving, still }) => [...moving, ...still].flatMap((s)
 }));
 
 // Every leg bent at hinges keeps its knee and its paw within their limits
-// (types.ts's HingedLeg), whatever its toes are doing.
+// (types.ts's HingedLeg), whatever its toes are doing; and planted on its
+// toes (flat on the ground), its paw within what it bears.
 const hingesHold: Law = ({ moving, still }) => [...moving, ...still].flatMap((s) => (s.pose.skeleton?.limbs ?? []).flatMap(({ code, limb, hinges }) => {
   if (!hinges) return [];
   const knee = kneeAngle(limb, hinges.side);
@@ -76,9 +77,11 @@ const hingesHold: Law = ({ moving, still }) => [...moving, ...still].flatMap((s)
     const read = limits.min + ((((turn - limits.min) % 360) + 360) % 360);
     return read > limits.max + EPSILON && read < limits.min + 360 - EPSILON;
   };
+  const bearing = hinges.planted && hinges.toes && limb.paw === 0 ? hinges.planted : undefined;
   return [
     ...(out(knee, hinges.knee) ? [`${code} knee at ${knee.toFixed(2)} ${where(s)}`] : []),
     ...(out(paw, hinges.paw) ? [`${code} paw at ${paw.toFixed(2)} from its shin ${where(s)}`] : []),
+    ...(bearing && out(paw, bearing) ? [`${code} planted paw at ${paw.toFixed(2)} from its shin, past what it bears ${where(s)}`] : []),
   ];
 }));
 

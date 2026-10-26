@@ -97,7 +97,9 @@ const FEET = GROUND - LEG_WIDTH / 2 - 0.7;
 // Sources and the projected pose tuning are in design-docs/hares/README.md.
 // Each joint turns against the bone above it (rig/skeleton/hinge.ts): the
 // knee within its limits; the forefoot from the forearm as far as it folds
-// back off the ground and its planted lean tips it; the long hind foot from
+// back off the ground and its planted lean tips it, though planted the wrist
+// bears little fold, so a forearm brought down low (grazing, crouched) lays
+// the forefoot flat along it; the long hind foot from
 // the shank, folding the other way as it swings (a negative fold), up
 // against the shank, so the foot tucks up under the body, as a bounding
 // hare's do, where the gait aims it close under the hip. Its own reach
@@ -110,7 +112,7 @@ const HIND_LEG = {
 } as const;
 const FORE_LEG = {
   art: FORE_ART, width: LEG_WIDTH, thigh: 4.4, shin: 4, bend: -1, jointLimits: { min: 30, max: 175 }, fore: true, haunch: 1.6, reach: -0.2,
-  walksOn: { kind: 'toes', length: 1, lean: 30, fold: 45 }, paw: { limits: { min: -80, max: 75 } }, digits: 20,
+  walksOn: { kind: 'toes', length: 1, lean: 30, fold: 45 }, paw: { limits: { min: -80, max: 75 }, planted: { min: -75, max: 15 } }, digits: 20,
 } as const;
 const LEGS: HingedArtLeg[] = [
   { ...HIND_LEG, hip: { x: 5.8, y: 13.1 }, far: true },

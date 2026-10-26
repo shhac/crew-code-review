@@ -43,8 +43,10 @@ type Rest = { points: ReadonlyMap<string, Point>; limbs: ReadonlyMap<string, Lim
 function hingesOf(leg: HingedLeg, goal: Goal): PosedHinges {
   const rest = leg.paw.rest ?? 0;
   const stands = goal.kind === 'plant' || goal.kind === 'reach' ? goal : undefined;
+  const { planted } = leg.paw;
   return {
     side: stands?.side ?? leg.side, knee: leg.knee ?? STRAIGHT, paw: { min: rest + leg.paw.limits.min, max: rest + leg.paw.limits.max },
+    ...(planted ? { planted: { min: rest + planted.min, max: rest + planted.max } } : {}),
     toes: (stands?.walksOn ?? leg.walksOn)?.kind === 'toes',
   };
 }

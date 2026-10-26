@@ -94,13 +94,14 @@ const TOES = GROUND - (PAW.height - PAW.heel.y);
 // (rig/skeleton/hinge.ts), so no bone is stretched to reach a foot: a knee
 // within its limits (a hind leg straightens as it pushes off), the wrist
 // from the forearm back as far as its paw folds and forward as far as it
-// stands planted, the long hind foot from the shank as far as its heel
+// stands planted (bearing little fold, so a forearm brought low lays the
+// paw down flat along it), the long hind foot from the shank as far as its heel
 // peels up as it pushes off.
 const HIND_LEG = {
   art: HIND_ART, width: 1.9, thigh: 3.3, shin: 3.6, bend: 1, jointLimits: { min: 25, max: 180 }, fore: false, haunch: 3.2, taper: true, reach: -3.1,
   walksOn: { kind: 'sole', toes: { x: FOOT.width - FOOT.heel.x, y: FOOT.height - FOOT.heel.y }, peel: 62 }, paw: { limits: { min: -15, max: 135 } },
 } as const;
-const FORE_LEG = { art: FORE_ART, width: 1.45, thigh: 2.6, shin: 2.6, bend: -1, jointLimits: { min: 30, max: 175 }, fore: true, haunch: 1.7, reach: 1.8, walksOn: { kind: 'toes', length: 0.8, lean: 35, fold: 89 }, paw: { limits: { min: -70, max: 95 } }, digits: -15 } as const;
+const FORE_LEG = { art: FORE_ART, width: 1.45, thigh: 2.6, shin: 2.6, bend: -1, jointLimits: { min: 30, max: 175 }, fore: true, haunch: 1.7, reach: 1.8, walksOn: { kind: 'toes', length: 0.8, lean: 35, fold: 89 }, paw: { limits: { min: -70, max: 95 }, planted: { min: -70, max: -12 } }, digits: -15 } as const;
 const LEGS: HingedArtLeg[] = [
   { ...HIND_LEG, hip: { x: 7.6, y: 11.4 }, far: true },
   { ...FORE_LEG, hip: { x: 15.8, y: 12.8 }, far: true },

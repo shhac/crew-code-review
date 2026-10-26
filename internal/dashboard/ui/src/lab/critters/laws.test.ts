@@ -120,6 +120,17 @@ describe('the laws themselves', () => {
     expect(LAWS.toesNeverFoldBack({ moving: [seenOf(paw(-160), 0)], still: [] })).toEqual(['L2 toes turned -160.00 from the bone up to them test at 0']);
   });
 
+  it('finds a planted wrist turned past what it bears, and lets a lifted one fold', () => {
+    const hinges = { side: 1, knee: { min: 0, max: 180 }, paw: { min: -90, max: 90 }, planted: { min: -10, max: 10 }, toes: true } as const;
+    // The shin straight down, the bone up from the toes turned 30 from it.
+    const wrist = (paw: number): RigPose => {
+      const limb = { hip: { x: 5, y: 2 }, knee: { x: 5, y: 5 }, ankle: { x: 5, y: 8 }, foot: { x: 5 - Math.sin(Math.PI / 6), y: 8 + Math.cos(Math.PI / 6) }, paw };
+      return { ...frame, layers: [], skeleton: { joints: [], bones: [], limbs: [{ id: 'leg', code: 'L0', limb, fore: true, sole: 10, hinges }] } };
+    };
+    expect(LAWS.hingesHold({ moving: [seenOf(wrist(0), 0)], still: [] })).toEqual(['L0 planted paw at 30.00 from its shin, past what it bears test at 0']);
+    expect(LAWS.hingesHold({ moving: [seenOf(wrist(40), 0)], still: [] })).toEqual([]);
+  });
+
   it('finds a far part drawn over the body', () => {
     const over: RigPose = { ...frame, layers: [{ ...image('body', 3), width: 4 }, { ...image('far leg', 3), far: true }] };
     expect(LAWS.farBeforeBody({ moving: [seenOf(over, 0)], still: [] })).toHaveLength(1);

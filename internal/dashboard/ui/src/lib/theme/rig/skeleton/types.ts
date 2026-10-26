@@ -51,8 +51,10 @@ type Owned = { root: string; middle: string; lower: string; end: string; tip?: s
 type LimbOf<S extends string, L extends QuadLeg> = { id: string; pair: number; side: Side; joints: Owned; ground: number; solve: S; leg: Omit<L, 'hip' | 'far' | 'fore'> };
 // How far a hinge may turn, in degrees.
 export type Limits = { min: number; max: number };
-// A hinge's turn at rest and how far it may turn from there.
-export type Hinge = { rest?: number; limits: Limits };
+// A hinge's turn at rest and how far it may turn from there; `planted`, how
+// far from there a paw's hinge bears its weight with the toes pinned (a
+// wrist takes a load straight or a little overextended, never folded).
+export type Hinge = { rest?: number; limits: Limits; planted?: Limits };
 // A leg bent at relative hinges: its knee within `knee`, its interior angle
 // (180 straight), bent to `side` of the line from root to end (limb.ts's
 // jointBeside; a quad's from its `bend`); and what hangs below the shin
@@ -197,10 +199,10 @@ export type Body = {
 // long it is now with every squash and foreshortening above it taken out;
 // each limb as the solvers posed it, whether it is a foreleg, how low its
 // foot reaches, and, bent at hinges, the side its knee bends to, how far
-// its knee and its paw may turn (the paw's from the shin, absolute) and
-// whether a bone rises from its toes.
+// its knee and its paw may turn (the paw's from the shin, absolute; and
+// planted, as far as it bears) and whether a bone rises from its toes.
 export type PosedJoint = { id: string; code: string; name: string; at: Point; derived: boolean; far: boolean; parent: string | null; angle: number; limits?: { min: number; max: number } };
 export type PosedBone = { code: string; name: string; from: string; to: string; far: boolean; length: number; stretch?: { min: number; max: number } };
-export type PosedHinges = { side: 1 | -1; knee: Limits; paw: Limits; toes: boolean };
+export type PosedHinges = { side: 1 | -1; knee: Limits; paw: Limits; planted?: Limits; toes: boolean };
 export type PosedLimb = { id: string; code: string; limb: Limb; fore: boolean; sole: number; hinges?: PosedHinges };
 export type PosedSkeleton = { joints: readonly PosedJoint[]; bones: readonly PosedBone[]; limbs: readonly PosedLimb[]; titles?: Readonly<Record<string, string>> };

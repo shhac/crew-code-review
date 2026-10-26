@@ -13,7 +13,7 @@ import type { Point } from '../../pointer';
 import { rotate } from '../../spidergait';
 import { flexion, liftedBy, roll, type Limb, type Step, type Toes } from '../gait';
 import { jointBeside } from '../limb';
-import type { Goal, Hinge, HingedLeg, Limits } from './types';
+import type { Goal, HingedLeg, Limits } from './types';
 
 const dir = (from: Point, to: Point) => degrees(Math.atan2(to.y - from.y, to.x - from.x));
 const along = (from: Point, deg: number, length: number): Point => ({ x: from.x + Math.cos(rad(deg)) * length, y: from.y + Math.sin(rad(deg)) * length });
@@ -46,29 +46,60 @@ export function held(goal: Extract<Goal, { kind: 'plant' | 'reach' }>, sole = fa
   return { contact: clamp(goal.contact ?? (goal.kind === 'reach' ? 0 : 1 - freed(goal.step, sole)), 0, 1), fold: goal.fold ?? flexion(goal.step) };
 }
 
-const within = (hinge: Required<Hinge>, turn: number) => clamp(turn, hinge.rest + hinge.limits.min, hinge.rest + hinge.limits.max);
+const within = (hinge: { rest: number; limits: Limits }, turn: number) => clamp(turn, hinge.rest + hinge.limits.min, hinge.rest + hinge.limits.max);
 
 // Planted on its toes: where the toes are pinned (the reach clamped to what
 // the leg can span) and the ankle, the bone up from the toes at its lean;
 // for a knee with limits, as near its lean as they let it, in the one
-// sector behind the toes (gait.ts's hingedToes, its foot down).
-function pinned(leg: HingedLeg, hip: Point, target: Point, on: Toes): { ankle: Point; foot: Point } {
+// sector behind the toes (gait.ts's hingedToes, its foot down); and for a
+// wrist or hock that bears only so much turn from the shin (its paw's
+// `planted`), as near its lean as that lets it too, so a forearm lying
+// along the ground brings the paw down flat with it rather than kinking
+// the wrist.
+function pinned(leg: HingedLeg, side: 1 | -1, hip: Point, target: Point, on: Toes): { ankle: Point; foot: Point } {
   const { thigh: a, shin: b, knee } = leg;
   const c = on.length;
-  if (!knee) return { ankle: { x: target.x - c * Math.sin(rad(on.lean)), y: target.y - c * Math.cos(rad(on.lean)) }, foot: target };
+  const bears = leg.paw.planted;
+  if (!knee && !bears) return { ankle: { x: target.x - c * Math.sin(rad(on.lean)), y: target.y - c * Math.cos(rad(on.lean)) }, foot: target };
   const spanAt = (angle: number) => Math.sqrt(a * a + b * b - 2 * a * b * Math.cos(rad(angle)));
-  const [upperMin, upperMax] = [spanAt(knee.min), spanAt(knee.max)];
-  const minimum = Math.max(0, upperMin - c, c - upperMax) + 1e-4;
-  const maximum = upperMax + c - 1e-4;
+  const [upperMin, upperMax] = knee ? [spanAt(knee.min), spanAt(knee.max)] : [Math.abs(a - b), a + b];
+  const minimum = knee ? Math.max(0, upperMin - c, c - upperMax) + 1e-4 : 0;
+  const maximum = knee ? upperMax + c - 1e-4 : Infinity;
   const dx = target.x - hip.x, dy = target.y - hip.y;
   const reach = clamp(Math.hypot(dx, dy), minimum, maximum);
   const direction = Math.atan2(dx, dy);
-  const foot = { x: hip.x + reach * Math.sin(direction), y: hip.y + reach * Math.cos(direction) };
+  const foot = knee ? { x: hip.x + reach * Math.sin(direction), y: hip.y + reach * Math.cos(direction) } : target;
   const opening = (length: number) => Math.acos(clamp((reach * reach + c * c - length * length) / (2 * reach * c), -1, 1));
   const desired = rad(on.lean);
-  const off = clamp(Math.atan2(Math.sin(desired - direction), Math.cos(desired - direction)), opening(upperMin), opening(upperMax));
-  return { ankle: { x: foot.x - c * Math.sin(direction + off), y: foot.y - c * Math.cos(direction + off) }, foot };
+  const lean = Math.atan2(Math.sin(desired - direction), Math.cos(desired - direction));
+  const [low, high] = knee ? [opening(upperMin), opening(upperMax)] : [lean - Math.PI / 2, lean + Math.PI / 2];
+  const ankleAt = (off: number) => ({ x: foot.x - c * Math.sin(direction + off), y: foot.y - c * Math.cos(direction + off) });
+  const off = knee ? clamp(lean, low, high) : lean;
+  if (!bears) return { ankle: ankleAt(off), foot };
+  const rest = leg.paw.rest ?? 0;
+  const turn = (o: number) => {
+    const ankle = ankleAt(o);
+    return wrap(dir(ankle, foot) - dir(jointBeside(hip, ankle, a, b, side), ankle));
+  };
+  const over = (o: number) => {
+    const t = turn(o);
+    return Math.max(rest + bears.min - t, t - rest - bears.max, 0);
+  };
+  if (!over(off)) return { ankle: ankleAt(off), foot };
+  // The nearest lean it bears, found on a fine sweep of those the knee
+  // allows and closed in on toward its own; where none is borne, the one
+  // that comes nearest.
+  const sweep = Array.from({ length: BEARING_SWEEP + 1 }, (_, i) => low + ((high - low) * i) / BEARING_SWEEP);
+  const borne = sweep.filter((o) => !over(o));
+  if (!borne.length) return { ankle: ankleAt(sweep.reduce((best, o) => (over(o) < over(best) ? o : best))), foot };
+  const nearest = borne.reduce((best, o) => (Math.abs(o - off) < Math.abs(best - off) ? o : best));
+  const [edge] = Array.from({ length: 30 }).reduce<[number, number]>(([inside, outside]) => {
+    const middle = (inside + outside) / 2;
+    return over(middle) ? [inside, middle] : [middle, outside];
+  }, [nearest, off]);
+  return { ankle: ankleAt(edge), foot };
 }
+const BEARING_SWEEP = 96;
 
 // The leg from its hip to its toes with the bone up from them turned `turn`
 // from the shin: the shin and that bone one rigid bone from the knee to
@@ -135,7 +166,7 @@ export function restingPaw(leg: Omit<HingedLeg, 'paw'>, hip: Point, ground: numb
   const on = leg.walksOn;
   if (!on) throw new Error('hinge: a leg with nothing to stand on needs its paw\'s rest');
   if (on.kind === 'sole') return wrap(-dir(jointBeside(hip, foot, leg.thigh, leg.shin, leg.side), foot));
-  const pin = pinned({ ...leg, paw: { rest: 0, limits: STRAIGHT } }, hip, foot, on);
+  const pin = pinned({ ...leg, paw: { rest: 0, limits: STRAIGHT } }, leg.side, hip, foot, on);
   return wrap(dir(pin.ankle, pin.foot) - dir(jointBeside(hip, pin.ankle, leg.thigh, leg.shin, leg.side), pin.ankle));
 }
 
@@ -163,7 +194,7 @@ export function solveHinged(leg: HingedLeg, hip: Point, goal: Goal, target: () =
     if (!contact) return hung(free, 1, digits, standing);
     // Planted, as gait.ts's legsTo stood it; lifting or landing, each joint's
     // turn part way between the two.
-    const pin = pinned(leg, hip, to, on);
+    const pin = pinned(leg, side, hip, to, on);
     const planted = { hip, knee: jointBeside(hip, pin.ankle, leg.thigh, leg.shin, side), ankle: pin.ankle, foot: pin.foot };
     if (contact === 1) return { ...planted, paw: 0 };
     return hung(between(free, planted, contact), 1 - contact, digits, standing);
