@@ -294,7 +294,7 @@ function flying(pigeon: RigPigeon, look: PigeonLook): RigPose {
   // ledge rather than through it, and fanned as far as the pose has it.
   const joints = { ...far.joints, ...near.joints, tail: { angle: 1.3 * pose.pitch }, 'tail fan': { angle: -2 * pose.tail } };
   const hips = IN_AIR.hips({ root: body, joints });
-  const goals: Goal[] = pose.airborne ? LEGS.map(() => ({ kind: 'air', reach: pose.legs, legs: PIGEON_AIR })) : planted(hips);
+  const goals: Goal[] = pose.airborne ? LEGS.map(() => ({ kind: 'air', reach: pose.legs, legs: PIGEON_AIR, carried: true })) : planted(hips);
   const tucked = pose.airborne && Math.abs(pose.legs) < 0.25;
   const show: PoseSpec['show'] = { ...far.show, ...near.show, ...feetShown(goals), tail: pose.tail >= 0.5 ? false : 'drawn', 'tail, fanned': pose.tail < 0.5 ? false : 'drawn', 'folded wing': folded ? 'drawn' : false };
   return compose(IN_AIR.body, () => ({ root: body, joints, limbs: IN_AIR.limbs(goals), show, z: tucked ? IN_AIR.furUnder('near') : {}, shapes: eyelid(pigeon, look) }), look.now);
