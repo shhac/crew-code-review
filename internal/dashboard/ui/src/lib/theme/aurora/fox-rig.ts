@@ -1,10 +1,10 @@
 import type { Point } from '../pointer';
 import { gaitPhase, restingFeet, stepping, type Gait, type Step } from '../rig/gait';
 import { blinking, breath } from '../rig/life';
-import { lidLayers, turnAbout, type ArtLeg, type Frame, type Fur, type LimbArt, type RigPose, type Turn } from '../rig/rig';
+import { lidLayers, turnAbout, type Frame, type Fur, type LimbArt, type RigPose, type Turn } from '../rig/rig';
 import { compose } from '../rig/skeleton/compose';
 import { wholePicture } from '../rig/skeleton/picture';
-import { head, MAMMAL, picture, spine, tetrapod } from '../rig/skeleton/tetrapod';
+import { head, MAMMAL, picture, spine, tetrapod, type HingedArtLeg } from '../rig/skeleton/tetrapod';
 import { leapt, poseOf, type Fox } from './fox';
 import alertArt from './fox-alert.webp';
 import curledArt from './fox-curled.webp';
@@ -67,17 +67,19 @@ const LEG_WIDTH = 2.1;
 // and the long metatarsus near upright to the toes; the shoulders in the
 // chest, the upper arm back to the elbow at the chest's foot, the forearm
 // near straight down to the wrist (the carpus) just off the ground, and the
-// short metacarpus to the toes. Those bottom bones fold back as the paw lifts. The
-// far pair a little behind and above the near, as they would be seen.
+// short metacarpus to the toes. Those bottom bones fold back as the paw lifts,
+// each turning against the bone above it (rig/skeleton/hinge.ts), as far as
+// a trot folds it back and its planted lean tips it forward. The far pair a
+// little behind and above the near, as they would be seen.
 // Trotting, diagonal pairs move together: near fore with far hind, far fore
 // with near hind.
 // A trot's diagonal pairs never land quite together: the hind foot of each
 // pair lands this much of a stride before its fore foot, as a trotter's
 // tends to.
 const HIND_FIRST = 0.06;
-const HIND_LEG = { art: LEG_ART, width: LEG_WIDTH, thigh: 2.3, shin: 2.1, bend: 1, fore: false, haunch: 2.6, taper: true, reach: -1, walksOn: { kind: 'toes', length: 1.5, lean: 10, fold: 70 } } as const;
-const FORE_LEG = { art: LEG_ART, width: LEG_WIDTH, thigh: 2.3, shin: 3.6, bend: -1, fore: true, haunch: 2.4, reach: 0.3, walksOn: { kind: 'toes', length: 0.7, lean: 8, fold: 100 } } as const;
-const LEGS: ArtLeg[] = [
+const HIND_LEG = { art: LEG_ART, width: LEG_WIDTH, thigh: 2.3, shin: 2.1, bend: 1, fore: false, haunch: 2.6, taper: true, reach: -1, walksOn: { kind: 'toes', length: 1.5, lean: 10, fold: 70 }, paw: { limits: { min: -90, max: 75 } } } as const;
+const FORE_LEG = { art: LEG_ART, width: LEG_WIDTH, thigh: 2.3, shin: 3.6, bend: -1, fore: true, haunch: 2.4, reach: 0.3, walksOn: { kind: 'toes', length: 0.7, lean: 8, fold: 100 }, paw: { limits: { min: -55, max: 105 } } } as const;
+const LEGS: HingedArtLeg[] = [
   { ...HIND_LEG, hip: { x: 12.2, y: 11 }, far: true },
   { ...FORE_LEG, hip: { x: 21.9, y: 10.2 }, far: true },
   { ...HIND_LEG, hip: { x: 11.2, y: 11.2 }, far: false },
@@ -130,6 +132,8 @@ function stance(fox: RigFox, look: FoxLook): Stance {
       // the forelegs reach for the snow.
       const t = leapt(fox, look.now);
       const reach = (h: Point, i: number): Point => (LEGS[i].fore ? { x: h.x + 2 + 1.5 * t, y: h.y + 3.5 + 1.5 * t } : { x: h.x - 3 - 3 * t, y: h.y + 4.5 - 3 * t });
+      // Its paws held flat, as it lands on them: let hang from the wrist and
+      // hock, they would reach down past the snow it leaps over.
       return { body: turnAbout(-8 + 20 * t, HIND), head: 8 * t, tail: 10 - 15 * t, feet: (hips) => hips.map(reach) };
     }
     case 'dig': {
