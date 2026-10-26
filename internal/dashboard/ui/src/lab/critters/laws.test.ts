@@ -131,6 +131,18 @@ describe('the laws themselves', () => {
     expect(LAWS.hingesHold({ moving: [seenOf(wrist(40), 0)], still: [] })).toEqual([]);
   });
 
+  it('finds a bird\'s ankle opened backwards past straight', () => {
+    const leg = (toes: number): RigPose => {
+      const ankle = { x: 5, y: 7 };
+      const limb = { hip: { x: 5, y: 2 }, knee: { x: 6, y: 4 }, ankle, foot: { x: ankle.x + 2 * Math.cos((toes * Math.PI) / 180), y: ankle.y + 2 * Math.sin((toes * Math.PI) / 180) }, paw: 0 };
+      return { ...frame, layers: [], skeleton: { joints: [], bones: [], limbs: [{ id: 'leg', code: 'L2', limb, fore: false, sole: 10, intertarsal: { min: -178, max: 0 } }] } };
+    };
+    // The drumstick runs down and back at about 108 degrees: a tarsus at 80
+    // is flexed the bird's way, one at 140 opened backwards.
+    expect(LAWS.intertarsalHolds({ moving: [seenOf(leg(80), 0)], still: [] })).toEqual([]);
+    expect(LAWS.intertarsalHolds({ moving: [seenOf(leg(140), 0)], still: [] })).toHaveLength(1);
+  });
+
   it('finds a far part drawn over the body', () => {
     const over: RigPose = { ...frame, layers: [{ ...image('body', 3), width: 4 }, { ...image('far leg', 3), far: true }] };
     expect(LAWS.farBeforeBody({ moving: [seenOf(over, 0)], still: [] })).toHaveLength(1);

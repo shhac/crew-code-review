@@ -200,9 +200,10 @@ export type Body = {
 // each limb as the solvers posed it, whether it is a foreleg, how low its
 // foot reaches, and, bent at hinges, the side its knee bends to, how far
 // its knee and its paw may turn (the paw's from the shin, absolute; and
-// planted, as far as it bears) and whether a bone rises from its toes.
+// planted, as far as it bears) and whether a bone rises from its toes; a
+// bird's, how far its tarsus may turn from the drumstick.
 export type PosedJoint = { id: string; code: string; name: string; at: Point; derived: boolean; far: boolean; parent: string | null; angle: number; limits?: { min: number; max: number } };
 export type PosedBone = { code: string; name: string; from: string; to: string; far: boolean; length: number; stretch?: { min: number; max: number } };
 export type PosedHinges = { side: 1 | -1; knee: Limits; paw: Limits; planted?: Limits; toes: boolean };
-export type PosedLimb = { id: string; code: string; limb: Limb; fore: boolean; sole: number; hinges?: PosedHinges };
+export type PosedLimb = { id: string; code: string; limb: Limb; fore: boolean; sole: number; hinges?: PosedHinges; intertarsal?: Limits };
 export type PosedSkeleton = { joints: readonly PosedJoint[]; bones: readonly PosedBone[]; limbs: readonly PosedLimb[]; titles?: Readonly<Record<string, string>> };

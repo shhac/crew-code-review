@@ -143,8 +143,10 @@ const strokes = (depth: number): Flap => {
 const UPRIGHT = 26;
 const GLIDE: WingPose = { lift: 4, sweep: 5, fold: 10 };
 // Pushing off, a crow's legs stretch down and back; tucked up under it in
-// flight; reaching forward to land, its toes spread forward and a little
-// down (the landing drawing).
+// flight, folded flat out of sight (trailed under the tail, as the flight
+// drawings show them, they would swing down past its low flare's footprint
+// on their way to reach); reaching forward to land, its toes spread forward
+// and a little down (the landing drawing).
 const CROW_AIR: AirLegs = {
   tucked: { ankle: { x: -0.3, y: 0.6 }, lean: 105 },
   trailing: { ankle: { x: -0.45, y: 0.85 }, lean: -40 },

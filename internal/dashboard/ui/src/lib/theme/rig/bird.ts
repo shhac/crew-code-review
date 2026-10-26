@@ -4,6 +4,7 @@ import { cycleLength, rotate } from '../spidergait';
 import { flexion, gaitPhase, restingFeet, type Gait, type Limb, type Step, type Toes } from './gait';
 import { jointBeside } from './limb';
 import type { ArtLeg, Foot, Guide } from './rig';
+import { wrap } from './skeleton/hinge';
 
 // A bird's two legs (July's pigeons, August's gulls, September's crows). A
 // bird stands on its toes, and its leg has a mammal's hind-leg joints, most
@@ -70,6 +71,39 @@ const ankleAbove = (spec: BirdLeg, mtp: Point, lean: number): Point =>
 // The two bones above the ankle, the knee forward.
 const kneeOf = (spec: BirdLeg, hip: Point, ankle: Point) => jointBeside(hip, ankle, spec.thigh, spec.shin, KNEE);
 
+// How far the tarsus may turn from the drumstick (degrees, its foot end
+// forward of the drumstick's line negative): straight at most, for the
+// intertarsal joint never opens backwards, and folded at most flat
+// against the drumstick, the bones never crossing.
+export const INTERTARSAL = { min: -178, max: 0 } as const;
+const dir = (from: Point, to: Point) => degrees(Math.atan2(to.y - from.y, to.x - from.x));
+export const intertarsalTurn = (limb: Pick<Limb, 'knee' | 'ankle' | 'foot'>) => wrap(dir(limb.ankle, limb.foot) - dir(limb.knee, limb.ankle));
+
+// How far a turn is past the joint's limits: more fold wanted (positive,
+// opened backwards) or less (negative, folded past flat), read the nearer
+// way round.
+function pastLimits(turn: number): number {
+  const read = INTERTARSAL.min + ((((turn - INTERTARSAL.min) % 360) + 360) % 360);
+  if (read <= INTERTARSAL.max) return 0;
+  return read - INTERTARSAL.max < INTERTARSAL.min + 360 - read ? read - INTERTARSAL.max : read - INTERTARSAL.min - 360;
+}
+
+// The tarsus's lean nearest `lean` that keeps the intertarsal joint within
+// its limits, `turnAt` reading the joint's turn at a lean (more lean folds
+// it): stepped out the way that mends it, then closed in on.
+function withinIntertarsal(turnAt: (lean: number) => number, lean: number): number {
+  const start = Math.sign(pastLimits(turnAt(lean)));
+  if (!start) return lean;
+  const step = start * 5;
+  const past = Array.from({ length: 36 }, (_, i) => lean + step * (i + 1)).find((l) => Math.sign(pastLimits(turnAt(l))) !== start);
+  if (past === undefined) return lean;
+  const [mended] = Array.from({ length: 30 }).reduce<[number, number]>(([good, bad]) => {
+    const middle = (good + bad) / 2;
+    return Math.sign(pastLimits(turnAt(middle))) === start ? [good, middle] : [middle, bad];
+  }, [past, past - step]);
+  return mended;
+}
+
 // How far below the metatarsophalangeal joint a foot's drawing reaches,
 // turned `paw` degrees about it.
 function depth(foot: Foot, paw: number): number {
@@ -96,7 +130,13 @@ function birdLimb(spec: BirdLeg, hip: Point, foot: Point, step?: Step, ground?: 
   const drawn = (curled && spec.art.curled) || spec.art.foot;
   const clear = ground === undefined || step?.down !== false ? 0 : Math.max(0, peeledTo.y + depth(drawn, paw) - ground);
   const mtp = { x: peeledTo.x, y: peeledTo.y - clear };
-  const ankle = ankleAbove(spec, mtp, spec.walksOn.lean - fold + swung);
+  // The tarsus leans as it swings, but never so far back that the joint
+  // above it opens backwards: it turns about its foot end instead.
+  const turnAt = (lean: number) => {
+    const ankle = ankleAbove(spec, mtp, lean);
+    return intertarsalTurn({ knee: kneeOf(spec, hip, ankle), ankle, foot: mtp });
+  };
+  const ankle = ankleAbove(spec, mtp, withinIntertarsal(turnAt, spec.walksOn.lean - fold + swung));
   return { hip, knee: kneeOf(spec, hip, ankle), ankle, foot: mtp, paw, curled: curledIn(step) };
 }
 
@@ -198,11 +238,14 @@ function airLeg(reach: number, at: AirLegs, standing: number): Required<AirLeg> 
 // it reaches to land, their picture turned with the tarsus: as it stands,
 // or as far as the pose turns them.
 function airLimb(spec: BirdLeg, hip: Point, reach: number, at: AirLegs): Limb {
-  const { ankle: share, lean, toes } = airLeg(reach, at, spec.walksOn.lean - 90);
+  const { ankle: share, lean: posed, toes } = airLeg(reach, at, spec.walksOn.lean - 90);
   const above = spec.thigh + spec.shin;
   const ankle = { x: hip.x + share.x * above, y: hip.y + share.y * above };
-  const foot = { x: ankle.x + spec.walksOn.length * Math.sin(rad(lean)), y: ankle.y + spec.walksOn.length * Math.cos(rad(lean)) };
-  return { hip, knee: kneeOf(spec, hip, ankle), ankle, foot, paw: 90 - lean + toes, curled: reach < 0.6 };
+  const knee = kneeOf(spec, hip, ankle);
+  const footAt = (lean: number) => ({ x: ankle.x + spec.walksOn.length * Math.sin(rad(lean)), y: ankle.y + spec.walksOn.length * Math.cos(rad(lean)) });
+  // Its tarsus turned about the ankle as far as the joint lets it.
+  const lean = withinIntertarsal((l) => intertarsalTurn({ knee, ankle, foot: footAt(l) }), posed);
+  return { hip, knee, ankle, foot: footAt(lean), paw: 90 - lean + toes, curled: reach < 0.6 };
 }
 
 // Where a foot in the air is.

@@ -123,10 +123,11 @@ const TAKEOFF_BEATS = 1.6;
 const UPRIGHT = 25;
 // Reaching to land, a pigeon's feet come down nearly flat under it, so its
 // toes meet the ledge as it touches down rather than claws first.
-// Tucked in flight, they are drawn up into the belly feathers, out of sight.
+// Tucked in flight, they are drawn up and back under the belly feathers,
+// the feet trailing toward the tail (the flight drawings).
 const PIGEON_AIR: AirLegs = {
   ...AIR_LEGS,
-  tucked: { ankle: { x: -0.15, y: 0.42 }, lean: 110 },
+  tucked: { ankle: { x: -0.7, y: 0.35 }, lean: -100 },
   reaching: { ankle: { x: 0.15, y: 0.7 }, lean: 12 },
 };
 const RAISED: WingPose = { lift: 26, sweep: -10, fold: 15 };

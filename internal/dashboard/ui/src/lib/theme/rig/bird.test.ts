@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { apart } from '../math';
 import type { Point } from '../pointer';
 import { cycleLength, rotate } from '../spidergait';
-import { AIR_LEGS, airFoot, airLegsTo, BIRD_JOINTS, BIRD_STANCE, birdJointGuides, birdLegsTo, birdWalk, curledIn, feetLine, headBob, peeled, plantedLegs, stepLength, stepPhase, stepRise, type BirdLeg } from './bird';
+import { AIR_LEGS, airFoot, airLegsTo, BIRD_JOINTS, BIRD_STANCE, birdJointGuides, birdLegsTo, birdWalk, curledIn, feetLine, headBob, INTERTARSAL, intertarsalTurn, peeled, plantedLegs, stepLength, stepPhase, stepRise, type BirdLeg } from './bird';
 import { restingFeet, stepping, stepsOf } from './gait';
 import { legImages, piecesOf, type LimbArt } from './rig';
 import { wrap } from './skeleton/hinge';
@@ -128,6 +128,19 @@ describe("a bird's walk", () => {
     };
     const all = Array.from({ length: 400 }, (_, i) => lowest((i / 400) * CYCLE)).flat();
     expect(Math.max(...all)).toBeLessThanOrEqual(GROUND + 1e-6);
+  });
+
+  it('never opens its ankle backwards past straight, walking or in the air, however a pose asks it to lean', () => {
+    const opened = (leg: { knee: Point; ankle: Point; foot: Point }) => intertarsalTurn(leg) > INTERTARSAL.max + 1e-6 || intertarsalTurn(leg) < INTERTARSAL.min - 1e-6;
+    const walking = Array.from({ length: 400 }, (_, i) => {
+      const { feet, steps } = stepping(LEGS, (i / 400) * CYCLE, GROUND - 0.7, GAIT);
+      return birdLegsTo(LEGS, hipsOf(LEGS), feet(hipsOf(LEGS)), steps, GROUND);
+    }).flat();
+    // Swinging far forward of the hip asks the tarsus to lean back past the
+    // drumstick's line.
+    const swung = birdLegsTo([LEG], [LEG.hip], [{ x: LEG.hip.x + 4, y: GROUND - 1.5 }], [{ down: false, t: 0.4 }]);
+    const flying = Array.from({ length: 41 }, (_, i) => airLegsTo([LEG], [LEG.hip], -1 + i / 20)[0]);
+    expect([...walking, ...swung, ...flying].filter(opened)).toEqual([]);
   });
 
   it('counts each step from a foot landing to the next', () => {
