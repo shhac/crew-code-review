@@ -318,7 +318,7 @@ function flying(gull: RigGull, look: GullLook): RigPose {
   const hips = IN_AIR.hips({ root: body, joints });
   // Down until its feet leave; then stretched down and back as they push
   // off (GULL_AIR), close to where they stood, tucked, or reaching to land.
-  const goals: Goal[] = pose.airborne ? LEGS.map(() => ({ kind: 'air', reach: pose.legs, legs: GULL_AIR })) : planted(hips);
+  const goals: Goal[] = pose.airborne ? LEGS.map(() => ({ kind: 'air', reach: pose.legs, legs: GULL_AIR, carried: true })) : planted(hips);
   // The body with its wing folded has its own tail, tucked under the
   // primaries: the flight tail behind it would show above them.
   const seen = (shown: boolean) => (shown ? 'drawn' : false);
