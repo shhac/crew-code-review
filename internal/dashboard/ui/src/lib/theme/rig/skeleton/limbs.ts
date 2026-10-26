@@ -5,7 +5,7 @@
 // owns. FK never places those. Each owned joint's frame turns with its
 // bone from where the limb stands at rest (its standing solve), the foot's
 // with the paw, so a part hung on one follows it.
-import { degrees } from '../../math';
+import { clamp, degrees } from '../../math';
 import type { Point } from '../../pointer';
 import { rotate as turnPoint } from '../../spidergait';
 import { airLegsTo, birdLegsTo, type BirdLeg } from '../bird';
@@ -27,7 +27,7 @@ const direction = (from: Point, to: Point) => degrees(Math.atan2(to.y - from.y, 
 
 // The limb posed from `root` (its J0 now) toward its goal; `handle` finds
 // a reach's target, which may only be an authored joint or a point on one.
-type Solver<K extends LimbKind> = (limb: Extract<LimbSpec, { solve: K }>, root: Point, goal: Goal, handle: (h: Handle) => Point) => Limb;
+type Solver<K extends LimbKind> = (limb: Extract<LimbSpec, { solve: K }>, root: Point, goal: Goal, handle: (h: Handle) => Point, turn: number) => Limb;
 const target = (goal: Goal, handle: (h: Handle) => Point): Point => {
   if (goal.kind === 'plant') return goal.at;
   if (goal.kind === 'reach') return plus(handle(goal.to), goal.by);
@@ -41,8 +41,13 @@ const SOLVERS: { [K in LimbKind]: Solver<K> } = {
     }
     throw new Error(`skeleton: ${limb.id} is not posed by a ${goal.kind} goal`);
   },
-  bird: (limb, root, goal, handle) => {
-    if (goal.kind === 'air') return airLegsTo([birdOf(limb, root)], [root], goal.reach, goal.legs)[0];
+  bird: (limb, root, goal, handle, turn) => {
+    if (goal.kind === 'air') {
+      const air = airLegsTo([birdOf(limb, root)], [root], goal.reach, goal.legs)[0];
+      // Reaching to land, they meet the ground as it lies; tucked up or
+      // trailing, they are held as the body holds them.
+      return goal.carried ? turnedAbout(air, root, turn * (1 - clamp(goal.reach, 0, 1))) : air;
+    }
     if (goal.kind === 'plant' || goal.kind === 'reach') return birdLegsTo([birdOf(limb, root)], [root], [target(goal, handle)], goal.step ? [goal.step] : [], goal.kind === 'plant' ? goal.ground : undefined)[0];
     throw new Error(`skeleton: ${limb.id} is not posed by a ${goal.kind} goal`);
   },
@@ -56,9 +61,16 @@ const SOLVERS: { [K in LimbKind]: Solver<K> } = {
 };
 const solverOf = <K extends LimbKind>(limb: Extract<LimbSpec, { solve: K }>): Solver<K> => SOLVERS[limb.solve];
 
-export function solveLimb(limb: LimbSpec, root: Point, goal: Goal, handle: (h: Handle) => Point): Limb {
-  return solverOf(limb)(limb, root, goal, handle);
+// `turn`: how far its root is turned (the body's turn, carried down to it),
+// which a bird's legs held in the air turn with.
+export function solveLimb(limb: LimbSpec, root: Point, goal: Goal, handle: (h: Handle) => Point, turn = 0): Limb {
+  return solverOf(limb)(limb, root, goal, handle, turn);
 }
+
+// A limb turned as a whole about `pivot`, its paw with it.
+const turnedAbout = (limb: Limb, pivot: Point, turn: number): Limb => ({
+  ...limb, hip: turnPoint(limb.hip, pivot, turn), knee: turnPoint(limb.knee, pivot, turn), ankle: turnPoint(limb.ankle, pivot, turn), foot: turnPoint(limb.foot, pivot, turn), paw: limb.paw + turn,
+});
 
 // Standing at rest: its foot down `reach` ahead of its root, on its ground;
 // a hinged leg with nothing to stand on hanging straight down.

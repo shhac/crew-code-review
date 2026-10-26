@@ -80,7 +80,10 @@ export type JointPose = { angle?: number; squash?: { by: number; axis?: number }
 
 // What a limb's constraint reaches for: a foot planted (or stepping, with
 // its step; a bird's kept clear of `ground`), a handle reached, or a bird's
-// legs in the air (bird.ts's airLegsTo `reach`), or a limb swung `swing`
+// legs in the air (bird.ts's airLegsTo `reach`; `carried`, tucked or
+// trailing held as the body holds them, turning with it, reaching to land
+// as the ground lies), or a limb
+// swung `swing`
 // degrees forward of straight down and its lower bone bent `bend` back from
 // it. `walksOn`: what the foot stands on in this pose, where that is not
 // the limb's own (a hare sat on its long hind soles, gait.ts's onSoles);
@@ -94,7 +97,7 @@ type Stands = { walksOn?: NonNullable<QuadLeg['walksOn']>; side?: 1 | -1; contac
 export type Goal =
   | ({ kind: 'plant'; at: Point; step?: Step; ground?: number } & Stands)
   | ({ kind: 'reach'; to: Handle; by?: Point; step?: Step } & Stands)
-  | { kind: 'air'; reach: number; legs?: AirLegs }
+  | { kind: 'air'; reach: number; legs?: AirLegs; carried?: boolean }
   | { kind: 'angles'; swing: number; bend: number };
 
 // One moment's pose: the root's turn (the one joint that may turn about a

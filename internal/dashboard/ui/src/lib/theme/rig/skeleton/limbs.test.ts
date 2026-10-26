@@ -168,3 +168,26 @@ describe('the joints a limb owns', () => {
     near(points.get('J4'), applied(frames.get('J4') ?? translate(NaN, NaN), { x: 6.5, y: 13 }));
   });
 });
+
+describe('a bird\'s legs carried in the air', () => {
+  const spec: bird.BirdLeg = {
+    hip: { x: 0, y: 0 }, reach: 0, thigh: 2, shin: 1.5, bend: 1, fore: false, far: false,
+    walksOn: { kind: 'toes', length: 1.3, lean: 6, fold: 45 }, toes: { x: 2, y: 1 }, peel: 25,
+    art: { bone: 'b', boneFur: 'b', knee: true, inBody: true, foot: { src: 'f', fur: 'f', width: 2, height: 1, heel: { x: 0.5, y: 0.5 } } }, width: 0.5, haunch: 1,
+  };
+  const root = { x: 1, y: 2 };
+  const turned = (p: Point, by: number) => {
+    const a = (by * Math.PI) / 180;
+    return { x: root.x + (p.x - root.x) * Math.cos(a) - (p.y - root.y) * Math.sin(a), y: root.y + (p.x - root.x) * Math.sin(a) + (p.y - root.y) * Math.cos(a) };
+  };
+
+  it('tucked up, turn with the body as it holds them; reaching to land, meet the ground as it lies', () => {
+    const page = (reach: number) => solveLimb(birdLimb(spec), root, { kind: 'air', reach }, nowhere, -20);
+    const carried = (reach: number) => solveLimb(birdLimb(spec), root, { kind: 'air', reach, carried: true }, nowhere, -20);
+    const tucked = page(0);
+    expect(planDiff(carried(0), { ...tucked, knee: turned(tucked.knee, -20), ankle: turned(tucked.ankle, -20), foot: turned(tucked.foot, -20), paw: tucked.paw - 20 }, 1e-9)).toEqual([]);
+    expect(planDiff(carried(1), page(1), 1e-9)).toEqual([]);
+    expect(planDiff(carried(-1), page(-1), 1e-9)).not.toEqual([]);
+  });
+});
+

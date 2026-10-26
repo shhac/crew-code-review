@@ -8,7 +8,7 @@ import { degrees } from '../../math';
 import type { Point } from '../../pointer';
 import type { Limb } from '../gait';
 import { bone, type Layer, type RigPose } from '../rig';
-import { angleOf, applied, inverse, linear, product, rotate, scale, translate, type Affine } from './affine';
+import { angleOf, applied, IDENTITY, inverse, linear, product, rotate, scale, translate, type Affine } from './affine';
 import { frames, local } from './forward';
 import { STRAIGHT } from './hinge';
 import { ownedBy, ownedFrames, ownedPoints, solveLimb, standing } from './limbs';
@@ -262,7 +262,7 @@ export function compose(body: Body, poseAt: (now: number) => PoseSpec, now: numb
     const stood = rest.limbs.get(limb.id);
     if (!stood) throw new Error(`skeleton: ${limb.id} never stood`);
     const goal = pose.limbs[limb.id] ?? (limb.solve === 'hinged' && !limb.leg.walksOn ? { kind: 'angles', swing: 0, bend: 0 } : { kind: 'plant', at: { x: root.x + limb.leg.reach, y: limb.ground } });
-    const limbNow = solveLimb(limb, root, goal, authored);
+    const limbNow = solveLimb(limb, root, goal, authored, angleOf(world.get(limb.joints.root) ?? IDENTITY));
     return { limb, goal, now: limbNow, points: ownedPoints(skeleton, limb, stood, limbNow), frames: ownedFrames(skeleton, limb, stood, limbNow) };
   });
   const frameMap = new Map([...world, ...limbs.flatMap((l) => [...l.frames])]);
