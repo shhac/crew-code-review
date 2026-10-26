@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { unlike } from '../../../lab/critters/equivalence';
 import { crow, crowAt } from '../../../lab/critters/crow';
+import { BIRD_JOINTS } from '../rig/bird';
 import { planDiff, planOf, type Plan } from '../rig/skeleton/plan';
 import { crowRig as built, grounded, type CrowPose } from './crow-rig';
 import { crowRig as legacy } from './crow-rig-legacy';
@@ -8,11 +9,13 @@ import { crowRig as legacy } from './crow-rig-legacy';
 // The crow moved onto its skeleton draws exactly what its old rig drew,
 // but for its head, which now turns its small turns on the neck's top,
 // behind the eye, rather than at the neck's base: the head, its eyelid and
-// its marks on them.
+// its marks on them; and its legs in the air, now held as its body holds
+// them when tucked: their pieces and the marks on their joints.
+const LEG_MARKS: readonly string[] = [BIRD_JOINTS.hip, BIRD_JOINTS.knee, BIRD_JOINTS.ankle, BIRD_JOINTS.foot];
 const BODY_ONLY = (plan: Plan): Plan => ({
   ...plan,
-  draws: plan.draws.filter((d) => d.kind === 'image' && !/crow-head/.test(d.href)),
-  guides: plan.guides.filter((g) => g.name !== 'eye' && g.name !== 'bill'),
+  draws: plan.draws.filter((d) => d.kind === 'image' && !/crow-(head|drumstick|tarsus|foot)/.test(d.href)),
+  guides: plan.guides.filter((g) => g.name !== 'eye' && g.name !== 'bill' && !LEG_MARKS.includes(g.name)),
 });
 
 describe('the crow on its skeleton', () => {

@@ -312,7 +312,7 @@ function flying(crow: RigCrow, look: CrowLook): RigPose {
   // level as the body tips forward under it.
   const joints = { ...far.joints, ...near.joints, tail: tailOf(0.75 * Math.max(0, pose.pitch - level) - 4 * pose.tail, pose.tail), 'neck base': { angle: -0.8 * level } };
   const hips = IN_AIR.hips({ root: body, joints });
-  const goals: Goal[] = pose.airborne ? LEGS.map(() => ({ kind: 'air', reach: pose.legs, legs: CROW_AIR })) : planted(hips);
+  const goals: Goal[] = pose.airborne ? LEGS.map(() => ({ kind: 'air', reach: pose.legs, legs: CROW_AIR, carried: true })) : planted(hips);
   const show: PoseSpec['show'] = { ...far.show, ...near.show, ...feetShown(goals), 'folded wing': folded ? 'drawn' : false };
   // Tucked up in flight, the legs are hidden in the belly feathers, so even
   // the near leg's fur goes behind the body.
