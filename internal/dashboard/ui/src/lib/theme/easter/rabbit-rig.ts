@@ -3,10 +3,10 @@ import type { Point } from '../pointer';
 import { beatsFor, flightLift, gaitPhase, stepping, type Gait, type Step } from '../rig/gait';
 import { gazeFrom } from '../rig/gaze';
 import { blinking, snuffle } from '../rig/life';
-import { lidLayers, turnAbout, type ArtLeg, type Foot, type Frame, type Fur, type LimbArt, type RigPose, type Turn } from '../rig/rig';
+import { lidLayers, turnAbout, type Foot, type Frame, type Fur, type LimbArt, type RigPose, type Turn } from '../rig/rig';
 import { compose } from '../rig/skeleton/compose';
 import { mixPose } from '../rig/skeleton/mix';
-import { head, LEPORID, picture, spine, tetrapod } from '../rig/skeleton/tetrapod';
+import { head, LEPORID, picture, spine, tetrapod, type HingedArtLeg } from '../rig/skeleton/tetrapod';
 import type { Goal, PoseSpec } from '../rig/skeleton/types';
 import bodyArt from './rabbit-body.webp';
 import earsArt from './rabbit-ears.webp';
@@ -86,14 +86,18 @@ const TOES = GROUND - (PAW.height - PAW.heel.y);
 // do: the hock on the ledge under the hip, the long foot running forward,
 // and the forepaws under the chest, the elbows tucked back behind the
 // shoulders. Thigh to shank 1:1.1 and upper arm to forearm 1:1, as the
-// rabbit's bones measure; each limb hinges on its own side (bendFrame), so
-// no bone is stretched to reach a foot.
+// rabbit's bones measure. Each joint turns against the bone above it
+// (rig/skeleton/hinge.ts), so no bone is stretched to reach a foot: a knee
+// within its limits (a hind leg straightens as it pushes off), the wrist
+// from the forearm back as far as its paw folds and forward as far as it
+// stands planted, the long hind foot from the shank as far as its heel
+// peels up as it pushes off.
 const HIND_LEG = {
-  art: HIND_ART, width: 1.9, thigh: 3.3, shin: 3.6, bend: 1, bendFrame: 'limb', jointLimits: { min: 30, max: 175 }, fore: false, haunch: 3.2, taper: true, reach: -3.1,
-  walksOn: { kind: 'sole', toes: { x: FOOT.width - FOOT.heel.x, y: FOOT.height - FOOT.heel.y }, peel: 62 },
+  art: HIND_ART, width: 1.9, thigh: 3.3, shin: 3.6, bend: 1, jointLimits: { min: 25, max: 180 }, fore: false, haunch: 3.2, taper: true, reach: -3.1,
+  walksOn: { kind: 'sole', toes: { x: FOOT.width - FOOT.heel.x, y: FOOT.height - FOOT.heel.y }, peel: 62 }, paw: { limits: { min: -15, max: 135 } },
 } as const;
-const FORE_LEG = { art: FORE_ART, width: 1.45, thigh: 2.6, shin: 2.6, bend: -1, bendFrame: 'limb', jointLimits: { min: 30, max: 175 }, fore: true, haunch: 1.7, reach: 1.8, walksOn: { kind: 'toes', length: 0.8, lean: 35, fold: 89 } } as const;
-const LEGS: ArtLeg[] = [
+const FORE_LEG = { art: FORE_ART, width: 1.45, thigh: 2.6, shin: 2.6, bend: -1, jointLimits: { min: 30, max: 175 }, fore: true, haunch: 1.7, reach: 1.8, walksOn: { kind: 'toes', length: 0.8, lean: 35, fold: 89 }, paw: { limits: { min: -70, max: 95 } } } as const;
+const LEGS: HingedArtLeg[] = [
   { ...HIND_LEG, hip: { x: 7.6, y: 11.4 }, far: true },
   { ...FORE_LEG, hip: { x: 15.8, y: 12.8 }, far: true },
   { ...HIND_LEG, hip: { x: 6.4, y: 11.6 }, far: false },
@@ -135,9 +139,9 @@ export const gazeAt = gazeFrom({ eye: EYE, anchor: ANCHOR, scale: SCALE, look: L
 
 // How the rabbit stands: its body's turn, its head's (positive nose down),
 // its ears' (positive back), its tail's (positive up), where its feet go and
-// where each is in its step; and, washing, how far from the muzzle its
-// forepaws are held.
-type Stance = { body: Turn; head: number; ears: number; tail: number; feet: (hips: readonly Point[]) => Point[]; steps: Step[]; groom?: Point };
+// where each is in its step; its forepaws held up off the ledge, folded at
+// the wrist; and, washing, how far from the muzzle they are held.
+type Stance = { body: Turn; head: number; ears: number; tail: number; feet: (hips: readonly Point[]) => Point[]; steps: Step[]; held?: boolean; groom?: Point };
 
 const fore = (i: number) => LEGS[i].fore;
 // The feet as they stand at rest between hops: every pose that is not a hop
@@ -190,10 +194,9 @@ function hopping(walked: number): Stance {
 const still = (body: Turn, head: number, ears: number, tail: number): Stance => ({ body, head, ears, tail, feet: resting, steps: [] });
 
 // The forepaws off the ledge, each where `at` puts it from its shoulder, the
-// hind feet where they rest; and those forepaws folded back at the wrist.
+// hind feet where they rest.
 const forepawsAt = (at: (hip: Point) => Point) => (hips: readonly Point[]): Point[] =>
   resting().map((f, i) => (fore(i) ? { x: hips[i].x + at(hips[i]).x, y: hips[i].y + at(hips[i]).y } : f));
-const LIFTED: Step[] = LEGS.map((l) => (l.fore ? { down: false, t: 0.4 } : { down: true, t: 0 }));
 // Where its forepaws wash: just under the nose.
 const MUZZLE = { x: 19.6, y: 9.6 };
 
@@ -213,13 +216,13 @@ function stance(rabbit: RigRabbit, look: RabbitLook): Stance {
       // Sat up on its haunches, ears pricked, nose still, the forepaws
       // lifted off the ledge and held to its chest.
       const body = turnAbout(-30, HIND, 0.6, 1.4);
-      return { ...still(body, 24, -4, -8), feet: forepawsAt(() => ({ x: 0.5, y: 2.7 })), steps: LIFTED };
+      return { ...still(body, 24, -4, -8), feet: forepawsAt(() => ({ x: 0.5, y: 2.7 })), held: true };
     }
     case 'groom': {
       // Sat up, washing its face: both forepaws at the muzzle, stroking up
       // over it as the head bobs down to them.
       const stroke = Math.sin((Math.PI * rabbit.since) / 450) ** 2;
-      return { ...still(turnAbout(-24, HIND, 0.6, 1.4), 22 + 10 * stroke, 10, 0), groom: { x: -0.4, y: 0.6 - 0.8 * stroke }, steps: LIFTED };
+      return { ...still(turnAbout(-24, HIND, 0.6, 1.4), 22 + 10 * stroke, 10, 0), groom: { x: -0.4, y: 0.6 - 0.8 * stroke }, held: true };
     }
     case 'nudge': {
       // Head down to the ledge, nose pushing the egg along, rump up.
@@ -241,17 +244,6 @@ function stamping(rabbit: RigRabbit): Step[] {
   const t = (rabbit.since % 250) / 250;
   const up = t < 0.6 ? { down: true, t: 0.6 + 0.4 * (t / 0.6) } : { down: true, t: 0 };
   return LEGS.map((l) => (l.fore ? { down: true, t: 0 } : up));
-}
-
-// A forepaw's fold part way from one step to another: the step whose fold
-// (gait.ts's flexion) is that mix of the two, so a paw lifting off the
-// ledge folds as it rises rather than all at once at the ledge: late as it
-// lifts, early as it comes down, so its toes never dip into the ledge.
-function foldBetween(a: Step | undefined, b: Step | undefined, f: number): Step {
-  const folded = (s?: Step) => (!s || s.down ? 0 : s.t < 0.75 ? Math.sin((Math.PI * s.t) / 0.75) : 0);
-  const g = folded(b) > folded(a) ? f * f : 1 - (1 - f) * (1 - f);
-  const k = clamp(folded(a) + (folded(b) - folded(a)) * g, 0, 1);
-  return k === 0 ? { down: true, t: 0 } : { down: false, t: (0.75 * Math.asin(k)) / Math.PI };
 }
 
 // Its skeleton: the body turning about its hips, the tail at its root,
@@ -289,13 +281,14 @@ const RABBIT = tetrapod(LEPORID, {
 });
 
 // A stance as a pose: each foot set from where its hip is in it, a washing
-// forepaw reaching for the muzzle.
+// forepaw reaching for the muzzle, a held one free of the ledge and folded.
 function poseOf(s: Stance): PoseSpec {
   const joints = { skull: { angle: s.head }, ears: { angle: -s.ears }, tail: { angle: s.tail } };
   const feet = s.feet(RABBIT.hips({ root: s.body, joints }));
+  const held = (leg: HingedArtLeg) => (s.held && leg.fore ? { contact: 0, fold: 1 } : {});
   const goals = LEGS.map((leg, i): Goal => (s.groom && leg.fore
-    ? { kind: 'reach', to: { on: 'skull', at: MUZZLE }, by: s.groom, step: s.steps[i] }
-    : { kind: 'plant', at: feet[i], step: s.steps[i] }));
+    ? { kind: 'reach', to: { on: 'skull', at: MUZZLE }, by: s.groom, step: s.steps[i], ...held(leg) }
+    : { kind: 'plant', at: feet[i], step: s.steps[i], ...held(leg) }));
   return { root: s.body, joints, limbs: RABBIT.limbs(goals), show: {}, z: {} };
 }
 
@@ -304,14 +297,14 @@ function poseOf(s: Stance): PoseSpec {
 // plants are the same, so none slides. A lifted paw eases between where
 // each pose holds it against its own shoulders: carried on the shoulders in
 // between, a paw held to the chest would sink into the ledge as they drop
-// into a nudge; and it folds between its two steps (foldBetween).
+// into a nudge; and it folds, and takes its weight, as far between the two
+// poses as it is.
 const EASE = 260;
-const FOLDING = { steps: Object.fromEntries(RABBIT.codes.flatMap((code, i) => (LEGS[i].fore ? [[code, foldBetween]] : []))) };
 function eased(rabbit: RigRabbit, look: RabbitLook): PoseSpec {
   const next = poseOf(stance(rabbit, look));
   if (look.still || !rabbit.was || rabbit.was === rabbit.pose || rabbit.since >= EASE) return next;
   const before = poseOf(stance({ ...rabbit, pose: rabbit.was }, look));
-  return mixPose(RABBIT.body.skeleton, before, next, smooth(rabbit.since / EASE), FOLDING);
+  return mixPose(RABBIT.body.skeleton, before, next, smooth(rabbit.since / EASE));
 }
 
 export function rabbitRig(rabbit: RigRabbit, look: RabbitLook): RigPose {
