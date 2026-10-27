@@ -6,7 +6,7 @@
 // and visibility change; nodes move only when a pose changes the order.
 import { degrees } from '../../math';
 import type { Point } from '../../pointer';
-import { INTERTARSAL } from '../bird';
+import { hingedLegOf, INTERTARSAL, isHingedBird } from '../bird';
 import type { Limb } from '../gait';
 import { bone, type Layer, type RigPose } from '../rig';
 import { angleOf, applied, IDENTITY, inverse, linear, product, rotate, scale, translate, type Affine } from './affine';
@@ -317,7 +317,9 @@ export function compose(body: Body, poseAt: (now: number) => PoseSpec, now: numb
     const feet = layout.feet[n];
     const onFoot = painted.flatMap(({ piece, layers: drawn }) => (piece !== undefined && feet.includes(piece) ? drawn.flatMap((d) => (d.kind === 'piece' && seenLayer(d) ? [d] : [])) : []));
     const sole = onFoot.length ? Math.max(...onFoot.flatMap(corners).map((c) => c.y)) : l.foot.y;
-    const joints = limb.solve === 'hinged' ? { hinges: hingesOf(limb.leg, goal) } : limb.solve === 'bird' ? { intertarsal: INTERTARSAL } : {};
+    const stepping = goal.kind === 'plant' || goal.kind === 'reach';
+    const bird = limb.solve === 'bird' ? { intertarsal: INTERTARSAL, ...(stepping && isHingedBird(limb.leg) ? { hinges: hingesOf(hingedLegOf(limb.leg), goal) } : {}) } : {};
+    const joints = limb.solve === 'hinged' ? { hinges: hingesOf(limb.leg, goal) } : bird;
     return { id: limb.id, code: `L${2 * limb.pair + sideCode(limb.side)}`, limb: l, fore: limb.pair === 0, sole, ...joints };
   });
   return {

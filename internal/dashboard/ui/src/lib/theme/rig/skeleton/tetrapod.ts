@@ -8,7 +8,7 @@
 // bands: the far legs outlined then as fur alone, the near legs outlined,
 // the animal's own parts, the near legs' fur over its edge.
 import type { Point } from '../../pointer';
-import { BIRD_JOINTS, type BirdLeg } from '../bird';
+import { BIRD_JOINTS, hingedLegOf, isHingedBird, type BirdLeg } from '../bird';
 import type { ArtLeg, Foot, Frame } from '../rig';
 import { rootsOf } from './forward';
 import { restingPaw } from './hinge';
@@ -159,7 +159,10 @@ export function tetrapod<L extends ArtLeg>(preset: Preset, m: Measured<L>): Tetr
     if (preset.solve === 'bird') {
       if (!isBird(leg)) throw new Error(`tetrapod: ${codeOf(leg)} is not a bird's leg`);
       const { hip, far, fore, ...bird } = leg;
-      return { ...limb, solve: 'bird', leg: bird };
+      if (!isHingedBird(bird)) return { ...limb, solve: 'bird', leg: bird };
+      // Bent at hinges, its tarsus rests where it stands at rest.
+      const rest = bird.paw.rest ?? restingPaw(hingedLegOf({ ...bird, paw: { ...bird.paw, rest: 0 } }), hip, m.ground(leg));
+      return { ...limb, solve: 'bird', leg: { ...bird, paw: { ...bird.paw, rest } } };
     }
     if (isHinged(leg)) {
       const { hip, far, fore, bend, bendFrame, jointLimits, paw, ...bones } = leg;

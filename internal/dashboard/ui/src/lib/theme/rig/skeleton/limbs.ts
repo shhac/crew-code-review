@@ -8,7 +8,7 @@
 import { degrees } from '../../math';
 import type { Point } from '../../pointer';
 import { rotate as turnPoint } from '../../spidergait';
-import { airLegsTo, birdLegsTo, type BirdLeg } from '../bird';
+import { airLegsTo, birdLegsTo, hingedBirdLimb, isHingedBird, type BirdLeg } from '../bird';
 import { jointBeside } from '../limb';
 import { legsTo, type Limb, type QuadLeg } from '../gait';
 import { product, rotate, translate, type Affine } from './affine';
@@ -49,7 +49,11 @@ const SOLVERS: { [K in LimbKind]: Solver<K> } = {
       // against the ground they push from or meet, by as far as they reach.
       return goal.carried ? turnedAbout(air, root, turn * (1 - Math.min(1, Math.abs(goal.reach)))) : air;
     }
-    if (goal.kind === 'plant' || goal.kind === 'reach') return birdLegsTo([birdOf(limb, root)], [root], [target(goal, handle)], goal.step ? [goal.step] : [], goal.kind === 'plant' ? goal.ground : undefined)[0];
+    if (goal.kind === 'plant' || goal.kind === 'reach') {
+      const ground = goal.kind === 'plant' ? goal.ground : undefined;
+      if (isHingedBird(limb.leg)) return hingedBirdLimb(limb.leg, root, goal, () => target(goal, handle), ground);
+      return birdLegsTo([birdOf(limb, root)], [root], [target(goal, handle)], goal.step ? [goal.step] : [], ground)[0];
+    }
     throw new Error(`skeleton: ${limb.id} is not posed by a ${goal.kind} goal`);
   },
   hinged: (limb, root, goal, handle) => solveHinged(limb.leg, root, goal, () => target(goal, handle)),

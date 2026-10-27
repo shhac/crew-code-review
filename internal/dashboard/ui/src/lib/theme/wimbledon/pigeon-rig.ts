@@ -1,6 +1,6 @@
 import { apart, mix, smooth } from '../math';
 import type { Point } from '../pointer';
-import { AIR_LEGS, birdWalk, curledIn, feetLine, headBob, stepRise, type AirLegs, type BirdLeg } from '../rig/bird';
+import { AIR_LEGS, birdWalk, curledIn, feetLine, headBob, INTERTARSAL_HINGE, stepRise, type AirLegs, type HingedBirdLeg } from '../rig/bird';
 import { stepping, type Step } from '../rig/gait';
 import { gazeFrom } from '../rig/gaze';
 import { blinking, breath } from '../rig/life';
@@ -85,11 +85,15 @@ const LEG_ART: LimbArt = {
   bone: shankArt, boneFur: shankFurArt, knee: true, inBody: true,
   thigh: { src: thighArt, fur: thighFurArt }, foot: TOES, curled: CURLED,
 };
+// Its tarsus short under a long femur, a striding pigeon's planted ankle
+// opens nearly straight at the ends of a stride, where the other birds'
+// stay bent.
+const STRIDING = { limits: { ...INTERTARSAL_HINGE.limits, max: 55 }, planted: { ...INTERTARSAL_HINGE.limits, max: 55 } };
 const LEG = {
   art: LEG_ART, width: 0.45, haunch: 1.4, thigh: 2, shin: 1, bend: 1, fore: false,
-  walksOn: { kind: 'toes', length: 1.25, lean: 6, fold: 45 }, toes: { x: 3.08, y: 1.7 }, peel: 25,
+  walksOn: { kind: 'toes', length: 1.25, lean: 6, fold: -45 }, toes: { x: 3.08, y: 1.7 }, peel: 25, paw: STRIDING,
 } as const;
-const LEGS: BirdLeg[] = [
+const LEGS: HingedBirdLeg[] = [
   { ...LEG, hip: { x: 13.3, y: 12.5 }, reach: -0.6, far: true },
   { ...LEG, hip: { x: 13, y: 12.7 }, reach: 0.9, far: false },
 ];

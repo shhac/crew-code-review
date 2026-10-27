@@ -4,7 +4,8 @@ import { cycleLength, rotate } from '../spidergait';
 import { flexion, gaitPhase, restingFeet, type Gait, type Limb, type Step, type Toes } from './gait';
 import { jointBeside } from './limb';
 import type { ArtLeg, Foot, Guide } from './rig';
-import { wrap } from './skeleton/hinge';
+import { held, solveHinged, wrap } from './skeleton/hinge';
+import type { Goal, Hinge, HingedLeg } from './skeleton/types';
 
 // A bird's two legs (July's pigeons, August's gulls, September's crows). A
 // bird stands on its toes, and its leg has a mammal's hind-leg joints, most
@@ -138,6 +139,61 @@ function birdLimb(spec: BirdLeg, hip: Point, foot: Point, step?: Step, ground?: 
   };
   const ankle = ankleAbove(spec, mtp, withinIntertarsal(turnAt, spec.walksOn.lean - fold + swung));
   return { hip, knee: kneeOf(spec, hip, ankle), ankle, foot: mtp, paw, curled: curledIn(step) };
+}
+
+// A bird's leg bent at relative hinges (skeleton/hinge.ts), as a toe
+// walker's is: the tarsus the bone up from the toes, turned from the
+// drumstick by `paw` (the intertarsal joint, folding it back as the foot
+// swings), its toes hanging free at `digits` from it. Planted, the toes are
+// pinned and the tarsus stands at its lean however the body passes over
+// it, rather than swinging with the leg like a pendulum.
+export type HingedBirdLeg = BirdLeg & { paw: Hinge; digits?: number };
+// How far the intertarsal joint turns from where the leg stands at rest: a
+// swinging foot's tarsus tucks up under the drumstick, and it opens no
+// further than a bird's standing ankle does toward straight.
+export const INTERTARSAL_HINGE: Hinge = { limits: { min: -110, max: 35 }, planted: { min: -110, max: 35 } };
+// How far the knee (hidden in the belly) may bend, its interior angle: the
+// femur and drumstick never fold flat, and never quite straighten, so a
+// planted tarsus can always lean between the hip and its toes.
+export const BIRD_KNEE = { min: 25, max: 178 } as const;
+export const isHingedBird = <L extends Omit<BirdLeg, 'hip' | 'far' | 'fore'>>(leg: L): leg is L & { paw: Hinge; digits?: number } => 'paw' in leg;
+
+type Stood = Omit<HingedBirdLeg, 'hip' | 'far' | 'fore'>;
+const hingedOf = (spec: Stood): HingedLeg => ({
+  thigh: spec.thigh, shin: spec.shin, reach: spec.reach, side: KNEE, walksOn: spec.walksOn, paw: spec.paw,
+  ...(spec.digits === undefined ? {} : { digits: spec.digits }), knee: spec.jointLimits ?? BIRD_KNEE,
+});
+// The leg it is as skeleton/hinge.ts bends it, for the laws.
+export const hingedLegOf = hingedOf;
+
+// A hair over what clears the ground, so the lifts settle above it.
+const CLEARANCE = 1e-6;
+
+// One such leg toward its goal. As a foot pushes off, its joint peels up
+// over the toe tips, which stay planted, the toes turning with it as far
+// as they are still pinned; given the ground, a swinging foot is lifted as
+// far as its toes need to clear it.
+export function hingedBirdLimb(spec: Stood, hip: Point, goal: Extract<Goal, { kind: 'plant' | 'reach' }>, target: () => Point, ground?: number): Limb {
+  const leg = hingedOf(spec);
+  const peel = spec.peel * peeled(goal.step);
+  const pinned = held(goal).contact;
+  const curled = curledIn(goal.step);
+  const posed = (lift: number): Limb => {
+    const at = target();
+    const peeledTo = peel ? rotate(at, { x: at.x + spec.toes.x, y: at.y + spec.toes.y }, peel) : at;
+    const limb = solveHinged(leg, hip, goal, () => ({ x: peeledTo.x, y: peeledTo.y - lift }));
+    return { ...limb, paw: limb.paw + peel * pinned, curled };
+  };
+  const first = posed(0);
+  if (ground === undefined || goal.step?.down !== false) return first;
+  const drawn = (curled && spec.art.curled) || spec.art.foot;
+  const under = (limb: Limb) => Math.max(0, limb.foot.y + depth(drawn, limb.paw) - ground);
+  // Lifted, its toes may turn and its reach move, so it is lifted again by
+  // what is still under, until it clears.
+  return Array.from({ length: 12 }).reduce<{ limb: Limb; lift: number }>(({ limb, lift }) => {
+    const more = under(limb);
+    return more ? { limb: posed(lift + more + CLEARANCE), lift: lift + more + CLEARANCE } : { limb, lift };
+  }, { limb: first, lift: 0 }).limb;
 }
 
 // Where a bird's legs end standing, `ground` being where its toes stand: on

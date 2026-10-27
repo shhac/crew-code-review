@@ -1,6 +1,6 @@
 import { clamp, smooth } from '../math';
 import type { Point } from '../pointer';
-import { birdWalk, curledIn, feetLine, headBob, stepRise, type AirLegs, type BirdLeg } from '../rig/bird';
+import { birdWalk, curledIn, feetLine, headBob, INTERTARSAL_HINGE, stepRise, type AirLegs, type HingedBirdLeg } from '../rig/bird';
 import { stepping } from '../rig/gait';
 import { gazeFrom } from '../rig/gaze';
 import { blinking, breath } from '../rig/life';
@@ -106,9 +106,9 @@ const LEG_ART: LimbArt = {
 };
 const LEG = {
   art: LEG_ART, width: 0.85, haunch: 1.6, thigh: 2.5, shin: 2.4, bend: 1, fore: false,
-  walksOn: { kind: 'toes', length: 4.47, lean: 16, fold: 40 }, toes: { x: 3.4, y: 1.65 }, peel: 22,
+  walksOn: { kind: 'toes', length: 4.47, lean: 16, fold: -40 }, toes: { x: 3.4, y: 1.65 }, peel: 22, paw: INTERTARSAL_HINGE,
 } as const;
-const LEGS: BirdLeg[] = [
+const LEGS: HingedBirdLeg[] = [
   { ...LEG, hip: { x: 20.4, y: 17.6 }, reach: -0.6, far: true },
   { ...LEG, hip: { x: 22.6, y: 17.9 }, reach: 0.9, far: false },
 ];
