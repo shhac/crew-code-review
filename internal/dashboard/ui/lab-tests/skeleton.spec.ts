@@ -73,10 +73,12 @@ test("the spider's skeleton is read off its drawn legs, and follows them as it w
   await expect.poll(claws).not.toEqual(first);
 });
 
-test('the robin, whole pictures each turning about its pivot, shows those as its joints, its spine through them head to tail', async ({ page }) => {
+test('the robin, whole pictures each turning about its joints, shows those as its joints, its spine through them head to tail', async ({ page }) => {
   await page.goto('/lab/critters.html#animal=robin&mode=alive&frame=0&skeleton=only');
   await expect(page.locator('[data-legend] [data-row="SJ0"]')).toContainText('head joint');
-  await expect(page.locator('[data-legend] [data-row="SJ2"]')).toContainText('tail root');
+  await expect(page.locator('[data-legend] [data-row="SJ1"]')).toContainText('neck base');
+  await expect(page.locator('[data-legend] [data-row="SJ2"]')).toContainText('hip');
+  await expect(page.locator('[data-legend] [data-row="SJ3"]')).toContainText('tail root');
   await expect(skeleton(page).locator('text[data-code="SB0"]')).toHaveCount(1);
 });
 

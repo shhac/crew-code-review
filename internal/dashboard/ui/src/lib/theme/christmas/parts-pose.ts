@@ -1,5 +1,6 @@
 import manifest from './robin-parts/manifest.json' with { type: 'json' };
 import { smooth } from '../math';
+import { transformPoint } from './parts-affine';
 
 const pulse = (time: number, start: number, duration: number) => {
   const progress = (time - start) / duration;
@@ -69,7 +70,7 @@ export function partsPose(elapsed: number, mode = 'alive', reduced = false) {
   const lift = hopping ? track(beat, [[0, 0], [1050, 0], [1250, -25], [1540, 0], [4000, 0]]) : 0;
   const crouch = hopping ? track(beat, [[0, 0], [700, 0], [940, 5], [1050, 0], [1540, 0], [1640, 4], [1920, 0], [4000, 0]])
     : pecking ? track(beat, [[0, 0], [700, 0], [1120, 4], [1580, 4], [2200, 0], [4000, 0]]) : 0;
-  const lean = pecking ? track(beat, [[0, 0], [700, 0], [1120, 20], [1580, 20], [2200, 0], [4000, 0]])
+  const lean = pecking ? track(beat, [[0, 0], [700, 0], [1120, 25], [1580, 25], [2200, 0], [4000, 0]])
     : flying ? 28 : hopping ? -lift * .12 : 0;
   const headAngle = pecking ? track(beat, [[0, 0], [700, 0], [1120, 82], [1250, 68], [1350, 82], [1480, 68], [1580, 82], [1900, 14], [2200, 0], [4000, 0]])
     : flying ? -20 : tilt * 9;
@@ -77,7 +78,7 @@ export function partsPose(elapsed: number, mode = 'alive', reduced = false) {
   const phase = heldStroke >= 0 ? heldStroke / wingStates.length : time % 600 / 600;
   const nearWing = wingStroke(phase), farWing = wingStroke(mode === 'flight' ? (phase - .035 + 1) % 1 : phase, true);
   return {
-    breathing, headBreath, headAngle, headPivotY: pecking ? 52 : 42,
+    breathing, headBreath, headAngle,
     tailAngle: pecking ? -lean * .25 : flying ? -10 : flick * 12, closed,
     flying, pecking, flightMix: flying ? 1 : 0, peckMix: pecking ? 1 : 0, lift, crouch, lean, tuck: -lift / 25,
     bob: flying && mode === 'flight' ? -2 * Math.sin(phase * Math.PI * 2) : 0,
@@ -94,34 +95,56 @@ export function mixPartsPose(from: PartsPose, to: PartsPose, amount: number): Pa
   const mix = (a: number, b: number) => a + (b - a) * amount;
   return { ...to, flying: from.flying || to.flying, pecking: from.pecking || to.pecking,
     breathing: mix(from.breathing, to.breathing), headBreath: mix(from.headBreath, to.headBreath),
-    headAngle: mix(from.headAngle, to.headAngle), headPivotY: mix(from.headPivotY, to.headPivotY),
+    headAngle: mix(from.headAngle, to.headAngle),
     tailAngle: mix(from.tailAngle, to.tailAngle), lift: mix(from.lift, to.lift),
     crouch: mix(from.crouch, to.crouch), lean: mix(from.lean, to.lean), tuck: mix(from.tuck, to.tuck),
     bob: mix(from.bob, to.bob), flightMix: mix(from.flightMix, to.flightMix), peckMix: mix(from.peckMix, to.peckMix),
     nearWing: to.flying ? to.nearWing : from.nearWing, farWing: to.flying ? to.farWing : from.farWing };
 }
 
-// Where each part turns, in the drawing's units, for the rig below and the
-// lab's skeleton: a grounded leg squashes from its foot and, tucked up in a
-// hop, turns where it leaves the belly; a tucked flight leg turns there too.
-// The head turns at its `headPivotY`, lower when it pecks.
+// Where each part turns, in the drawing's units, measured on the drawing
+// and kept with its parts (the manifest's joints), for the rig below and
+// the lab's skeleton. The head's small turns (a tilt, a look up) are at the
+// skull, behind the eye; past those it nods from the neck's base, as a
+// peck does. The body leans about the hip and breathes from its belly's
+// floor. A grounded leg squashes from its foot and, tucked up in a hop,
+// turns where it leaves the belly; a tucked flight leg turns there too.
+const at = ([x, y]: readonly number[]): readonly [number, number] => [x, y];
+const { joints } = manifest;
 export const partsPivots = {
-  head: 82, body: [64, 83], tail: [46, 65], shoulder: [79, 43], farShoulder: [90, 42],
-  nearLegRoot: [59, 86], farLegRoot: [72, 80], nearFoot: [64, 102.1], farFoot: [78, 101],
-  nearTucked: [65.85, 88.61], farTucked: [77.71, 81.75],
-} as const;
+  skull: at(joints.skull), neckBase: at(joints.neckBase), hip: at(joints.hip), body: at(joints.body), tail: at(joints.tail),
+  shoulder: at(joints.shoulder), farShoulder: at(joints.farShoulder),
+  nearLegRoot: at(joints.nearLegRoot), farLegRoot: at(joints.farLegRoot), nearFoot: at(joints.nearFoot), farFoot: at(joints.farFoot),
+  nearTucked: at(joints.nearTucked), farTucked: at(joints.farTucked),
+};
+// How far the head turns at the skull at most, either way; the rest of a
+// turn is the neck's.
+const SKULL = 12;
+export const headTurns = (angle: number) => {
+  const skull = Math.max(-SKULL, Math.min(SKULL, angle));
+  return { skull, neck: angle - skull };
+};
 
 // Shared by the live SVG rig and the deterministic exported motion preview.
 export function partsTransforms(pose: ReturnType<typeof partsPose>, exploded = false) {
   const wing = (stroke: ReturnType<typeof wingStroke>, x: number, y: number) =>
     `translate(${x} ${y}) rotate(${stroke.angle - stroke.drawing.angle - pose.lean}) scale(${stroke.span / stroke.drawing.span}) translate(${-x} ${-y})`;
-  const { head: hx, body: [bx, by], tail: [tx, ty], shoulder: [sx, sy], farShoulder: [fx, fy],
+  const { skull: [kx, ky], neckBase: [nx, ny], hip: [px, py], body: [bx, by], tail: [tx, ty], shoulder: [sx, sy], farShoulder: [fx, fy],
     nearLegRoot, farLegRoot, nearFoot, farFoot, nearTucked, farTucked } = partsPivots;
+  const turns = headTurns(pose.headAngle);
+  const body = `translate(0 ${pose.crouch}) rotate(${pose.lean} ${px} ${py}) translate(${bx} ${by}) scale(${1 + pose.breathing * .012} ${1 + pose.breathing * .018}) translate(${-bx} ${-by})`;
+  // A grounded leg stays on its body: turned about its foot to where the
+  // body carries the top of it as it leans, as the ankle flexes.
+  const attached = (root: readonly [number, number], foot: readonly [number, number]) => {
+    const [x, y] = transformPoint(body, root[0], root[1]);
+    const turn = Math.atan2(y - foot[1], x - foot[0]) - Math.atan2(root[1] - foot[1], root[0] - foot[0]);
+    return `rotate(${turn * 180 / Math.PI} ${foot[0]} ${foot[1]})`;
+  };
   return {
     rig: exploded ? '' : `translate(${-5 * pose.flightMix} ${pose.lift + (-12 + pose.bob) * pose.flightMix})`,
-    body: exploded ? 'translate(0 15)' : `translate(0 ${pose.crouch}) rotate(${pose.lean} ${bx} ${by}) translate(${bx} ${by}) scale(${1 + pose.breathing * .012} ${1 + pose.breathing * .018}) translate(${-bx} ${-by})`,
-    head: exploded ? 'translate(8 -14)' : `translate(0 ${pose.headBreath * -.45}) rotate(${pose.headAngle} ${hx} ${pose.headPivotY})`,
-    neck: exploded ? 'translate(16 4)' : `rotate(${pose.headAngle * (.3 + .35 * pose.peckMix)} ${hx} ${pose.headPivotY})`,
+    body: exploded ? 'translate(0 15)' : body,
+    head: exploded ? 'translate(8 -14)' : `translate(0 ${pose.headBreath * -.45}) rotate(${turns.neck} ${nx} ${ny}) rotate(${turns.skull} ${kx} ${ky})`,
+    neck: exploded ? 'translate(16 4)' : `rotate(${turns.neck} ${nx} ${ny})`,
     tail: exploded ? 'translate(-6 5)' : `rotate(${pose.tailAngle} ${tx} ${ty})`,
     wing: exploded ? 'translate(-17 -8)' : pose.flying ? wing(pose.nearWing, sx, sy) : `rotate(${pose.breathing * -.6} ${sx} ${sy})`,
     farWing: exploded ? 'translate(20 -16)' : wing(pose.farWing, fx, fy),
@@ -129,8 +152,8 @@ export function partsTransforms(pose: ReturnType<typeof partsPose>, exploded = f
     // The cover's feathers point down-left (150 degrees) in its source.
     // Align them to the continuous wing trajectory, not the selected drawing.
     shoulder: exploded ? 'translate(-17 -8)' : `rotate(${pose.nearWing.angle + 360 - 150 - pose.lean} ${sx} ${sy})`,
-    farLeg: exploded ? 'translate(-8 5)' : `translate(${farFoot[0]} ${farFoot[1]}) scale(1 ${1 - pose.crouch * .055}) translate(${-farFoot[0]} ${-farFoot[1]}) rotate(${-pose.tuck * 10} ${farLegRoot[0]} ${farLegRoot[1]})`,
-    nearLeg: exploded ? 'translate(8 5)' : `translate(${nearFoot[0]} ${nearFoot[1]}) scale(1 ${1 - pose.crouch * .055}) translate(${-nearFoot[0]} ${-nearFoot[1]}) rotate(${pose.tuck * 12} ${nearLegRoot[0]} ${nearLegRoot[1]})`,
+    farLeg: exploded ? 'translate(-8 5)' : `${attached(farLegRoot, farFoot)} translate(${farFoot[0]} ${farFoot[1]}) scale(1 ${1 - pose.crouch * .055}) translate(${-farFoot[0]} ${-farFoot[1]}) rotate(${-pose.tuck * 10} ${farLegRoot[0]} ${farLegRoot[1]})`,
+    nearLeg: exploded ? 'translate(8 5)' : `${attached(nearLegRoot, nearFoot)} translate(${nearFoot[0]} ${nearFoot[1]}) scale(1 ${1 - pose.crouch * .055}) translate(${-nearFoot[0]} ${-nearFoot[1]}) rotate(${pose.tuck * 12} ${nearLegRoot[0]} ${nearLegRoot[1]})`,
     flightFarLeg: exploded ? 'translate(-8 5)' : `rotate(-28 ${farTucked[0]} ${farTucked[1]})`,
     flightNearLeg: exploded ? 'translate(8 5)' : `rotate(-28 ${nearTucked[0]} ${nearTucked[1]})`,
   };

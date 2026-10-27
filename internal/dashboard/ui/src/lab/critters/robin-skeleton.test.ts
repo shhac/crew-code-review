@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { transformPoint } from '../../lib/theme/christmas/parts-affine';
-import { partsLayers, partsPose } from '../../lib/theme/christmas/parts-pose';
+import { partsLayers, partsPivots, partsPose } from '../../lib/theme/christmas/parts-pose';
 import { robinSkeleton } from './robin-skeleton';
 
 const joint = (mode: string, now: number, code: string) => robinSkeleton(mode, now, false, false).joints.find((j) => j.code === code)?.at;
@@ -8,17 +8,18 @@ const joint = (mode: string, now: number, code: string) => robinSkeleton(mode, n
 describe("the robin's skeleton", () => {
   // A point a picture turns about stays put however far it turns, so each
   // joint is where its picture is drawn turning.
-  it('puts each joint where its picture turns, the head lower when it pecks', () => {
+  it('puts each joint where its picture turns: the head at its skull, lower when it pecks, the neck at its base, the body at its hip', () => {
     for (const [mode, now] of [['peck', 1120], ['tilt', 750], ['hop', 1250], ['flight', 100]] as const) {
-      const pose = partsPose(now, mode);
-      const head = partsLayers(pose).find((l) => l.id === 'head');
-      const at = joint(mode, now, 'SJ0');
-      expect(head && at, mode).toBeTruthy();
-      if (!head || !at) continue;
-      const turnedOnly = head.transform.replace(/rotate\([^)]*\)$/, '');
-      const [x, y] = transformPoint(turnedOnly, 82, pose.headPivotY);
-      expect(at.x, mode).toBeCloseTo(x, 6);
-      expect(at.y, mode).toBeCloseTo(y, 6);
+      const layers = partsLayers(partsPose(now, mode));
+      for (const [id, code, rest] of [['head', 'SJ0', partsPivots.skull], ['neck', 'SJ1', partsPivots.neckBase], ['body', 'SJ2', partsPivots.hip]] as const) {
+        const layer = layers.find((l) => l.id === id || (id === 'body' && l.id === 'body-peck'));
+        const at = joint(mode, now, code);
+        expect(layer && at, `${mode} ${code}`).toBeTruthy();
+        if (!layer || !at) continue;
+        const [x, y] = transformPoint(layer.transform, rest[0], rest[1]);
+        expect(at.x, `${mode} ${code}`).toBeCloseTo(x, 6);
+        expect(at.y, `${mode} ${code}`).toBeCloseTo(y, 6);
+      }
     }
     expect(joint('peck', 1120, 'SJ0')?.y).toBeGreaterThan((joint('peck', 0, 'SJ0')?.y ?? 0) + 5);
   });

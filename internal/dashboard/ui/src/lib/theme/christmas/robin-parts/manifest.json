@@ -10,6 +10,60 @@
     64,
     100
   ],
+  "joints": {
+    "skull": [
+      88,
+      36
+    ],
+    "neckBase": [
+      84,
+      52
+    ],
+    "hip": [
+      64,
+      76
+    ],
+    "body": [
+      64,
+      83
+    ],
+    "tail": [
+      46,
+      65
+    ],
+    "shoulder": [
+      79,
+      43
+    ],
+    "farShoulder": [
+      90,
+      42
+    ],
+    "nearLegRoot": [
+      59,
+      86
+    ],
+    "farLegRoot": [
+      72,
+      80
+    ],
+    "nearFoot": [
+      64,
+      102.1
+    ],
+    "farFoot": [
+      78,
+      101
+    ],
+    "nearTucked": [
+      65.85,
+      88.61
+    ],
+    "farTucked": [
+      77.71,
+      81.75
+    ]
+  },
   "parts": {
     "body": {
       "x": 35,

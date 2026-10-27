@@ -25,6 +25,11 @@ type Shown = {
   walking: readonly string[];
   // Its pace in a mode, given the dial's speed, when that differs (a hurry).
   pace?: (mode: string, speed: number) => number;
+  // Codes its skeleton's joints and bones had before (an old link's
+  // &joint= or &bone=, one without &codes=), by the codes they have now. A
+  // code can mean another joint now (the hedgehog's J1 was its foot, and is
+  // its elbow), so only an old link is read through them.
+  aliases?: Readonly<Record<string, string>>;
 };
 
 // Drawn from parts by a rig (lib/theme/rig): the lab draws its RigPose, and
@@ -44,11 +49,6 @@ export type RigCritter = Shown & {
   drawings?: Record<string, Drawing>;
   // What its bones are, for the lab's skeleton view.
   bones?: BoneNames;
-  // Codes its skeleton's joints and bones had before (an old link's
-  // &joint= or &bone=, one without &codes=), by the codes they have now. A
-  // code can mean another joint now (the hedgehog's J1 was its foot, and is
-  // its elbow), so only an old link is read through them.
-  aliases?: Readonly<Record<string, string>>;
 };
 
 // The props a ViewCritter's view takes. `marked` is the big one on the stage,
@@ -103,4 +103,4 @@ export const momentsOf = (rig: RigCritter): Moment[] => rig.modes.flatMap((mode)
 export const posesOf = (rig: RigCritter): RigPose[] => momentsOf(rig).map((at) => rig.pose(at, { gaze: 0, still: false }));
 
 // The code a joint or bone has now, for one an old link names.
-export const codeNow = (critter: Critter, code: string): string => (critter.kind === 'rig' ? critter.aliases?.[code] : undefined) ?? code;
+export const codeNow = (critter: Critter, code: string): string => critter.aliases?.[code] ?? code;
