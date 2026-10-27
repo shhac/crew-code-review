@@ -18,10 +18,10 @@ const ALL_BUT_LEGS = (plan: Plan): Plan => ({
   draws: plan.draws.filter((d) => d.kind !== 'image' || !/rabbit-(haunch|leg|foreleg|foot|paw)/.test(d.href)),
   guides: plan.guides.filter((g) => !LEG_MARKS.includes(g.name)),
 });
-// Nudging, its head nods at the back of its skull, where the old rig
-// turned it about the throat and swung the back of it off the body: so
-// there, all but its head and what is on it too (its eyelid, a lid and a
-// line, the only shapes it draws).
+// Nudging and grooming, its head nods at the back of its skull, where the
+// old rig turned it about the throat and swung the back of it off the
+// body: so there, all but its head and what is on it too (its eyelid, a
+// lid and a line, the only shapes it draws).
 const HEAD_MARKS = ['ear base', 'eye', 'nose'];
 const ALL_BUT_LEGS_AND_HEAD = (plan: Plan): Plan => {
   const legless = ALL_BUT_LEGS(plan);
@@ -31,17 +31,18 @@ const ALL_BUT_LEGS_AND_HEAD = (plan: Plan): Plan => {
     guides: legless.guides.filter((g) => !HEAD_MARKS.includes(g.name)),
   };
 };
-const butFor = (...poses: Pose[]) => (poses.includes('nudge') ? ALL_BUT_LEGS_AND_HEAD : ALL_BUT_LEGS);
-const nudging = (rig: typeof rabbit, nudge: boolean) => ({ ...rig, modes: rig.modes.filter((m) => (m === 'nudge') === nudge) });
+const NODDING: readonly string[] = ['nudge', 'groom'];
+const butFor = (...poses: Pose[]) => (poses.some((p) => NODDING.includes(p)) ? ALL_BUT_LEGS_AND_HEAD : ALL_BUT_LEGS);
+const nodding = (rig: typeof rabbit, nod: boolean) => ({ ...rig, modes: rig.modes.filter((m) => NODDING.includes(m) === nod) });
 
 describe('the rabbit on its skeleton', () => {
-  it('draws what its old rig drew, but for its legs (and nudging, its head), in every moment the lab shows, held still, and looking either way as far as it goes', () => {
+  it('draws what its old rig drew, but for its legs (and nudging and grooming, its head), in every moment the lab shows, held still, and looking either way as far as it goes', () => {
     const old = (at: Moment, look: { gaze: number; still: boolean }) => legacy(rabbitAt(at), { now: at.now, ...look });
-    expect(unlike(nudging(rabbit, false), old, 10, ALL_BUT_LEGS)).toEqual([]);
-    expect(unlike(nudging(rabbit, true), old, 10, ALL_BUT_LEGS_AND_HEAD)).toEqual([]);
+    expect(unlike(nodding(rabbit, false), old, 10, ALL_BUT_LEGS)).toEqual([]);
+    expect(unlike(nodding(rabbit, true), old, 10, ALL_BUT_LEGS_AND_HEAD)).toEqual([]);
   }, 60000);
 
-  it('draws what it drew, but for its legs (and into or out of a nudge, its head), as it eases from each pose into each other, which the lab does not show', () => {
+  it('draws what it drew, but for its legs (and into or out of a nudge or a groom, its head), as it eases from each pose into each other, which the lab does not show', () => {
     const poses: Pose[] = ['sit', 'alert', 'groom', 'hop', 'nudge', 'thump'];
     for (const was of poses) for (const pose of poses) for (const since of [0, 40, 90, 150, 220, 300]) {
       const r = { pose, was, walked: since / 9, since, seed: 1 };

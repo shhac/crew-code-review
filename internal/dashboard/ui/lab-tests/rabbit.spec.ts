@@ -48,10 +48,10 @@ test('each of the rabbit\'s modes lays its own key pose over it', async ({ page 
 // Its page pixels per drawing unit (rabbit-rig.ts's SCALE).
 const SCALE = 1.4;
 // Where the head lay over the body as the rabbit was drawn, each one's edge
-// stays within a pixel and a half of the other in every mode (sitting up to
-// groom, its head raised, the widest, closed to the eye): a nudge's head
+// stays within a pixel and a fifth of the other in every mode (sat up
+// alert, its head raised, the widest, closed to the eye): a nudge's head
 // turned nose down about the throat swung the back of it 2.3px off the
-// body, and the neck showed a notch.
+// body, and the neck showed a notch; a groom's, 1.4px.
 test('the rabbit\'s head stays on its neck in every mode', async ({ page }) => {
   test.setTimeout(120000);
   await page.goto('/lab/critters.html#animal=rabbit&mode=nudge&frame=0');
@@ -61,5 +61,5 @@ test('the rabbit\'s head stays on its neck in every mode', async ({ page }) => {
   const found = await seamOpening(page, 'rabbit-head', 'rabbit-body', at);
   expect(found).toHaveLength(at.length);
   const widest = found.reduce((a, b) => (b.by > a.by ? b : a));
-  expect(widest.by * SCALE, widest.at).toBeLessThan(1.5);
+  expect(widest.by * SCALE, widest.at).toBeLessThan(1.2);
 });

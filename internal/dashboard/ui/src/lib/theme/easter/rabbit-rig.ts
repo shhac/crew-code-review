@@ -234,9 +234,10 @@ function stance(rabbit: RigRabbit, look: RabbitLook): Stance {
     }
     case 'groom': {
       // Sat up, washing its face: both forepaws at the muzzle, stroking up
-      // over it as the head bobs down to them.
+      // over it as the head bobs down to them, nodding at the back of its
+      // skull, so it stays on its neck.
       const stroke = Math.sin((Math.PI * rabbit.since) / 450) ** 2;
-      return { ...still(turnAbout(-24, HIND, 0.6, 1.4), 22 + 10 * stroke, 10, 0), groom: { x: -0.4, y: 0.6 - 0.8 * stroke }, held: true };
+      return { ...still(turnAbout(-24, HIND, 0.6, 1.4), 0, 10, 0), groom: { x: -0.4, y: 0.6 - 0.8 * stroke }, held: true, nod: 22 + 10 * stroke };
     }
     case 'nudge': {
       // Head down to the ledge, nose pushing the egg along, rump up; the
