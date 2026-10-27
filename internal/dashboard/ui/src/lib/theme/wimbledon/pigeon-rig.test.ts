@@ -149,6 +149,16 @@ describe('pigeon rig', () => {
 // stay inside the envelope the model had for that moment, and never below
 // the ledge.
 describe('pigeon rig in flight', () => {
+  it('marks its toes\' tip on the foot it draws, its toes drawn together tucked up', () => {
+    const pose = pigeonRig(pigeon('fly'), { now: 0, still: false });
+    const near = pose.skeleton!.joints.find((j) => j.code === 'L2J4')!;
+    const curled = flatLayers(pose.layers).find((l) => l.kind === 'piece' && l.id === 'L2 foot (curled)' && l.opacity !== 0);
+    if (curled?.kind !== 'piece') throw new Error('no curled near foot drawn');
+    const [a, b, c, d, e, f] = curled.matrix;
+    const { x, y, width, height } = curled.box;
+    expect([near.at.x, near.at.y]).toEqual([expect.closeTo(a * (x + width) + c * (y + height) + e, 9), expect.closeTo(b * (x + width) + d * (y + height) + f, 9)]);
+  });
+
   const PAGE = overview();
   const SKY = skyOf(PAGE);
   const inside = (pose: RigPose, env: { half: number; up: number; down: number }, what: string) => {

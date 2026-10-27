@@ -307,8 +307,24 @@ export function compose(body: Body, poseAt: (now: number) => PoseSpec, now: numb
   });
   const layers = painted.flatMap((p) => p.layers);
 
+  // A toes' tip is the far corner of its foot's picture under the sole, as
+  // the flat foot stands at rest; where the foot shows another picture (its
+  // toes drawn together), that one's.
+  const tips = new Map(skeleton.limbs.flatMap((limb, n) => {
+    const { tip } = limb.joints;
+    const shownOther = layout.feet[n].flatMap((i) => {
+      const piece = body.pieces[i];
+      const variants = artOf(piece);
+      const shown = pose.show[piece.id];
+      const art = variants.find(([key]) => key === shown)?.[1];
+      return shown && art?.box && shown !== variants[0][0] ? [{ box: art.box, matrix: placings[i].matrix }] : [];
+    })[0];
+    if (!tip || !shownOther) return [];
+    const { box, matrix } = shownOther;
+    return [[tip, applied(matrix, { x: box.x + box.width, y: box.y + box.height })] as const];
+  }));
   const joints: PosedJoint[] = skeleton.joints.map((j, i) => ({
-    id: j.id, code: layout.joints[i].code, name: j.name, at: posed.point(j.id), derived: !!j.derived, far: layout.joints[i].far, parent: j.parent,
+    id: j.id, code: layout.joints[i].code, name: j.name, at: tips.get(j.id) ?? posed.point(j.id), derived: !!j.derived, far: layout.joints[i].far, parent: j.parent,
     angle: pose.joints[j.id]?.angle ?? 0, ...(j.limits ? { limits: j.limits } : {}),
   }));
   // How low a limb's foot reaches: its foot's pictures as seen, or the foot
