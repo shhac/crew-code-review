@@ -61,15 +61,16 @@ const INK = '#111111';
 // Six legs from the thorax's underside, the sockets measured off the
 // reference's. A wasp's legs lengthen front to back, about 0.45, 0.55 and
 // 0.7 of her body; a vespid's front tibia is shorter than its femur, the
-// middle about as long, the hind longer (Silveira et al. 2024), and a whole
-// tarsus about 1.3 femurs (a honeybee's hind leg: AL-Kahtani and Taha
-// 2021). Each pair's legs are alike, the far side's seen past her body;
-// each sprawls out to the side as she stands (insect.ts's sprawled), its
-// tarsus lying out along the surface.
+// middle about as long, the hind clearly longer, its coxa large (Silveira
+// et al. 2024), and a whole tarsus about 1.3 femurs (a honeybee's hind leg:
+// AL-Kahtani and Taha 2021). Each pair's legs are alike, the far side's
+// seen past her body; each sprawls out to the side as she stands
+// (insect.ts's sprawled), its tarsus lying out along the surface, the hind
+// pair stretched back so their knees stay under her gaster.
 const SEGMENTS: Segments = {
-  fore: { coxa: 0.8, femur: 3, tibia: 2.6, tarsus: 3.8, lean: 70, curl: 25 },
-  mid: { coxa: 0.9, femur: 3.4, tibia: 3.4, tarsus: 4.4, lean: 70, curl: 20 },
-  hind: { coxa: 1.1, femur: 4, tibia: 4.8, tarsus: 5.2, lean: 70, curl: 20 },
+  fore: { coxa: 0.8, femur: 3, tibia: 2.6, tarsus: 3.8, lean: 70, curl: 25, out: 0.8 },
+  mid: { coxa: 0.9, femur: 3.4, tibia: 3.4, tarsus: 4.4, lean: 70, curl: 20, out: 0.8 },
+  hind: { coxa: 2.0, femur: 3.2, tibia: 5.4, tarsus: 4.4, lean: 50, curl: 20, out: 0.88 },
 };
 const LEGS: readonly InsectLeg[] = sprawledLegs([
   { pair: 'fore', far: false, hip: { x: 19.6, y: 7.4 } },
@@ -105,7 +106,7 @@ export const CRUISE = 200;
 // Shuffling on the cake, a tripod: each shuffle (wasp.ts's) one tripod's
 // step, SHUFFLE page px, half the gait's cycle, so every foot is down
 // before and after it.
-export const SHUFFLE = 4;
+export const SHUFFLE = 3;
 const SHUFFLING = insectGait(LEGS, 'tripod', strideFor('tripod', (2 * SHUFFLE) / SCALE), 0.6);
 
 // What she is doing, as far as the drawing cares.
@@ -136,8 +137,9 @@ function tapping(seed: number, now: number): [number, number] {
 function hold(w: RigWasp, now: number): Hold {
   switch (w.pose) {
     case 'feed':
-      // Head down, jaws to the sugar, the front of her lowered a little.
-      return { swept: 0, pitch: 7, bob: 2.5, gaster: 2, head: 30, taps: tapping(w.seed, now), legs: (hips) => walkingGoals(LEGS, hips, w.walked, GROUND, SHUFFLING) };
+      // Head down, jaws to the sugar, nose down rather than crouched, her
+      // legs still standing under her.
+      return { swept: 0, pitch: 14, bob: 1.6, gaster: 2, head: 30, taps: tapping(w.seed, now), legs: (hips) => walkingGoals(LEGS, hips, w.walked, GROUND, SHUFFLING) };
     case 'hover': {
       const pitch = pitchAt(PITCHING, 0);
       return { swept: 0, pitch, bob: hoverBob(w.seed, now, 0.8, 2), gaster: -2, head: 10, taps: [0, 0], legs: (hips) => airGoals(LEGS, hips, { hang: 0.45, reach: 0, pitch }) };

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { unlike } from '../../../lab/critters/equivalence';
+import type { RigCritter } from '../../../lab/critters/critter';
 import { wasp, waspAt } from '../../../lab/critters/wasp';
 import { planDiff, planOf, type Plan } from '../rig/skeleton/plan';
 import type { WaspPose } from './footprints';
@@ -11,7 +12,8 @@ import { waspRig as legacy } from './wasp-rig-legacy';
 // model moves rather than bobbing with her body; and her legs, now
 // real bones from a swinging coxa, sprawled out to the side and seen
 // foreshortened, stepping as far as a real one's do, and the marks on
-// their joints.
+// their joints. Feeding, she now stands nose down rather than crouched, so
+// only her other modes still match.
 const MOVES = 'body (moves here)';
 const LEG_MARKS = ['coxa', 'trochanter', 'knee', 'tibiotarsal joint', 'claws'];
 const LEGS = ['near legs', 'far legs'];
@@ -23,11 +25,12 @@ const ALL_BUT_MOVES = (plan: Plan): Plan => ({
 
 describe('the wasp on her skeleton', () => {
   it('draws what her old rig drew in every moment the lab shows, held still, and leaning either way as far as she leans', () => {
-    expect(unlike(wasp, (at, look) => legacy(waspAt(at, look.gaze), { now: at.now, still: look.still }), 10, ALL_BUT_MOVES)).toEqual([]);
+    const asBefore: RigCritter['pose'] = (at, look) => (at.mode === 'feed' ? wasp.pose(at, look) : legacy(waspAt(at, look.gaze), { now: at.now, still: look.still }));
+    expect(unlike(wasp, asBefore, 10, ALL_BUT_MOVES)).toEqual([]);
   }, 60000);
 
   it('draws what she drew in every pose through its whole motion, at every speed, wings folding and beating', () => {
-    const poses: WaspPose[] = ['standing', 'feed', 'hover', 'land', 'cruise'];
+    const poses: WaspPose[] = ['standing', 'hover', 'land', 'cruise'];
     for (const pose of poses) for (const speed of [0, 60, 200]) for (let i = 0; i < 60; i += 1) {
       const w: RigWasp = { pose, seed: 2, walked: i * 0.13, speed, lean: (i % 3) * 15 - 15, wings: (i % 5) / 4 };
       const look = { now: i * 29, still: false };

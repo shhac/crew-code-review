@@ -62,9 +62,9 @@ const POLLEN = '#f2a516';
 // far side's seen past her body; each sprawls out to the side as she
 // stands (insect.ts's sprawled), its tarsus lying out along the bell.
 const SEGMENTS: Segments = {
-  fore: { coxa: 0.5, femur: 1.9, tibia: 1.7, tarsus: 2.7, lean: 70, curl: 25 },
-  mid: { coxa: 0.5, femur: 2.1, tibia: 2.2, tarsus: 2.9, lean: 70, curl: 20 },
-  hind: { coxa: 0.6, femur: 2.5, tibia: 3, tarsus: 3.8, lean: 70, curl: 20 },
+  fore: { coxa: 0.5, femur: 1.9, tibia: 1.7, tarsus: 2.7, lean: 70, curl: 25, out: 0.8 },
+  mid: { coxa: 0.5, femur: 2.1, tibia: 2.2, tarsus: 2.9, lean: 70, curl: 20, out: 0.8 },
+  hind: { coxa: 0.6, femur: 2.5, tibia: 3, tarsus: 3.8, lean: 70, curl: 20, out: 0.85 },
 };
 const LEGS: readonly InsectLeg[] = sprawledLegs([
   { pair: 'fore', far: false, hip: { x: 14.75, y: 8.59 } },

@@ -31,8 +31,10 @@ const BONES = ['coxa', 'femur (with the trochanter)', 'tibia', 'tarsus'] as cons
 // but never quite straightens it.
 const KNEE = { min: 25, max: 172 } as const;
 // How far the coxa protracts (positive, forward) or retracts from where it
-// rests, degrees.
+// rests, degrees; and how far toward the claws it is turned at rest from
+// hanging straight down, as a bee's and a wasp's hang under the thorax.
 const SWING = { min: -60, max: 60 } as const;
+const COXA_TOWARD = 0.25;
 
 // A leg by its bones, its socket where the drawing has it; where its claws
 // stand is the leg's own, from how it sprawls (sprawled).
@@ -43,23 +45,23 @@ type Jointed = Omit<InsectLeg, 'reach' | 'bend' | 'track'>;
 // front to hind (Guschlbauer et al. 2022), so the front claws work ahead of
 // their sockets, the middle ones from ahead to behind, the hind behind.
 const HEADING = { fore: 58, mid: 96, hind: 126 } as const;
-// How far a standing leg reaches out from its socket to its claws, of its
-// whole length: most of it, the knee bent, riding high; the hind legs
-// furthest, stretched back behind the body.
-const OUT = { fore: 0.8, mid: 0.8, hind: 0.85 } as const;
 
 // Where a leg is and which: its socket, and each pair's bones, alike on
-// both sides.
+// both sides, and how far it reaches out from its socket to its claws
+// standing, of its whole length: most of it, the knee bent, riding high.
 export type Socket = Pick<InsectLeg, 'pair' | 'far' | 'hip'>;
-export type Segments = Readonly<Record<InsectLeg['pair'], Omit<Jointed, keyof Socket>>>;
+export type Segments = Readonly<Record<InsectLeg['pair'], Omit<Jointed, keyof Socket> & { out: number }>>;
 
 // Each leg with its claws set where it sprawls to, `ground` below the
 // drawing's top.
 export const sprawledLegs = (sockets: readonly Socket[], segments: Segments, ground: number): InsectLeg[] =>
-  sockets.map((socket) => sprawled({ ...socket, ...segments[socket.pair] }, ground));
-function sprawled(leg: Jointed, ground: number): InsectLeg {
+  sockets.map((socket) => {
+    const { out, ...bones } = segments[socket.pair];
+    return sprawled({ ...socket, ...bones }, out, ground);
+  });
+function sprawled(leg: Jointed, share: number, ground: number): InsectLeg {
   const length = leg.coxa + leg.femur + leg.tibia + leg.tarsus;
-  const out = Math.sqrt(Math.max(0, (OUT[leg.pair] * length) ** 2 - (ground - leg.hip.y) ** 2));
+  const out = Math.sqrt(Math.max(0, (share * length) ** 2 - (ground - leg.hip.y) ** 2));
   const heading = rad(HEADING[leg.pair]);
   return { ...leg, reach: out * Math.cos(heading), track: out * Math.sin(heading), bend: leg.pair === 'fore' ? 1 : -1 };
 }
@@ -114,11 +116,12 @@ export function insect(m: InsectMeasured): Insect {
   const at = (leg: InsectLeg, k: number) => `${codeOfLeg(leg)}J${k}`;
   const side = (leg: InsectLeg): Side => (leg.far ? 'far' : 'near');
   // Where each leg's claws stand at rest, and its trochanter: the coxa's
-  // end, along the line from its socket to them.
+  // end, the coxa hanging down from its socket, turned part way toward
+  // them.
   const claws = (leg: InsectLeg): Point => ({ x: leg.hip.x + leg.reach, y: m.ground });
   const rested = (leg: InsectLeg) => bearing(leg.hip, claws(leg));
   const trochanter = (leg: InsectLeg): Point => {
-    const along = Math.atan2(m.ground - leg.hip.y, leg.reach);
+    const along = rad(90 + (rested(leg) - 90) * COXA_TOWARD);
     return { x: leg.hip.x + leg.coxa * Math.cos(along), y: leg.hip.y + leg.coxa * Math.sin(along) };
   };
   const legJoints = (leg: InsectLeg): JointSpec[] => ([0, 1, 2, 3, 4] as const).map((k) => ({

@@ -3,7 +3,7 @@ import type { Point } from '../pointer';
 import type { RigPose } from '../rig/rig';
 import { flatLayers, legsOf, lidsOf, rigBounds } from '../rig/test-rig';
 import { FOOTPRINTS, STAND, type WaspPose } from './footprints';
-import { ANCHOR, GROUND, SCALE, waspRig, type RigWasp } from './wasp-rig';
+import { ANCHOR, GROUND, SCALE, SHUFFLE, waspRig, type RigWasp } from './wasp-rig';
 
 const POSES: WaspPose[] = ['standing', 'feed', 'hover', 'land', 'cruise'];
 const grounded = (pose: WaspPose) => pose === 'standing' || pose === 'feed';
@@ -52,6 +52,13 @@ describe('the wasp', () => {
       const shuffling = feet(waspRig(wasp('feed', { walked: m.walked }), { now: m.now, still: false }));
       expect(shuffling.filter((f) => Math.abs(f.y - GROUND) < 1e-9).length).toBeGreaterThanOrEqual(3);
       expect(Math.max(...shuffling.map((f) => f.y))).toBeLessThanOrEqual(GROUND + 1e-9);
+    }
+  });
+
+  it('has all six feet down between shuffles, out or back, a shuffle being one tripod\'s step', () => {
+    for (const n of [-2, -1, 0, 1, 2, 3]) {
+      const down = feet(waspRig(wasp('feed', { walked: (n * SHUFFLE) / SCALE }), { now: 0, still: false }));
+      expect(down.filter((f) => Math.abs(f.y - GROUND) < 1e-6), `after ${n} shuffles`).toHaveLength(6);
     }
   });
 
