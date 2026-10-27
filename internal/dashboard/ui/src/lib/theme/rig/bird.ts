@@ -4,7 +4,7 @@ import { cycleLength, rotate } from '../spidergait';
 import { flexion, gaitPhase, restingFeet, type Gait, type Limb, type Step, type Toes } from './gait';
 import { jointBeside } from './limb';
 import type { ArtLeg, Foot, Guide } from './rig';
-import { held, solveHinged, wrap } from './skeleton/hinge';
+import { cleared, depth, held, solveHinged, wrap } from './skeleton/hinge';
 import type { Goal, Hinge, HingedLeg } from './skeleton/types';
 
 // A bird's two legs (July's pigeons, August's gulls, September's crows). A
@@ -105,13 +105,6 @@ function withinIntertarsal(turnAt: (lean: number) => number, lean: number): numb
   return mended;
 }
 
-// How far below the metatarsophalangeal joint a foot's drawing reaches,
-// turned `paw` degrees about it.
-function depth(foot: Foot, paw: number): number {
-  const corners = [0, foot.width].flatMap((x) => [0, foot.height].map((y) => ({ x: x - foot.heel.x, y: y - foot.heel.y })));
-  return Math.max(...corners.map((c) => rotate(c, { x: 0, y: 0 }, paw).y));
-}
-
 // One leg on the ground or stepping, from its hip to where its foot goes
 // (the metatarsophalangeal joint's place before any peel). Given the
 // ground, a swinging foot is lifted as far as it must be for its toes to
@@ -166,9 +159,6 @@ const hingedOf = (spec: Stood): HingedLeg => ({
 // The leg it is as skeleton/hinge.ts bends it, for the laws.
 export const hingedLegOf = hingedOf;
 
-// A hair over what clears the ground, so the lifts settle above it.
-const CLEARANCE = 1e-6;
-
 // One such leg toward its goal. As a foot pushes off, its joint peels up
 // over the toe tips, which stay planted, the toes turning with it as far
 // as they are still pinned; given the ground, a swinging foot is lifted as
@@ -184,16 +174,9 @@ export function hingedBirdLimb(spec: Stood, hip: Point, goal: Extract<Goal, { ki
     const limb = solveHinged(leg, hip, goal, () => ({ x: peeledTo.x, y: peeledTo.y - lift }));
     return { ...limb, paw: limb.paw + peel * pinned, curled };
   };
-  const first = posed(0);
-  if (ground === undefined || goal.step?.down !== false) return first;
+  if (ground === undefined || goal.step?.down !== false) return posed(0);
   const drawn = (curled && spec.art.curled) || spec.art.foot;
-  const under = (limb: Limb) => Math.max(0, limb.foot.y + depth(drawn, limb.paw) - ground);
-  // Lifted, its toes may turn and its reach move, so it is lifted again by
-  // what is still under, until it clears.
-  return Array.from({ length: 12 }).reduce<{ limb: Limb; lift: number }>(({ limb, lift }) => {
-    const more = under(limb);
-    return more ? { limb: posed(lift + more + CLEARANCE), lift: lift + more + CLEARANCE } : { limb, lift };
-  }, { limb: first, lift: 0 }).limb;
+  return cleared(posed, (limb) => Math.max(0, limb.foot.y + depth(drawn, limb.paw) - ground));
 }
 
 // Where a bird's legs end standing, `ground` being where its toes stand: on

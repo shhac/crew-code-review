@@ -16,9 +16,7 @@ const KNOWN = {
   },
   fox: {
     bonesKeepLength: 'trotting, a foot beyond thigh and shin straightens the leg and the shank stretches to the hock (spidergait\'s knees)',
-    plantedFeetHold: 'leaping and digging, the feet are set under the hips the body turns (restingFeet from the turned hips)',
-    anklesBehindToes: 'trotting, a planted paw late in its stance has its wrist or hock ahead of its toes',
-    noFootBelowLedge: 'a paw folding toes down as it lifts turns its box about the heel, so its toes dip under the ledge before the foot is clear',
+    plantedFeetHold: 'digging, a forepaw scrapes back through the snow while it is down, as a dig does',
     footprintsHold: 'in every mode the leg pieces\' caps and folding paws reach under the ledge by under a pixel',
   },
   rabbit: { footprintsHold: 'a leg piece\'s rounded cap, turned with the foot, reaches about 0.29px under the ledge, as the page has always drawn it (counted as squares round each joint, as legs were before its skeleton, it never showed)' },

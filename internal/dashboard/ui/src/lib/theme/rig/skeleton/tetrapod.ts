@@ -167,7 +167,8 @@ export function tetrapod<L extends ArtLeg>(preset: Preset, m: Measured<L>): Tetr
     if (isHinged(leg)) {
       const { hip, far, fore, bend, bendFrame, jointLimits, paw, ...bones } = leg;
       const bent = { ...bones, side: bend === 1 ? -1 : 1, ...(jointLimits ? { knee: jointLimits } : {}) } as const;
-      return { ...limb, solve: 'hinged', leg: { ...bent, paw: { ...paw, rest: paw.rest ?? restingPaw(bent, hip, m.ground(leg)) } } };
+      const print = { width: leg.art.foot.width, height: leg.art.foot.height, heel: leg.art.foot.heel };
+      return { ...limb, solve: 'hinged', leg: { ...bent, print, paw: { ...paw, rest: paw.rest ?? restingPaw(bent, hip, m.ground(leg)) } } };
     }
     const { hip, far, fore, ...quad } = leg;
     return { ...limb, solve: 'quad', leg: quad };

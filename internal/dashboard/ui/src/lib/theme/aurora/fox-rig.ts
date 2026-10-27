@@ -193,7 +193,8 @@ export function foxRig(fox: RigFox, look: FoxLook): RigPose {
   const { body, head: angle, tail, feet, steps = [], held } = stance(fox, look);
   const joints = { skull: { angle }, tail: { angle: tail } };
   const at = feet(FOX.hips({ root: body, joints }));
-  const limbs = FOX.limbs(at.map((p, i) => ({ kind: 'plant', at: p, step: steps[i], ...held?.(LEGS[i]) })));
+  // A paw off the ground is kept clear of the snow its toes would dip into.
+  const limbs = FOX.limbs(at.map((p, i) => ({ kind: 'plant', at: p, step: steps[i], ground: GROUND, ...held?.(LEGS[i]) })));
   const shapes = { eyelid: lidLayers(!look.still && blinking(fox.seed, look.now), EYE, 0.85, FACE) };
   return compose(FOX.body, () => ({ root: body, joints, limbs, show: {}, z: {}, shapes }), look.now);
 }

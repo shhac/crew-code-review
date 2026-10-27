@@ -65,8 +65,11 @@ export type Hinge = { rest?: number; limits: Limits; planted?: Limits };
 // a toe walker's toes turn from the bone up to them once nothing pins them
 // (positive curls them under), which they ease into as the paw lifts;
 // where it does not say, they keep the turn they had planted, so a lifted
-// paw keeps its planted shape.
-export type HingedLeg = Omit<QuadLeg, 'hip' | 'far' | 'fore' | 'bend' | 'bendFrame' | 'jointLimits'> & { side: 1 | -1; knee?: Limits; paw: Hinge; digits?: number };
+// paw keeps its planted shape. `print`: its foot's picture, which a
+// swinging foot lifts clear of the ground a plant goal gives.
+export type HingedLeg = Omit<QuadLeg, 'hip' | 'far' | 'fore' | 'bend' | 'bendFrame' | 'jointLimits'> & { side: 1 | -1; knee?: Limits; paw: Hinge; digits?: number; print?: Print };
+// A foot's picture's box about its joint, for the ground it must clear.
+export type Print = { width: number; height: number; heel: Point };
 // An arm (a cupid's): two bones from the shoulder to the wrist, the elbow to
 // `side` of the line between unless its goal says otherwise, the fist along
 // the forearm (limb.ts's jointBeside). At rest it reaches `reach` ahead of

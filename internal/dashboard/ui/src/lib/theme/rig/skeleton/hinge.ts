@@ -171,7 +171,7 @@ export function restingPaw(leg: Omit<HingedLeg, 'paw'>, hip: Point, ground: numb
 }
 
 // The leg posed from `hip` toward its goal, `target` where its toes go.
-export function solveHinged(leg: HingedLeg, hip: Point, goal: Goal, target: () => Point): Limb {
+function posedHinged(leg: HingedLeg, hip: Point, goal: Goal, target: () => Point): Limb {
   const paw = { rest: leg.paw.rest ?? 0, limits: leg.paw.limits };
   if (goal.kind === 'angles') {
     if (leg.walksOn) throw new Error('hinge: only a leg with nothing to stand on is posed by angles');
@@ -219,4 +219,37 @@ export function solveHinged(leg: HingedLeg, hip: Point, goal: Goal, target: () =
   const knee = jointBeside(hip, heel, leg.thigh, leg.shin, side);
   if (contact === 1) return { hip, knee, ankle: heel, foot: heel, paw: peel };
   return soled(between(free, { hip, knee, ankle: heel, foot: tips }, contact));
+}
+
+// How far below the foot's joint its picture reaches, turned `paw` degrees
+// about it: the lowest of its box's corners.
+export function depth(foot: { width: number; height: number; heel: Point }, paw: number): number {
+  const corners = [0, foot.width].flatMap((x) => [0, foot.height].map((y) => ({ x: x - foot.heel.x, y: y - foot.heel.y })));
+  return Math.max(...corners.map((c) => rotate(c, { x: 0, y: 0 }, paw).y));
+}
+
+// A hair over what clears the ground, so a lifted foot settles above it
+// and never reads as down.
+const CLEARANCE = 1e-4;
+
+// Lifted as far as `under` says it is under the ground still, a few times
+// over, since a lift may turn the foot or move its reach.
+export function cleared(posed: (lift: number) => Limb, under: (limb: Limb) => number): Limb {
+  return Array.from({ length: 12 }).reduce<{ limb: Limb; lift: number }>(({ limb, lift }) => {
+    const more = under(limb);
+    return more ? { limb: posed(lift + more + CLEARANCE), lift: lift + more + CLEARANCE } : { limb, lift };
+  }, { limb: posed(0), lift: 0 }).limb;
+}
+
+// The leg posed toward its goal; given the ground, a foot not planted
+// (swinging, or held free) is lifted as far as its picture (the leg's
+// `print`) needs to clear it.
+export function solveHinged(leg: HingedLeg, hip: Point, goal: Goal, target: () => Point): Limb {
+  const ground = goal.kind === 'plant' ? goal.ground : undefined;
+  const print = leg.print;
+  if (ground === undefined || !print || goal.kind !== 'plant' || held(goal, leg.walksOn?.kind === 'sole').contact === 1) return posedHinged(leg, hip, goal, target);
+  return cleared((lift) => posedHinged(leg, hip, goal, () => {
+    const to = target();
+    return { x: to.x, y: to.y - lift };
+  }), (limb) => Math.max(0, limb.foot.y + depth(print, limb.paw) - ground));
 }
