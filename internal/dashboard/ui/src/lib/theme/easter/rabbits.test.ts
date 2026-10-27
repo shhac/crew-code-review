@@ -20,12 +20,13 @@ const live = (g: Rabbits, from: number, to: number, rand: () => number, cursor: 
   steps(g, from, to, (s, t) => takeEggs(stepRabbits(s, page, t, 50, rand, cursor(t) && { ...cursor(t)!, at: t }, canLay)).group);
 
 // The dashboard page with a control standing on the heading rule, and the
-// box each rabbit drawn on it takes up.
+// box each rabbit drawn on it takes up: none for one faded out, gone past
+// its ledge's end as it leaves.
 const dashboard = dashboardPage([{ left: 900, right: 1000, top: 135, bottom: 158 }]);
 const boxesOf = (g: Rabbits, page = dashboard) => g.rabbits.flatMap((r) => {
   const v = rabbitView(r, page);
   const { width, height } = POSES[v?.pose ?? 'sit'];
-  return v ? [{ left: v.x - width / 2, right: v.x + width / 2, top: v.y - height, bottom: v.y }] : [];
+  return v && v.opacity > 0 ? [{ left: v.x - width / 2, right: v.x + width / 2, top: v.y - height, bottom: v.y }] : [];
 });
 // A cursor that comes and lingers by each ledge in turn, then leaves.
 const visits = (t: number) => (Math.floor(t / 6000) % 2 === 1 ? { x: 320 + ((t / 8) % 960), y: [160, 182][Math.floor(t / 12000) % 2] - 12 } : null);

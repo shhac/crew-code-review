@@ -99,7 +99,7 @@ const TOES = GROUND - (PAW.height - PAW.heel.y);
 // heel peels up as it pushes off, and open from it again as the leg trails.
 const HIND_LEG = {
   art: HIND_ART, width: 1.9, thigh: 3.3, shin: 3.6, bend: 1, jointLimits: { min: 25, max: 180 }, fore: false, haunch: 3.2, taper: true, reach: -3.1,
-  walksOn: { kind: 'sole', toes: { x: FOOT.width - FOOT.heel.x, y: FOOT.height - FOOT.heel.y }, peel: 62, fold: 90 }, paw: { limits: { min: -15, max: 135 } },
+  walksOn: { kind: 'sole', toes: { x: FOOT.width - FOOT.heel.x, y: FOOT.height - FOOT.heel.y }, peel: 62, fold: 150 }, paw: { limits: { min: -15, max: 135 } },
 } as const;
 const FORE_LEG = { art: FORE_ART, width: 1.45, thigh: 2.6, shin: 2.6, bend: -1, jointLimits: { min: 30, max: 175 }, fore: true, haunch: 1.7, reach: 1.8, walksOn: { kind: 'toes', length: 0.8, lean: 35, fold: 89 }, paw: { limits: { min: -70, max: 95 }, planted: { min: -70, max: -12 } }, digits: -15 } as const;
 const LEGS: HingedArtLeg[] = [
@@ -185,7 +185,9 @@ function hopping(walked: number): Stance {
   const air = Math.sin(Math.PI * clamp((p - 0.1) / 0.8, 0, 1));
   // Pushed off, the hind legs stay stretched out behind for the first of
   // their swing, the hock opened so the long foot streams out after the
-  // shank, before they fold and come forward under the body.
+  // shank, near in line with it at the most, before they fold and come
+  // forward under the body: the hock closing ahead of the lift, so the
+  // long foot swinging forward never hangs down into the ledge.
   const trail = (step: Step) => (step.down ? 0 : Math.sin(Math.PI * clamp(step.t / 0.6, 0, 1)));
   const foot = (f: Point, i: number): Point => {
     if (fore(i)) return { x: f.x, y: f.y - HEEL + TOES - paws(s.steps[i]) };
@@ -199,7 +201,7 @@ function hopping(walked: number): Stance {
     // carries them, so a planted foot stays put as the body rocks over it.
     feet: () => s.feet(LEGS.map((l) => l.hip)).map(foot),
     steps: s.steps,
-    opens: (i) => (fore(i) ? undefined : trail(s.steps[i])),
+    opens: (i) => (fore(i) ? undefined : trail(s.steps[i]) ** 2),
   };
 }
 
