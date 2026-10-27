@@ -1,6 +1,6 @@
 import { clamp, smooth } from '../math';
 import type { Point } from '../pointer';
-import { birdStepping, birdWalk, curledIn, feetLine, headBob, INTERTARSAL_HINGE, stepRise, type AirLegs, type HingedBirdLeg } from '../rig/bird';
+import { birdStepping, birdWalk, curledIn, feetLine, headBob, INTERTARSAL_HINGE, rehung, stepRise, type AirLegs, type HingedBirdLeg } from '../rig/bird';
 import { flightAt, flightsOf, gaitPhase, type Gait } from '../rig/gait';
 import { gazeFrom } from '../rig/gaze';
 import { blinking, breath } from '../rig/life';
@@ -88,40 +88,49 @@ const looking = (gaze: number) => ({ neck: { angle: gaze - Math.min(gaze, SKULL_
 // The nictitating membrane: pale blue-grey, drawn across the eye.
 const MEMBRANE: Fur = { fill: '#aab9c7', outline: '#0b0c0e' };
 
-// The legs, as the reference's are: the hips high in the body, the femur
-// forward and down to the knee in the belly feathers, the feathered
-// drumstick down and back to the intertarsal joint where the trousers end,
-// the bare tarsus leaning its foot end forward to the toes. Measured on the
-// reference: the trousers end 21.8 units down, the toes' joint 25.55, the
-// tarsus about 4 units, leaning 9 (far) to 28 (near) degrees, here 16. The
+// The legs, as a crow's are, much of them hidden in the body: the hips high
+// in it, each femur forward and a little down to the knee in the belly
+// feathers, the tibiotarsus down and back from there to the intertarsal
+// joint where the trousers end, only its foot end showing as the feathered
+// drumstick, the bare tarsus leaning its foot end forward to the toes.
+// Measured on the reference: the trousers end 21.8 units down, the toes'
+// joint 25.55, the tarsus about 4 units, leaning 9 (far) to 28 (near)
+// degrees, here 16, the drumstick's slope with it; the hidden bones are a
+// crow's against the tarsus (femur about 0.75 of it, tibiotarsus 1.35), so
+// the knee sits up the drumstick's line, the drumstick's piece drawn as long
+// as it is seen and held on the tibiotarsus. The
 // bar runs on 0.55 units into the foot's picture, to where the toes part,
 // which is its joint; the picture keeps of the tarsus only a knob round it
 // (design-docs/art.py's knobbed), so it turns there without a stub standing
 // out from the bar.
 const FOOT = { src: footArt, fur: footFurArt, width: 5.58, height: 2.5, heel: { x: 2.18, y: 0.85 } };
 const CURLED = { src: curledArt, fur: curledFurArt, width: 2.42, height: 2.67, heel: { x: 0.85, y: 0.69 } };
+const HAUNCH = 1.6;
 const LEG_ART: LimbArt = {
-  bone: tarsusArt, boneFur: tarsusFurArt, knee: true, inBody: true,
+  bone: tarsusArt, boneFur: tarsusFurArt, knee: true, inBody: true, upperShown: 2.4 + HAUNCH / 2,
   thigh: { src: drumstickArt, fur: drumstickFurArt }, foot: FOOT, curled: CURLED,
 };
 const LEG = {
-  art: LEG_ART, width: 0.85, haunch: 1.6, thigh: 2.5, shin: 2.4, bend: 1, fore: false,
+  art: LEG_ART, width: 0.85, haunch: HAUNCH, thigh: 3.4, shin: 6, bend: 1, fore: false,
   walksOn: { kind: 'toes', length: 4.47, lean: 16, fold: -40 }, toes: { x: 3.4, y: 1.65 }, peel: 22, paw: INTERTARSAL_HINGE,
 } as const;
+// The hips where the femur from each knee puts them, the far well behind
+// the near, as the reference stands them.
+const HIP = { x: 23.39, y: 15.69 };
 const LEGS: HingedBirdLeg[] = [
-  { ...LEG, hip: { x: 20.4, y: 17.6 }, reach: -0.6, far: true },
-  { ...LEG, hip: { x: 22.6, y: 17.9 }, reach: 0.9, far: false },
+  { ...LEG, hip: { x: HIP.x - 2.2, y: HIP.y - 0.3 }, reach: 19.8 - (HIP.x - 2.2), far: true },
+  { ...LEG, hip: HIP, reach: 23.5 - HIP.x, far: false },
 ];
 const FEET = feetLine(GROUND, FOOT);
 
 // The walk: one foot after the other, each down for 0.6 of the stride, the
 // head bobbing once a step, its thrust about 0.45 of it (0.15s of thrust to
-// 0.2s of hold; the harvest note's research). Each foot sweeps as far as
-// these legs reach while it is down, a cycle of 10.5 units (about 14cm on
-// a carrion crow; Elbroch and Marks give an American crow's walking stride
-// as 11.4 to 20.3cm), so about four steps a second at 20px/s; the note's
-// three a second would want longer legs than these.
-const WALK = birdWalk(6.3, 1.1);
+// 0.2s of hold; the harvest note's research): about three steps a second
+// at 20px/s, as the note has it, a cycle of 14 units (about 18cm on a
+// carrion crow; Elbroch and Marks give an American crow's walking stride as
+// 11.4 to 20.3cm), which its legs, a crow's long hidden bones and all,
+// carry.
+const WALK = birdWalk(8.4, 1.1);
 const THRUST = 0.45;
 // In a hurry, it skips: crows walk, but hop in corvid fashion when they
 // hurry (Birds of the World), as magpies, walking slowly, take to hopping
@@ -166,11 +175,12 @@ const GLIDE: WingPose = { lift: 4, sweep: 5, fold: 10 };
 // drawings show them, they would swing down past its low flare's footprint
 // on their way to reach); reaching forward to land, its toes spread forward
 // and a little down (the landing drawing).
-const CROW_AIR: AirLegs = {
+// (Set on its legs before they had their true hidden bones, and held so.)
+const CROW_AIR: AirLegs = rehung({
   tucked: { ankle: { x: -0.3, y: 0.6 }, lean: 105 },
   trailing: { ankle: { x: -0.45, y: 0.85 }, lean: -40 },
   reaching: { ankle: { x: 0.3, y: 0.85 }, lean: 40, toes: -35 },
-};
+}, { hip: { x: 22.6, y: 17.9 }, above: 2.5 + 2.4 }, { hip: HIP, above: LEG.thigh + LEG.shin });
 
 export type CrowPose = 'stand' | 'walk' | 'sidle' | 'peck' | 'alert' | 'takeoff' | 'flap' | 'skim' | 'glide' | 'flare' | 'settle';
 const GROUND_POSES: readonly CrowPose[] = ['stand', 'walk', 'sidle', 'peck', 'alert'];
@@ -324,7 +334,7 @@ const crowOf = (air: boolean) => tetrapod(BIRD, {
     { from: 'skull', to: 'neck base', name: 'neck line' },
     // Its neck stretches and shortens from its base as the head bobs,
     // stretches up alert and reaches down to peck.
-    { from: 'neck base', to: 'body', name: 'back line', stretch: { min: 5.4, max: 8.6 } }, { from: 'body', to: 'tail', name: 'pelvis line (to the tail root)' },
+    { from: 'neck base', to: 'body', name: 'back line', stretch: { min: 5.4, max: 8.9 } }, { from: 'body', to: 'tail', name: 'pelvis line (to the tail root)' },
     ...(air ? [...FAR_WING.bones, ...NEAR_WING.bones] : []),
   ],
   legs: LEGS,
@@ -390,12 +400,12 @@ export const SIDLE_SPEED = 45;
 // never the drawing; in the air, the wings below the line it flies along.
 export type Footprint = { width: number; height: number; down?: number };
 export const FOOTPRINTS: Record<CrowPose, Footprint> = {
-  stand: { width: 40, height: 27.5 }, walk: { width: 42, height: 27.5, down: 0.2 }, sidle: { width: 42.5, height: 27.5, down: 0.2 },
+  stand: { width: 40, height: 27.5 }, walk: { width: 43, height: 27.5, down: 0.2 }, sidle: { width: 42.5, height: 27.5, down: 0.2 },
   peck: { width: 46.5, height: 24, down: 0.45 }, alert: { width: 38, height: 32.5 },
   takeoff: { width: 51.5, height: 51.5, down: 4.5 }, flap: { width: 52, height: 44, down: 6 }, skim: { width: 48, height: 28.5 },
   glide: { width: 48, height: 27 }, flare: { width: 47, height: 50, down: 3.5 }, settle: { width: 47.5, height: 48.5, down: 3 },
 };
 // Taking off, landing and settling low (depth 0), where only a skim fits.
 export const LOW_FOOTPRINTS: Record<'takeoff' | 'flare' | 'settle', Footprint> = {
-  takeoff: { width: 51, height: 30.5, down: 1 }, flare: { width: 43.5, height: 28.5, down: 1.5 }, settle: { width: 47.5, height: 28, down: 1.5 },
+  takeoff: { width: 51, height: 30.5, down: 1.1 }, flare: { width: 43.5, height: 28.5, down: 1.5 }, settle: { width: 47.5, height: 28, down: 1.5 },
 };

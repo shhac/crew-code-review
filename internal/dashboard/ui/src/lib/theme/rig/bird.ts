@@ -303,6 +303,18 @@ function airLimb(spec: BirdLeg, hip: Point, reach: number, at: AirLegs): Limb {
   return { hip, knee, ankle, foot: footAt(lean), paw: 90 - lean + toes, curled: reach < 0.6 };
 }
 
+// Holds set for legs hung from one hip, the two bones above the ankle
+// spanning `above`, moved onto legs hung from another: each ankle held where
+// it was, so a bird given its true, longer hidden bones holds its legs in
+// the air as it did.
+type Hung = { hip: Point; above: number };
+export function rehung(at: AirLegs, was: Hung, now: Hung): AirLegs {
+  const moved = (leg: AirLeg): AirLeg => ({
+    ...leg, ankle: { x: (was.hip.x + leg.ankle.x * was.above - now.hip.x) / now.above, y: (was.hip.y + leg.ankle.y * was.above - now.hip.y) / now.above },
+  });
+  return { tucked: moved(at.tucked), trailing: moved(at.trailing), reaching: moved(at.reaching) };
+}
+
 // Where a foot in the air is.
 export const airFoot = (spec: BirdLeg, hip: Point, reach: number, at: AirLegs = AIR_LEGS): Point => airLimb(spec, hip, reach, at).foot;
 

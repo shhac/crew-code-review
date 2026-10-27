@@ -97,8 +97,8 @@ describe('crow rig', () => {
       for (const [i, rig] of moments(pose).entries()) {
         for (const leg of legsOf(rig)) {
           const what = `${pose} at ${i}`;
-          expect(apart(leg.hip, leg.knee), what).toBeCloseTo(2.5, 2);
-          expect(apart(leg.knee, leg.ankle), what).toBeCloseTo(2.4, 2);
+          expect(apart(leg.hip, leg.knee), what).toBeCloseTo(3.4, 2);
+          expect(apart(leg.knee, leg.ankle), what).toBeCloseTo(6, 2);
           expect(apart(leg.ankle, leg.foot), what).toBeCloseTo(4.47, 2);
         }
       }

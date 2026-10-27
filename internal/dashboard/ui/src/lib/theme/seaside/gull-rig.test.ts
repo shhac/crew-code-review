@@ -63,8 +63,8 @@ describe('gull rig', () => {
       for (const [i, rig] of moments(pose).entries()) {
         for (const leg of legsOf(rig)) {
           const what = `${pose} at ${i}`;
-          expect(apart(leg.hip, leg.knee), what).toBeCloseTo(1.7, 2);
-          expect(apart(leg.knee, leg.ankle), what).toBeCloseTo(1.42, 2);
+          expect(apart(leg.hip, leg.knee), what).toBeCloseTo(2.3, 2);
+          expect(apart(leg.knee, leg.ankle), what).toBeCloseTo(4.3, 2);
           expect(apart(leg.ankle, leg.foot), what).toBeCloseTo(2.68, 2);
         }
       }

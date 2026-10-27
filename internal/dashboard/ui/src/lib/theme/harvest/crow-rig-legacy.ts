@@ -104,7 +104,7 @@ const FEET = feetLine(GROUND, FOOT);
 // 0.2s of hold; the harvest note's research). Its stride is the rig's
 // now, longer than it was, so the body still rises and the head still bobs
 // with the rig's steps for the comparison.
-const WALK = birdWalk(6.3, 1.1);
+const WALK = birdWalk(8.4, 1.1);
 const THRUST = 0.45;
 // A sidle is a hurried walk, the same legs at a longer stride.
 const SIDLE = birdWalk(5.2, 1.3);

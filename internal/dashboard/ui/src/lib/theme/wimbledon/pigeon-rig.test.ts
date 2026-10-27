@@ -75,8 +75,8 @@ describe('pigeon rig', () => {
     for (const pose of POSES) {
       for (const [i, rig] of moments(pose).entries()) {
         for (const leg of legsOf(rig)) {
-          expect(apart(leg.hip, leg.knee), `${pose} at ${i}`).toBeCloseTo(2, 2);
-          expect(apart(leg.knee, leg.ankle), `${pose} at ${i}`).toBeCloseTo(1, 2);
+          expect(apart(leg.hip, leg.knee), `${pose} at ${i}`).toBeCloseTo(1.75, 2);
+          expect(apart(leg.knee, leg.ankle), `${pose} at ${i}`).toBeCloseTo(2.6, 2);
           expect(apart(leg.ankle, leg.foot), `${pose} at ${i}`).toBeCloseTo(1.25, 2);
         }
       }

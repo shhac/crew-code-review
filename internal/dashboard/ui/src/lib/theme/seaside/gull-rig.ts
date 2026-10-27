@@ -1,7 +1,7 @@
 import { clamp, mix, smooth } from '../math';
 import type { Point } from '../pointer';
 import { gazeFrom } from '../rig/gaze';
-import { birdStepping, birdWalk, curledIn, feetLine, headBob, INTERTARSAL_HINGE, stepRise, type AirLegs, type HingedBirdLeg } from '../rig/bird';
+import { birdStepping, birdWalk, curledIn, feetLine, headBob, INTERTARSAL_HINGE, rehung, stepRise, type AirLegs, type HingedBirdLeg } from '../rig/bird';
 import { blinking, breath } from '../rig/life';
 import { lidLayers, turnAbout, turned, type Frame, type Fur, type Layer, type LimbArt, type RigPose, type Turn } from '../rig/rig';
 import { compose } from '../rig/skeleton/compose';
@@ -74,38 +74,49 @@ const MIDDLE = { x: 15, y: 10.5 };
 const HIPS = { x: 16.6, y: 11.9 };
 const FACE: Fur = { fill: '#e9edf0', outline: '#1a1a1a' };
 
-// The legs, as the reference's are: the hips high in the body above them,
-// the femur running forward and down to the knee in the belly feathers, the
-// drumstick down and back to the intertarsal joint just below the belly,
-// the tarsus leaning its foot end a little forward to the toes. Measured on
-// the reference's near leg: drumstick 1.42 and tarsus 2.43 drawing units,
-// the tarsus leaning 14 degrees; the femur, never seen, is as long as the
-// legs need to reach through a stride. The tarsus bar runs on 0.25 units
-// into the toes' picture, to where the toes part, which is its joint; the
-// picture keeps of the tarsus only a knob round it (design-docs/art.py's
-// knobbed), so it turns there without a stub standing out from the bar.
+// The legs, as a herring gull's are, most of them hidden in the body: the
+// hips high in it, each femur running forward and a little down to the
+// knee, high in the belly; the tibiotarsus, nearly twice as long, down and
+// back from there to the intertarsal joint just below the belly, only its
+// foot end showing as the drumstick; the tarsus leaning its foot end a
+// little forward to the toes. The tarsus is measured on the reference's
+// near leg (2.43 units, leaning 14 degrees) and the drumstick's slope
+// with it; the hidden bones are a gull's against it (femur about 0.85 of
+// the tarsus, tibiotarsus 1.6), so the knee sits up the drumstick's line,
+// the drumstick's piece drawn as long as it is seen (1.42) and held on the
+// tibiotarsus. The tarsus bar runs on 0.25 units into the toes' picture,
+// to where the toes part, which is its joint; the picture keeps of the
+// tarsus only a knob round it (design-docs/art.py's knobbed), so it turns
+// there without a stub standing out from the bar.
 const TOES = { src: toesArt, fur: toesFurArt, width: 4.08, height: 1.92, heel: { x: 0.82, y: 0.57 } };
 const CURLED = { src: curledArt, fur: curledFurArt, width: 2.17, height: 2.5, heel: { x: 0.48, y: 0.5 } };
+const HAUNCH = 0.92;
 const LEG_ART: LimbArt = {
-  bone: tarsusArt, boneFur: tarsusFurArt, knee: true, inBody: true,
+  bone: tarsusArt, boneFur: tarsusFurArt, knee: true, inBody: true, upperShown: 1.42 + HAUNCH / 2,
   thigh: { src: drumstickArt, fur: drumstickFurArt }, foot: TOES, curled: CURLED,
 };
 const LEG = {
-  art: LEG_ART, width: 0.75, haunch: 0.92, thigh: 1.7, shin: 1.42, bend: 1, fore: false,
+  art: LEG_ART, width: 0.75, haunch: HAUNCH, thigh: 2.3, shin: 4.3, bend: 1, fore: false,
   walksOn: { kind: 'toes', length: 2.68, lean: 14, fold: -40 }, toes: { x: 3.26, y: 1.35 }, peel: 22, paw: INTERTARSAL_HINGE,
 } as const;
+// The hips where the femur from each knee puts them, the far a little
+// behind and above the near.
+const HIP = { x: 18.09, y: 9.67 };
 const LEGS: HingedBirdLeg[] = [
-  { ...LEG, hip: { x: 16.5, y: 11.8 }, reach: -0.8, far: true },
-  { ...LEG, hip: { x: 16.8, y: 12 }, reach: 1.1, far: false },
+  { ...LEG, hip: { x: HIP.x - 0.3, y: HIP.y - 0.2 }, reach: 15.7 - (HIP.x - 0.3), far: true },
+  { ...LEG, hip: HIP, reach: 17.9 - HIP.x, far: false },
 ];
 const FEET = feetLine(GROUND, TOES);
 
-// The walk: the feet half a cycle apart, each down for 0.6 of it, the
-// stride as long as the drawn legs reach.
+// The walk: the feet half a cycle apart, each down for 0.6 of it; the
+// head held steady, as a gull walking about does not bob it (Dagg 1977;
+// Necker's review).
 const STRUT = birdWalk(4.4, 1.4);
-// Foraging, slow and long-strided, a gull now and then bobs its head as a
-// pigeon does (Fujita 2006; Lisney and Troje), the thrust about half a step.
-const FORAGE = birdWalk(4.4, 1.2);
+// Foraging, slow, a gull lengthens its stride and now and then bobs its
+// head as a pigeon does, a step at a time (Fujita 2006, black-headed gulls
+// bobbing on strides longer and slower than their others; Lisney and
+// Troje), the thrust about half a step.
+const FORAGE = birdWalk(5.5, 1.2);
 const THRUST = 0.5;
 
 // The wing, as drawn flat, its span up the picture: the shoulder where the
@@ -129,11 +140,12 @@ const SOAR: WingPose = { lift: 6, sweep: 0, fold: 8 };
 // Pushing off, a gull's legs are stretched down and back, not trailed out
 // behind as a raptor's; reaching to land, its webbed toes spread forward and
 // down to meet the ground (the flare drawing).
-const GULL_AIR: AirLegs = {
+// (Set on its legs before they had their true hidden bones, and held so.)
+const GULL_AIR: AirLegs = rehung({
   tucked: { ankle: { x: -0.25, y: 0.65 }, lean: 105 },
   trailing: { ankle: { x: -0.35, y: 0.85 }, lean: -30 },
   reaching: { ankle: { x: 0.25, y: 0.85 }, lean: 45, toes: -10 },
-};
+}, { hip: { x: 16.8, y: 12 }, above: 1.7 + 1.42 }, { hip: HIP, above: LEG.thigh + LEG.shin });
 
 export type GullPose = 'stand' | 'strut' | 'forage' | 'eye' | 'call' | 'takeoff' | 'flap' | 'glide' | 'stoop' | 'flare' | 'settle';
 // What the drawing reads of a gull: its pose, how far it has walked, its
@@ -290,7 +302,7 @@ const gullOf = (air: boolean) => tetrapod(BIRD, {
     // Its neck stretches and shortens as the head thrusts and bobs, eyes
     // something and calls.
     { from: 'skull', to: 'neck base', name: 'neck line', stretch: { min: 3.85, max: 4.1 } },
-    { from: 'neck base', to: 'body', name: 'back line', stretch: { min: 3.75, max: 4.8 } },
+    { from: 'neck base', to: 'body', name: 'back line', stretch: { min: 3.6, max: 4.9 } },
     ...(air ? [{ from: 'body', to: 'tail', name: 'pelvis line (to the tail root)' }, ...FAR_WING.bones, ...NEAR_WING.bones] : []),
   ],
   legs: LEGS,

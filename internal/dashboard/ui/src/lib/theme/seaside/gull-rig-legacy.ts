@@ -101,7 +101,10 @@ const FEET = feetLine(GROUND, TOES);
 const STRUT = birdWalk(4.4, 1.4);
 // Foraging, slow and long-strided, a gull now and then bobs its head as a
 // pigeon does (Fujita 2006; Lisney and Troje), the thrust about half a step.
-const FORAGE = birdWalk(4.4, 1.2);
+// Its foraging stride is the rig's now, longer than it was, so the body
+// still rises and the head still bobs with the rig's steps for the
+// comparison.
+const FORAGE = birdWalk(5.5, 1.2);
 const THRUST = 0.5;
 
 // The wing, as drawn flat, its span up the picture: the shoulder where the

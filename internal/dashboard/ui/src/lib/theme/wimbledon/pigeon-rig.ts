@@ -1,6 +1,6 @@
 import { apart, mix, smooth } from '../math';
 import type { Point } from '../pointer';
-import { AIR_LEGS, birdStepping, birdWalk, curledIn, feetLine, headBob, INTERTARSAL_HINGE, stepRise, type AirLegs, type HingedBirdLeg } from '../rig/bird';
+import { AIR_LEGS, birdStepping, birdWalk, curledIn, feetLine, headBob, INTERTARSAL_HINGE, rehung, stepRise, type AirLegs, type HingedBirdLeg } from '../rig/bird';
 import type { Step } from '../rig/gait';
 import { gazeFrom } from '../rig/gaze';
 import { blinking, breath } from '../rig/life';
@@ -68,39 +68,43 @@ const HIPS = { x: 13.1, y: 12.6 };
 // The blink is the nictitating membrane, pale across the eye.
 const MEMBRANE: Fur = { fill: '#dfe6ea', outline: '#5b6670' };
 
-// The legs, as the reference's are: the hips high in the body under the
-// folded wing, the femur hidden running forward to the knee in the belly
-// feathers, the drumstick down and back to the intertarsal joint just below
-// them, and the bare coral tarsus leaning its foot end a little forward to
-// the toes, three forward and the hallux back. Measured on the reference's
-// near leg (53 source pixels to a unit): the tarsus 1.25 units, leaning
-// 6 degrees, its top 1.7 units below the hips; the femur, never seen, as
-// long as the legs need to reach through a stride. The feet's pictures keep
-// of the tarsus only a knob round the joint where the toes part
-// (design-docs/art.py's knobbed), so the toes turn there without a stub
-// standing out from the bar.
+// The legs, as a rock pigeon's are, most of them hidden in the body: the
+// hips high in it under the folded wing, each femur running forward and a
+// little down to the knee in the belly feathers, the tibiotarsus twice as
+// long down and back from there to the intertarsal joint just below them,
+// only its foot end showing as the drumstick, and the bare coral tarsus
+// leaning its foot end a little forward to the toes, three forward and the
+// hallux back. The tarsus is measured on the reference's near leg (53
+// source pixels to a unit: 1.25 units, leaning 6 degrees) and the
+// drumstick's slope with it; the hidden bones are a pigeon's against it
+// (femur about 1.4 times the tarsus, tibiotarsus 2.1), so the knee sits up
+// the drumstick's line, the drumstick's piece drawn as long as it is seen
+// and held on the tibiotarsus. The feet's pictures keep of the tarsus only
+// a knob round the joint where the toes part (design-docs/art.py's
+// knobbed), so the toes turn there without a stub standing out from the
+// bar.
 const TOES = { src: footArt, fur: footFurArt, width: 4.67, height: 2.42, heel: { x: 1.59, y: 0.72 } };
 const CURLED = { src: curledArt, fur: curledFurArt, width: 2.83, height: 2.75, heel: { x: 1.28, y: 0.71 } };
+const HAUNCH = 1.4;
 const LEG_ART: LimbArt = {
-  bone: shankArt, boneFur: shankFurArt, knee: true, inBody: true,
+  bone: shankArt, boneFur: shankFurArt, knee: true, inBody: true, upperShown: 1 + HAUNCH / 2,
   thigh: { src: thighArt, fur: thighFurArt }, foot: TOES, curled: CURLED,
 };
-// Its tarsus short under a long femur, a striding pigeon's planted ankle
-// opens nearly straight at the ends of a stride, where the other birds'
-// stay bent.
 // How long the neck line (head joint to its base) and the back line (the
 // base to the body's pivot) are at their shortest and longest, through its
 // bob, its alert stretch and its peck.
 const NECK_STRETCH = { min: 1.4, max: 3.25 };
 const BACK_STRETCH = { min: 4.3, max: 5.85 };
-const STRIDING = { limits: { ...INTERTARSAL_HINGE.limits, max: 55 }, planted: { ...INTERTARSAL_HINGE.limits, max: 55 } };
 const LEG = {
-  art: LEG_ART, width: 0.45, haunch: 1.4, thigh: 2, shin: 1, bend: 1, fore: false,
-  walksOn: { kind: 'toes', length: 1.25, lean: 6, fold: -45 }, toes: { x: 3.08, y: 1.7 }, peel: 25, paw: STRIDING,
+  art: LEG_ART, width: 0.45, haunch: HAUNCH, thigh: 1.75, shin: 2.6, bend: 1, fore: false,
+  walksOn: { kind: 'toes', length: 1.25, lean: 6, fold: -45 }, toes: { x: 3.08, y: 1.7 }, peel: 25, paw: INTERTARSAL_HINGE,
 } as const;
+// The hips where the femur from each knee puts them, the far a little
+// ahead of and above the near.
+const HIP = { x: 13.81, y: 12.19 };
 const LEGS: HingedBirdLeg[] = [
-  { ...LEG, hip: { x: 13.3, y: 12.5 }, reach: -0.6, far: true },
-  { ...LEG, hip: { x: 13, y: 12.7 }, reach: 0.9, far: false },
+  { ...LEG, hip: { x: HIP.x + 0.3, y: HIP.y - 0.2 }, reach: 12.7 - (HIP.x + 0.3), far: true },
+  { ...LEG, hip: HIP, reach: 13.9 - HIP.x, far: false },
 ];
 const FEET = feetLine(GROUND, TOES);
 
@@ -111,11 +115,11 @@ export const WALK = birdWalk(3, 0.9);
 const THRUST = 0.45;
 // Shying, it walks nearly twice as fast. A bird's foot swings for about
 // as long however fast it goes (Alexander and Ker 1990; Abourachid 2001),
-// so it is down for less of each stride, here half, and it steps out as
-// far as its legs let it: about eight steps a second where a quicker walk
-// at the same stride would take ten. Its hold shortens as it hurries
-// (Davies and Green 1988).
-const BRISK = birdWalk(3.2, 1, 0.5);
+// so it is down for less of each stride, here half, and steps out further,
+// each foot swinging as long as it does walking: about six and a half
+// steps a second where a quicker walk at the same stride would take ten.
+// Its hold shortens as it hurries (Davies and Green 1988).
+const BRISK = birdWalk(3.9, 1, 0.5);
 const BRISK_THRUST = 0.6;
 
 // The wing, drawn flat with its span up the picture: the shoulder where the
@@ -145,11 +149,14 @@ const UPRIGHT = 25;
 // toes meet the ledge as it touches down rather than claws first.
 // Tucked in flight, they are drawn up and back under the belly feathers,
 // the feet trailing toward the tail (the flight drawings).
-const PIGEON_AIR: AirLegs = {
+// (Set on its legs before they had their true hidden bones, and held so;
+// reaching to land, held as far ahead of the hips as it was, the hips now
+// further forward.)
+const PIGEON_AIR: AirLegs = rehung({
   ...AIR_LEGS,
   tucked: { ankle: { x: -0.7, y: 0.35 }, lean: -100 },
-  reaching: { ankle: { x: 0.15, y: 0.7 }, lean: 12 },
-};
+  reaching: { ankle: { x: 0.15 + (HIP.x - 13) / 3, y: 0.7 }, lean: 12 },
+}, { hip: { x: 13, y: 12.7 }, above: 2 + 1 }, { hip: HIP, above: LEG.thigh + LEG.shin });
 const RAISED: WingPose = { lift: 26, sweep: -10, fold: 15 };
 // Wingbeats a second: 7 for the first three after take-off and landing,
 // 5.5 in level flight (the note's research).

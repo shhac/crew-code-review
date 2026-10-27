@@ -96,7 +96,7 @@ const WALK = birdWalk(3, 0.9);
 const THRUST = 0.45;
 // Shying, the rig's brisk walk now, so the body still rises and the head
 // still bobs with the rig's steps for the comparison.
-const BRISK = birdWalk(3.2, 1, 0.5);
+const BRISK = birdWalk(3.9, 1, 0.5);
 const BRISK_THRUST = 0.6;
 
 // The wing, drawn flat with its span up the picture: the shoulder where the
