@@ -217,7 +217,7 @@ const beatsIn = (ms: number, landing: number) =>
 // What the rig draws of a pigeon at now: its pose and how far through it.
 export function rigPigeon(view: View, now: number): RigPigeon {
   const p = view.pigeon;
-  const base = { pose: view.pose, walked: p.walked, seed: p.seed, beat: 0, t: 0 };
+  const base = { pose: view.pose, walked: p.walked, seed: p.seed, beat: 0, t: 0, brisk: p.mode === 'shy' };
   if (p.flight) {
     const where = flying(p.flight.track, now - p.flight.start, p.flight.lands);
     const landing = flightEnds(p.flight) - p.flight.start - LAND;

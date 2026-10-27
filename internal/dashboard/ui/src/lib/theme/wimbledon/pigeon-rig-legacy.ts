@@ -94,6 +94,10 @@ const FEET = feetLine(GROUND, TOES);
 // drawn legs reach; the head thrust over just under half of each step.
 const WALK = birdWalk(3, 0.9);
 const THRUST = 0.45;
+// Shying, the rig's brisk walk now, so the body still rises and the head
+// still bobs with the rig's steps for the comparison.
+const BRISK = birdWalk(3.2, 1, 0.5);
+const BRISK_THRUST = 0.6;
 
 // The wing, drawn flat with its span up the picture: the shoulder where the
 // arm's root meets the body, the wrist at the arm's tip, the hand
@@ -134,7 +138,7 @@ type PigeonPose = 'stand' | 'walk' | 'peck' | 'alert' | 'takeoff' | 'fly' | 'lan
 // it is (`t`, 0 to 1).
 // `gaze` turns its head (degrees, nose down positive) toward what it is
 // looking at, standing or alert; eased by the layer.
-type RigPigeon = { pose: PigeonPose; walked: number; seed: number; beat: number; t: number; gaze?: number };
+type RigPigeon = { pose: PigeonPose; walked: number; seed: number; beat: number; t: number; gaze?: number; brisk?: boolean };
 type PigeonLook = { now: number; still: boolean };
 
 // The neck: the feathers between the body's shoulders and the head, cut
@@ -214,11 +218,12 @@ function onGround(pigeon: RigPigeon, look: PigeonLook): Ground {
   // The body rides up over each planted leg; the head thrusts forward just
   // after a foot lands and holds still over the ground while the body walks
   // on under it.
-  const rise = 0.2 * stepRise(walked, WALK);
-  const { feet, steps } = stepping(LEGS, walked, FEET, WALK);
+  const [gait, thrust] = pigeon.brisk ? [BRISK, BRISK_THRUST] : [WALK, THRUST];
+  const rise = 0.2 * stepRise(walked, gait);
+  const { feet, steps } = stepping(LEGS, walked, FEET, gait);
   return {
     body: turnAbout(0, MIDDLE, 0, -rise),
-    head: turnAbout(0, NECK, headBob(walked, WALK, THRUST), rise),
+    head: turnAbout(0, NECK, headBob(walked, gait, thrust), rise),
     limbs: (hips) => birdLegsTo(LEGS, hips, feet(hips), steps, GROUND),
     tail: 0,
   };

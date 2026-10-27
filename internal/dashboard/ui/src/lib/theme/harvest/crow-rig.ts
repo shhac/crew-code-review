@@ -1,6 +1,7 @@
 import { clamp, smooth } from '../math';
 import type { Point } from '../pointer';
 import { birdStepping, birdWalk, curledIn, feetLine, headBob, INTERTARSAL_HINGE, stepRise, type AirLegs, type HingedBirdLeg } from '../rig/bird';
+import { flightAt, flightsOf, gaitPhase, type Gait } from '../rig/gait';
 import { gazeFrom } from '../rig/gaze';
 import { blinking, breath } from '../rig/life';
 import { lidLayers, turnAbout, type Frame, type Fur, type LimbArt, type RigPose, type Turn } from '../rig/rig';
@@ -122,8 +123,19 @@ const FEET = feetLine(GROUND, FOOT);
 // three a second would want longer legs than these.
 const WALK = birdWalk(6.3, 1.1);
 const THRUST = 0.45;
-// A sidle is a hurried walk, the same legs at a longer stride.
-const SIDLE = birdWalk(5.2, 1.3);
+// In a hurry, it skips: crows walk, but hop in corvid fashion when they
+// hurry (Birds of the World), as magpies, walking slowly, take to hopping
+// faster (Verstappen, Aerts and Van Damme 2000). Each hop the feet land
+// one just after the other, the trailing (far) foot first, push off
+// together and fly forward. A foot swings for about as long as it does
+// walking, as a bird's does however fast it goes (the magpie's too), so at
+// 45px/s each is down for 0.35 of a hop, a hop of 14 units, about three a
+// second.
+const SKIP: Gait = { stride: 5, lift: 1.2, stance: 0.35, beats: [0.1, 0] };
+// How far the body rises in a skip's flight, and sinks as it lands and
+// gathers for the next; the rise keeps the head inside its walk's height.
+const SKIP_RISE = { up: 0.15, down: 0.45 };
+const fract = (n: number) => n - Math.floor(n);
 
 // The wing, as drawn flat, its span up the picture: the shoulder where the
 // arm's rounded root meets the body, the wrist at the arm's tip near its
@@ -209,13 +221,33 @@ function onGround(crow: RigCrow, look: CrowLook): Ground {
     const d = dip(crow.t);
     return { body: turnAbout(24 + 10 * d, LEG_ROOTS, 0, 0.5), neck: { angle: 26 + 26 * d, shift: { x: -1.2 * d, y: 1.6 * d } }, head: {}, tail: -4 + 4 * d, goals: planted };
   }
-  const gait = crow.pose === 'sidle' ? SIDLE : WALK;
   const walked = crow.walked / SCALE;
-  const rise = 0.25 * stepRise(walked, gait);
-  const { feet, steps } = birdStepping(LEGS, walked, FEET, gait);
+  if (crow.pose === 'sidle') return skipping(walked, gaze);
+  const rise = 0.25 * stepRise(walked, WALK);
+  const { feet, steps } = birdStepping(LEGS, walked, FEET, WALK);
   return {
     body: turnAbout(0, MIDDLE, 0, -rise),
-    neck: { ...looking(gaze).neck, shift: { x: headBob(walked, gait, THRUST), y: rise } },
+    neck: { ...looking(gaze).neck, shift: { x: headBob(walked, WALK, THRUST), y: rise } },
+    head: looking(gaze).head,
+    tail: 0,
+    goals: (hips) => feet(hips).map((at, i) => ({ kind: 'plant', at, step: steps[i], ground: GROUND })),
+  };
+}
+
+// Skipping: the body sinking as the feet land and rising off them into the
+// flight; the head, as a hopping bird's does (Daanje 1951), drawn back as
+// it lands, thrust forward as it springs, drawn back again before it lands.
+function skipping(walked: number, gaze: number): Ground {
+  const phase = gaitPhase(walked, SKIP);
+  const flight = flightAt(phase, SKIP);
+  const down = flightsOf(SKIP)[0];
+  const ground = flight ? 0 : fract(phase - down.from - down.length) / (1 - down.length);
+  const rise = flight ? SKIP_RISE.up * 4 * flight.t * (1 - flight.t) : -SKIP_RISE.down * Math.sin(Math.PI * ground);
+  const reach = flight ? 0.5 * Math.cos(Math.PI * flight.t) : -0.5 * Math.cos(Math.PI * ground);
+  const { feet, steps } = birdStepping(LEGS, walked, FEET, SKIP);
+  return {
+    body: turnAbout(0, MIDDLE, 0, -rise),
+    neck: { ...looking(gaze).neck, shift: { x: reach, y: 0 } },
     head: looking(gaze).head,
     tail: 0,
     goals: (hips) => feet(hips).map((at, i) => ({ kind: 'plant', at, step: steps[i], ground: GROUND })),
@@ -347,7 +379,8 @@ export function crowRig(crow: RigCrow, look: CrowLook): RigPose {
 // How far the head turns toward a cursor: at most 14 degrees, from 160px.
 export const crowGaze = gazeFrom({ eye: EYE, anchor: ANCHOR, scale: SCALE, look: LOOK, reach: 160 });
 
-// The lab's speeds: the walk about three steps a second at 20px/s.
+// The lab's speeds: the walk about four steps a second at 20px/s, the
+// skip three hops.
 export const WALK_SPEED = 20;
 export const SIDLE_SPEED = 45;
 // The box each pose's drawing stays inside through its whole motion (page

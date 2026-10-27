@@ -91,7 +91,7 @@ const LEG_ART: LimbArt = {
 // How long the neck line (head joint to its base) and the back line (the
 // base to the body's pivot) are at their shortest and longest, through its
 // bob, its alert stretch and its peck.
-const NECK_STRETCH = { min: 1.45, max: 3.25 };
+const NECK_STRETCH = { min: 1.4, max: 3.25 };
 const BACK_STRETCH = { min: 4.3, max: 5.85 };
 const STRIDING = { limits: { ...INTERTARSAL_HINGE.limits, max: 55 }, planted: { ...INTERTARSAL_HINGE.limits, max: 55 } };
 const LEG = {
@@ -109,6 +109,14 @@ const FEET = feetLine(GROUND, TOES);
 // drawn legs reach; the head thrust over just under half of each step.
 export const WALK = birdWalk(3, 0.9);
 const THRUST = 0.45;
+// Shying, it walks nearly twice as fast. A bird's foot swings for about
+// as long however fast it goes (Alexander and Ker 1990; Abourachid 2001),
+// so it is down for less of each stride, here half, and it steps out as
+// far as its legs let it: about eight steps a second where a quicker walk
+// at the same stride would take ten. Its hold shortens as it hurries
+// (Davies and Green 1988).
+const BRISK = birdWalk(3.2, 1, 0.5);
+const BRISK_THRUST = 0.6;
 
 // The wing, drawn flat with its span up the picture: the shoulder where the
 // arm's root meets the body, the wrist at the arm's tip, the hand
@@ -152,8 +160,9 @@ export type PigeonPose = 'stand' | 'walk' | 'peck' | 'alert' | 'takeoff' | 'fly'
 // wingbeats so far (`beat`), how far through a peck, a landing or a settle
 // it is (`t`, 0 to 1).
 // `gaze` turns its head (degrees, nose down positive) toward what it is
-// looking at, standing or alert; eased by the layer.
-export type RigPigeon = { pose: PigeonPose; walked: number; seed: number; beat: number; t: number; gaze?: number };
+// looking at, standing or alert; eased by the layer. `brisk`: walking
+// briskly away from something (it shies).
+export type RigPigeon = { pose: PigeonPose; walked: number; seed: number; beat: number; t: number; gaze?: number; brisk?: boolean };
 type PigeonLook = { now: number; still: boolean };
 
 // The neck: the feathers between the body's shoulders and the head, cut
@@ -226,14 +235,15 @@ function onGround(pigeon: RigPigeon, look: PigeonLook): Ground {
     return { body: turnAbout(p.body, HIPS), skull: {}, neck: { angle: p.head, shift: { x: 2.5 * p.down, y: 2.9 * p.down } }, goals: planted, tail: -6 * p.down };
   }
   const walked = pigeon.walked / SCALE;
+  const [gait, thrust] = pigeon.brisk ? [BRISK, BRISK_THRUST] : [WALK, THRUST];
   // The body rides up over each planted leg; the head thrusts forward as a
   // foot lands and holds still over the ground while the body walks on
   // under it on the other.
-  const rise = 0.2 * stepRise(walked, WALK);
-  const { feet, steps } = birdStepping(LEGS, walked, FEET, WALK);
+  const rise = 0.2 * stepRise(walked, gait);
+  const { feet, steps } = birdStepping(LEGS, walked, FEET, gait);
   return {
     body: turnAbout(0, MIDDLE, 0, -rise),
-    skull: { angle: 0, shift: { x: headBob(walked, WALK, THRUST), y: rise } },
+    skull: { angle: 0, shift: { x: headBob(walked, gait, thrust), y: rise } },
     neck: {},
     goals: (hips) => feet(hips).map((at, i) => ({ kind: 'plant', at, step: steps[i], ground: GROUND })),
     tail: 0,

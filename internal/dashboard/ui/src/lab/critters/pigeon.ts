@@ -45,7 +45,7 @@ export const pigeonAt = ({ mode, now, walked }: Moment): RigPigeon => {
   const time = pick.every ? now % pick.every : now;
   const beat = ((pick.beats ?? 0) * time) / 1000;
   // A take-off opens its wings for half a beat before the first stroke.
-  return { pose: pick.pose, walked, seed: 1, beat: pick.pose === 'takeoff' ? beat - 0.5 : beat, t: pick.every ? time / pick.every : 0 };
+  return { pose: pick.pose, walked, seed: 1, beat: pick.pose === 'takeoff' ? beat - 0.5 : beat, t: pick.every ? time / pick.every : 0, brisk: mode === 'shy' };
 };
 
 export const pigeon = {

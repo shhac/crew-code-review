@@ -72,14 +72,24 @@ describe('crow rig', () => {
   });
 
   it('walks with a foot always down, both down at each change, its toes never below the ledge', () => {
-    for (const pose of ['walk', 'sidle'] as const) {
-      const rigs = moments(pose);
-      const ground = rigs[0].anchor.y;
-      const downs = rigs.map((r) => solesOf(r).filter((y) => y > ground - 1e-3).length);
-      expect(Math.min(...downs)).toBeGreaterThanOrEqual(1);
-      expect(downs.filter((n) => n === 2).length).toBeGreaterThan(0);
-      expect(most(rigs, (r) => Math.max(...solesOf(r)) - ground)).toBeLessThanOrEqual(1e-6);
-    }
+    const rigs = moments('walk');
+    const ground = rigs[0].anchor.y;
+    const downs = rigs.map((r) => solesOf(r).filter((y) => y > ground - 1e-3).length);
+    expect(Math.min(...downs)).toBeGreaterThanOrEqual(1);
+    expect(downs.filter((n) => n === 2).length).toBeGreaterThan(0);
+    expect(most(rigs, (r) => Math.max(...solesOf(r)) - ground)).toBeLessThanOrEqual(1e-6);
+  });
+
+  it('skips when it sidles: the far foot lands just before the near, they push off together, and it flies between, its toes never below the ledge', () => {
+    const rigs = Array.from({ length: 600 }, (_, i) => crowRig(crow('sidle', { walked: i * 0.1 }), look(i * 17)));
+    const ground = rigs[0].anchor.y;
+    const down = rigs.map((r) => solesOf(r).map((y) => y > ground - 1e-3));
+    expect(down.some((d) => d.every((f) => !f))).toBe(true);
+    expect(down.some((d) => d.every((f) => f))).toBe(true);
+    const landings = down.flatMap((d, i) => (i && d.some((f) => f) && down[i - 1].every((f) => !f) ? [d] : []));
+    expect(landings.length).toBeGreaterThan(2);
+    for (const d of landings) expect(d).toEqual([true, false]);
+    expect(most(rigs, (r) => Math.max(...solesOf(r)) - ground)).toBeLessThanOrEqual(1e-6);
   });
 
   it('keeps every bone of its legs its length, the femur hidden, the intertarsal joint bending back', () => {
