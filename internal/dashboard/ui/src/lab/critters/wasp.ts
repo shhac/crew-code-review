@@ -3,6 +3,7 @@ import { shuffleAt } from '../../lib/theme/fete/wasp';
 import { ANCHOR, CRUISE, EYE, GROUND, REFERENCE, SCALE, eyeOf, waspRig, type RigWasp } from '../../lib/theme/fete/wasp-rig';
 import { smooth } from '../../lib/theme/math';
 import { gazeFrom } from '../../lib/theme/rig/gaze';
+import { CODES_BEFORE_COXA } from '../../lib/theme/rig/skeleton/insect';
 import type { Drawing } from '../drawings';
 import cruise from '../wasp-pose-cruise.webp';
 import feed from '../wasp-pose-feed.webp';
@@ -60,6 +61,6 @@ export const wasp = {
   gaze: (dir, cursor) => gaze(dir, { x: 0, y: -(GROUND - ANCHOR.y) * SCALE }, cursor),
   drawings: DRAWINGS,
   // Before her skeleton was her own, read off the drawing, her spine had no
-  // joint where she moves: the petiole was SJ1.
-  aliases: { SJ1: 'SJ2' },
+  // joint where she moves (the petiole was SJ1), and her legs no coxa.
+  aliases: { SJ1: 'SJ2', ...CODES_BEFORE_COXA },
 } satisfies RigCritter;

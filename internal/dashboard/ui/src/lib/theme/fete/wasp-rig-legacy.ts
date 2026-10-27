@@ -60,12 +60,12 @@ const INK = '#111111';
 // sprawled back with their knees back, the far side's shorter and tucked a
 // little behind the near so each shows past the other.
 const LEGS: readonly InsectLeg[] = [
-  { pair: 'fore', far: false, hip: { x: 19.6, y: 7.4 }, femur: 3, tibia: 3.6, tarsus: 2, reach: 5.9, bend: 1, lean: 40, curl: 25 },
-  { pair: 'fore', far: true, hip: { x: 17, y: 8 }, femur: 2.8, tibia: 3.2, tarsus: 1.8, reach: 3.2, bend: 1, lean: 30, curl: 25 },
-  { pair: 'mid', far: false, hip: { x: 14, y: 8 }, femur: 2.8, tibia: 3.4, tarsus: 1.9, reach: -2.4, bend: -1, lean: -25, curl: 20 },
-  { pair: 'mid', far: true, hip: { x: 15, y: 8.2 }, femur: 2.6, tibia: 3.2, tarsus: 1.7, reach: 0.3, bend: 1, lean: 15, curl: 20 },
-  { pair: 'hind', far: false, hip: { x: 12.3, y: 7.8 }, femur: 5, tibia: 5, tarsus: 2.6, reach: -10.5, bend: -1, lean: -60, curl: 20 },
-  { pair: 'hind', far: true, hip: { x: 13, y: 8.2 }, femur: 3.6, tibia: 3.6, tarsus: 2, reach: -4.7, bend: -1, lean: -40, curl: 20 },
+  { pair: 'fore', far: false, hip: { x: 19.6, y: 7.4 }, coxa: 0, femur: 3, tibia: 3.6, tarsus: 2, reach: 5.9, bend: 1, lean: 40, curl: 25 },
+  { pair: 'fore', far: true, hip: { x: 17, y: 8 }, coxa: 0, femur: 2.8, tibia: 3.2, tarsus: 1.8, reach: 3.2, bend: 1, lean: 30, curl: 25 },
+  { pair: 'mid', far: false, hip: { x: 14, y: 8 }, coxa: 0, femur: 2.8, tibia: 3.4, tarsus: 1.9, reach: -2.4, bend: -1, lean: -25, curl: 20 },
+  { pair: 'mid', far: true, hip: { x: 15, y: 8.2 }, coxa: 0, femur: 2.6, tibia: 3.2, tarsus: 1.7, reach: 0.3, bend: 1, lean: 15, curl: 20 },
+  { pair: 'hind', far: false, hip: { x: 12.3, y: 7.8 }, coxa: 0, femur: 5, tibia: 5, tarsus: 2.6, reach: -10.5, bend: -1, lean: -60, curl: 20 },
+  { pair: 'hind', far: true, hip: { x: 13, y: 8.2 }, coxa: 0, femur: 3.6, tibia: 3.6, tarsus: 2, reach: -4.7, bend: -1, lean: -40, curl: 20 },
 ];
 // Yellow legs, darker at the femur's root as the drawing's are.
 const LOOK: LegLook = {

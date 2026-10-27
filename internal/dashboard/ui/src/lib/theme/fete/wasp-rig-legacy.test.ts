@@ -8,9 +8,18 @@ import { waspRig as legacy } from './wasp-rig-legacy';
 
 // The wasp moved onto her skeleton draws exactly what her old rig drew,
 // but for the mark of where she moves, which now stays on the point a
-// model moves rather than bobbing with her body.
+// model moves rather than bobbing with her body; and her legs, now
+// real bones from a swinging coxa, sprawled out to the side and seen
+// foreshortened, stepping as far as a real one's do, and the marks on
+// their joints.
 const MOVES = 'body (moves here)';
-const ALL_BUT_MOVES = (plan: Plan): Plan => ({ ...plan, guides: plan.guides.filter((g) => g.name !== MOVES) });
+const LEG_MARKS = ['coxa', 'trochanter', 'knee', 'tibiotarsal joint', 'claws'];
+const LEGS = ['near legs', 'far legs'];
+const ALL_BUT_MOVES = (plan: Plan): Plan => ({
+  ...plan,
+  draws: plan.draws.filter((d) => d.kind !== 'path' || !LEGS.includes(d.data['data-stroke'] ?? '')),
+  guides: plan.guides.filter((g) => g.name !== MOVES && !LEG_MARKS.includes(g.name)),
+});
 
 describe('the wasp on her skeleton', () => {
   it('draws what her old rig drew in every moment the lab shows, held still, and leaning either way as far as she leans', () => {

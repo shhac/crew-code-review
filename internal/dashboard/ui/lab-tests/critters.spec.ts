@@ -165,8 +165,8 @@ test('the bee proves the insect rig: legs and antennae in code, a steady wing bl
   const sizes = await decoded(page);
   expect(sizes.length).toBeGreaterThanOrEqual(5);
   expect(sizes.every((n) => n > 0)).toBe(true);
-  // Six legs, each its bones and claws, outlined then coloured.
-  expect(await legs()).toHaveLength(48);
+  // Six legs, each its coxa, bones and claws, outlined then coloured.
+  expect(await legs()).toHaveLength(60);
   await expect(big(page).locator('[data-stroke="near antenna"]')).toHaveCount(2);
   const first = await legs();
   await expect.poll(legs).not.toEqual(first);
@@ -195,9 +195,9 @@ test('the wasp stands on the insect rig: six legs and antennae in code, a shimme
   const sizes = await decoded(page);
   expect(sizes.length).toBeGreaterThanOrEqual(4);
   expect(sizes.every((n) => n > 0)).toBe(true);
-  expect(await legs()).toHaveLength(48);
+  expect(await legs()).toHaveLength(60);
   await expect(big(page).locator('[data-stroke="near antenna"]')).toHaveCount(2);
-  // Feeding, she shuffles on a slow tripod.
+  // Feeding, she shuffles a tripod's step out and, later, back.
   const first = await legs();
   await expect.poll(legs).not.toEqual(first);
   await expect(big(page).locator('[data-stroke="wing blur"]')).toHaveCount(0);

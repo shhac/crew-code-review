@@ -5,7 +5,7 @@ import { airLegs, bonesOf, insectGait, legLayers, podAlong, standingLegs, walkin
 
 const GROUND = 13.5;
 const leg = (pair: InsectLeg['pair'], far: boolean, x: number, reach: number, bend: 1 | -1, lean: number): InsectLeg =>
-  ({ pair, far, hip: { x, y: 8.6 }, femur: 2.3, tibia: 2.3, tarsus: 2, reach, bend, lean, curl: 20 });
+  ({ pair, far, hip: { x, y: 8.6 }, coxa: 0, femur: 2.3, tibia: 2.3, tarsus: 2, reach, bend, lean, curl: 20 });
 // Near and far of each pair, fore to hind.
 const LEGS: InsectLeg[] = [
   leg('fore', false, 14.6, 4, 1, 40), leg('fore', true, 14.3, 2.6, 1, 40),

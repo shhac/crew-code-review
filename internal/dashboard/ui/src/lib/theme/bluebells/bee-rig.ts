@@ -6,7 +6,7 @@ import { hangAt, hoverBob, pitchAt, type Pitching } from '../rig/insect-flight';
 import { breath } from '../rig/life';
 import { turnAbout, turned, type Layer, type RigPose, type Turn } from '../rig/rig';
 import { compose } from '../rig/skeleton/compose';
-import { insect, localized } from '../rig/skeleton/insect';
+import { insect, localized, sprawledLegs, type Segments } from '../rig/skeleton/insect';
 import type { Goal, PoseSpec } from '../rig/skeleton/types';
 import { wingBlur, type BlurWing, type WingBeat } from '../rig/wing-blur';
 import abdomenArt from './bee-abdomen.webp';
@@ -54,23 +54,26 @@ const FAR_TILT = 8;
 const INK = '#101010';
 const POLLEN = '#f2a516';
 
-// Six legs, all from the thorax's underside, measured off the reference's
-// legs: fore legs reaching forward with their knees forward, hind legs
-// reaching back with their knees back, the far side a little behind and
-// above the near so each shows past the other. They are drawn three
-// quarters as long as the reference's: at full length they stood her
-// thorax 8px above the flower, much taller than a bumblebee stands, and her
-// footprint taller than the page's room over a card.
-const LEG_LENGTH = 0.75;
-const leg = (l: InsectLeg): InsectLeg => ({ ...l, femur: l.femur * LEG_LENGTH, tibia: l.tibia * LEG_LENGTH, tarsus: l.tarsus * LEG_LENGTH });
-const LEGS: readonly InsectLeg[] = [
-  leg({ pair: 'fore', far: false, hip: { x: 14.75, y: 8.59 }, femur: 2.5, tibia: 2.3, tarsus: 2.2, reach: 4.2, bend: 1, lean: 43, curl: 25 }),
-  leg({ pair: 'fore', far: true, hip: { x: 14.45, y: 8.45 }, femur: 2.4, tibia: 2.2, tarsus: 2.1, reach: 2.6, bend: 1, lean: 40, curl: 25 }),
-  leg({ pair: 'mid', far: false, hip: { x: 13.35, y: 8.88 }, femur: 2.05, tibia: 2.15, tarsus: 1.95, reach: 2.6, bend: 1, lean: 40, curl: 20 }),
-  leg({ pair: 'mid', far: true, hip: { x: 12.6, y: 8.75 }, femur: 2.05, tibia: 2.1, tarsus: 1.9, reach: 0.5, bend: 1, lean: 20, curl: 20 }),
-  leg({ pair: 'hind', far: false, hip: { x: 10.54, y: 8.74 }, femur: 1.85, tibia: 2.9, tarsus: 2, reach: -3.8, bend: -1, lean: -41, curl: 20 }),
-  leg({ pair: 'hind', far: true, hip: { x: 9.6, y: 8.4 }, femur: 2.6, tibia: 2.5, tarsus: 2.3, reach: -4.9, bend: -1, lean: -45, curl: 20 }),
-];
+// Six legs, all from the thorax's underside, the sockets measured off the
+// reference's. A bee's legs lengthen front to back, about 0.38, 0.43 and
+// 0.55 of her body, the hind tibia long and broad, bearing the pollen
+// basket; a honeybee's hind leg runs femur, tibia, whole tarsus about
+// 1 : 1.1 : 1.3 (AL-Kahtani and Taha 2021). Each pair's legs are alike, the
+// far side's seen past her body; each sprawls out to the side as she
+// stands (insect.ts's sprawled), its tarsus lying out along the bell.
+const SEGMENTS: Segments = {
+  fore: { coxa: 0.5, femur: 1.9, tibia: 1.7, tarsus: 2.7, lean: 70, curl: 25 },
+  mid: { coxa: 0.5, femur: 2.1, tibia: 2.2, tarsus: 2.9, lean: 70, curl: 20 },
+  hind: { coxa: 0.6, femur: 2.5, tibia: 3, tarsus: 3.8, lean: 70, curl: 20 },
+};
+const LEGS: readonly InsectLeg[] = sprawledLegs([
+  { pair: 'fore', far: false, hip: { x: 14.75, y: 8.59 } },
+  { pair: 'fore', far: true, hip: { x: 14.45, y: 8.45 } },
+  { pair: 'mid', far: false, hip: { x: 13.35, y: 8.88 } },
+  { pair: 'mid', far: true, hip: { x: 12.6, y: 8.75 } },
+  { pair: 'hind', far: false, hip: { x: 10.54, y: 8.74 } },
+  { pair: 'hind', far: true, hip: { x: 9.6, y: 8.4 } },
+], SEGMENTS, GROUND);
 const NEAR_HIND = 4;
 const LOOK: LegLook = {
   widths: [0.62, 0.55, 0.36], outline: 0.14, ink: INK,
@@ -106,8 +109,8 @@ const PITCHING: Pitching = { hover: -38, cruise: -8, speed: 70 };
 
 // Walking on a flower: a slow tetrapod crawl (four feet down, diagonal
 // pairs stepping in turn), and a quicker tripod scurry.
-const CRAWL = insectGait(LEGS, 'tetrapod', 1.3, 0.55);
-const SCURRY = insectGait(LEGS, 'tripod', 1.8, 0.7);
+const CRAWL = insectGait(LEGS, 'tetrapod', 3.6, 0.55);
+const SCURRY = insectGait(LEGS, 'tripod', 3.8, 0.7);
 
 // What she is doing, as far as the drawing cares.
 export type BeePose = 'perch' | 'crawl' | 'scurry' | 'hover' | 'fly' | 'land' | 'bonk';
@@ -229,7 +232,7 @@ const BEE = insect({
   stands: 'thorax (moves here)',
   guides: (code) => [
     { name: 'waist (petiole)', at: 'abdomen' }, { name: 'neck', at: 'head' }, { name: 'wing hinge (tegula)', at: 'hinge' }, { name: 'antenna socket', at: 'socket' },
-    ...LEGS.flatMap((leg) => ['coxa', 'knee', 'tibiotarsal joint', 'claws'].map((name, k) => ({ name, at: code(leg, k) }))),
+    ...LEGS.flatMap((leg) => ['coxa', 'trochanter', 'knee', 'tibiotarsal joint', 'claws'].map((name, k) => ({ name, at: code(leg, k) }))),
   ],
 });
 
@@ -246,11 +249,12 @@ function poseOf(b: RigBee, now: number, still: boolean): PoseSpec {
   const flick = still ? 0 : -14 * flicking(b.seed, now);
   const lean = clamp(b.lean, -15, 15) + flick;
   const joints = { head: { angle: h.head + clamp(b.lean / 3, -5, 5) }, abdomen: { angle: h.abdomen, squash: { by: pump } } };
-  const goals = h.legs(BEE.hips({ root, joints }));
-  const legs = (limb: (id: string) => Limb) => legLayers(LEGS, BEE.legs(limb), LOOK);
+  const hips = BEE.hips({ root, joints });
+  const goals = h.legs(hips);
+  const legs = (limb: (id: string) => Limb) => legLayers(LEGS, BEE.legs(limb), LOOK, hips);
   const knocked = b.pose === 'bonk';
   return {
-    root, joints, limbs: BEE.limbs(goals), show: {}, z: {},
+    root, joints: { ...joints, ...BEE.coxae({ root, joints }, goals) }, limbs: BEE.limbs(goals), show: {}, z: {},
     shapes: {
       'far wings': wingsOf(true, b.wings, knocked),
       'far legs': ({ limb, local }) => localized(legs(limb).far, local),

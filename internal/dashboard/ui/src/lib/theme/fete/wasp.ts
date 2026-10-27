@@ -8,6 +8,7 @@ import { SPACE, along, clearRoute, firstClear, flightOf, flightProgress, flying,
 import { FOOTPRINTS, STAND, type WaspPose } from './footprints';
 import { BLEND, LAP, LAPS, bandOf, nearestTheta, orbitFits, orbitOf, orbitPoint, thetaAt, trueOrbitPoint } from './orbit';
 import type { Places } from './table';
+import { SHUFFLE } from './wasp-rig';
 
 // Two common wasps at the fête's cake, in the shelf stage's coordinates (so
 // they ride with the stage), never leaving the rail's air or its exit lane.
@@ -57,8 +58,9 @@ const TAKEOFF = 350;
 const DEPART = 1500;
 // The arcs it backs away in, from just above its spot out to its widest.
 const ARCS = [{ from: STAND + RISE, to: 20 }, { from: STAND + RISE, to: 18 }] as const;
-const SHUFFLE = 3;
-const SHUFFLE_TIME = 400;
+// Each shuffle is one step of a tripod (wasp-rig.ts's), so all six feet
+// are down between them.
+const SHUFFLE_TIME = 300;
 // Chased: by a cursor that moved in the last CHASE_FRESH ms at CHASE_SPEED
 // or more, within CHASE_REACH of it. No wasp lands within LAND_SHY of a
 // cursor, and none comes back while one is within BACK_SHY of the cake.

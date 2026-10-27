@@ -11,6 +11,7 @@ import { rotate as turnPoint } from '../../spidergait';
 import { airLegsTo, birdLegsTo, hingedBirdLimb, isHingedBird, type BirdLeg } from '../bird';
 import { jointBeside } from '../limb';
 import { legsTo, type Limb, type QuadLeg } from '../gait';
+import { sprawledLimb } from '../hexapod';
 import { product, rotate, translate, type Affine } from './affine';
 import { solveHinged } from './hinge';
 import type { Goal, Handle, LimbKind, LimbSpec, Skeleton } from './types';
@@ -57,6 +58,11 @@ const SOLVERS: { [K in LimbKind]: Solver<K> } = {
     throw new Error(`skeleton: ${limb.id} is not posed by a ${goal.kind} goal`);
   },
   hinged: (limb, root, goal, handle) => solveHinged(limb.leg, root, goal, () => target(goal, handle)),
+  sprawled: (limb, root, goal, handle) => {
+    if (goal.kind !== 'plant' && goal.kind !== 'reach') throw new Error(`skeleton: ${limb.id} is not posed by a ${goal.kind} goal`);
+    const lean = goal.walksOn?.kind === 'toes' ? goal.walksOn.lean : undefined;
+    return sprawledLimb(limb.leg, root, target(goal, handle), goal.step, lean);
+  },
   arm: (limb, root, goal, handle) => {
     if (goal.kind !== 'plant' && goal.kind !== 'reach') throw new Error(`skeleton: ${limb.id} is not posed by a ${goal.kind} goal`);
     const at = target(goal, handle);

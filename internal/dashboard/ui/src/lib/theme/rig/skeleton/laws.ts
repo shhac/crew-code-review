@@ -52,7 +52,18 @@ const bonesKeepLength: Law = ({ moving }) => {
     const out = stretch ? now < stretch.min - EPSILON || now > stretch.max + EPSILON : was !== undefined && Math.abs(now - was) > EPSILON;
     if (out && !broken.has(key)) broken.set(key, `${key}: ${(was ?? now).toFixed(4)} then ${now.toFixed(4)} ${where(s)}`);
   };
+  // A leg sprawled across the view keeps each bone's length in depth,
+  // however it is foreshortened.
+  const deep = (s: Seen) => (s.pose.skeleton?.limbs ?? []).forEach(({ code, limb }) => {
+    const { depth } = limb;
+    if (!depth) return;
+    const span = (a: Point, da: number, b: Point, db: number) => Math.hypot(b.x - a.x, b.y - a.y, db - da);
+    keep(`${code} femur in depth`, span(limb.hip, depth.hip, limb.knee, depth.knee), s);
+    keep(`${code} tibia in depth`, span(limb.knee, depth.knee, limb.ankle, depth.ankle), s);
+    keep(`${code} tarsus in depth`, span(limb.ankle, depth.ankle, limb.foot, depth.foot), s);
+  });
   moving.forEach((s) => {
+    deep(s);
     if (s.pose.skeleton) return s.pose.skeleton.bones.forEach((b) => keep(`${b.code} (${b.name})`, b.length, s, b.stretch));
     drawnLegs(s.pose).forEach((leg, i) => piecesOf(leg).forEach((p, k) => keep(`leg ${i} piece ${k} (${p.src.split('/').pop()})`, length(p.from, p.to), s)));
   });

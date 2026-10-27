@@ -5,6 +5,7 @@
 // parts hang from them. See .ai-cache/plan-skeleton-rigs.md.
 import type { Point } from '../../pointer';
 import type { AirLegs, BirdLeg } from '../bird';
+import type { SprawledLeg } from '../hexapod';
 import type { Limb, QuadLeg, Step } from '../gait';
 import type { Frame, Layer, Turn } from '../rig';
 
@@ -76,7 +77,7 @@ export type Print = { width: number; height: number; heel: Point };
 // its shoulder down to its ground.
 type Arm = { thigh: number; shin: number; reach: number; side?: 1 | -1 };
 type Member<S extends string, L> = { id: string; pair: number; side: Side; joints: Owned; ground: number; solve: S; leg: L };
-export type LimbSpec = LimbOf<'quad', QuadLeg> | LimbOf<'bird', BirdLeg> | Member<'hinged', HingedLeg> | Member<'arm', Arm>;
+export type LimbSpec = LimbOf<'quad', QuadLeg> | LimbOf<'bird', BirdLeg> | Member<'hinged', HingedLeg> | Member<'arm', Arm> | Member<'sprawled', SprawledLeg>;
 export type LimbKind = LimbSpec['solve'];
 
 export type Skeleton = { joints: readonly JointSpec[]; bones: readonly BoneSpec[]; limbs: readonly LimbSpec[] };

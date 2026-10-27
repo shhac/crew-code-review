@@ -1,12 +1,13 @@
 import { mix, mixPoint, rad } from '../math';
 import type { Point } from '../pointer';
-import { legsTo, restingFeet, stepping, type Gait, type Limb, type QuadLeg } from './gait';
+import { legsTo, restingFeet, stepping, type Gait, type Limb, type QuadLeg, type Step } from './gait';
 import type { Layer } from './rig';
 import type { Goal } from './skeleton/types';
 
 // An insect's six legs, drawn in code. All six come from the thorax, a pair
-// on each of its segments: fore, mid and hind. Each runs coxa (its socket,
-// hidden in the fur, the leg's root here), trochanter (too small to show),
+// on each of its segments: fore, mid and hind. Each runs from its socket
+// (the thorax-coxa joint, where the leg swings forward and back) down the
+// coxa to the trochanter (too small to show apart from the femur's root),
 // femur, the knee, tibia, the tibiotarsal joint, then the tarsus out to the
 // claws. At page size a leg is a pixel thick or less, so it is drawn as
 // strokes rather than leg art, which would blur away: crisp, any colour.
@@ -24,21 +25,51 @@ export type InsectLeg = {
   // The coxa's socket on the thorax's underside, in the drawing's own
   // coordinates (facing right, y down).
   hip: Point;
+  coxa: number;
   femur: number;
   tibia: number;
   tarsus: number;
   // How far ahead of the hip (behind, negative) the claws stand.
   reach: number;
-  // Which way the knee points: forward (1), as on a leg reaching forward, or
-  // back (-1), as on a hind leg reaching back. Insect knees ride high, on
-  // the side away from the body.
+  // Drawn flat in the view, which way the knee points: forward (1), as on a
+  // leg reaching forward, or back (-1), as on a hind leg reaching back.
+  // Insect knees ride high, on the side away from the body.
   bend: 1 | -1;
   // How far the tarsus lies from straight down at rest, degrees, its claws
-  // ahead of the joint above (positive) or behind it (negative); and how far
-  // it curls back as the leg swings.
+  // ahead of the joint above (positive) or behind it (negative), or for a
+  // sprawled leg out from the body in its own plane; and how far it curls
+  // back as the leg swings.
   lean: number;
   curl: number;
+  // How far out to the side its claws stand from its root: a leg sprawled
+  // as an insect's is (sprawledLimb). Without it, drawn flat in the view.
+  track?: number;
 };
+
+// A leg sprawled out to the side, as an insect stands: its claws `track`
+// out from its root across the view as well as where they are seen. It is
+// solved in its own upright plane through its root and claws, as a toe
+// walker's is (the tarsus for the bone up from the toes, leaning out from
+// the body, curling as it swings), its knee riding high, then seen from the
+// side: along that plane foreshortened by how far the leg turns across the
+// view, so a foot near under its root shows a leg standing out toward the
+// viewer, never one folded up. Each bone keeps its length in depth.
+export type SprawledLeg = { femur: number; tibia: number; tarsus: number; reach: number; track: number; lean: number; curl: number; knee: { min: number; max: number } };
+const ROOT = { x: 0, y: 0 };
+// In its plane the knee rides high, above the line from root to ankle.
+const KNEE_UP = 1;
+export function sprawledLimb(leg: SprawledLeg, root: Point, claws: Point, step?: Step, lean = leg.lean): Limb {
+  const along = claws.x - root.x;
+  const out = Math.hypot(along, leg.track);
+  const plane: QuadLeg = {
+    hip: ROOT, reach: out, thigh: leg.femur, shin: leg.tibia, fore: false, far: false, bend: KNEE_UP, bendFrame: 'limb', jointLimits: leg.knee,
+    walksOn: { kind: 'toes', length: leg.tarsus, lean: Math.abs(lean), fold: leg.curl },
+  };
+  const flat = legsTo([plane], [ROOT], [{ x: out, y: claws.y - root.y }], step ? [step] : [])[0];
+  const seen = (p: Point): Point => ({ x: root.x + (p.x * along) / out, y: root.y + p.y });
+  const depth = (p: Point) => (p.x * leg.track) / out;
+  return { hip: root, knee: seen(flat.knee), ankle: seen(flat.ankle), foot: seen(flat.foot), paw: flat.paw, depth: { hip: 0, knee: depth(flat.knee), ankle: depth(flat.ankle), foot: depth(flat.foot) } };
+}
 
 // The leg as the shared stepping knows a leg.
 export const asQuad = (leg: InsectLeg): QuadLeg => ({
@@ -63,6 +94,10 @@ const GAITS: Record<InsectGait, { stance: number; lifts: Record<'near' | 'far', 
 };
 
 const fract = (n: number) => n - Math.floor(n);
+
+// How far each foot moves while down when the body goes `cycle` in each
+// whole cycle of the gait.
+export const strideFor = (kind: InsectGait, cycle: number) => GAITS[kind].stance * cycle;
 
 // The gait for these legs, in their order: how far each foot moves while
 // down (stride) and how high it lifts. A leg lifting off at `t` in the cycle
@@ -157,18 +192,21 @@ function held(legs: readonly InsectLeg[], hips: readonly Point[], hold: AirHold)
     const h = helds[i];
     const down = rad(h.angle - hold.pitch * h.turns);
     const lean = rad(h.lean - hold.pitch * h.turns);
-    const length = h.out * (leg.femur + leg.tibia);
+    // A sprawled leg spends some of its length reaching out to the side.
+    const length = Math.sqrt(Math.max(0, (h.out * (leg.coxa + leg.femur + leg.tibia)) ** 2 - (leg.track ?? 0) ** 2));
     const ankle = { x: hips[i].x + length * Math.sin(down), y: hips[i].y + length * Math.cos(down) };
     return { x: ankle.x + leg.tarsus * Math.sin(lean), y: ankle.y + leg.tarsus * Math.cos(lean) };
   });
   return { specs, feet };
 }
 
-// How a leg is drawn: each bone's thickness (femur, tibia, tarsus), the dark
-// outline round them, the near and far sides' colours for each bone, and
-// how long the claws' hook is.
+// How a leg is drawn: each bone's thickness (femur, tibia, tarsus; the
+// coxa's, where it is drawn, its own), the dark outline round them, the
+// near and far sides' colours for each bone, and how long the claws' hook
+// is.
 export type LegLook = {
   widths: readonly [number, number, number];
+  coxa?: number;
   outline: number;
   ink: string;
   near: readonly [string, string, string];
@@ -188,21 +226,26 @@ export function bonesOf(limb: Limb, claw: number): [Point[], Point[], Point[], P
 
 // One side's legs as strokes: every outline first, then every bone's colour
 // over them, so outlines show only round the legs' silhouettes and never
-// across a joint. Named for the lab, which shows and hides each side.
-function side(limbs: readonly Limb[], look: LegLook, far: boolean): Layer[] {
+// across a joint. Named for the lab, which shows and hides each side. A leg
+// posed from its trochanter has its coxa drawn up to its socket.
+type Drawn = { limb: Limb; socket?: Point };
+function side(legs: readonly Drawn[], look: LegLook, far: boolean): Layer[] {
   const name = far ? 'far legs' : 'near legs';
   const colours = far ? look.far : look.near;
   const widths = [...look.widths, look.widths[2] * 0.8];
-  const bones = limbs.map((limb) => bonesOf(limb, look.claw));
-  const outlines = bones.flatMap((leg) => leg.map((points, b): Layer => ({ kind: 'stroke', name, points, width: widths[b] + 2 * look.outline, colour: look.ink })));
-  const fills = bones.flatMap((leg) => leg.map((points, b): Layer => ({ kind: 'stroke', name, points, width: widths[b], colour: colours[Math.min(b, 2)] })));
+  const coxa = look.coxa ?? look.widths[0];
+  const bones = legs.map(({ limb, socket }) => ({ coxa: socket ? [[socket, limb.hip]] : [], rest: bonesOf(limb, look.claw) }));
+  const stroke = (points: Point[], width: number, colour: string): Layer => ({ kind: 'stroke', name, points, width, colour });
+  const outlines = bones.flatMap((leg) => [...leg.coxa.map((p) => stroke(p, coxa + 2 * look.outline, look.ink)), ...leg.rest.map((p, b) => stroke(p, widths[b] + 2 * look.outline, look.ink))]);
+  const fills = bones.flatMap((leg) => [...leg.coxa.map((p) => stroke(p, coxa, colours[0])), ...leg.rest.map((p, b) => stroke(p, widths[b], colours[Math.min(b, 2)]))]);
   return [...outlines, ...fills];
 }
 
 // The legs as layers: the far side's, to go behind the body, and the near
-// side's, to go over its edge so they grow out of it.
-export function legLayers(legs: readonly InsectLeg[], limbs: readonly Limb[], look: LegLook): { far: Layer[]; near: Layer[] } {
-  const of = (far: boolean) => limbs.filter((_, i) => legs[i].far === far);
+// side's, to go over its edge so they grow out of it. `sockets`: each leg's
+// thorax-coxa joint, where its limb is posed from its trochanter.
+export function legLayers(legs: readonly InsectLeg[], limbs: readonly Limb[], look: LegLook, sockets?: readonly Point[]): { far: Layer[]; near: Layer[] } {
+  const of = (far: boolean) => limbs.flatMap((limb, i) => (legs[i].far === far ? [{ limb, ...(sockets ? { socket: sockets[i] } : {}) }] : []));
   return { far: side(of(true), look, true), near: side(of(false), look, false) };
 }
 

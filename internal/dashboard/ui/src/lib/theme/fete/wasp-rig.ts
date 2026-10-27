@@ -1,12 +1,12 @@
 import { clamp } from '../math';
 import type { Point } from '../pointer';
 import { antennaLayer, flicking, turnedBy, type Antenna } from '../rig/antennae';
-import { airGoals, insectGait, legLayers, standingGoals, walkingGoals, type InsectLeg, type LegLook, type Limb } from '../rig/hexapod';
+import { airGoals, insectGait, legLayers, standingGoals, strideFor, walkingGoals, type InsectLeg, type LegLook, type Limb } from '../rig/hexapod';
 import { hangAt, hoverBob, pitchAt, type Pitching } from '../rig/insect-flight';
 import { breath } from '../rig/life';
 import { turnAbout, turned, type Layer, type RigPose, type Turn } from '../rig/rig';
 import { compose } from '../rig/skeleton/compose';
-import { insect, localized } from '../rig/skeleton/insect';
+import { insect, localized, sprawledLegs, type Segments } from '../rig/skeleton/insect';
 import type { Goal, PoseSpec } from '../rig/skeleton/types';
 import { shimmer, wingBlur, type BlurWing, type WingBeat } from '../rig/wing-blur';
 import type { WaspPose } from './footprints';
@@ -58,18 +58,27 @@ const FAR_TILT = 8;
 
 const INK = '#111111';
 
-// Six legs from the thorax's underside, measured off the reference's: the
-// fore legs reaching forward with their knees forward, the hind legs
-// sprawled back with their knees back, the far side's shorter and tucked a
-// little behind the near so each shows past the other.
-const LEGS: readonly InsectLeg[] = [
-  { pair: 'fore', far: false, hip: { x: 19.6, y: 7.4 }, femur: 3, tibia: 3.6, tarsus: 2, reach: 5.9, bend: 1, lean: 40, curl: 25 },
-  { pair: 'fore', far: true, hip: { x: 17, y: 8 }, femur: 2.8, tibia: 3.2, tarsus: 1.8, reach: 3.2, bend: 1, lean: 30, curl: 25 },
-  { pair: 'mid', far: false, hip: { x: 14, y: 8 }, femur: 2.8, tibia: 3.4, tarsus: 1.9, reach: -2.4, bend: -1, lean: -25, curl: 20 },
-  { pair: 'mid', far: true, hip: { x: 15, y: 8.2 }, femur: 2.6, tibia: 3.2, tarsus: 1.7, reach: 0.3, bend: 1, lean: 15, curl: 20 },
-  { pair: 'hind', far: false, hip: { x: 12.3, y: 7.8 }, femur: 5, tibia: 5, tarsus: 2.6, reach: -10.5, bend: -1, lean: -60, curl: 20 },
-  { pair: 'hind', far: true, hip: { x: 13, y: 8.2 }, femur: 3.6, tibia: 3.6, tarsus: 2, reach: -4.7, bend: -1, lean: -40, curl: 20 },
-];
+// Six legs from the thorax's underside, the sockets measured off the
+// reference's. A wasp's legs lengthen front to back, about 0.45, 0.55 and
+// 0.7 of her body; a vespid's front tibia is shorter than its femur, the
+// middle about as long, the hind longer (Silveira et al. 2024), and a whole
+// tarsus about 1.3 femurs (a honeybee's hind leg: AL-Kahtani and Taha
+// 2021). Each pair's legs are alike, the far side's seen past her body;
+// each sprawls out to the side as she stands (insect.ts's sprawled), its
+// tarsus lying out along the surface.
+const SEGMENTS: Segments = {
+  fore: { coxa: 0.8, femur: 3, tibia: 2.6, tarsus: 3.8, lean: 70, curl: 25 },
+  mid: { coxa: 0.9, femur: 3.4, tibia: 3.4, tarsus: 4.4, lean: 70, curl: 20 },
+  hind: { coxa: 1.1, femur: 4, tibia: 4.8, tarsus: 5.2, lean: 70, curl: 20 },
+};
+const LEGS: readonly InsectLeg[] = sprawledLegs([
+  { pair: 'fore', far: false, hip: { x: 19.6, y: 7.4 } },
+  { pair: 'fore', far: true, hip: { x: 17, y: 8 } },
+  { pair: 'mid', far: false, hip: { x: 14, y: 8 } },
+  { pair: 'mid', far: true, hip: { x: 15, y: 8.2 } },
+  { pair: 'hind', far: false, hip: { x: 12.3, y: 7.8 } },
+  { pair: 'hind', far: true, hip: { x: 13, y: 8.2 } },
+], SEGMENTS, GROUND);
 // Yellow legs, darker at the femur's root as the drawing's are.
 const LOOK: LegLook = {
   widths: [0.95, 0.8, 0.55], outline: 0.2, ink: INK,
@@ -93,8 +102,11 @@ const SWEPT = 70;
 const PITCHING: Pitching = { hover: -30, cruise: -10, speed: 160 };
 export const CRUISE = 200;
 
-// Shuffling on the cake: a slow tripod.
-const SHUFFLE = insectGait(LEGS, 'tripod', 1.4, 0.6);
+// Shuffling on the cake, a tripod: each shuffle (wasp.ts's) one tripod's
+// step, SHUFFLE page px, half the gait's cycle, so every foot is down
+// before and after it.
+export const SHUFFLE = 4;
+const SHUFFLING = insectGait(LEGS, 'tripod', strideFor('tripod', (2 * SHUFFLE) / SCALE), 0.6);
 
 // What she is doing, as far as the drawing cares.
 export type RigWasp = {
@@ -125,7 +137,7 @@ function hold(w: RigWasp, now: number): Hold {
   switch (w.pose) {
     case 'feed':
       // Head down, jaws to the sugar, the front of her lowered a little.
-      return { swept: 0, pitch: 7, bob: 2.5, gaster: 2, head: 30, taps: tapping(w.seed, now), legs: (hips) => walkingGoals(LEGS, hips, w.walked, GROUND, SHUFFLE) };
+      return { swept: 0, pitch: 7, bob: 2.5, gaster: 2, head: 30, taps: tapping(w.seed, now), legs: (hips) => walkingGoals(LEGS, hips, w.walked, GROUND, SHUFFLING) };
     case 'hover': {
       const pitch = pitchAt(PITCHING, 0);
       return { swept: 0, pitch, bob: hoverBob(w.seed, now, 0.8, 2), gaster: -2, head: 10, taps: [0, 0], legs: (hips) => airGoals(LEGS, hips, { hang: 0.45, reach: 0, pitch }) };
@@ -193,7 +205,7 @@ const WASP = insect({
   stands: 'body (moves here)',
   guides: (code) => [
     { name: 'petiole', at: 'gaster' }, { name: 'neck', at: 'head' }, { name: 'wing hinge (tegula)', at: 'hinge' }, { name: 'scape', at: 'scape' },
-    ...LEGS.flatMap((leg) => ['coxa', 'knee', 'tibiotarsal joint', 'claws'].map((name, k) => ({ name, at: code(leg, k) }))),
+    ...LEGS.flatMap((leg) => ['coxa', 'trochanter', 'knee', 'tibiotarsal joint', 'claws'].map((name, k) => ({ name, at: code(leg, k) }))),
   ],
 });
 
@@ -212,10 +224,11 @@ function poseOf(w: RigWasp, now: number, still: boolean): PoseSpec {
   const flick = still ? 0 : -12 * flicking(w.seed, now);
   const lean = clamp(w.lean, -15, 15) + flick;
   const joints = { head: { angle: h.head + clamp(w.lean / 3, -5, 5) }, gaster: { angle: h.gaster, squash: { by: pulse } } };
-  const goals = h.legs(WASP.hips({ root, joints }));
-  const legs = ({ limb }: { limb: (id: string) => Limb }) => legLayers(LEGS, WASP.legs(limb), LOOK);
+  const hips = WASP.hips({ root, joints });
+  const goals = h.legs(hips);
+  const legs = ({ limb }: { limb: (id: string) => Limb }) => legLayers(LEGS, WASP.legs(limb), LOOK, hips);
   return {
-    root, joints, limbs: WASP.limbs(goals), show: {}, z: {},
+    root, joints: { ...joints, ...WASP.coxae({ root, joints }, goals) }, limbs: WASP.limbs(goals), show: {}, z: {},
     shapes: {
       'far wings': wingsOf(true, w.wings, h.swept, w.seed, now, still),
       'far legs': (posed) => localized(legs(posed).far, posed.local),

@@ -60,12 +60,12 @@ const POLLEN = '#f2a516';
 const LEG_LENGTH = 0.75;
 const leg = (l: InsectLeg): InsectLeg => ({ ...l, femur: l.femur * LEG_LENGTH, tibia: l.tibia * LEG_LENGTH, tarsus: l.tarsus * LEG_LENGTH });
 const LEGS: readonly InsectLeg[] = [
-  leg({ pair: 'fore', far: false, hip: { x: 14.75, y: 8.59 }, femur: 2.5, tibia: 2.3, tarsus: 2.2, reach: 4.2, bend: 1, lean: 43, curl: 25 }),
-  leg({ pair: 'fore', far: true, hip: { x: 14.45, y: 8.45 }, femur: 2.4, tibia: 2.2, tarsus: 2.1, reach: 2.6, bend: 1, lean: 40, curl: 25 }),
-  leg({ pair: 'mid', far: false, hip: { x: 13.35, y: 8.88 }, femur: 2.05, tibia: 2.15, tarsus: 1.95, reach: 2.6, bend: 1, lean: 40, curl: 20 }),
-  leg({ pair: 'mid', far: true, hip: { x: 12.6, y: 8.75 }, femur: 2.05, tibia: 2.1, tarsus: 1.9, reach: 0.5, bend: 1, lean: 20, curl: 20 }),
-  leg({ pair: 'hind', far: false, hip: { x: 10.54, y: 8.74 }, femur: 1.85, tibia: 2.9, tarsus: 2, reach: -3.8, bend: -1, lean: -41, curl: 20 }),
-  leg({ pair: 'hind', far: true, hip: { x: 9.6, y: 8.4 }, femur: 2.6, tibia: 2.5, tarsus: 2.3, reach: -4.9, bend: -1, lean: -45, curl: 20 }),
+  leg({ pair: 'fore', far: false, hip: { x: 14.75, y: 8.59 }, coxa: 0, femur: 2.5, tibia: 2.3, tarsus: 2.2, reach: 4.2, bend: 1, lean: 43, curl: 25 }),
+  leg({ pair: 'fore', far: true, hip: { x: 14.45, y: 8.45 }, coxa: 0, femur: 2.4, tibia: 2.2, tarsus: 2.1, reach: 2.6, bend: 1, lean: 40, curl: 25 }),
+  leg({ pair: 'mid', far: false, hip: { x: 13.35, y: 8.88 }, coxa: 0, femur: 2.05, tibia: 2.15, tarsus: 1.95, reach: 2.6, bend: 1, lean: 40, curl: 20 }),
+  leg({ pair: 'mid', far: true, hip: { x: 12.6, y: 8.75 }, coxa: 0, femur: 2.05, tibia: 2.1, tarsus: 1.9, reach: 0.5, bend: 1, lean: 20, curl: 20 }),
+  leg({ pair: 'hind', far: false, hip: { x: 10.54, y: 8.74 }, coxa: 0, femur: 1.85, tibia: 2.9, tarsus: 2, reach: -3.8, bend: -1, lean: -41, curl: 20 }),
+  leg({ pair: 'hind', far: true, hip: { x: 9.6, y: 8.4 }, coxa: 0, femur: 2.6, tibia: 2.5, tarsus: 2.3, reach: -4.9, bend: -1, lean: -45, curl: 20 }),
 ];
 const NEAR_HIND = 4;
 const LOOK: LegLook = {

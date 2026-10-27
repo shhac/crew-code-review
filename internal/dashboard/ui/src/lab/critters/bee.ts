@@ -3,6 +3,7 @@ import { ANCHOR, beeRig, collarOf, EYE, GROUND, REACH, REFERENCE, SCALE, type Be
 import { gazeFrom } from '../../lib/theme/rig/gaze';
 import { dartAt } from '../../lib/theme/rig/insect-flight';
 import { turnAbout, type RigPose } from '../../lib/theme/rig/rig';
+import { CODES_BEFORE_COXA } from '../../lib/theme/rig/skeleton/insect';
 import bonk from '../bee-pose-bonk.webp';
 import crawl from '../bee-pose-crawl.webp';
 import fly from '../bee-pose-fly.webp';
@@ -93,6 +94,6 @@ export const bee = {
   gaze: (dir, cursor) => gaze(dir, { x: 0, y: -(GROUND - ANCHOR.y) * SCALE }, cursor),
   drawings: DRAWINGS,
   // Before her skeleton was her own, read off the drawing, her spine had no
-  // joint where she moves: the waist was SJ1.
-  aliases: { SJ1: 'SJ2' },
+  // joint where she moves (the waist was SJ1), and her legs no coxa.
+  aliases: { SJ1: 'SJ2', ...CODES_BEFORE_COXA },
 } satisfies RigCritter;

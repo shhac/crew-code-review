@@ -19,11 +19,9 @@ const KNOWN = {
   },
   rabbit: { footprintsHold: 'the box of a forepaw\'s metacarpus reaches 0.29px under the ledge at its rounded cap\'s corner, which is see-through, as the page has always drawn it (counted as squares round each joint, as legs were before its skeleton, it never showed)' },
   bee: {
-    bonesKeepLength: 'crawling and scurrying, a foot stepping further than femur and tibia span stretches the tibia to the claws, as the insect rig has always drawn it (spidergait\'s knees)',
     anklesBehindToes: 'she stands on her tarsi, not on toes with a bone rising from them: the hind legs\' tarsi lie back along the bell from the tibiotarsal joint, ahead of the claws, as an insect\'s do',
   },
   wasp: {
-    bonesKeepLength: 'her front and hind legs reach further than femur and tibia span, standing and feeding, so the tibia stretches to the claws, as the insect rig has always drawn them (spidergait\'s knees)',
     anklesBehindToes: 'she stands on her tarsi, not on toes with a bone rising from them: the middle and hind legs\' tarsi lie back along the surface from the tibiotarsal joint, ahead of the claws, as an insect\'s do',
   },
   hare: { footprintsHold: 'alert, its breath lifts its back up to 0.32px over the 27px it keeps to day to day (hare.ts\'s CLEAR); held shallow enough to fit, it would hardly breathe' },
@@ -95,6 +93,16 @@ describe('the laws themselves', () => {
     const moved: RigPose = { ...frame, layers: [image('body', 3)] };
     expect(LAWS.stillHolds({ moving: [], still: [seenOf(wide, 0, true), seenOf(moved, 40, true), seenOf(blink, 80, true)] }))
       .toEqual(['blinks test at 80, motion reduced', 'moves test at 40, motion reduced']);
+  });
+
+  it('finds a leg sprawled across the view that stretches in depth, however it is foreshortened', () => {
+    const leg = (out: number) => ({
+      id: 'L0', code: 'L0', fore: true, sole: 10,
+      limb: { hip: { x: 0, y: 0 }, knee: { x: 0, y: 3 }, ankle: { x: 0, y: 6 }, foot: { x: 0, y: 8 }, paw: 0, depth: { hip: 0, knee: out, ankle: out, foot: out } },
+    });
+    const posed = (out: number): RigPose => ({ ...frame, layers: [], skeleton: { joints: [], bones: [], limbs: [leg(out)] } });
+    expect(LAWS.bonesKeepLength({ moving: [seenOf(posed(1), 0), seenOf(posed(1), 40)], still: [] })).toEqual([]);
+    expect(LAWS.bonesKeepLength({ moving: [seenOf(posed(1), 0), seenOf(posed(2), 40)], still: [] })).toEqual(['L0 femur in depth: 3.1623 then 3.6056 test at 40']);
   });
 
   it('finds toes doubled back over the bone up to them', () => {
