@@ -214,6 +214,15 @@ export function where(b: Bee, page: PageMap, now: number): Point | null {
   }
 }
 
+// How far it has crawled along its way to the next bell, eased as where()
+// eases it, so each foot stays where it was set down.
+function crawled(b: Bee, page: PageMap, now: number): number {
+  const at = onPage(page, b.at);
+  const to = b.to && onPage(page, b.to);
+  if (b.mode !== 'crawl' || !at || !to) return 0;
+  return apart(at, to) * smooth((now - b.since) / Math.max(1, b.until - b.since));
+}
+
 // Two braking steps: most of the way, a breath, then the rest.
 function braking(ms: number): number {
   if (ms < STEP) return 0.65 * (1 - (1 - ms / STEP) ** 2);
@@ -600,7 +609,7 @@ export function beeView(b: Bee, page: PageMap, now: number): BeeView | null {
   const tremble = b.mode === 'shiver' ? TREMBLE * Math.sin((2 * Math.PI * TREMBLE_HZ * since) / 1000) : 0;
   return {
     x: p.x + tremble, y: p.y, dir: b.dir, pose: poseOf(b, now, page), mode: b.mode, speed,
-    walked: b.mode === 'crawl' ? (since / 1000) * CRAWL_SPEED : 0, wings,
+    walked: crawled(b, page, now), wings,
     ...(b.mode === 'bounce' ? { knocked: since } : {}), opacity: opacityOf(b, now), on,
   };
 }

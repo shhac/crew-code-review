@@ -110,15 +110,14 @@ const zigAt = (id: number, places: Places, t: number): Point => {
   return { x: above.x + ZIG * clamp(1.3 * Math.sin((Math.PI * t) / SWEEP), -1, 1), y: above.y };
 };
 
-// A few short shuffles across its spot while it feeds: how far from the
-// middle it stands at t into feeding, and how far it has walked.
-function shuffleAt(seed: number, t: number): { dx: number; walked: number } {
+// A few short shuffles across its spot while it feeds, out and back: how
+// far from the middle it stands at t into feeding.
+function shuffleAt(seed: number, t: number): number {
   const every = 1800 + 1200 * hash(seed + 5);
   const n = Math.floor(t / every);
   const into = clamp((t - n * every - 600) / SHUFFLE_TIME, 0, 1);
   const out = n % 2 === 0;
-  const dx = SHUFFLE * (out ? smooth(into) : 1 - smooth(into)) * (hash(seed + 3) < 0.5 ? 1 : -1);
-  return { dx, walked: SHUFFLE * (n + smooth(into)) };
+  return SHUFFLE * (out ? smooth(into) : 1 - smooth(into)) * (hash(seed + 3) < 0.5 ? 1 : -1);
 }
 
 // Where a wasp is now, or null while it is away.
@@ -135,7 +134,7 @@ export function where(w: Wasp, places: Places, now: number): Point | null {
     case 'feed':
     case 'rest': {
       const stand = standOf(w.id, places);
-      return { x: stand.x + shuffleAt(w.seed, now - w.since).dx, y: stand.y };
+      return { x: stand.x + shuffleAt(w.seed, now - w.since), y: stand.y };
     }
     default: return w.from;
   }
@@ -176,7 +175,9 @@ export function waspView(w: Wasp, places: Places, now: number, still = false): W
     const theta = thetaAt(w, now);
     return { ...base, pose: 'hover', scale: 0.95 + 0.05 * Math.sin(theta) };
   }
-  if (w.mode === 'feed' || w.mode === 'rest') return { ...base, pose: 'feed', walked: shuffleAt(w.seed, now - w.since).walked };
+  // Her legs step as far as she has moved, forward of her facing or back,
+  // so each foot stays where she set it down.
+  if (w.mode === 'feed' || w.mode === 'rest') return { ...base, pose: 'feed', walked: shuffleAt(w.seed, now - w.since) * (w.face < 0 ? -1 : 1) };
   return { ...base, pose: poseOf(w) };
 }
 
