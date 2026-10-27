@@ -1,7 +1,7 @@
 import { degrees, mixPoint, rad, smooth } from '../math';
 import type { Point } from '../pointer';
 import { cycleLength, rotate } from '../spidergait';
-import { flexion, gaitPhase, restingFeet, type Gait, type Limb, type Step, type Toes } from './gait';
+import { flexion, gaitPhase, restingFeet, stepping, type Gait, type Limb, type Step, type Toes } from './gait';
 import { jointBeside } from './limb';
 import type { ArtLeg, Foot, Guide } from './rig';
 import { cleared, depth, held, solveHinged, wrap } from './skeleton/hinge';
@@ -204,6 +204,17 @@ export const plantedLegs = (specs: readonly BirdLeg[], hips: readonly Point[], f
 export const BIRD_STANCE = 0.6;
 export const birdWalk = (stride: number, lift: number, stance = BIRD_STANCE): Gait => ({ stride, lift, stance, beats: [0, 0.5] });
 
+// Where a walking bird's feet go, as gait.ts's stepping sets them, but for
+// a swinging foot's way forward: brought through early in its swing, then
+// reaching out ahead for the rest of it, so it is well past the planted
+// foot as the body passes over that one (each bird's walk-pass or walk
+// drawing), rather than beside it.
+export function birdStepping(specs: readonly BirdLeg[], walked: number, ground: number, gait: Gait) {
+  const { feet, steps } = stepping(specs, walked, ground, gait);
+  const ahead = (step: Step) => (step.down ? 0 : gait.stride * (1 - (1 - step.t) ** 2 - step.t));
+  return { feet: (hips: readonly Point[]) => feet(hips).map((f, i) => ({ x: f.x + ahead(steps[i]), y: f.y })), steps };
+}
+
 const fract = (n: number) => n - Math.floor(n);
 
 // How far through its current step the walk is, 0 as a foot lands to 1 as
@@ -223,22 +234,27 @@ export const stepLength = (gait: Gait) => cycleLength(gait.stride, gait.stance) 
 // The head bob of a walking pigeon or crow (gulls do not bob): how far
 // forward of where it sits standing the head is, along the body, in
 // drawing units. It moves in two phases, one bob per step (Necker's review,
-// after Frost 1978 and Troje and Frost 2000): a quick forward thrust, which
-// starts in double support just after the front foot lands, then a hold
-// through the single support that follows, in which the head stays still in
-// space while the body walks on beneath it, so against the body it slides
-// back. `thrust` is the thrust's share of a step (a crow's is about 0.45:
-// 0.15s of thrust to 0.2s of hold); a faster walk shortens the hold, so a
-// month may raise it with speed. Centred, so standing and walking share the
-// head's middle place.
+// after Frost 1978 and Troje and Frost 2000): a quick forward thrust, then
+// a hold, in which the head stays still in space while the body walks on
+// beneath it, so against the body it slides back. The two keep time with
+// the feet: the thrust starts a little before the front foot lands and the
+// hold a little after the rear foot lifts, so the head holds still through
+// the single support (Daanje 1951; Fujita 2002 and 2003, as Hancock et al.
+// 2014 sum them up). `thrust` is the thrust's share of a step (a crow's is
+// about 0.45: 0.15s of thrust to 0.2s of hold); a faster walk shortens the
+// hold, so a month may raise it with speed, the thrust starting sooner.
+// Centred, so standing and walking share the head's middle place.
 export function headBob(walked: number, gait: Gait, thrust: number): number {
   const length = stepLength(gait);
-  const s = stepPhase(walked, gait);
+  const holds = gait.beats.length * gait.stance - 1 + HOLD_LAG;
+  const s = fract(stepPhase(walked, gait) - holds + thrust);
   // Against the ground, the head jumps a whole step forward in the thrust
   // and holds in the rest; the body moves on steadily under it.
   const ahead = s < thrust ? smooth(s / thrust) : 1;
   return length * (ahead - s) - (length * (1 - thrust)) / 2;
 }
+// How long after the rear foot lifts the hold starts, in shares of a step.
+const HOLD_LAG = 0.05;
 
 // How high the body rides through a step, 0 to 1: lowest as a foot lands,
 // highest midway through the single support, as the body vaults over the

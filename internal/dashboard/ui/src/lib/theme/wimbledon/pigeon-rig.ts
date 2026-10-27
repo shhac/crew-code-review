@@ -1,7 +1,7 @@
 import { apart, mix, smooth } from '../math';
 import type { Point } from '../pointer';
-import { AIR_LEGS, birdWalk, curledIn, feetLine, headBob, INTERTARSAL_HINGE, stepRise, type AirLegs, type HingedBirdLeg } from '../rig/bird';
-import { stepping, type Step } from '../rig/gait';
+import { AIR_LEGS, birdStepping, birdWalk, curledIn, feetLine, headBob, INTERTARSAL_HINGE, stepRise, type AirLegs, type HingedBirdLeg } from '../rig/bird';
+import type { Step } from '../rig/gait';
 import { gazeFrom } from '../rig/gaze';
 import { blinking, breath } from '../rig/life';
 import { lidLayers, turnAbout, type Frame, type Fur, type LimbArt, type RigPose, type Turn } from '../rig/rig';
@@ -91,7 +91,7 @@ const LEG_ART: LimbArt = {
 // How long the neck line (head joint to its base) and the back line (the
 // base to the body's pivot) are at their shortest and longest, through its
 // bob, its alert stretch and its peck.
-const NECK_STRETCH = { min: 1.55, max: 3.25 };
+const NECK_STRETCH = { min: 1.45, max: 3.25 };
 const BACK_STRETCH = { min: 4.3, max: 5.85 };
 const STRIDING = { limits: { ...INTERTARSAL_HINGE.limits, max: 55 }, planted: { ...INTERTARSAL_HINGE.limits, max: 55 } };
 const LEG = {
@@ -226,11 +226,11 @@ function onGround(pigeon: RigPigeon, look: PigeonLook): Ground {
     return { body: turnAbout(p.body, HIPS), skull: {}, neck: { angle: p.head, shift: { x: 2.5 * p.down, y: 2.9 * p.down } }, goals: planted, tail: -6 * p.down };
   }
   const walked = pigeon.walked / SCALE;
-  // The body rides up over each planted leg; the head thrusts forward just
-  // after a foot lands and holds still over the ground while the body walks
-  // on under it.
+  // The body rides up over each planted leg; the head thrusts forward as a
+  // foot lands and holds still over the ground while the body walks on
+  // under it on the other.
   const rise = 0.2 * stepRise(walked, WALK);
-  const { feet, steps } = stepping(LEGS, walked, FEET, WALK);
+  const { feet, steps } = birdStepping(LEGS, walked, FEET, WALK);
   return {
     body: turnAbout(0, MIDDLE, 0, -rise),
     skull: { angle: 0, shift: { x: headBob(walked, WALK, THRUST), y: rise } },

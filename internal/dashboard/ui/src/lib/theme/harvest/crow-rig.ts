@@ -1,7 +1,6 @@
 import { clamp, smooth } from '../math';
 import type { Point } from '../pointer';
-import { birdWalk, curledIn, feetLine, headBob, INTERTARSAL_HINGE, stepRise, type AirLegs, type HingedBirdLeg } from '../rig/bird';
-import { stepping } from '../rig/gait';
+import { birdStepping, birdWalk, curledIn, feetLine, headBob, INTERTARSAL_HINGE, stepRise, type AirLegs, type HingedBirdLeg } from '../rig/bird';
 import { gazeFrom } from '../rig/gaze';
 import { blinking, breath } from '../rig/life';
 import { lidLayers, turnAbout, type Frame, type Fur, type LimbArt, type RigPose, type Turn } from '../rig/rig';
@@ -116,8 +115,12 @@ const FEET = feetLine(GROUND, FOOT);
 
 // The walk: one foot after the other, each down for 0.6 of the stride, the
 // head bobbing once a step, its thrust about 0.45 of it (0.15s of thrust to
-// 0.2s of hold; the harvest note's research).
-const WALK = birdWalk(4.2, 1.1);
+// 0.2s of hold; the harvest note's research). Each foot sweeps as far as
+// these legs reach while it is down, a cycle of 10.5 units (about 14cm on
+// a carrion crow; Elbroch and Marks give an American crow's walking stride
+// as 11.4 to 20.3cm), so about four steps a second at 20px/s; the note's
+// three a second would want longer legs than these.
+const WALK = birdWalk(6.3, 1.1);
 const THRUST = 0.45;
 // A sidle is a hurried walk, the same legs at a longer stride.
 const SIDLE = birdWalk(5.2, 1.3);
@@ -209,7 +212,7 @@ function onGround(crow: RigCrow, look: CrowLook): Ground {
   const gait = crow.pose === 'sidle' ? SIDLE : WALK;
   const walked = crow.walked / SCALE;
   const rise = 0.25 * stepRise(walked, gait);
-  const { feet, steps } = stepping(LEGS, walked, FEET, gait);
+  const { feet, steps } = birdStepping(LEGS, walked, FEET, gait);
   return {
     body: turnAbout(0, MIDDLE, 0, -rise),
     neck: { ...looking(gaze).neck, shift: { x: headBob(walked, gait, THRUST), y: rise } },

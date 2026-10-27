@@ -1,8 +1,7 @@
 import { clamp, mix, smooth } from '../math';
 import type { Point } from '../pointer';
 import { gazeFrom } from '../rig/gaze';
-import { birdWalk, curledIn, feetLine, headBob, INTERTARSAL_HINGE, stepRise, type AirLegs, type HingedBirdLeg } from '../rig/bird';
-import { stepping } from '../rig/gait';
+import { birdStepping, birdWalk, curledIn, feetLine, headBob, INTERTARSAL_HINGE, stepRise, type AirLegs, type HingedBirdLeg } from '../rig/bird';
 import { blinking, breath } from '../rig/life';
 import { lidLayers, turnAbout, turned, type Frame, type Fur, type Layer, type LimbArt, type RigPose, type Turn } from '../rig/rig';
 import { compose } from '../rig/skeleton/compose';
@@ -235,7 +234,7 @@ function onGround(gull: RigGull, look: GullLook): Ground {
   // held a little low, bobs.
   const rise = 0.3 * stepRise(walked, gait);
   const forage = gull.pose === 'forage';
-  const { feet, steps } = stepping(LEGS, walked, FEET, gait);
+  const { feet, steps } = birdStepping(LEGS, walked, FEET, gait);
   return {
     body: turnAbout(0, MIDDLE, 0, -rise),
     neck: { angle: forage ? 6 : 0, shift: { x: forage ? 0.6 * headBob(walked, gait, THRUST) : 0, y: rise } },
@@ -291,7 +290,7 @@ const gullOf = (air: boolean) => tetrapod(BIRD, {
     // Its neck stretches and shortens as the head thrusts and bobs, eyes
     // something and calls.
     { from: 'skull', to: 'neck base', name: 'neck line', stretch: { min: 3.85, max: 4.1 } },
-    { from: 'neck base', to: 'body', name: 'back line', stretch: { min: 3.8, max: 4.8 } },
+    { from: 'neck base', to: 'body', name: 'back line', stretch: { min: 3.75, max: 4.8 } },
     ...(air ? [{ from: 'body', to: 'tail', name: 'pelvis line (to the tail root)' }, ...FAR_WING.bones, ...NEAR_WING.bones] : []),
   ],
   legs: LEGS,

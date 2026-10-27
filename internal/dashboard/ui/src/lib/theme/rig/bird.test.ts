@@ -156,19 +156,25 @@ describe('the head bob', () => {
   const THRUST = 0.45;
   const step = stepLength(GAIT);
 
-  it('holds the head still in space through the hold, the body walking on beneath it', () => {
+  // A foot lands at 0 and the other half a cycle on; the rear one lifts a
+  // tenth of a cycle after each landing.
+  it('holds the head still in space through the single support, the body walking on beneath it', () => {
     const world = (walked: number) => walked + headBob(walked, GAIT, THRUST);
-    expect(world(0.3 * CYCLE)).toBeCloseTo(world(0.45 * CYCLE));
-    expect(world(0.8 * CYCLE)).toBeCloseTo(world(0.95 * CYCLE));
+    expect(stepsOf(0.15 * CYCLE, GAIT).some((s) => !s.down)).toBe(true);
+    expect(world(0.15 * CYCLE)).toBeCloseTo(world(0.35 * CYCLE));
+    expect(world(0.65 * CYCLE)).toBeCloseTo(world(0.85 * CYCLE));
   });
 
-  it('thrusts it forward a whole step from just after a foot lands, in double support', () => {
+  it('thrusts it forward a whole step from a little before a foot lands to just after the rear one lifts', () => {
     const world = (walked: number) => walked + headBob(walked, GAIT, THRUST);
-    const start = world(0), end = world(THRUST * step);
+    // The hold starts a little after the rear foot lifts, the thrust its
+    // share of a step before that.
+    const holds = 0.1 * CYCLE + 0.05 * step;
+    const start = world(holds - THRUST * step), end = world(holds);
     expect(end - start).toBeCloseTo(step);
+    expect(headBob(0.48 * CYCLE, GAIT, THRUST)).toBeGreaterThan(headBob(0.46 * CYCLE, GAIT, THRUST));
     // Landing starts double support: the other foot is still down.
-    expect(stepsOf(0.01 * CYCLE, GAIT).every((s) => s.down)).toBe(true);
-    expect(headBob(0.1 * CYCLE, GAIT, THRUST)).toBeGreaterThan(headBob(0, GAIT, THRUST));
+    expect(stepsOf(0.51 * CYCLE, GAIT).every((s) => s.down)).toBe(true);
   });
 
   it('bobs once a step, around where the head sits standing, with no jump', () => {
