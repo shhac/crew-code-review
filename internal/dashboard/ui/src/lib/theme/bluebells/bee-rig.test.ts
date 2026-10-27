@@ -49,6 +49,26 @@ describe('the bee', () => {
     }
   });
 
+  it('ends a crawl of any length from bell to bell on all six feet, and perched settles them without a slide', () => {
+    const down = (p: RigPose) => feet(p).filter((f) => Math.abs(f.y - GROUND) < 1e-6).length;
+    for (const length of [0.5, 1.8, 2.5, 4, 5.3, 6, 7.9]) {
+      const crawl = { length };
+      expect(down(beeRig(bee('crawl', { walked: length, crawl }), { now: 0, still: false })), `a ${length}px crawl`).toBe(6);
+      const settled = (since: number) => feet(beeRig(bee('perch', { crawl: { length, since } }), { now: since, still: false }));
+      const ended = feet(beeRig(bee('crawl', { walked: length, crawl }), { now: 0, still: false }));
+      // As she arrives her feet are where the crawl set them down; settled,
+      // where she stands perched.
+      settled(0).forEach((f, i) => expect(f.x).toBeCloseTo(ended[i].x, 6));
+      expect(settled(2000)).toEqual(feet(beeRig(bee('perch'), { now: 2000, still: false })));
+      for (let t = 0; t < 600; t += 10) {
+        const [a, b] = [settled(t), settled(t + 10)];
+        a.forEach((f, i) => {
+          if (Math.abs(f.y - GROUND) < 1e-6 && Math.abs(b[i].y - GROUND) < 1e-6) expect(b[i].x, `leg ${i} at ${t}ms`).toBeCloseTo(f.x, 6);
+        });
+      }
+    }
+  });
+
   it('carries all six legs on her thorax', () => {
     const pose = beeRig(bee('perch'), { now: 0, still: true });
     const thorax = flatLayers(pose.layers).flatMap((l) => (l.kind === 'piece' && l.name === 'thorax' ? [l.box] : []))[0];

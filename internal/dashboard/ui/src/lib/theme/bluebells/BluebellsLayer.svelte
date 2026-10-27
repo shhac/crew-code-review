@@ -161,7 +161,7 @@
   </svg>
   {#each shown as { b, view } (b.id)}
     <Rig
-      pose={beeRig({ pose: view.pose, seed: b.seed, walked: view.walked, speed: view.speed, lean: gazes.get(b.id) ?? 0, wings: view.wings, knocked: view.knocked }, { now, still: reduced })}
+      pose={beeRig({ pose: view.pose, seed: b.seed, walked: view.walked, crawl: view.crawl, speed: view.speed, lean: gazes.get(b.id) ?? 0, wings: view.wings, knocked: view.knocked }, { now, still: reduced })}
       x={view.x} y={view.y} dir={view.dir} opacity={view.opacity} data-bee={view.mode} data-pose={view.pose} data-id={b.id}
     />
   {/each}

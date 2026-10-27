@@ -76,6 +76,9 @@ export type Bee = {
   // Never yet placed: the page had no flower for it when the group was
   // made (still loading, say), so it is put on one as soon as there is.
   unplaced?: boolean;
+  // Perched after crawling to its bell, how far that crawl went (px), so
+  // its feet settle from where the crawl set them down.
+  crawled?: number;
 };
 
 // Timings in ms, speeds in px/s, per the note's state table.
@@ -215,12 +218,14 @@ export function where(b: Bee, page: PageMap, now: number): Point | null {
 }
 
 // How far it has crawled along its way to the next bell, eased as where()
-// eases it, so each foot stays where it was set down.
-function crawled(b: Bee, page: PageMap, now: number): number {
+// eases it, so each foot stays where it was set down; and how far the
+// whole crawl goes.
+function crawling(b: Bee, page: PageMap, now: number): { walked: number; length: number } | null {
   const at = onPage(page, b.at);
   const to = b.to && onPage(page, b.to);
-  if (b.mode !== 'crawl' || !at || !to) return 0;
-  return apart(at, to) * smooth((now - b.since) / Math.max(1, b.until - b.since));
+  if (b.mode !== 'crawl' || !at || !to) return null;
+  const length = apart(at, to);
+  return { walked: length * smooth((now - b.since) / Math.max(1, b.until - b.since)), length };
 }
 
 // Two braking steps: most of the way, a breath, then the rest.
@@ -242,7 +247,7 @@ const self = (id: number) => ({ id, seed: id * 7 + 3 });
 export function perchOn(base: Pick<Bee, 'id' | 'seed'> & Partial<Bee>, f: Flower, i: number, now: number, rest: number, dir: 1 | -1, visited = 1): Bee {
   return {
     calm: now, stuck: -Infinity, heading: null, startled: null, fled: null, fade: null, bonk: null, ...base,
-    mode: 'perch', since: now, until: now + rest, at: perchSpot(f, i), to: null, dir, flower: f.key, bell: i, visited, flight: null,
+    mode: 'perch', since: now, until: now + rest, at: perchSpot(f, i), to: null, dir, flower: f.key, bell: i, visited, flight: null, crawled: 0,
   };
 }
 
@@ -297,7 +302,11 @@ export function stepBee(b: Bee, ctx: Context, now: number, dt: number, rand: Ran
   const flower = b.flower ? ctx.flowers.get(b.flower) : undefined;
   switch (b.mode) {
     case 'perch': return perched(b, flower, ctx, now, rand);
-    case 'crawl': return now < b.until ? b : perchOn(b, flower ?? nowhere(b), b.bell, now, between(rand, ...PERCH), b.dir, b.visited);
+    case 'crawl': {
+      if (now < b.until) return b;
+      const crawled = b.to ? apart(b.at, b.to) : 0;
+      return { ...perchOn(b, flower ?? nowhere(b), b.bell, now, between(rand, ...PERCH), b.dir, b.visited), crawled };
+    }
     case 'shiver': return now < b.until ? b : takeOff(b, flower, ctx, now, rand);
     case 'takeoff': return now < b.until ? b : hoverHere(b, b.to ?? b.at, now, between(rand, ...HOVER));
     case 'approach': return now < b.until ? b : timed({ ...b, at: b.to ?? b.at }, 'land', now, LAND, flower ? perchSpot(flower, b.bell) : null);
@@ -584,12 +593,13 @@ function opacityOf(b: Bee, now: number): number {
 }
 
 // What the drawing needs: where, which way, its pose, how fast it is going,
-// how far it has crawled, how far its wings are going (0 folded to 1
+// how far it has crawled (and how far the crawl goes, or went, perched
+// after one: how long since), how far its wings are going (0 folded to 1
 // beating), how long since a bonk knocked it back, how visible it is, and
 // the flower and bell it is on (which dips under it). Seen from the side, a
 // bee banking into a turn shows nothing a page can draw, so it does not.
 export type BeeView = Point & {
-  dir: 1 | -1; pose: Pose; mode: Mode; speed: number; walked: number; wings: number; knocked?: number; opacity: number;
+  dir: 1 | -1; pose: Pose; mode: Mode; speed: number; walked: number; crawl?: { length: number; since?: number }; wings: number; knocked?: number; opacity: number;
   on: { flower: string; bell: number } | null;
 };
 // Warming up, the body trembles this much (px) at this rate, the wings still.
@@ -606,10 +616,13 @@ export function beeView(b: Bee, page: PageMap, now: number): BeeView | null {
   const speed = f ? f.v : b.mode === 'bonk' ? CRUISE : 0;
   const on = ON_BELL.has(b.mode) && b.flower ? { flower: b.flower, bell: b.bell } : null;
   const wings = on ? 0 : b.mode === 'takeoff' ? clamp(since / TAKEOFF, 0, 1) : b.mode === 'bounce' && since < DIM ? 0.5 : 1;
+  const crawl = crawling(b, page, now);
+  // Perched after a crawl, its feet settle from where the crawl left them.
+  const crawled = crawl ? { length: crawl.length } : b.mode === 'perch' && b.crawled ? { length: b.crawled, since } : null;
   const tremble = b.mode === 'shiver' ? TREMBLE * Math.sin((2 * Math.PI * TREMBLE_HZ * since) / 1000) : 0;
   return {
     x: p.x + tremble, y: p.y, dir: b.dir, pose: poseOf(b, now, page), mode: b.mode, speed,
-    walked: crawled(b, page, now), wings,
+    walked: crawl?.walked ?? 0, ...(crawled ? { crawl: crawled } : {}), wings,
     ...(b.mode === 'bounce' ? { knocked: since } : {}), opacity: opacityOf(b, now), on,
   };
 }

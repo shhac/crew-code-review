@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { unlike } from '../../../lab/critters/equivalence';
 import { bee, beeAt, darted } from '../../../lab/critters/bee';
+import type { RigCritter } from '../../../lab/critters/critter';
 import { planDiff, planOf, type Plan } from '../rig/skeleton/plan';
 import { beeRig as built, type BeePose, type RigBee } from './bee-rig';
 import { beeRig as legacy } from './bee-rig-legacy';
@@ -10,7 +11,8 @@ import { beeRig as legacy } from './bee-rig-legacy';
 // model moves rather than bobbing with her body; and her legs, and the pollen on them, now
 // real bones from a swinging coxa, sprawled out to the side and seen
 // foreshortened, stepping as far as a real one's do, and the marks on
-// their joints.
+// their joints. Her settling as she perches after a crawl is new, so it
+// has nothing to match.
 const MOVES = 'thorax (moves here)';
 const LEG_MARKS = ['coxa', 'trochanter', 'knee', 'tibiotarsal joint', 'claws'];
 const LEGS = ['near legs', 'far legs', 'pollen'];
@@ -22,7 +24,8 @@ const ALL_BUT_MOVES = (plan: Plan): Plan => ({
 
 describe('the bee on her skeleton', () => {
   it('draws what her old rig drew in every moment the lab shows, held still, and leaning either way as far as she leans', () => {
-    expect(unlike(bee, (at, look) => darted(legacy(beeAt(at, look.gaze), { now: at.now, still: look.still }), at, look.still), 10, ALL_BUT_MOVES)).toEqual([]);
+    const asBefore: RigCritter['pose'] = (at, look) => (at.mode === 'settle' ? bee.pose(at, look) : darted(legacy(beeAt(at, look.gaze), { now: at.now, still: look.still }), at, look.still));
+    expect(unlike(bee, asBefore, 10, ALL_BUT_MOVES)).toEqual([]);
   }, 60000);
 
   it('draws what she drew in every pose through its whole motion, at every speed, wings folding and beating, knocked any while', () => {

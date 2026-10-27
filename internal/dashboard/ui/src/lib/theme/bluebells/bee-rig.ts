@@ -1,7 +1,8 @@
-import { clamp } from '../math';
+import { clamp, mix, smooth } from '../math';
 import type { Point } from '../pointer';
 import { antennaLayer, flicking, turnedBy, type Antenna } from '../rig/antennae';
-import { airGoals, insectGait, legLayers, podAlong, standingGoals, walkingGoals, type InsectLeg, type LegLook, type Limb } from '../rig/hexapod';
+import type { Gait } from '../rig/gait';
+import { airGoals, insectGait, legLayers, podAlong, standingGoals, strideFor, walkingGoals, type InsectLeg, type LegLook, type Limb } from '../rig/hexapod';
 import { hangAt, hoverBob, pitchAt, type Pitching } from '../rig/insect-flight';
 import { breath } from '../rig/life';
 import { turnAbout, turned, type Layer, type RigPose, type Turn } from '../rig/rig';
@@ -9,6 +10,7 @@ import { compose } from '../rig/skeleton/compose';
 import { insect, localized, sprawledLegs, type Segments } from '../rig/skeleton/insect';
 import type { Goal, PoseSpec } from '../rig/skeleton/types';
 import { wingBlur, type BlurWing, type WingBeat } from '../rig/wing-blur';
+import { cycleLength } from '../spidergait';
 import abdomenArt from './bee-abdomen.webp';
 import headArt from './bee-head.webp';
 import thoraxArt from './bee-thorax.webp';
@@ -111,6 +113,33 @@ const PITCHING: Pitching = { hover: -38, cruise: -8, speed: 70 };
 // pairs stepping in turn), and a quicker tripod scurry.
 const CRAWL = insectGait(LEGS, 'tetrapod', 3.6, 0.55);
 const SCURRY = insectGait(LEGS, 'tripod', 3.8, 0.7);
+// A tetrapod has every foot down each third of its cycle, so a crawl from
+// bell to bell takes whole thirds, each no longer than the crawl's own:
+// she ends it standing on all six.
+function crawlOf(length?: number): Gait {
+  if (!length) return CRAWL;
+  const third = cycleLength(CRAWL.stride, CRAWL.stance) / 3;
+  const thirds = Math.max(1, Math.ceil(length / third - 1e-9));
+  return insectGait(LEGS, 'tetrapod', strideFor('tetrapod', (3 * length) / thirds), CRAWL.lift);
+}
+// Crawling, her head down to the flower and her body near level.
+const CRAWLING = { pitch: 3, bob: 0, abdomen: 2, head: 4 } as const;
+// Perched after a crawl, her feet step from where it set them down to
+// where she stands, one after another from the hind legs forward, each
+// lifted through a short step of its own, as her body eases level.
+const SETTLE = { step: 160, every: 70 } as const;
+const SETTLED = SETTLE.every * 5 + SETTLE.step;
+function settling(crawled: readonly Point[], perched: readonly Point[], crawl: number, since: number): Goal[] {
+  const from = walkingGoals(LEGS, crawled, crawl, GROUND, crawlOf(crawl));
+  return standingGoals(LEGS, perched, GROUND).map((to, i) => {
+    const was = from[i];
+    const t = clamp((since - SETTLE.every * (LEGS.length - 1 - i)) / SETTLE.step, 0, 1);
+    if (to.kind !== 'plant' || was.kind !== 'plant' || t >= 1) return to;
+    if (t <= 0) return { kind: 'plant', at: was.at };
+    const at = { x: mix(was.at.x, to.at.x, smooth(t)), y: GROUND - Math.sin(Math.PI * t) * CRAWL.lift };
+    return { kind: 'plant', at, step: { down: false, t }, contact: 0 };
+  });
+}
 
 // What she is doing, as far as the drawing cares.
 export type BeePose = 'perch' | 'crawl' | 'scurry' | 'hover' | 'fly' | 'land' | 'bonk';
@@ -129,20 +158,37 @@ export type RigBee = {
   // Bonked, how long since her head met the wall (ms): she recoils nose up
   // and settles.
   knocked?: number;
+  // Crawling, how far the crawl goes (px); perched after one, how far it
+  // went and how long since (ms).
+  crawl?: { length: number; since?: number };
 };
 type BeeLook = { now: number; still: boolean };
 
 type Hold = { pitch: number; bob: number; abdomen: number; head: number; legs: (hips: readonly Point[]) => Goal[] };
+
+// Perched after a crawl, the hold easing from the crawl's to standing.
+function settled(crawl: number, since: number): Hold {
+  const u = smooth(since / SETTLED);
+  // Where her coxae were as she crawled, that her feet step from, and
+  // where they are perched, that they step to.
+  const crawled = BEE.hips({ root: turnAbout(CRAWLING.pitch, ANCHOR, 0, CRAWLING.bob), joints: {} });
+  const perched = BEE.hips({ root: turnAbout(0, ANCHOR), joints: {} });
+  return {
+    pitch: mix(CRAWLING.pitch, 0, u), bob: 0, abdomen: mix(CRAWLING.abdomen, 0, u), head: mix(CRAWLING.head, 0, u),
+    legs: () => settling(crawled, perched, crawl, since),
+  };
+}
 
 function hold(b: RigBee, now: number): Hold {
   const standing = (hips: readonly Point[]) => standingGoals(LEGS, hips, GROUND);
   switch (b.pose) {
     case 'crawl':
     case 'scurry': {
-      const gait = b.pose === 'crawl' ? CRAWL : SCURRY;
-      // Head down to the flower, the body near level.
-      return { pitch: 3, bob: 0, abdomen: 2, head: 4, legs: (hips) => walkingGoals(LEGS, hips, b.walked, GROUND, gait) };
+      const gait = b.pose === 'crawl' ? crawlOf(b.crawl?.length) : SCURRY;
+      return { ...CRAWLING, legs: (hips) => walkingGoals(LEGS, hips, b.walked, GROUND, gait) };
     }
+    case 'perch':
+      return b.crawl?.since !== undefined && b.crawl.since < SETTLED ? settled(b.crawl.length, b.crawl.since) : { pitch: 0, bob: 0, abdomen: 0, head: 0, legs: standing };
     case 'hover': {
       // Nose up, legs hanging, the hind pair trailing, the abdomen hanging a
       // little below the line of the body, bobbing slowly.
@@ -275,12 +321,13 @@ export function beeRig(bee: RigBee, look: BeeLook): RigPose {
 
 // How far each pose's drawing reaches from her anchor (page px), at every
 // moment of its motion: wing ghosts and fan, bob, hanging legs, antennae
-// leaning and flicking (bee-rig.test.ts samples each whole cycle). Behind
+// leaning and flicking, a perch settling from a crawl (bee-rig.test.ts and
+// the lab's laws sample each whole cycle). Behind
 // is toward her tail; mirrored when she faces left, so unlike the kit's
 // reaches it faces a way.
 export type FacingReach = { behind: number; ahead: number; up: number; down: number };
 export const REACH: Record<BeePose, FacingReach> = {
-  perch: { behind: 12, ahead: 10.5, up: 7, down: 7 },
+  perch: { behind: 12.25, ahead: 10.5, up: 7.5, down: 7 },
   crawl: { behind: 12.25, ahead: 10.25, up: 7.5, down: 7 },
   scurry: { behind: 12.25, ahead: 10.25, up: 7.5, down: 7 },
   hover: { behind: 10.75, ahead: 9.75, up: 11.75, down: 13.25 },
