@@ -1,10 +1,13 @@
 import { clamp } from '../math';
 import type { Point } from '../pointer';
 import { antennaLayer, flicking, turnedBy, type Antenna } from '../rig/antennae';
-import { airLegs, insectGait, legLayers, podAlong, standingLegs, walkingLegs, type InsectLeg, type LegLook, type Limb } from '../rig/hexapod';
+import { airGoals, insectGait, legLayers, podAlong, standingGoals, walkingGoals, type InsectLeg, type LegLook, type Limb } from '../rig/hexapod';
 import { hangAt, hoverBob, pitchAt, type Pitching } from '../rig/insect-flight';
 import { breath } from '../rig/life';
 import { turnAbout, turned, type Layer, type RigPose, type Turn } from '../rig/rig';
+import { compose } from '../rig/skeleton/compose';
+import { insect, localized } from '../rig/skeleton/insect';
+import type { Goal, PoseSpec } from '../rig/skeleton/types';
 import { wingBlur, type BlurWing, type WingBeat } from '../rig/wing-blur';
 import abdomenArt from './bee-abdomen.webp';
 import headArt from './bee-head.webp';
@@ -15,7 +18,8 @@ import wingsArt from './bee-wings.webp';
 // and head from one drawing (design-docs/bluebells/bee-standing.png), the
 // near pair of wings as one piece (the hooks between fore and hind wing
 // hold them as one in flight), and six legs and two antennae drawn in code
-// on the insect rig (rig/hexapod.ts, rig/antennae.ts). Facing right. The
+// on the insect rig (rig/hexapod.ts, rig/antennae.ts), all hung on her
+// skeleton (rig/skeleton). Facing right. The
 // drawing units are the reference's as export.py prints them, and a unit is
 // a page pixel, so she is 18px from her jaws to the tip of her tail. Her
 // anchor is the middle of her thorax, the point a model moves: standing,
@@ -125,28 +129,28 @@ export type RigBee = {
 };
 type BeeLook = { now: number; still: boolean };
 
-type Hold = { pitch: number; bob: number; abdomen: number; head: number; legs: (hips: readonly Point[]) => Limb[] };
+type Hold = { pitch: number; bob: number; abdomen: number; head: number; legs: (hips: readonly Point[]) => Goal[] };
 
 function hold(b: RigBee, now: number): Hold {
-  const standing = (hips: readonly Point[]) => standingLegs(LEGS, hips, GROUND);
+  const standing = (hips: readonly Point[]) => standingGoals(LEGS, hips, GROUND);
   switch (b.pose) {
     case 'crawl':
     case 'scurry': {
       const gait = b.pose === 'crawl' ? CRAWL : SCURRY;
       // Head down to the flower, the body near level.
-      return { pitch: 3, bob: 0, abdomen: 2, head: 4, legs: (hips) => walkingLegs(LEGS, hips, b.walked, GROUND, gait) };
+      return { pitch: 3, bob: 0, abdomen: 2, head: 4, legs: (hips) => walkingGoals(LEGS, hips, b.walked, GROUND, gait) };
     }
     case 'hover': {
       // Nose up, legs hanging, the hind pair trailing, the abdomen hanging a
       // little below the line of the body, bobbing slowly.
       const pitch = pitchAt(PITCHING, 0);
-      return { pitch, bob: hoverBob(b.seed, now, 1.5, 1.8), abdomen: -6, head: 6, legs: (hips) => airLegs(LEGS, hips, { hang: 1, reach: 0, pitch }) };
+      return { pitch, bob: hoverBob(b.seed, now, 1.5, 1.8), abdomen: -6, head: 6, legs: (hips) => airGoals(LEGS, hips, { hang: 1, reach: 0, pitch }) };
     }
     case 'fly': {
       // Flatter with speed, legs drawn up, the abdomen trailing in line.
       const pitch = pitchAt(PITCHING, b.speed);
       const hang = hangAt(b.speed, 60);
-      return { pitch, bob: hoverBob(b.seed, now, 0.8, 1.3), abdomen: -6 * hang + 2, head: 8 * hang, legs: (hips) => airLegs(LEGS, hips, { hang, reach: 0, pitch }) };
+      return { pitch, bob: hoverBob(b.seed, now, 0.8, 1.3), abdomen: -6 * hang + 2, head: 8 * hang, legs: (hips) => airGoals(LEGS, hips, { hang, reach: 0, pitch }) };
     }
     case 'bonk': {
       // Knocked back off a wall: level as she meets it, then nose up 25
@@ -154,13 +158,13 @@ function hold(b: RigBee, now: number): Hold {
       // 3Hz; legs splayed, the abdomen swinging down.
       const t = (b.knocked ?? 0) / 1000;
       const pitch = -KNOCK * (Math.exp(-t / KNOCK_SETTLE) * Math.sin(2 * Math.PI * KNOCK_HZ * t)) / Math.exp(-1 / (4 * KNOCK_HZ) / KNOCK_SETTLE);
-      return { pitch, bob: 0, abdomen: -8, head: 4, legs: (hips) => airLegs(LEGS, hips, { hang: 1, reach: 0.5, pitch }) };
+      return { pitch, bob: 0, abdomen: -8, head: 4, legs: (hips) => airGoals(LEGS, hips, { hang: 1, reach: 0.5, pitch }) };
     }
     case 'land': {
       // The last moment before touching down: legs stretched down and
       // forward to meet the bell.
       const pitch = -18;
-      return { pitch, bob: 0, abdomen: -4, head: 4, legs: (hips) => airLegs(LEGS, hips, { hang: 1, reach: 0.85, pitch }) };
+      return { pitch, bob: 0, abdomen: -4, head: 4, legs: (hips) => airGoals(LEGS, hips, { hang: 1, reach: 0.85, pitch }) };
     }
     default:
       return { pitch: 0, bob: 0, abdomen: 0, head: 0, legs: standing };
@@ -193,48 +197,76 @@ function pollen(limbs: readonly Limb[]): Layer {
 const antenna = (name: string, a: Antenna): Layer[] =>
   [antennaLayer(name, a, ANTENNA_WIDTH + 2 * LOOK.outline, INK), antennaLayer(name, a, ANTENNA_WIDTH, ANTENNA)];
 
+const picture = (id: string, on: string, src: string, box: typeof HEAD) => ({ id, art: { drawn: { src, box } }, at: { kind: 'joint', to: on }, draws: [{ id, z: 0 }] }) as const;
+
+// Her skeleton: the body turning about her thorax's middle, where she
+// moves, the abdomen on its waist and the head on its neck, the antennae's
+// sockets on the face, the wings' hinge on the thorax, and six legs from
+// the thorax's underside. Drawn with the far wings, legs and antenna behind
+// her, the near legs over her edge, the pollen on them and the near wings
+// over all.
+const BEE = insect({
+  frame: FRAME,
+  root: 'body',
+  joints: [
+    { id: 'body', parent: null, role: { part: 'spine', index: 1 }, at: ANCHOR, name: 'thorax (where she moves)' },
+    { id: 'head', parent: 'body', role: { part: 'spine', index: 0 }, at: NECK, name: 'head joint (neck)' },
+    { id: 'abdomen', parent: 'body', role: { part: 'spine', index: 2 }, at: WAIST, name: 'waist (petiole)' },
+    { id: 'socket', parent: 'head', role: { part: 'head', index: 0 }, at: NEAR_ANTENNA.base, name: 'antenna socket' },
+    { id: 'hinge', parent: 'body', role: { part: 'wing', side: 'near', index: 0 }, at: HINGE, name: 'wing hinge (tegula)' },
+  ],
+  bones: [
+    { from: 'head', to: 'body', name: 'thorax line (head joint to where she moves)' }, { from: 'body', to: 'abdomen', name: 'thorax line (to the waist)' },
+    { from: 'socket', to: 'head', name: 'head' },
+  ],
+  legs: LEGS,
+  ground: GROUND,
+  order: [
+    { shape: 'far wings', on: 'body' }, { shape: 'far legs', on: 'body' }, { shape: 'far antenna', on: 'head' },
+    picture('abdomen', 'abdomen', abdomenArt, ABDOMEN), picture('head', 'head', headArt, HEAD), { shape: 'near antenna', on: 'head' },
+    picture('thorax', 'body', thoraxArt, THORAX), { shape: 'near legs', on: 'body' }, { shape: 'pollen', on: 'body' }, { shape: 'wings', on: 'body' },
+  ],
+  stands: 'thorax (moves here)',
+  guides: (code) => [
+    { name: 'waist (petiole)', at: 'abdomen' }, { name: 'neck', at: 'head' }, { name: 'wing hinge (tegula)', at: 'hinge' }, { name: 'antenna socket', at: 'socket' },
+    ...LEGS.flatMap((leg) => ['coxa', 'knee', 'tibiotarsal joint', 'claws'].map((name, k) => ({ name, at: code(leg, k) }))),
+  ],
+});
+
 // Held still under reduced motion: perched, wings folded, no flick.
 const STILL: Omit<RigBee, 'seed'> = { pose: 'perch', walked: 0, speed: 0, lean: 0, wings: 0 };
+
+// The pose her hold makes: each foot set from where its coxa is now.
+function poseOf(b: RigBee, now: number, still: boolean): PoseSpec {
+  const h = hold(b, now);
+  const root: Turn = turnAbout(h.pitch, ANCHOR, 0, h.bob);
+  // Perched, her abdomen pumps as she breathes; her antennae flick now and
+  // then, and lean toward a cursor close by.
+  const pump = b.pose === 'perch' && !still ? 1 + 0.03 * breath(b.seed, now, 1000 / 1.2) : 1;
+  const flick = still ? 0 : -14 * flicking(b.seed, now);
+  const lean = clamp(b.lean, -15, 15) + flick;
+  const joints = { head: { angle: h.head + clamp(b.lean / 3, -5, 5) }, abdomen: { angle: h.abdomen, squash: { by: pump } } };
+  const goals = h.legs(BEE.hips({ root, joints }));
+  const legs = (limb: (id: string) => Limb) => legLayers(LEGS, BEE.legs(limb), LOOK);
+  const knocked = b.pose === 'bonk';
+  return {
+    root, joints, limbs: BEE.limbs(goals), show: {}, z: {},
+    shapes: {
+      'far wings': wingsOf(true, b.wings, knocked),
+      'far legs': ({ limb, local }) => localized(legs(limb).far, local),
+      'far antenna': antenna('far antenna', turnedBy(FAR_ANTENNA, lean)),
+      'near antenna': antenna('near antenna', turnedBy(NEAR_ANTENNA, lean)),
+      'near legs': ({ limb, local }) => localized(legs(limb).near, local),
+      pollen: ({ limb, local }) => localized([pollen(BEE.legs(limb))], local),
+      wings: wingsOf(false, b.wings, knocked),
+    },
+  };
+}
 
 export function beeRig(bee: RigBee, look: BeeLook): RigPose {
   const b = look.still ? { ...STILL, seed: bee.seed } : bee;
   const now = look.still ? 0 : look.now;
-  const h = hold(b, now);
-  const body: Turn = turnAbout(h.pitch, ANCHOR, 0, h.bob);
-  const at = (p: Point) => turned(body, p);
-  const limbs = h.legs(LEGS.map((l) => at(l.hip)));
-  const legs = legLayers(LEGS, limbs, LOOK);
-  // Perched, her abdomen pumps as she breathes; her antennae flick now and
-  // then, and lean toward a cursor close by.
-  const pump = b.pose === 'perch' && !look.still ? 1 + 0.03 * breath(b.seed, now, 1000 / 1.2) : 1;
-  const flick = look.still ? 0 : -14 * flicking(b.seed, now);
-  const lean = clamp(b.lean, -15, 15) + flick;
-  const nod = turnAbout(h.head + clamp(b.lean / 3, -5, 5), NECK);
-  const abdomen: Layer = { kind: 'group', turn: turnAbout(h.abdomen, WAIST), scaleY: pump, layers: [image('abdomen', abdomenArt, ABDOMEN)] };
-  const beating = b.wings;
-  return {
-    ...FRAME,
-    layers: [
-      { kind: 'group', turn: body, layers: wingsOf(true, beating, b.pose === 'bonk') },
-      ...legs.far,
-      { kind: 'group', turn: body, layers: [{ kind: 'group', turn: nod, layers: antenna('far antenna', turnedBy(FAR_ANTENNA, lean)) }] },
-      {
-        kind: 'group', turn: body, layers: [
-          abdomen,
-          { kind: 'group', turn: nod, layers: [image('head', headArt, HEAD), ...antenna('near antenna', turnedBy(NEAR_ANTENNA, lean))] },
-          image('thorax', thoraxArt, THORAX),
-        ],
-      },
-      ...legs.near,
-      pollen(limbs),
-      { kind: 'group', turn: body, layers: wingsOf(false, beating, b.pose === 'bonk') },
-    ],
-    guides: [
-      { name: 'thorax (moves here)', at: at(ANCHOR) }, { name: 'waist (petiole)', at: at(WAIST) }, { name: 'neck', at: at(NECK) },
-      { name: 'wing hinge (tegula)', at: at(HINGE) }, { name: 'antenna socket', at: at(turned(nod, NEAR_ANTENNA.base)) },
-      ...limbs.flatMap((l) => [{ name: 'coxa', at: l.hip }, { name: 'knee', at: l.knee }, { name: 'tibiotarsal joint', at: l.ankle }, { name: 'claws', at: l.foot }]),
-    ],
-  };
+  return compose(BEE.body, (t) => poseOf(b, t, look.still), now);
 }
 
 // How far each pose's drawing reaches from her anchor (page px), at every

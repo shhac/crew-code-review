@@ -1,10 +1,13 @@
 import { clamp } from '../math';
 import type { Point } from '../pointer';
 import { antennaLayer, flicking, turnedBy, type Antenna } from '../rig/antennae';
-import { airLegs, insectGait, legLayers, standingLegs, walkingLegs, type InsectLeg, type LegLook, type Limb } from '../rig/hexapod';
+import { airGoals, insectGait, legLayers, standingGoals, walkingGoals, type InsectLeg, type LegLook, type Limb } from '../rig/hexapod';
 import { hangAt, hoverBob, pitchAt, type Pitching } from '../rig/insect-flight';
 import { breath } from '../rig/life';
 import { turnAbout, turned, type Layer, type RigPose, type Turn } from '../rig/rig';
+import { compose } from '../rig/skeleton/compose';
+import { insect, localized } from '../rig/skeleton/insect';
+import type { Goal, PoseSpec } from '../rig/skeleton/types';
 import { shimmer, wingBlur, type BlurWing, type WingBeat } from '../rig/wing-blur';
 import type { WaspPose } from './footprints';
 import foldedArt from './wasp-wing-folded.webp';
@@ -108,7 +111,7 @@ export type RigWasp = {
 };
 type WaspLook = { now: number; still: boolean };
 
-type Hold = { swept: number; pitch: number; bob: number; gaster: number; head: number; legs: (hips: readonly Point[]) => Limb[]; taps: [number, number] };
+type Hold = { swept: number; pitch: number; bob: number; gaster: number; head: number; legs: (hips: readonly Point[]) => Goal[]; taps: [number, number] };
 
 // Feeding, her antennae tap the sugar in turn, each every 0.3 to 0.6s: how
 // far down each is, 0 to 1, near then far.
@@ -122,22 +125,22 @@ function hold(w: RigWasp, now: number): Hold {
   switch (w.pose) {
     case 'feed':
       // Head down, jaws to the sugar, the front of her lowered a little.
-      return { swept: 0, pitch: 7, bob: 2.5, gaster: 2, head: 30, taps: tapping(w.seed, now), legs: (hips) => walkingLegs(LEGS, hips, w.walked, GROUND, SHUFFLE) };
+      return { swept: 0, pitch: 7, bob: 2.5, gaster: 2, head: 30, taps: tapping(w.seed, now), legs: (hips) => walkingGoals(LEGS, hips, w.walked, GROUND, SHUFFLE) };
     case 'hover': {
       const pitch = pitchAt(PITCHING, 0);
-      return { swept: 0, pitch, bob: hoverBob(w.seed, now, 0.8, 2), gaster: -2, head: 10, taps: [0, 0], legs: (hips) => airLegs(LEGS, hips, { hang: 0.45, reach: 0, pitch }) };
+      return { swept: 0, pitch, bob: hoverBob(w.seed, now, 0.8, 2), gaster: -2, head: 10, taps: [0, 0], legs: (hips) => airGoals(LEGS, hips, { hang: 0.45, reach: 0, pitch }) };
     }
     case 'cruise': {
       const pitch = pitchAt(PITCHING, w.speed || CRUISE);
       const hang = hangAt(w.speed || CRUISE, CRUISE);
-      return { swept: SWEPT * (1 - hang), pitch, bob: hoverBob(w.seed, now, 0.5, 1.5), gaster: -2, head: 6, taps: [0, 0], legs: (hips) => airLegs(LEGS, hips, { hang, reach: 0, pitch }) };
+      return { swept: SWEPT * (1 - hang), pitch, bob: hoverBob(w.seed, now, 0.5, 1.5), gaster: -2, head: 6, taps: [0, 0], legs: (hips) => airGoals(LEGS, hips, { hang, reach: 0, pitch }) };
     }
     case 'land': {
       const pitch = -25;
-      return { swept: 0, pitch, bob: 0, gaster: 0, head: 8, taps: [0, 0], legs: (hips) => airLegs(LEGS, hips, { hang: 0.8, reach: 0.7, pitch }) };
+      return { swept: 0, pitch, bob: 0, gaster: 0, head: 8, taps: [0, 0], legs: (hips) => airGoals(LEGS, hips, { hang: 0.8, reach: 0.7, pitch }) };
     }
     default:
-      return { swept: 0, pitch: 0, bob: 0, gaster: 0, head: 0, taps: [0, 0], legs: (hips) => standingLegs(LEGS, hips, GROUND) };
+      return { swept: 0, pitch: 0, bob: 0, gaster: 0, head: 0, taps: [0, 0], legs: (hips) => standingGoals(LEGS, hips, GROUND) };
   }
 }
 
@@ -159,48 +162,75 @@ function wingsOf(far: boolean, beating: number, swept: number, seed: number, now
 const antenna = (name: string, a: Antenna): Layer[] =>
   [antennaLayer(name, a, ANTENNA_WIDTH + 2 * LOOK.outline, INK), antennaLayer(name, a, ANTENNA_WIDTH, ANTENNA)];
 
+const picture = (id: string, on: string, src: string, box: typeof HEAD) => ({ id, art: { drawn: { src, box } }, at: { kind: 'joint', to: on }, draws: [{ id, z: 0 }] }) as const;
+
+// Her skeleton: the body turning about where she moves, the gaster on its
+// petiole and the head on its neck, the antennae's sockets on the head, the
+// wings' hinge on the thorax, and six legs from the thorax's underside.
+// Drawn with the far wings, legs and antenna behind her, the near legs over
+// her edge and the near wings over all.
+const WASP = insect({
+  frame: FRAME,
+  root: 'body',
+  joints: [
+    { id: 'body', parent: null, role: { part: 'spine', index: 1 }, at: ANCHOR, name: 'thorax (where she moves)' },
+    { id: 'head', parent: 'body', role: { part: 'spine', index: 0 }, at: NECK, name: 'head joint (neck)' },
+    { id: 'gaster', parent: 'body', role: { part: 'spine', index: 2 }, at: WAIST, name: 'petiole' },
+    { id: 'scape', parent: 'head', role: { part: 'head', index: 0 }, at: NEAR_ANTENNA.base, name: 'scape' },
+    { id: 'hinge', parent: 'body', role: { part: 'wing', side: 'near', index: 0 }, at: HINGE, name: 'wing hinge (tegula)' },
+  ],
+  bones: [
+    { from: 'head', to: 'body', name: 'thorax line (head joint to where she moves)' }, { from: 'body', to: 'gaster', name: 'thorax line (to the petiole)' },
+    { from: 'scape', to: 'head', name: 'head' },
+  ],
+  legs: LEGS,
+  ground: GROUND,
+  order: [
+    { shape: 'far wings', on: 'body' }, { shape: 'far legs', on: 'body' }, { shape: 'far antenna', on: 'head' },
+    picture('gaster', 'gaster', gasterArt, GASTER), picture('thorax', 'body', thoraxArt, THORAX), picture('head', 'head', headArt, HEAD),
+    { shape: 'near antenna', on: 'head' }, { shape: 'near legs', on: 'body' }, { shape: 'wings', on: 'body' },
+  ],
+  stands: 'body (moves here)',
+  guides: (code) => [
+    { name: 'petiole', at: 'gaster' }, { name: 'neck', at: 'head' }, { name: 'wing hinge (tegula)', at: 'hinge' }, { name: 'scape', at: 'scape' },
+    ...LEGS.flatMap((leg) => ['coxa', 'knee', 'tibiotarsal joint', 'claws'].map((name, k) => ({ name, at: code(leg, k) }))),
+  ],
+});
+
 // Held still under reduced motion: standing, wings folded, nothing moving.
 const STILL: Omit<RigWasp, 'seed'> = { pose: 'standing', walked: 0, speed: 0, lean: 0, wings: 0 };
+
+// The pose her hold makes: each foot set from where its coxa is now.
+function poseOf(w: RigWasp, now: number, still: boolean): PoseSpec {
+  const h = hold(w, now);
+  const root: Turn = turnAbout(h.pitch, ANCHOR, 0, h.bob);
+  // At rest her gaster pulses slowly as she breathes; her antennae flick now
+  // and then, lean toward a cursor close by and, feeding, tap the surface
+  // in turn.
+  const resting = (w.pose === 'standing' || w.pose === 'feed') && !still;
+  const pulse = resting ? 1 + 0.04 * breath(w.seed, now, 1400) : 1;
+  const flick = still ? 0 : -12 * flicking(w.seed, now);
+  const lean = clamp(w.lean, -15, 15) + flick;
+  const joints = { head: { angle: h.head + clamp(w.lean / 3, -5, 5) }, gaster: { angle: h.gaster, squash: { by: pulse } } };
+  const goals = h.legs(WASP.hips({ root, joints }));
+  const legs = ({ limb }: { limb: (id: string) => Limb }) => legLayers(LEGS, WASP.legs(limb), LOOK);
+  return {
+    root, joints, limbs: WASP.limbs(goals), show: {}, z: {},
+    shapes: {
+      'far wings': wingsOf(true, w.wings, h.swept, w.seed, now, still),
+      'far legs': (posed) => localized(legs(posed).far, posed.local),
+      'far antenna': antenna('far antenna', turnedBy(FAR_ANTENNA, lean + 10 * h.taps[1])),
+      'near antenna': antenna('near antenna', turnedBy(NEAR_ANTENNA, lean + 10 * h.taps[0])),
+      'near legs': (posed) => localized(legs(posed).near, posed.local),
+      wings: wingsOf(false, w.wings, h.swept, w.seed, now, still),
+    },
+  };
+}
 
 export function waspRig(wasp: RigWasp, look: WaspLook): RigPose {
   const w = look.still ? { ...STILL, seed: wasp.seed } : wasp;
   const now = look.still ? 0 : look.now;
-  const h = hold(w, now);
-  const body: Turn = turnAbout(h.pitch, ANCHOR, 0, h.bob);
-  const at = (p: Point) => turned(body, p);
-  const limbs = h.legs(LEGS.map((l) => at(l.hip)));
-  const legs = legLayers(LEGS, limbs, LOOK);
-  // At rest her gaster pulses slowly as she breathes; her antennae flick now
-  // and then, lean toward a cursor close by and, feeding, tap the surface
-  // in turn.
-  const resting = (w.pose === 'standing' || w.pose === 'feed') && !look.still;
-  const pulse = resting ? 1 + 0.04 * breath(w.seed, now, 1400) : 1;
-  const flick = look.still ? 0 : -12 * flicking(w.seed, now);
-  const lean = clamp(w.lean, -15, 15) + flick;
-  const nod = turnAbout(h.head + clamp(w.lean / 3, -5, 5), NECK);
-  const gaster: Layer = { kind: 'group', turn: turnAbout(h.gaster, WAIST), scaleY: pulse, layers: [image('gaster', gasterArt, GASTER)] };
-  return {
-    ...FRAME,
-    layers: [
-      { kind: 'group', turn: body, layers: wingsOf(true, w.wings, h.swept, w.seed, now, look.still) },
-      ...legs.far,
-      { kind: 'group', turn: body, layers: [{ kind: 'group', turn: nod, layers: antenna('far antenna', turnedBy(FAR_ANTENNA, lean + 10 * h.taps[1])) }] },
-      {
-        kind: 'group', turn: body, layers: [
-          gaster,
-          image('thorax', thoraxArt, THORAX),
-          { kind: 'group', turn: nod, layers: [image('head', headArt, HEAD), ...antenna('near antenna', turnedBy(NEAR_ANTENNA, lean + 10 * h.taps[0]))] },
-        ],
-      },
-      ...legs.near,
-      { kind: 'group', turn: body, layers: wingsOf(false, w.wings, h.swept, w.seed, now, look.still) },
-    ],
-    guides: [
-      { name: 'body (moves here)', at: at(ANCHOR) }, { name: 'petiole', at: at(WAIST) }, { name: 'neck', at: at(NECK) },
-      { name: 'wing hinge (tegula)', at: at(HINGE) }, { name: 'scape', at: at(turned(nod, NEAR_ANTENNA.base)) },
-      ...limbs.flatMap((l) => [{ name: 'coxa', at: l.hip }, { name: 'knee', at: l.knee }, { name: 'tibiotarsal joint', at: l.ankle }, { name: 'claws', at: l.foot }]),
-    ],
-  };
+  return compose(WASP.body, (t) => poseOf(w, t, look.still), now);
 }
 
 // Where her eye is in a pose, for the lab to line a key pose up by.

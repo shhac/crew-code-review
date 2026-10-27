@@ -18,6 +18,14 @@ const KNOWN = {
     footprintsHold: 'in every mode the box of each leg\'s bone up from the toes reaches up to 0.73px under the ledge at its rounded cap\'s corner, which is see-through (its fur does not); and digging, its nose goes into the snow (3.1px), crouching nearly (0.74px)',
   },
   rabbit: { footprintsHold: 'the box of a forepaw\'s metacarpus reaches 0.29px under the ledge at its rounded cap\'s corner, which is see-through, as the page has always drawn it (counted as squares round each joint, as legs were before its skeleton, it never showed)' },
+  bee: {
+    bonesKeepLength: 'crawling and scurrying, a foot stepping further than femur and tibia span stretches the tibia to the claws, as the insect rig has always drawn it (spidergait\'s knees)',
+    anklesBehindToes: 'she stands on her tarsi, not on toes with a bone rising from them: the hind legs\' tarsi lie back along the bell from the tibiotarsal joint, ahead of the claws, as an insect\'s do',
+  },
+  wasp: {
+    bonesKeepLength: 'her front and hind legs reach further than femur and tibia span, standing and feeding, so the tibia stretches to the claws, as the insect rig has always drawn them (spidergait\'s knees)',
+    anklesBehindToes: 'she stands on her tarsi, not on toes with a bone rising from them: the middle and hind legs\' tarsi lie back along the surface from the tibiotarsal joint, ahead of the claws, as an insect\'s do',
+  },
   hare: { footprintsHold: 'alert, its breath lifts its back up to 0.32px over the 27px it keeps to day to day (hare.ts\'s CLEAR); held shallow enough to fit, it would hardly breathe' },
 } satisfies Record<string, Partial<Record<LawName, string>>>;
 

@@ -341,7 +341,8 @@ export function compose(body: Body, poseAt: (now: number) => PoseSpec, now: numb
     const stepping = goal.kind === 'plant' || goal.kind === 'reach';
     const bird = limb.solve === 'bird' ? { intertarsal: INTERTARSAL, ...(stepping && isHingedBird(limb.leg) ? { hinges: hingesOf(hingedLegOf(limb.leg), goal) } : {}) } : {};
     const joints = limb.solve === 'hinged' ? { hinges: hingesOf(limb.leg, goal) } : bird;
-    return { id: limb.id, code: `L${2 * limb.pair + sideCode(limb.side)}`, limb: l, fore: limb.pair === 0, sole, ...joints, ...(goal.kind === 'air' ? { inAir: true } : {}) };
+    const held = stepping && goal.contact === 0;
+    return { id: limb.id, code: `L${2 * limb.pair + sideCode(limb.side)}`, limb: l, fore: limb.pair === 0, sole, ...joints, ...(goal.kind === 'air' || held ? { inAir: true } : {}) };
   });
   return {
     ...body.frame,

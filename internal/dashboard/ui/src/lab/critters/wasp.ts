@@ -8,7 +8,6 @@ import feed from '../wasp-pose-feed.webp';
 import hover from '../wasp-pose-hover.webp';
 import land from '../wasp-pose-land.webp';
 import reference from '../wasp-reference.webp';
-import { INSECT_LEGS } from './bones';
 import type { Moment, RigCritter } from './critter';
 
 // June's common wasp (lib/theme/fete/wasp-rig.ts) on the insect rig. The
@@ -19,7 +18,7 @@ const MODES: { label: string; pose: WaspPose }[] = [
   { label: 'land', pose: 'land' }, { label: 'lift off', pose: 'land' }, { label: 'cruise', pose: 'cruise' },
 ];
 
-const waspAt = ({ mode, now, walked }: Moment, lean: number): RigWasp => {
+export const waspAt = ({ mode, now, walked }: Moment, lean: number): RigWasp => {
   const pick = MODES.find((m) => m.label === mode) ?? MODES[0];
   const grounded = pick.pose === 'standing' || pick.pose === 'feed';
   const wings = grounded ? 0 : mode === 'lift off' ? smooth((now % 1500) / 350) : 1;
@@ -57,10 +56,7 @@ export const wasp = {
   },
   gaze: (dir, cursor) => gaze(dir, { x: 0, y: -(GROUND - ANCHOR.y) * SCALE }, cursor),
   drawings: DRAWINGS,
-  bones: {
-    marked: [INSECT_LEGS],
-    spine: [{ mark: 'neck', name: 'head joint (neck)', line: 'thorax line' }, { mark: 'body (moves here)', line: 'thorax line' }, { mark: 'petiole' }],
-    head: { joints: [{ mark: 'scape' }], bones: [['head joint (neck)', 'scape', 'head']] },
-    wings: { joints: [{ mark: 'wing hinge (tegula)' }] },
-  },
+  // Before her skeleton was her own, read off the drawing, her spine had no
+  // joint where she moves: the petiole was SJ1.
+  aliases: { SJ1: 'SJ2' },
 } satisfies RigCritter;

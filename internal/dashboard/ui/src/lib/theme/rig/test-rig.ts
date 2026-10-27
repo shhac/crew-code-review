@@ -38,8 +38,7 @@ function reach(l: Exclude<Layer, { kind: 'group' | 'frame' }>): Point[] {
     case 'image': return corners(l.x, l.y, l.x + l.width, l.y + l.height);
     case 'piece': return corners(l.box.x, l.box.y, l.box.x + l.box.width, l.box.y + l.box.height).map((p) => applied(l.matrix, p));
     case 'lid': return corners(l.at.x - l.r, l.at.y - l.r, l.at.x + l.r, l.at.y + l.r);
-    // Round joins and ends reach half the width past each point.
-    case 'stroke': return l.points.flatMap((p) => corners(p.x - l.width / 2, p.y - l.width / 2, p.x + l.width / 2, p.y + l.width / 2));
+    case 'stroke': return [...l.points];
     case 'legs': {
       // Each piece runs half its thickness past its joints, every way; each
       // foot is its own box.
@@ -71,6 +70,9 @@ export function rigBounds(pose: RigPose): { left: number; right: number; top: nu
       if (l.kind === 'frame') return points(l.layers, (p) => place(applied(l.matrix, p)));
       if ((l.kind === 'image' || l.kind === 'piece') && l.hidden) return [];
       if (l.kind === 'piece' && l.opacity === 0) return [];
+      // A stroke's round ends reach half its width past each point every
+      // way however it is turned: its points placed, then that far round.
+      if (l.kind === 'stroke') return l.points.map(place).flatMap((p) => corners(p.x - l.width / 2, p.y - l.width / 2, p.x + l.width / 2, p.y + l.width / 2));
       return reach(l).map(place);
     });
   const all = points(pose.layers, (p) => p);

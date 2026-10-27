@@ -1,20 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import type { Point } from '../pointer';
-import type { Layer, RigPose } from '../rig/rig';
-import { flatLayers, lidsOf, rigBounds } from '../rig/test-rig';
+import type { RigPose } from '../rig/rig';
+import { flatLayers, legsOf, lidsOf, rigBounds } from '../rig/test-rig';
 import { ANCHOR, beeRig, GROUND, REACH, SCALE, type BeePose, type RigBee } from './bee-rig';
 
 const POSES: BeePose[] = ['perch', 'crawl', 'scurry', 'hover', 'fly', 'land', 'bonk'];
 const grounded = (pose: BeePose) => pose === 'perch' || pose === 'crawl' || pose === 'scurry';
 const bee = (pose: BeePose, over: Partial<RigBee> = {}): RigBee => ({ pose, seed: 2, walked: 0, speed: 0, lean: 0, wings: grounded(pose) ? 0 : 1, ...over });
 const strokes = (pose: RigPose, name: string) => flatLayers(pose.layers).flatMap((l) => (l.kind === 'stroke' && l.name === name ? [l] : []));
-// Each leg's claws, where its tarsus ends: the first point of the last
-// stroke of each leg's coloured pass (four strokes a leg).
-const feet = (pose: RigPose): Point[] => ['near legs', 'far legs'].flatMap((name) => {
-  const drawn = strokes(pose, name);
-  const fills = drawn.slice(drawn.length / 2);
-  return fills.filter((_, i) => i % 4 === 3).map((claws) => claws.points[0]);
-});
+// Each leg's claws, where its tarsus ends, as her skeleton poses them.
+const feet = (pose: RigPose): Point[] => legsOf(pose).map((l) => l.foot);
 // A whole cycle of every motion: the bob, the stride, the antennae
 // flicking and leaning.
 const moments = Array.from({ length: 160 }, (_, i) => ({ now: i * 31, walked: i * 0.11, lean: [-15, 0, 15][i % 3] }));
@@ -22,8 +17,8 @@ const moments = Array.from({ length: 160 }, (_, i) => ({ now: i * 31, walked: i 
 describe('the bee', () => {
   it('is 18px from her jaws to the tip of her tail', () => {
     const pose = beeRig(bee('perch'), { now: 0, still: true });
-    const body = flatLayers(pose.layers).flatMap((l) => (l.kind === 'image' && ['abdomen', 'thorax', 'head'].includes(l.name) ? [l] : []));
-    const length = (Math.max(...body.map((l) => l.x + l.width)) - Math.min(...body.map((l) => l.x))) * SCALE;
+    const body = flatLayers(pose.layers).flatMap((l) => (l.kind === 'piece' && ['abdomen', 'thorax', 'head'].includes(l.name) ? [l.box] : []));
+    const length = (Math.max(...body.map((b) => b.x + b.width)) - Math.min(...body.map((b) => b.x))) * SCALE;
     expect(length).toBeGreaterThan(17.5);
     expect(length).toBeLessThan(18.75);
   });
@@ -56,7 +51,7 @@ describe('the bee', () => {
 
   it('carries all six legs on her thorax', () => {
     const pose = beeRig(bee('perch'), { now: 0, still: true });
-    const thorax = flatLayers(pose.layers).find((l): l is Extract<Layer, { kind: 'image' }> => l.kind === 'image' && l.name === 'thorax');
+    const thorax = flatLayers(pose.layers).flatMap((l) => (l.kind === 'piece' && l.name === 'thorax' ? [l.box] : []))[0];
     const coxae = (pose.guides ?? []).filter((g) => g.name === 'coxa').map((g) => g.at);
     expect(coxae).toHaveLength(6);
     for (const c of coxae) {

@@ -107,7 +107,8 @@ const intertarsalHolds: Law = ({ moving, still }) => [...moving, ...still].flatM
 }));
 
 // A foot down and flat in two moments running stays where it is on the
-// ledge, which moves back under the animal by how far it has walked.
+// ledge, which moves back under the animal by how far it has walked. A leg
+// posed in the air is not down, however low its foot hangs.
 const plantedFeetHold: Law = ({ moving }) => pairs(moving).flatMap(([a, b]) => {
   const [was, now] = [legsIn(a.pose), legsIn(b.pose)];
   if (was.length !== now.length) return [];
@@ -115,7 +116,7 @@ const plantedFeetHold: Law = ({ moving }) => pairs(moving).flatMap(([a, b]) => {
   const ground = (s: Seen, p: Point) => p.x + (s.walking ? s.walked / s.pose.scale : 0);
   return now.flatMap((leg, i) => {
     const before = was[i];
-    if (!downA[i] || !downB[i] || leg.limb.paw !== 0 || before.limb.paw !== 0) return [];
+    if (!downA[i] || !downB[i] || leg.inAir || before.inAir || leg.limb.paw !== 0 || before.limb.paw !== 0) return [];
     const slid = Math.hypot(ground(b, leg.limb.foot) - ground(a, before.limb.foot), leg.limb.foot.y - before.limb.foot.y);
     return slid > EPSILON ? [`leg ${i} slides ${slid.toFixed(4)} ${where(b)}`] : [];
   });

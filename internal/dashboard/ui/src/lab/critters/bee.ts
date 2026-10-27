@@ -2,7 +2,7 @@ import { smooth } from '../../lib/theme/math';
 import { ANCHOR, beeRig, collarOf, EYE, GROUND, REACH, REFERENCE, SCALE, type BeePose, type RigBee } from '../../lib/theme/bluebells/bee-rig';
 import { gazeFrom } from '../../lib/theme/rig/gaze';
 import { dartAt } from '../../lib/theme/rig/insect-flight';
-import { turnAbout } from '../../lib/theme/rig/rig';
+import { turnAbout, type RigPose } from '../../lib/theme/rig/rig';
 import bonk from '../bee-pose-bonk.webp';
 import crawl from '../bee-pose-crawl.webp';
 import fly from '../bee-pose-fly.webp';
@@ -11,7 +11,6 @@ import land from '../bee-pose-land.webp';
 import perch from '../bee-pose-perch.webp';
 import reference from '../bee-reference.webp';
 import type { Drawing } from '../drawings';
-import { INSECT_LEGS } from './bones';
 import type { Moment, RigCritter } from './critter';
 
 // The bumblebee the insect rig was proved on (rig/wing-blur.ts,
@@ -40,7 +39,7 @@ function darting(now: number): { dx: number; speed: number } {
   return { dx: d.at.x, speed: d.speed };
 }
 
-const beeAt = ({ mode, now, walked }: Moment, lean: number): RigBee => {
+export const beeAt = ({ mode, now, walked }: Moment, lean: number): RigBee => {
   const pick = MODES.find((m) => m.label === mode) ?? MODES[0];
   // Flying, the dial's speed is her speed ahead.
   const speed = mode === 'dart' ? darting(now).speed : pick.pose === 'fly' ? walked / Math.max(0.001, now / 1000) : 0;
@@ -67,6 +66,14 @@ const DRAWINGS: Record<string, Drawing> = {
 
 const gaze = gazeFrom({ eye: EYE, anchor: ANCHOR, scale: SCALE, look: 15, reach: 120 });
 
+// A dart carries her drawing along it, her joint marks with her.
+export function darted(pose: RigPose, at: Moment, still: boolean): RigPose {
+  if (at.mode !== 'dart' || still) return pose;
+  const { dx } = darting(at.now);
+  const guides = pose.guides?.map((g) => ({ ...g, at: { x: g.at.x + dx, y: g.at.y } }));
+  return { ...pose, layers: [{ kind: 'group', turn: turnAbout(0, ANCHOR, dx, 0), layers: pose.layers }], guides };
+}
+
 export const bee = {
   kind: 'rig',
   name: 'bee',
@@ -75,14 +82,7 @@ export const bee = {
   walking: ['crawl', 'scurry', 'fly'],
   pace: (mode, speed) => (mode === 'crawl' ? 10 : mode === 'scurry' ? 25 : speed),
   lift: (GROUND - ANCHOR.y) * SCALE,
-  pose: (at, { gaze: lean, still }) => {
-    const pose = beeRig(beeAt(at, lean), { now: at.now, still });
-    if (at.mode !== 'dart' || still) return pose;
-    // Her joint marks travel with her.
-    const { dx } = darting(at.now);
-    const guides = pose.guides?.map((g) => ({ ...g, at: { x: g.at.x + dx, y: g.at.y } }));
-    return { ...pose, layers: [{ kind: 'group', turn: turnAbout(0, ANCHOR, dx, 0), layers: pose.layers }], guides };
-  },
+  pose: (at, { gaze: lean, still }) => darted(beeRig(beeAt(at, lean), { now: at.now, still }), at, still),
   // Her reach in the mode, centred on her as the lab draws a footprint; a
   // dart's carries her its length ahead.
   box: ({ mode }) => {
@@ -92,10 +92,7 @@ export const bee = {
   },
   gaze: (dir, cursor) => gaze(dir, { x: 0, y: -(GROUND - ANCHOR.y) * SCALE }, cursor),
   drawings: DRAWINGS,
-  bones: {
-    marked: [INSECT_LEGS],
-    spine: [{ mark: 'neck', name: 'head joint (neck)', line: 'thorax line' }, { mark: 'thorax (moves here)', line: 'thorax line' }, { mark: 'waist (petiole)' }],
-    head: { joints: [{ mark: 'antenna socket' }], bones: [['head joint (neck)', 'antenna socket', 'head']] },
-    wings: { joints: [{ mark: 'wing hinge (tegula)' }] },
-  },
+  // Before her skeleton was her own, read off the drawing, her spine had no
+  // joint where she moves: the waist was SJ1.
+  aliases: { SJ1: 'SJ2' },
 } satisfies RigCritter;

@@ -208,8 +208,8 @@ export type Body = {
 // its knee and its paw may turn (the paw's from the shin, absolute; and
 // planted, as far as it bears) and whether a bone rises from its toes; a
 // bird's, how far its tarsus may turn from the drumstick; `inAir`, posed in
-// the air (a bird's legs pushing off or reaching to land), never planted
-// however near the ledge its toes are.
+// the air (a bird's legs pushing off or reaching to land, a foot held free
+// of the ground), never planted however near the ledge its toes are.
 export type PosedJoint = { id: string; code: string; name: string; at: Point; derived: boolean; far: boolean; parent: string | null; angle: number; limits?: { min: number; max: number } };
 export type PosedBone = { code: string; name: string; from: string; to: string; far: boolean; length: number; stretch?: { min: number; max: number } };
 export type PosedHinges = { side: 1 | -1; knee: Limits; paw: Limits; planted?: Limits; toes: boolean };

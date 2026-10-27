@@ -6,8 +6,9 @@ import { turnAbout, type DrawnLeg, type RigPose } from '../lib/theme/rig/rig';
 import { gullRig as gullDrawnAsBefore } from '../lib/theme/seaside/gull-rig-legacy';
 import { hawkRig as hawkDrawnAsBefore } from '../lib/theme/wimbledon/hawk-rig-legacy';
 import { pigeonRig as pigeonDrawnAsBefore } from '../lib/theme/wimbledon/pigeon-rig-legacy';
-import { bee } from './critters/bee';
-import { BIRD, mammalHead, mammalLeg, mammalSpine } from './critters/bones';
+import { beeRig as beeDrawnAsBefore } from '../lib/theme/bluebells/bee-rig-legacy';
+import { beeAt } from './critters/bee';
+import { BIRD, INSECT_LEGS, mammalHead, mammalLeg, mammalSpine } from './critters/bones';
 import { crowAt } from './critters/crow';
 import { gullAt } from './critters/gull';
 import { hawkAt } from './critters/hawk';
@@ -93,7 +94,15 @@ describe('skeletonOf', () => {
   });
 
   it("numbers an insect's six legs front to back, near before far, from its joint marks", () => {
-    const s = skeletonOf(bee.pose(at('crawl'), look), bee.bones);
+    // The bee as she was drawn before her skeleton was her own, with the
+    // names her lab entry gave her then.
+    const names: BoneNames = {
+      marked: [INSECT_LEGS],
+      spine: [{ mark: 'neck', name: 'head joint (neck)', line: 'thorax line' }, { mark: 'thorax (moves here)', line: 'thorax line' }, { mark: 'waist (petiole)' }],
+      head: { joints: [{ mark: 'antenna socket' }], bones: [['head joint (neck)', 'antenna socket', 'head']] },
+      wings: { joints: [{ mark: 'wing hinge (tegula)' }] },
+    };
+    const s = skeletonOf(beeDrawnAsBefore(beeAt(at('crawl'), 0), { now: at('crawl').now, still: false }), names);
     expect(s.groups.filter((g) => g.code.startsWith('L')).map((g) => `${g.code} ${g.title}`)).toEqual([
       'L0 near front leg', 'L1 far front leg', 'L2 near middle leg', 'L3 far middle leg', 'L4 near hind leg', 'L5 far hind leg',
     ]);

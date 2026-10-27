@@ -2,6 +2,7 @@ import { mix, mixPoint, rad } from '../math';
 import type { Point } from '../pointer';
 import { legsTo, restingFeet, stepping, type Gait, type Limb, type QuadLeg } from './gait';
 import type { Layer } from './rig';
+import type { Goal } from './skeleton/types';
 
 // An insect's six legs, drawn in code. All six come from the thorax, a pair
 // on each of its segments: fore, mid and hind. Each runs coxa (its socket,
@@ -40,7 +41,7 @@ export type InsectLeg = {
 };
 
 // The leg as the shared stepping knows a leg.
-const asQuad = (leg: InsectLeg): QuadLeg => ({
+export const asQuad = (leg: InsectLeg): QuadLeg => ({
   hip: leg.hip, reach: leg.reach, thigh: leg.femur, shin: leg.tibia, fore: leg.pair === 'fore', bend: leg.bend, far: leg.far,
   walksOn: { kind: 'toes', length: leg.tarsus, lean: leg.lean, fold: leg.curl },
 });
@@ -79,6 +80,17 @@ export function walkingLegs(legs: readonly InsectLeg[], hips: readonly Point[], 
   const { feet, steps } = stepping(quads, walked, ground, gait);
   return legsTo(quads, hips, feet(hips), steps);
 }
+
+// Where each foot goes walking this far, and where it is in its step: the
+// goals a skeleton's legs are posed toward, as walkingLegs poses them.
+export function walkingGoals(legs: readonly InsectLeg[], hips: readonly Point[], walked: number, ground: number, gait: Gait): Goal[] {
+  const { feet, steps } = stepping(legs.map(asQuad), walked, ground, gait);
+  return feet(hips).map((at, i) => ({ kind: 'plant', at, step: steps[i] }));
+}
+
+// Stood still, every foot down at its reach, as standingLegs poses them.
+export const standingGoals = (legs: readonly InsectLeg[], hips: readonly Point[], ground: number): Goal[] =>
+  restingFeet(legs.map(asQuad), hips, ground).map((at) => ({ kind: 'plant', at }));
 
 // Stood still, every foot down at its reach.
 export function standingLegs(legs: readonly InsectLeg[], hips: readonly Point[], ground: number): Limb[] {
@@ -124,6 +136,19 @@ const blend = (a: Held, b: Held, t: number): Held =>
 
 // The legs posed in the air.
 export function airLegs(legs: readonly InsectLeg[], hips: readonly Point[], hold: AirHold): Limb[] {
+  const { specs, feet } = held(legs, hips, hold);
+  return legsTo(specs, hips, feet);
+}
+
+// Where each foot is held in the air, and the tarsus's lean there: the
+// goals a skeleton's legs are posed toward, as airLegs poses them, none
+// of them planted.
+export function airGoals(legs: readonly InsectLeg[], hips: readonly Point[], hold: AirHold): Goal[] {
+  const { specs, feet } = held(legs, hips, hold);
+  return feet.map((at, i) => ({ kind: 'plant', at, contact: 0, ...(specs[i].walksOn ? { walksOn: specs[i].walksOn } : {}) }));
+}
+
+function held(legs: readonly InsectLeg[], hips: readonly Point[], hold: AirHold): { specs: QuadLeg[]; feet: Point[] } {
   const helds = legs.map((leg) => blend(blend(HOLDS.tucked[leg.pair], HOLDS.hanging[leg.pair], hold.hang), HOLDS.reaching[leg.pair], hold.reach));
   // Angles from straight down turn the other way to the page's: a nose-up
   // pitch (negative) swings a leg's end forward.
@@ -136,7 +161,7 @@ export function airLegs(legs: readonly InsectLeg[], hips: readonly Point[], hold
     const ankle = { x: hips[i].x + length * Math.sin(down), y: hips[i].y + length * Math.cos(down) };
     return { x: ankle.x + leg.tarsus * Math.sin(lean), y: ankle.y + leg.tarsus * Math.cos(lean) };
   });
-  return legsTo(specs, hips, feet);
+  return { specs, feet };
 }
 
 // How a leg is drawn: each bone's thickness (femur, tibia, tarsus), the dark
