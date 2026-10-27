@@ -122,21 +122,24 @@ function crawlOf(length?: number): Gait {
   const thirds = Math.max(1, Math.ceil(length / third - 1e-9));
   return insectGait(LEGS, 'tetrapod', strideFor('tetrapod', (3 * length) / thirds), CRAWL.lift);
 }
-// Crawling, her head down to the flower and her body near level.
-const CRAWLING = { pitch: 3, bob: 0, abdomen: 2, head: 4 } as const;
-// Perched after a crawl, her feet step from where it set them down to
-// where she stands, one after another from the hind legs forward, each
-// lifted through a short step of its own, as her body eases level.
-const SETTLE = { step: 160, every: 70 } as const;
-const SETTLED = SETTLE.every * 5 + SETTLE.step;
-function settling(crawled: readonly Point[], perched: readonly Point[], crawl: number, since: number): Goal[] {
-  const from = walkingGoals(LEGS, crawled, crawl, GROUND, crawlOf(crawl));
-  return standingGoals(LEGS, perched, GROUND).map((to, i) => {
+// How she holds her body: crawling, her head down to the flower and her
+// body near level; perched, as drawn.
+type Posture = { pitch: number; bob: number; abdomen: number; head: number };
+const CRAWLING: Posture = { pitch: 3, bob: 0, abdomen: 2, head: 4 };
+const PERCHED: Posture = { pitch: 0, bob: 0, abdomen: 0, head: 0 };
+// Setting off on a crawl, and perched after one, her feet step from one
+// stance to the other, one after another from the hind legs forward, each
+// lifted through a short step of its own, as her body eases from one
+// posture to the other: this long (ms) before she moves off, or once she
+// has arrived.
+const SHIFT = { step: 160, every: 70 } as const;
+export const FOOTWORK = SHIFT.every * 5 + SHIFT.step;
+function shifting(from: readonly Point[], to: readonly Point[], since: number): Goal[] {
+  return to.map((goal, i) => {
     const was = from[i];
-    const t = clamp((since - SETTLE.every * (LEGS.length - 1 - i)) / SETTLE.step, 0, 1);
-    if (to.kind !== 'plant' || was.kind !== 'plant' || t >= 1) return to;
-    if (t <= 0) return { kind: 'plant', at: was.at };
-    const at = { x: mix(was.at.x, to.at.x, smooth(t)), y: GROUND - Math.sin(Math.PI * t) * CRAWL.lift };
+    const t = clamp((since - SHIFT.every * (LEGS.length - 1 - i)) / SHIFT.step, 0, 1);
+    if (t <= 0 || t >= 1) return { kind: 'plant', at: t <= 0 ? was : goal };
+    const at = { x: mix(was.x, goal.x, smooth(t)), y: GROUND - Math.sin(Math.PI * t) * CRAWL.lift };
     return { kind: 'plant', at, step: { down: false, t }, contact: 0 };
   });
 }
@@ -158,37 +161,50 @@ export type RigBee = {
   // Bonked, how long since her head met the wall (ms): she recoils nose up
   // and settles.
   knocked?: number;
-  // Crawling, how far the crawl goes (px); perched after one, how far it
-  // went and how long since (ms).
+  // Crawling, how far the crawl goes (px) and how long since she set off
+  // (ms); perched after one, how far it went and how long since she
+  // arrived.
   crawl?: { length: number; since?: number };
 };
 type BeeLook = { now: number; still: boolean };
 
 type Hold = { pitch: number; bob: number; abdomen: number; head: number; legs: (hips: readonly Point[]) => Goal[] };
 
-// Perched after a crawl, the hold easing from the crawl's to standing.
-function settled(crawl: number, since: number): Hold {
-  const u = smooth(since / SETTLED);
-  // Where her coxae were as she crawled, that her feet step from, and
-  // where they are perched, that they step to.
-  const crawled = BEE.hips({ root: turnAbout(CRAWLING.pitch, ANCHOR, 0, CRAWLING.bob), joints: {} });
-  const perched = BEE.hips({ root: turnAbout(0, ANCHOR), joints: {} });
+// Her feet stepping from one stance to another as her body eases from
+// one posture to the other, each stance's feet set from her coxae where
+// its posture holds them.
+function shifted(from: Posture, to: Posture, feet: (hips: (p: Posture) => Point[]) => { from: Point[]; to: Point[] }, since: number): Hold {
+  const u = smooth(since / FOOTWORK);
+  const hips = (p: Posture) => BEE.hips({ root: turnAbout(p.pitch, ANCHOR, 0, p.bob), joints: {} });
+  const { from: was, to: now } = feet(hips);
   return {
-    pitch: mix(CRAWLING.pitch, 0, u), bob: 0, abdomen: mix(CRAWLING.abdomen, 0, u), head: mix(CRAWLING.head, 0, u),
-    legs: () => settling(crawled, perched, crawl, since),
+    pitch: mix(from.pitch, to.pitch, u), bob: mix(from.bob, to.bob, u), abdomen: mix(from.abdomen, to.abdomen, u), head: mix(from.head, to.head, u),
+    legs: () => shifting(was, now, since),
   };
 }
+// Where her feet are as a crawl of this length starts, and as it ends;
+// and where they stand perched.
+const feetOf = (goals: readonly Goal[]): Point[] => goals.flatMap((g) => (g.kind === 'plant' ? [g.at] : []));
+const crawlFeet = (hips: readonly Point[], length: number, walked: number) => feetOf(walkingGoals(LEGS, hips, walked, GROUND, crawlOf(length)));
+const perchFeet = (hips: readonly Point[]) => feetOf(standingGoals(LEGS, hips, GROUND));
 
 function hold(b: RigBee, now: number): Hold {
   const standing = (hips: readonly Point[]) => standingGoals(LEGS, hips, GROUND);
   switch (b.pose) {
     case 'crawl':
     case 'scurry': {
+      const { length = 0, since = Infinity } = b.crawl ?? {};
+      if (b.pose === 'crawl' && since < FOOTWORK) {
+        return shifted(PERCHED, CRAWLING, (hips) => ({ from: perchFeet(hips(PERCHED)), to: crawlFeet(hips(CRAWLING), length, 0) }), since);
+      }
       const gait = b.pose === 'crawl' ? crawlOf(b.crawl?.length) : SCURRY;
       return { ...CRAWLING, legs: (hips) => walkingGoals(LEGS, hips, b.walked, GROUND, gait) };
     }
-    case 'perch':
-      return b.crawl?.since !== undefined && b.crawl.since < SETTLED ? settled(b.crawl.length, b.crawl.since) : { pitch: 0, bob: 0, abdomen: 0, head: 0, legs: standing };
+    case 'perch': {
+      const { length = 0, since = Infinity } = b.crawl ?? {};
+      if (since < FOOTWORK) return shifted(CRAWLING, PERCHED, (hips) => ({ from: crawlFeet(hips(CRAWLING), length, length), to: perchFeet(hips(PERCHED)) }), since);
+      return { ...PERCHED, legs: standing };
+    }
     case 'hover': {
       // Nose up, legs hanging, the hind pair trailing, the abdomen hanging a
       // little below the line of the body, bobbing slowly.
@@ -321,14 +337,15 @@ export function beeRig(bee: RigBee, look: BeeLook): RigPose {
 
 // How far each pose's drawing reaches from her anchor (page px), at every
 // moment of its motion: wing ghosts and fan, bob, hanging legs, antennae
-// leaning and flicking, a perch settling from a crawl (bee-rig.test.ts and
+// leaning and flicking, her feet stepping into a crawl and out of it
+// (bee-rig.test.ts and
 // the lab's laws sample each whole cycle). Behind
 // is toward her tail; mirrored when she faces left, so unlike the kit's
 // reaches it faces a way.
 export type FacingReach = { behind: number; ahead: number; up: number; down: number };
 export const REACH: Record<BeePose, FacingReach> = {
   perch: { behind: 12.25, ahead: 10.5, up: 7.5, down: 7 },
-  crawl: { behind: 12.25, ahead: 10.25, up: 7.5, down: 7 },
+  crawl: { behind: 12.25, ahead: 10.5, up: 7.5, down: 7 },
   scurry: { behind: 12.25, ahead: 10.25, up: 7.5, down: 7 },
   hover: { behind: 10.75, ahead: 9.75, up: 11.75, down: 13.25 },
   fly: { behind: 12, ahead: 11.5, up: 11, down: 12.5 },

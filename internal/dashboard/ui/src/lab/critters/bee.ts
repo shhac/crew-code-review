@@ -18,16 +18,18 @@ import type { Moment, RigCritter } from './critter';
 // rig/hexapod.ts, rig/antennae.ts, rig/insect-flight.ts). The lab's labels
 // for what she does: her poses, plus a dart there and back, a lift-off
 // with the blur fading in, each on a loop to scrub through, and her feet
-// settling as she perches after a crawl.
+// stepping into a crawl and settling as she perches after one.
 const MODES: { label: string; pose: BeePose }[] = [
   { label: 'perch', pose: 'perch' }, { label: 'crawl', pose: 'crawl' }, { label: 'scurry', pose: 'scurry' },
   { label: 'hover', pose: 'hover' }, { label: 'fly', pose: 'fly' }, { label: 'dart', pose: 'fly' },
   { label: 'lift off', pose: 'land' }, { label: 'land', pose: 'land' }, { label: 'bonk', pose: 'bonk' },
-  { label: 'settle', pose: 'perch' },
+  { label: 'set off', pose: 'crawl' }, { label: 'settle', pose: 'perch' },
 ];
-// Settling: perched after a crawl of 6px to her bell, her feet stepping
-// from where the crawl set them down to where she stands, from frame 0.
-const SETTLED = 6;
+// Setting off on a crawl of 6px to the next bell, her feet stepping from
+// where she stands into the crawl's, and settling, perched after one, her
+// feet stepping from where the crawl set them down to where she stands,
+// each from frame 0.
+const STEPPING_IN = 6;
 // The bonk's knock back off the wall, again every 900ms.
 const KNOCK_EVERY = 900;
 
@@ -50,8 +52,8 @@ export const beeAt = ({ mode, now, walked }: Moment, lean: number): RigBee => {
   // Flying, the dial's speed is her speed ahead.
   const speed = mode === 'dart' ? darting(now).speed : pick.pose === 'fly' ? walked / Math.max(0.001, now / 1000) : 0;
   const wings = pick.pose === 'perch' || pick.pose === 'crawl' || pick.pose === 'scurry' ? 0 : mode === 'lift off' ? smooth((now % 1500) / 250) : 1;
-  const settle = mode === 'settle' ? { crawl: { length: SETTLED, since: now } } : {};
-  return { pose: pick.pose, seed: 1, walked, speed, lean, wings, ...settle, ...(pick.pose === 'bonk' ? { knocked: now % KNOCK_EVERY } : {}) };
+  const settle = mode === 'settle' || mode === 'set off' ? { crawl: { length: STEPPING_IN, since: now } } : {};
+  return { pose: pick.pose, seed: 1, walked: mode === 'set off' ? 0 : walked, speed, lean, wings, ...settle, ...(pick.pose === 'bonk' ? { knocked: now % KNOCK_EVERY } : {}) };
 };
 
 // Each key pose laid over the rig collar to collar (the export prints where

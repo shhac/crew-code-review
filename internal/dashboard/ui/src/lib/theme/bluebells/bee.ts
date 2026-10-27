@@ -2,6 +2,7 @@ import type { Box, PageMap } from '../floors';
 import { apart, clamp, facingFrom, mixPoint, smooth } from '../math';
 import type { Cursor, Point } from '../pointer';
 import { between, type Rand } from '../seed';
+import { FOOTWORK } from './bee-rig';
 import { clear, type BeeAir } from './beeair';
 import { KNOCK_BACK, type WallSide } from './bonks';
 import { approaches, fitsAt, frameAt, hoverSpot, lastBell, onPage, perchSpot, SHELF_KEY, spotIn, visitable, type Flower, type Spot } from './flowers';
@@ -206,7 +207,7 @@ export function where(b: Bee, page: PageMap, now: number): Point | null {
   if (!to) return at;
   const t = (now - b.since) / Math.max(1, b.until - b.since);
   switch (b.mode) {
-    case 'crawl': return mixPoint(at, to, smooth(t));
+    case 'crawl': return mixPoint(at, to, smooth(crawlProgress(b, now)));
     case 'takeoff': return mixPoint(at, to, smooth(t));
     case 'land': return mixPoint(at, to, smooth(t));
     case 'bonk': return mixPoint(at, to, clamp(t, 0, 1));
@@ -225,8 +226,11 @@ function crawling(b: Bee, page: PageMap, now: number): { walked: number; length:
   const to = b.to && onPage(page, b.to);
   if (b.mode !== 'crawl' || !at || !to) return null;
   const length = apart(at, to);
-  return { walked: length * smooth((now - b.since) / Math.max(1, b.until - b.since)), length };
+  return { walked: length * smooth(crawlProgress(b, now)), length };
 }
+// How far through its crawl it has moved, 0 to 1: still while its feet
+// step from its stance into the crawl's (bee-rig.ts's FOOTWORK), then on.
+const crawlProgress = (b: Bee, now: number) => clamp((now - b.since - FOOTWORK) / Math.max(1, b.until - b.since - FOOTWORK), 0, 1);
 
 // Two braking steps: most of the way, a breath, then the rest.
 function braking(ms: number): number {
@@ -340,7 +344,7 @@ function perched(b: Bee, flower: Flower | undefined, ctx: Context, now: number, 
   const gap = up && from ? apart(up, from) : Infinity;
   if (up && gap <= MAX_CRAWL && fitsAt(ctx.air, perchSpot(flower, next), 'crawl', b.dir, false, ctx.others)) {
     const dir = facingFrom(up.x - from.x, 0.5, b.dir);
-    return { ...timed(b, 'crawl', now, (gap / CRAWL_SPEED) * 1000, perchSpot(flower, next)), bell: next, visited: b.visited + 1, dir };
+    return { ...timed(b, 'crawl', now, FOOTWORK + (gap / CRAWL_SPEED) * 1000, perchSpot(flower, next)), bell: next, visited: b.visited + 1, dir };
   }
   return timed(b, 'shiver', now, SHIVER);
 }
@@ -617,8 +621,9 @@ export function beeView(b: Bee, page: PageMap, now: number): BeeView | null {
   const on = ON_BELL.has(b.mode) && b.flower ? { flower: b.flower, bell: b.bell } : null;
   const wings = on ? 0 : b.mode === 'takeoff' ? clamp(since / TAKEOFF, 0, 1) : b.mode === 'bounce' && since < DIM ? 0.5 : 1;
   const crawl = crawling(b, page, now);
-  // Perched after a crawl, its feet settle from where the crawl left them.
-  const crawled = crawl ? { length: crawl.length } : b.mode === 'perch' && b.crawled ? { length: b.crawled, since } : null;
+  // Setting off on a crawl its feet step into it; perched after one, they
+  // settle from where the crawl left them.
+  const crawled = crawl ? { length: crawl.length, since } : b.mode === 'perch' && b.crawled ? { length: b.crawled, since } : null;
   const tremble = b.mode === 'shiver' ? TREMBLE * Math.sin((2 * Math.PI * TREMBLE_HZ * since) / 1000) : 0;
   return {
     x: p.x + tremble, y: p.y, dir: b.dir, pose: poseOf(b, now, page), mode: b.mode, speed,

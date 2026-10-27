@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { Point } from '../pointer';
 import type { RigPose } from '../rig/rig';
 import { flatLayers, legsOf, lidsOf, rigBounds } from '../rig/test-rig';
-import { ANCHOR, beeRig, GROUND, REACH, SCALE, type BeePose, type RigBee } from './bee-rig';
+import { ANCHOR, beeRig, FOOTWORK, GROUND, REACH, SCALE, type BeePose, type RigBee } from './bee-rig';
 
 const POSES: BeePose[] = ['perch', 'crawl', 'scurry', 'hover', 'fly', 'land', 'bonk'];
 const grounded = (pose: BeePose) => pose === 'perch' || pose === 'crawl' || pose === 'scurry';
@@ -66,6 +66,19 @@ describe('the bee', () => {
           if (Math.abs(f.y - GROUND) < 1e-6 && Math.abs(b[i].y - GROUND) < 1e-6) expect(b[i].x, `leg ${i} at ${t}ms`).toBeCloseTo(f.x, 6);
         });
       }
+    }
+  });
+
+  it('steps her feet from where she stands into a crawl before she moves off, never sliding one', () => {
+    const length = 6;
+    const setting = (since: number) => feet(beeRig(bee('crawl', { walked: 0, crawl: { length, since } }), { now: since, still: false }));
+    expect(setting(0)).toEqual(feet(beeRig(bee('perch'), { now: 0, still: false })));
+    expect(setting(FOOTWORK)).toEqual(feet(beeRig(bee('crawl', { walked: 0, crawl: { length } }), { now: FOOTWORK, still: false })));
+    for (let t = 0; t < FOOTWORK; t += 10) {
+      const [a, b] = [setting(t), setting(t + 10)];
+      a.forEach((f, i) => {
+        if (Math.abs(f.y - GROUND) < 1e-6 && Math.abs(b[i].y - GROUND) < 1e-6) expect(b[i].x, `leg ${i} at ${t}ms`).toBeCloseTo(f.x, 6);
+      });
     }
   });
 
