@@ -25,17 +25,8 @@ const KNOWN = {
   hare: { footprintsHold: 'a leg piece\'s rounded cap, turned with its bone, reaches up to about 0.36px past its footprint (under a leap\'s arc, behind it sat up and leaping), and its breath 0.32px over the top when alert, as the page has always drawn them' },
   cupid: { footprintsHold: 'dodging, the drawing reaches up to 0.16px over its footprint\'s top' },
   bee: { footprintsHold: 'lifting off, the drawing reaches 0.18px past its footprint\'s left' },
-  gull: {
-    anklesBehindToes: 'walking, the tarsus swings with the leg like a pendulum from the foot (bird.ts\'s swungBy), so late in the stance the ankle passes ahead of the toes',
-  },
-  crow: {
-    anklesBehindToes: 'walking, the tarsus swings with the leg like a pendulum from the foot (bird.ts\'s swungBy), so late in the stance the ankle passes ahead of the toes',
-    footprintsHold: 'flaring, the drawing reaches 0.55px past its footprint\'s left',
-  },
-  pigeon: {
-    anklesBehindToes: 'walking, the tarsus swings with the leg like a pendulum from the foot (bird.ts\'s swungBy), so late in the stance the ankle passes ahead of the toes',
-    footprintsHold: 'landing, the drawing reaches 0.07px past its footprint\'s right',
-  },
+  crow: { footprintsHold: 'flaring, the drawing reaches 0.55px past its footprint\'s left' },
+  pigeon: { footprintsHold: 'landing, the drawing reaches 0.07px past its footprint\'s right' },
 } satisfies Record<string, Partial<Record<LawName, string>>>;
 
 const knownFor = (rig: string, law: string): string | undefined =>

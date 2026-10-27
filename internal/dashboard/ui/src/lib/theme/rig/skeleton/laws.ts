@@ -25,10 +25,10 @@ const where = (s: Seen) => `${s.mode} at ${s.now}${s.still ? ', motion reduced' 
 const length = (a: Point, b: Point) => Math.hypot(b.x - a.x, b.y - a.y);
 // Each leg as posed, in the order legsOf and solesOf list them, and whether
 // it stands on its toes, a bone rising from them to the hock or wrist.
-type Leg = { limb: Limb; toes: boolean };
+type Leg = { limb: Limb; toes: boolean; inAir?: boolean };
 const drawnLegs = (pose: RigPose): DrawnLeg[] => flatLayers(pose.layers).flatMap((l) => (l.kind === 'legs' && !l.fur ? [...l.legs] : []));
 const legsIn = (pose: RigPose): Leg[] => (pose.skeleton
-  ? pose.skeleton.limbs.map(({ limb }) => ({ limb, toes: length(limb.ankle, limb.foot) > EPSILON }))
+  ? pose.skeleton.limbs.map(({ limb, inAir }) => ({ limb, toes: length(limb.ankle, limb.foot) > EPSILON, inAir }))
   : drawnLegs(pose).map(({ limb, art }) => ({ limb, toes: art.knee && length(limb.ankle, limb.foot) > EPSILON })));
 const downIn = (s: Seen) => solesOf(s.pose).map((y) => y >= s.pose.anchor.y - EPSILON);
 // The moments of one mode in turn, each with the one before it.
@@ -122,11 +122,12 @@ const plantedFeetHold: Law = ({ moving }) => pairs(moving).flatMap(([a, b]) => {
 });
 
 // A planted foot on its toes (a bone up from them to the hock or wrist)
-// has that joint behind the toes and not below them.
+// has that joint behind the toes and not below them. A leg posed in the
+// air is not planted, though its toes graze the ledge as it pushes off.
 const anklesBehindToes: Law = ({ moving }) => moving.flatMap((s) => {
   const down = downIn(s);
-  return legsIn(s.pose).flatMap(({ limb, toes }, i) => {
-    if (!toes || !down[i]) return [];
+  return legsIn(s.pose).flatMap(({ limb, toes, inAir }, i) => {
+    if (!toes || !down[i] || inAir) return [];
     const behind = limb.ankle.x < limb.foot.x && limb.ankle.y <= limb.foot.y + EPSILON;
     return behind ? [] : [`leg ${i} ankle at (${limb.ankle.x.toFixed(2)}, ${limb.ankle.y.toFixed(2)}), toes at (${limb.foot.x.toFixed(2)}, ${limb.foot.y.toFixed(2)}) ${where(s)}`];
   });
