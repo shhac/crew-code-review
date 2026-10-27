@@ -17,7 +17,7 @@ import { REACH } from './trail';
 export const POSES: Record<HarePose, { width: number; height: number }> = {
   stand: { width: 38, height: 34.5 },
   graze: { width: 44, height: 26 },
-  sit: { width: 42, height: 38 },
+  sit: { width: 43, height: 38 },
   alert: { width: 36, height: 27 },
   lope: { width: 37, height: 27 },
   bound: { width: 47, height: 26 },
@@ -31,7 +31,7 @@ export const POSES: Record<HarePose, { width: number; height: number }> = {
 export const REACHES: Record<HarePose, { back: number; front: number }> = {
   stand: { back: 17, front: 19 },
   graze: { back: 18, front: 22 },
-  sit: { back: 21, front: 14 },
+  sit: { back: 21.5, front: 14 },
   alert: { back: 18, front: 18 },
   lope: { back: 18, front: 18.5 },
   bound: { back: 23.5, front: 21 },

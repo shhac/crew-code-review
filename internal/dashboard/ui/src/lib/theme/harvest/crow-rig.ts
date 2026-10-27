@@ -357,7 +357,7 @@ export const FOOTPRINTS: Record<CrowPose, Footprint> = {
   stand: { width: 40, height: 27.5 }, walk: { width: 42, height: 27.5, down: 0.2 }, sidle: { width: 42.5, height: 27.5, down: 0.2 },
   peck: { width: 46.5, height: 24, down: 0.45 }, alert: { width: 38, height: 32.5 },
   takeoff: { width: 51.5, height: 51.5, down: 4.5 }, flap: { width: 52, height: 44, down: 6 }, skim: { width: 48, height: 28.5 },
-  glide: { width: 48, height: 27 }, flare: { width: 45.5, height: 50, down: 3.5 }, settle: { width: 47.5, height: 48.5, down: 3 },
+  glide: { width: 48, height: 27 }, flare: { width: 47, height: 50, down: 3.5 }, settle: { width: 47.5, height: 48.5, down: 3 },
 };
 // Taking off, landing and settling low (depth 0), where only a skim fits.
 export const LOW_FOOTPRINTS: Record<'takeoff' | 'flare' | 'settle', Footprint> = {

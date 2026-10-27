@@ -17,14 +17,10 @@ const KNOWN = {
   fox: {
     bonesKeepLength: 'trotting, a foot beyond thigh and shin straightens the leg and the shank stretches to the hock (spidergait\'s knees)',
     plantedFeetHold: 'digging, a forepaw scrapes back through the snow while it is down, as a dig does',
-    footprintsHold: 'in every mode the leg pieces\' caps and folding paws reach under the ledge by under a pixel',
+    footprintsHold: 'in every mode the box of each leg\'s bone up from the toes reaches up to 0.73px under the ledge at its rounded cap\'s corner, which is see-through (its fur does not); and digging, its nose goes into the snow (3.1px), crouching nearly (0.74px)',
   },
-  rabbit: { footprintsHold: 'a leg piece\'s rounded cap, turned with the foot, reaches about 0.29px under the ledge, as the page has always drawn it (counted as squares round each joint, as legs were before its skeleton, it never showed)' },
-  hare: { footprintsHold: 'a leg piece\'s rounded cap, turned with its bone, reaches up to about 0.36px past its footprint (under a leap\'s arc, behind it sat up and leaping), and its breath 0.32px over the top when alert, as the page has always drawn them' },
-  cupid: { footprintsHold: 'dodging, the drawing reaches up to 0.16px over its footprint\'s top' },
-  bee: { footprintsHold: 'lifting off, the drawing reaches 0.18px past its footprint\'s left' },
-  crow: { footprintsHold: 'flaring, the drawing reaches 0.55px past its footprint\'s left' },
-  pigeon: { footprintsHold: 'landing, the drawing reaches 0.07px past its footprint\'s right' },
+  rabbit: { footprintsHold: 'the box of a forepaw\'s metacarpus reaches 0.29px under the ledge at its rounded cap\'s corner, which is see-through, as the page has always drawn it (counted as squares round each joint, as legs were before its skeleton, it never showed)' },
+  hare: { footprintsHold: 'alert, its breath lifts its back up to 0.32px over the 27px it keeps to day to day (hare.ts\'s CLEAR); held shallow enough to fit, it would hardly breathe' },
 } satisfies Record<string, Partial<Record<LawName, string>>>;
 
 const knownFor = (rig: string, law: string): string | undefined =>

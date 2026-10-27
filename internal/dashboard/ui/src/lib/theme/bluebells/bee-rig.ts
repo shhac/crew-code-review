@@ -249,7 +249,7 @@ export const REACH: Record<BeePose, FacingReach> = {
   scurry: { behind: 12.25, ahead: 10.25, up: 7.5, down: 7 },
   hover: { behind: 10.75, ahead: 9.75, up: 11.75, down: 13.25 },
   fly: { behind: 12, ahead: 11.5, up: 11, down: 12.5 },
-  land: { behind: 11.75, ahead: 10.75, up: 8.5, down: 9.25 },
+  land: { behind: 12, ahead: 10.75, up: 8.5, down: 9.25 },
   bonk: { behind: 12.25, ahead: 10.75, up: 9.75, down: 10.5 },
 };
 

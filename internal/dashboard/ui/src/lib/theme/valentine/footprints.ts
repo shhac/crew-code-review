@@ -9,7 +9,7 @@ export const FOOTPRINTS = {
   hover: { half: 24, up: 28, down: 17 },
   flight: { half: 23, up: 28, down: 17 },
   shoot: { half: 24, up: 29, down: 17 },
-  dodge: { half: 25, up: 28, down: 15 },
+  dodge: { half: 25, up: 28.5, down: 15 },
 } as const satisfies Record<string, Reach>;
 export type Footprint = keyof typeof FOOTPRINTS;
 
