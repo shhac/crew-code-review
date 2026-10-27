@@ -14,7 +14,7 @@
   import { GAZE_EASE } from '../lib/theme/rig/gaze';
   import { easeTo } from '../lib/theme/rig/life';
   import Rig from '../lib/theme/rig/Rig.svelte';
-  import { codeNow, drawingsOf, gazeOf, liftOf, posesOf, walkedIn, type Critter } from './critters/critter';
+  import { codeNow, codesOf, drawingsOf, gazeOf, liftOf, posesOf, walkedIn, type Critter } from './critters/critter';
   import { CRITTERS, critterNamed } from './critters/registry';
   import { drawingFor, overlay } from './drawings';
   import { allPartNames, keepParts, partArt } from './rig-parts';
@@ -124,9 +124,10 @@
     ...(reference ? { ref: reference } : {}),
     ...(hidden.length ? { hide: hidden.join(',') } : {}),
     ...(skeleton ? { skeleton } : {}),
-    // `codes`: the code is as skeletons have them now, so an animal's old
-    // codes (its aliases) are not read into it.
-    ...(pinned ? { [parseCode(pinned)?.kind === 'J' ? 'joint' : 'bone']: pinned, codes: 'role' } : {}),
+    // `codes`: which codes the link's are, those skeletons have now, so an
+    // animal's old codes (its aliases) are not read into it, nor its later
+    // ones into a link written before them.
+    ...(pinned ? { [parseCode(pinned)?.kind === 'J' ? 'joint' : 'bone']: pinned, codes: codesOf(critter) } : {}),
   });
   // Written while paused, or as it plays without the ever-changing frame.
   $: if (ready && !playing) history.replaceState(null, '', `#${state}`);
@@ -149,7 +150,7 @@
     hidden = q.get('hide')?.split(',') ?? [];
     skeleton = SKELETONS.find((s) => s.value && s.value === q.get('skeleton'))?.value ?? '';
     const code = q.get('bone') ?? q.get('joint');
-    pinned = code && (q.has('codes') ? code : codeNow(c, code));
+    pinned = code && codeNow(c, code, q.get('codes'));
     // Opened at a frame, it waits there.
     playing = !q.has('frame');
   }

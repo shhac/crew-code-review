@@ -104,4 +104,7 @@ export const bee = {
   // Before her skeleton was her own, read off the drawing, her spine had no
   // joint where she moves (the waist was SJ1), and her legs no coxa.
   aliases: { SJ1: 'SJ2', ...CODES_BEFORE_COXA },
+  // Since her coxa became a bone, her legs' codes are not those links
+  // written before called `role`.
+  codes: { now: 'coxa', before: { role: CODES_BEFORE_COXA } },
 } satisfies RigCritter;

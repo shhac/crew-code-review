@@ -34,6 +34,11 @@ type Shown = {
   // code can mean another joint now (the hedgehog's J1 was its foot, and is
   // its elbow), so only an old link is read through them.
   aliases?: Readonly<Record<string, string>>;
+  // What a link the lab writes now calls its codes (&codes=), where its
+  // codes have moved since links said `role` (an insect's, since its coxa
+  // became a bone); and for a link naming an earlier one, the codes its
+  // joints and bones had then, by the codes they have now.
+  codes?: { now: string; before: Readonly<Record<string, Readonly<Record<string, string>>>> };
 };
 
 // Drawn from parts by a rig (lib/theme/rig): the lab draws its RigPose, and
@@ -110,5 +115,14 @@ export const momentsOf = (rig: RigCritter): Moment[] => rig.modes.flatMap((mode)
 // Every pose it takes in those moments.
 export const posesOf = (rig: RigCritter): RigPose[] => momentsOf(rig).map((at) => rig.pose(at, { gaze: 0, still: false }));
 
-// The code a joint or bone has now, for one an old link names.
-export const codeNow = (critter: Critter, code: string): string => critter.aliases?.[code] ?? code;
+// What a link the lab writes now calls its codes.
+export const codesOf = (critter: Critter): string => critter.codes?.now ?? 'role';
+
+// The code a joint or bone has now, for one a link names: one without
+// &codes= read through its aliases, one naming earlier codes through
+// those.
+export const codeNow = (critter: Critter, code: string, codes: string | null = null): string => {
+  if (codes === null) return critter.aliases?.[code] ?? code;
+  if (codes === codesOf(critter)) return code;
+  return critter.codes?.before[codes]?.[code] ?? code;
+};

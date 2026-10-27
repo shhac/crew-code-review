@@ -62,6 +62,18 @@ test('an old link to a joint or bone whose code has moved pins it under its code
   await expect(page.locator('[data-legend] [data-row="L0J1"]')).toHaveAttribute('aria-pressed', 'true');
 });
 
+test('a link to an insect leg written before its coxa was a bone pins the same joint, and is written anew with codes as they are now', async ({ page }) => {
+  // Then, L0J1 was the bee's near front knee; now the trochanter is, the knee L0J2.
+  await page.goto('/lab/critters.html#animal=bee&mode=perch&frame=0&skeleton=faded&joint=L0J1&codes=role');
+  await expect(page.locator('[data-legend] [data-row="L0J2"]')).toHaveAttribute('aria-pressed', 'true');
+  await expect.poll(() => hash(page)).toContain('joint=L0J2');
+  await expect.poll(() => hash(page)).toContain('codes=coxa');
+  await page.goto('/lab/critters.html#animal=wasp&mode=standing&frame=0&skeleton=faded&bone=L4B0');
+  await expect(page.locator('[data-legend] [data-row="L4B1"]')).toHaveAttribute('aria-pressed', 'true');
+  await page.goto('/lab/critters.html#animal=bee&mode=perch&frame=0&skeleton=faded&joint=L0J1&codes=coxa');
+  await expect(page.locator('[data-legend] [data-row="L0J1"]')).toHaveAttribute('aria-pressed', 'true');
+});
+
 test("the spider's skeleton is read off its drawn legs, and follows them as it walks", async ({ page }) => {
   await page.goto('/lab/critters.html#animal=spider&mode=walk&frame=0&skeleton=faded');
   await expect(skeleton(page).locator('text[data-code$="B0"]')).toHaveCount(8);
