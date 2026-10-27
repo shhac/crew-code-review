@@ -112,7 +112,7 @@ const zigAt = (id: number, places: Places, t: number): Point => {
 
 // A few short shuffles across its spot while it feeds, out and back: how
 // far from the middle it stands at t into feeding.
-function shuffleAt(seed: number, t: number): number {
+export function shuffleAt(seed: number, t: number): number {
   const every = 1800 + 1200 * hash(seed + 5);
   const n = Math.floor(t / every);
   const into = clamp((t - n * every - 600) / SHUFFLE_TIME, 0, 1);

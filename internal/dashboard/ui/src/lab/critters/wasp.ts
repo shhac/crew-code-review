@@ -1,4 +1,5 @@
 import { FOOTPRINTS, type WaspPose } from '../../lib/theme/fete/footprints';
+import { shuffleAt } from '../../lib/theme/fete/wasp';
 import { ANCHOR, CRUISE, EYE, GROUND, REFERENCE, SCALE, eyeOf, waspRig, type RigWasp } from '../../lib/theme/fete/wasp-rig';
 import { smooth } from '../../lib/theme/math';
 import { gazeFrom } from '../../lib/theme/rig/gaze';
@@ -11,8 +12,9 @@ import reference from '../wasp-reference.webp';
 import type { Moment, RigCritter } from './critter';
 
 // June's common wasp (lib/theme/fete/wasp-rig.ts) on the insect rig. The
-// lab's labels for what she does: her poses, feeding with its shuffles on a
-// slow tripod, and a lift-off with the blur fading in, on a loop.
+// lab's labels for what she does: her poses, feeding with its shuffles as
+// the page times them (still between, a step out and later back), and a
+// lift-off with the blur fading in, on a loop.
 const MODES: { label: string; pose: WaspPose }[] = [
   { label: 'standing', pose: 'standing' }, { label: 'feed', pose: 'feed' }, { label: 'hover', pose: 'hover' },
   { label: 'land', pose: 'land' }, { label: 'lift off', pose: 'land' }, { label: 'cruise', pose: 'cruise' },
@@ -48,6 +50,7 @@ export const wasp = {
   modes: MODES.map((m) => m.label),
   speed: 12,
   walking: ['feed'],
+  walks: (mode, now) => (mode === 'feed' ? shuffleAt(1, now) : undefined),
   lift: (GROUND - ANCHOR.y) * SCALE,
   pose: (at, { gaze: lean, still }) => waspRig(waspAt(at, lean), { now: at.now, still }),
   box: ({ mode }) => {

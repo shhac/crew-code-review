@@ -14,7 +14,7 @@
   import { GAZE_EASE } from '../lib/theme/rig/gaze';
   import { easeTo } from '../lib/theme/rig/life';
   import Rig from '../lib/theme/rig/Rig.svelte';
-  import { codeNow, drawingsOf, gazeOf, liftOf, paceOf, posesOf, type Critter } from './critters/critter';
+  import { codeNow, drawingsOf, gazeOf, liftOf, posesOf, walkedIn, type Critter } from './critters/critter';
   import { CRITTERS, critterNamed } from './critters/registry';
   import { drawingFor, overlay } from './drawings';
   import { allPartNames, keepParts, partArt } from './rig-parts';
@@ -33,6 +33,8 @@
   // from the frame number (with the animal, mode and speed), so one number
   // names one drawing exactly: the page's address carries it, to share.
   const FPS = 60;
+  // How far apart the floor's marks are, page px.
+  const TICKS = 4;
   // The timeline shows at least a minute, and stretches to any later frame.
   const SPAN = 60 * FPS;
   let frame = 0;
@@ -71,8 +73,7 @@
   $: now = (frame * 1000) / FPS;
   $: walking = critter.walking.includes(mode);
   // Walking, its stride follows from the time, at its pace from frame 0.
-  $: pace = paceOf(critter, mode, speed);
-  $: walked = walking ? (pace * now) / 1000 : 0;
+  $: walked = walkedIn(critter, mode, now, speed);
   $: moment = { mode, now, walked };
   $: pose = rig && rig.pose(moment, { gaze, still });
   $: shown = pose && keepParts(pose, (name) => !hidden.includes(name));
@@ -225,7 +226,11 @@
 
   <!-- svelte-ignore a11y_no_static_element_interactions, a11y_click_events_have_key_events -->
   <div class="stage" bind:this={stage} on:pointermove={track} on:pointerleave={() => (cursor = null)} on:click={() => (pinned = null)} data-stage>
-    <div class="floor"></div>
+    <!-- Walking, the animal stays put and the floor's marks run back
+         under it, so a foot set down stays on its mark. -->
+    <div class="floor">
+      {#if walking && skeleton !== 'only'}<span class="ticks" style="background-size: {TICKS * zoom}px 100%; background-position-x: {-walked * zoom * dir}px"></span>{/if}
+    </div>
     <div class="big" style="scale: {zoom}">
       {#if box && footprint && pose}
         <span class="footprint" style="left: {-box.width / 2}px; top: {-lift - box.height}px; width: {box.width}px; height: {box.height + (box.down ?? 0)}px"></span>
@@ -317,6 +322,7 @@
   /* The floor stands 60px up the stage; the skeleton's codes keep 52px of
      that (Skeleton's room). */
   .floor { position: absolute; left: 0; right: 0; bottom: 60px; border-top: 2px solid var(--line-strong); }
+  .ticks { position: absolute; left: 0; right: 0; top: 0; height: 6px; opacity: .35; background-image: linear-gradient(90deg, var(--line-strong) 1px, transparent 1px); background-repeat: repeat-x; }
   .big { position: absolute; left: 50%; bottom: 60px; width: 0; height: 0; transform-origin: 0 0; }
   .footprint { position: absolute; outline: .2px dashed var(--accent); opacity: .6; }
   .segmented { display: inline-flex; gap: 2px; align-items: center; margin: 0; padding: 0; border: 0; }
