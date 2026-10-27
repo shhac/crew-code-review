@@ -33,7 +33,6 @@ const KNOWN = {
     footprintsHold: 'flaring, the drawing reaches 0.55px past its footprint\'s left',
   },
   pigeon: {
-    bonesKeepLength: 'walking, a foot beyond reach straightens the leg and the drumstick stretches (spidergait\'s knees)',
     anklesBehindToes: 'walking, the tarsus swings with the leg like a pendulum from the foot (bird.ts\'s swungBy), so late in the stance the ankle passes ahead of the toes',
     footprintsHold: 'landing, the drawing reaches 0.07px past its footprint\'s right',
   },

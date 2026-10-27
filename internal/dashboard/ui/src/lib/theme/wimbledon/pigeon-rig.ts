@@ -88,6 +88,11 @@ const LEG_ART: LimbArt = {
 // Its tarsus short under a long femur, a striding pigeon's planted ankle
 // opens nearly straight at the ends of a stride, where the other birds'
 // stay bent.
+// How long the neck line (head joint to its base) and the back line (the
+// base to the body's pivot) are at their shortest and longest, through its
+// bob, its alert stretch and its peck.
+const NECK_STRETCH = { min: 1.55, max: 3.25 };
+const BACK_STRETCH = { min: 4.3, max: 5.85 };
 const STRIDING = { limits: { ...INTERTARSAL_HINGE.limits, max: 55 }, planted: { ...INTERTARSAL_HINGE.limits, max: 55 } };
 const LEG = {
   art: LEG_ART, width: 0.45, haunch: 1.4, thigh: 2, shin: 1, bend: 1, fore: false,
@@ -274,7 +279,11 @@ const pigeonOf = (wings: boolean) => tetrapod(BIRD, {
     ...(wings ? [...FAR_WING.joints, ...NEAR_WING.joints] : []),
   ],
   bones: [
-    { from: 'skull', to: 'neck base', name: 'neck line' }, { from: 'neck base', to: 'body', name: 'back line' }, { from: 'body', to: 'tail', name: 'pelvis line (to the tail root)' },
+    // The neck piece stretches from its base to the head wherever the head
+    // goes (its bob, standing tall, the peck's reach); pecking, the neck's
+    // base reaches down and forward from the back.
+    { from: 'skull', to: 'neck base', name: 'neck line', stretch: NECK_STRETCH }, { from: 'neck base', to: 'body', name: 'back line', stretch: BACK_STRETCH },
+    { from: 'body', to: 'tail', name: 'pelvis line (to the tail root)' },
     ...(wings ? [...FAR_WING.bones, ...NEAR_WING.bones] : []),
   ],
   legs: LEGS,
