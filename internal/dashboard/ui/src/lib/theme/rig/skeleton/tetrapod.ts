@@ -71,6 +71,9 @@ export type Measured<L extends ArtLeg> = {
   // relative hinges (hinge.ts), its knee within its jointLimits.
   legs: readonly L[];
   ground: (leg: L) => number;
+  // The joint a leg's root hangs from, where that is not `root`: a
+  // foreleg's shoulder blade, a hip carried by the pelvis.
+  hung?: (leg: L) => string | undefined;
   order: readonly Slot[];
   // Pieces drawn where `order` names their draws, and shapes on joints.
   pieces?: readonly Piece[];
@@ -117,10 +120,12 @@ function barsOf(leg: ArtLeg, ground: number): Bar[] {
     return [{ from: 1, to: 3, art: plain, thick: width, held: { length: art.shown, turn } }];
   }
   if (!art.knee) return [{ from: 0, to: 3, art: plain, thick: width }];
-  if (art.inBody) return [{ from: 1, to: 2, art: art.thigh ?? plain, thick: haunch }, { from: 2, to: 3, art: plain, thick: width }];
-  const shank = leg.taper ? { art: art.shank ?? art.thigh ?? plain, thick: width * 1.15 } : { art: art.shank ?? plain, thick: width };
+  const upper = art.upperShown === undefined ? {} : { held: { length: art.upperShown, turn: 0 } };
+  if (art.inBody) return [{ from: 1, to: 2, art: art.thigh ?? plain, thick: haunch, ...upper }, { from: 2, to: 3, art: plain, thick: width }];
+  const middle = art.middleShown === undefined ? {} : { held: { length: art.middleShown, turn: 0 } };
+  const shank = leg.taper ? { art: art.shank ?? art.thigh ?? plain, thick: width * 1.15, ...middle } : { art: art.shank ?? plain, thick: width, ...middle };
   const toes = leg.walksOn?.kind === 'toes' ? [{ from: 2, to: 3, art: plain, thick: width }] : [];
-  return [{ from: 0, to: 1, art: art.thigh ?? plain, thick: haunch }, { from: 1, to: 2, ...shank }, ...toes];
+  return [{ from: 0, to: 1, art: art.thigh ?? plain, thick: haunch, ...upper }, { from: 1, to: 2, ...shank }, ...toes];
 }
 
 const boxOf = (foot: Foot) => ({ src: foot.src, fur: foot.fur, box: { x: -foot.heel.x, y: -foot.heel.y, width: foot.width, height: foot.height } });
@@ -158,7 +163,7 @@ export function tetrapod<L extends ArtLeg>(preset: Preset, m: Measured<L>): Tetr
     const { foot } = leg.art;
     const toes = { x: leg.hip.x + leg.reach + foot.width - foot.heel.x, y: m.ground(leg) + foot.height - foot.heel.y };
     return ([0, 1, 2, 3, 4] as const).map((k) => ({
-      id: at(leg, k), parent: k ? at(leg, k - 1) : m.root, role: { part: 'limb', pair: leg.fore ? 0 : 1, side: side(leg), index: k },
+      id: at(leg, k), parent: k ? at(leg, k - 1) : m.hung?.(leg) ?? m.root, role: { part: 'limb', pair: leg.fore ? 0 : 1, side: side(leg), index: k },
       at: k === 4 ? toes : leg.hip, name: names(leg).joints[k], ...(k ? { derived: true } : {}),
     }));
   };

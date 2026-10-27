@@ -1,10 +1,11 @@
 import type { Point } from '../pointer';
 import { gaitPhase, restingFeet, stepping, type Gait, type Step } from '../rig/gait';
 import { blinking, breath } from '../rig/life';
-import { lidLayers, turnAbout, type Frame, type Fur, type LimbArt, type RigPose, type Turn } from '../rig/rig';
+import { lidLayers, turnAbout, turned, type Frame, type Fur, type LimbArt, type RigPose, type Turn } from '../rig/rig';
 import { compose } from '../rig/skeleton/compose';
 import { wholePicture } from '../rig/skeleton/picture';
 import { head, MAMMAL, picture, spine, tetrapod, type HingedArtLeg } from '../rig/skeleton/tetrapod';
+import type { JointSpec } from '../rig/skeleton/types';
 import { leapt, poseOf, type Fox } from './fox';
 import alertArt from './fox-alert.webp';
 import curledArt from './fox-curled.webp';
@@ -60,36 +61,69 @@ const LEG_ART: LimbArt = {
 };
 const LEG_WIDTH = 2.1;
 
-// Where the legs are, as a fox's are (it stands on its toes): the hips up in
-// the rump, each thigh running down and forward to the stifle (the true
-// knee) at the belly, the shank back to the hock (the ankle, the joint that
-// looks like a backward knee) well off the ground, its point showing behind,
-// and the long metatarsus near upright to the toes; the shoulders in the
-// chest, the upper arm back to the elbow at the chest's foot, the forearm
-// near straight down to the wrist (the carpus) just off the ground, and the
-// short metacarpus to the toes. Those bottom bones fold back as the paw lifts,
-// each turning against the bone above it (rig/skeleton/hinge.ts), as far as a
-// trot folds it back and its planted lean tips it forward, a hock never opening
-// past straight, lifted or planted; a planted wrist bears little fold, so with
-// the forearm low (a play bow, a stalk) the paw comes down flat along it. The
-// far pair a little behind and above the near, as they would be seen.
+// Where the legs are, as a fox's are (it stands on its toes): the hip
+// joints in the haunch, back from the stifles, each femur sloping down and
+// forward to the stifle (the true knee) at the belly, the shank back to the
+// hock (the ankle, the joint that looks like a backward knee) well off the
+// ground, its point showing behind, and the long metatarsus near upright to
+// the toes; each shoulder joint (the point of the shoulder) in the chest,
+// ahead of its elbow, the humerus about as long as the forearm (as a
+// canid's are) running down and back to the elbow at the chest's foot, the
+// forearm near straight down to the wrist (the carpus) just off the ground,
+// and the short metacarpus to the toes. The shoulder hangs from its blade,
+// the scapula, which swings about its top at the withers, carrying the
+// shoulder forward as the paw reaches and back as it pushes off: the
+// forelimb's chief motion in a trot (Fischer and Lilje; the beagle's
+// forelimb in 3D). The hips ride the pelvis, which turns a little under
+// each stride, so seen from the side each hip goes forward with its foot
+// and back again. So the legs reach through a trot without a bone ever
+// stretching; the haunch pieces are drawn as long as they ever were, held
+// on the upper bones, their tops in the body. Those bottom bones fold back
+// as the paw lifts, each turning against the bone above it
+// (rig/skeleton/hinge.ts), as far as a trot folds it back and its planted
+// lean tips it forward, a hock never opening past straight, lifted or
+// planted; a planted wrist bears little fold, so with the forearm low (a
+// play bow, a stalk) the paw comes down flat along it. The far pair a
+// little behind and above the near, as they would be seen.
 // Trotting, diagonal pairs move together: near fore with far hind, far fore
 // with near hind.
 // A trot's diagonal pairs never land quite together: the hind foot of each
 // pair lands this much of a stride before its fore foot, as a trotter's
 // tends to.
 const HIND_FIRST = 0.06;
-const HIND_LEG = { art: LEG_ART, width: LEG_WIDTH, thigh: 2.3, shin: 2.1, bend: 1, fore: false, haunch: 2.6, taper: true, reach: -1, walksOn: { kind: 'toes', length: 1.5, lean: 10, fold: 70 }, paw: { limits: { min: -90, max: 35 }, planted: { min: -90, max: 35 } } } as const;
-const FORE_LEG = { art: LEG_ART, width: LEG_WIDTH, thigh: 2.3, shin: 3.6, bend: -1, fore: true, haunch: 2.4, reach: 0.3, walksOn: { kind: 'toes', length: 0.7, lean: 8, fold: 100 }, paw: { limits: { min: -55, max: 105 }, planted: { min: -50, max: 10 } } } as const;
+const FORE_ART: LimbArt = { ...LEG_ART, upperShown: 2.3 + 2.4 / 2 };
+const HIND_ART: LimbArt = { ...LEG_ART, upperShown: 2.3 + 2.6 / 2, middleShown: 2.1 + (LEG_WIDTH * 1.15) / 2 };
+const HIND_LEG = { art: HIND_ART, width: LEG_WIDTH, thigh: 2.8, shin: 2.8, bend: 1, fore: false, haunch: 2.6, taper: true, walksOn: { kind: 'toes', length: 1.5, lean: 10, fold: 70 }, paw: { limits: { min: -90, max: 35 }, planted: { min: -90, max: 35 } } } as const;
+const FORE_LEG = { art: FORE_ART, width: LEG_WIDTH, thigh: 3.4, shin: 3.6, bend: -1, fore: true, haunch: 2.4, walksOn: { kind: 'toes', length: 0.7, lean: 8, fold: 100 }, paw: { limits: { min: -55, max: 105 }, planted: { min: -50, max: 10 } } } as const;
+// Where each leg leaves the body as drawn, which every pose sets its feet
+// from, and where its foot stands at rest below that, in LEGS' order.
+const OUT: readonly Point[] = [{ x: 12.2, y: 11 }, { x: 21.9, y: 10.2 }, { x: 11.2, y: 11.2 }, { x: 21, y: 10.4 }];
+const STANDS = [11.2, 22.2, 10.2, 21.3];
+// The femur and humerus at rest, from the hip and the shoulder (degrees
+// from straight down, back positive): measured on the standing drawing's
+// stifles and elbows.
+const placed = (knee: Point, length: number, slope: number): Point => ({ x: knee.x - length * Math.sin((slope * Math.PI) / 180), y: knee.y - length * Math.cos((slope * Math.PI) / 180) });
+const HIPS = [{ x: 10.6, y: 11 }, placed({ x: 21.38, y: 12.44 }, 3.4, -45), { x: 9.6, y: 11.2 }, placed({ x: 20.13, y: 12.53 }, 3.4, -45)];
 const LEGS: HingedArtLeg[] = [
-  { ...HIND_LEG, hip: { x: 12.2, y: 11 }, far: true },
-  { ...FORE_LEG, hip: { x: 21.9, y: 10.2 }, far: true },
-  { ...HIND_LEG, hip: { x: 11.2, y: 11.2 }, far: false },
-  { ...FORE_LEG, hip: { x: 21, y: 10.4 }, far: false },
+  { ...HIND_LEG, hip: HIPS[0], reach: STANDS[0] - HIPS[0].x, far: true },
+  { ...FORE_LEG, hip: HIPS[1], reach: STANDS[1] - HIPS[1].x, far: true },
+  { ...HIND_LEG, hip: HIPS[2], reach: STANDS[2] - HIPS[2].x, far: false },
+  { ...FORE_LEG, hip: HIPS[3], reach: STANDS[3] - HIPS[3].x, far: false },
 ];
+// Each shoulder blade, from its top at the withers down and forward to the
+// shoulder joint, as long as the humerus is near enough, and how far it
+// swings either way; how far each hip goes with its stride.
+const SCAPULA = 3;
+const BLADE = 55;
+const blade = (shoulder: Point): Point => ({ x: shoulder.x - SCAPULA * Math.cos((BLADE * Math.PI) / 180), y: shoulder.y - SCAPULA * Math.sin((BLADE * Math.PI) / 180) });
+const SWING = 19;
+const PELVIS = 0.3;
+const girdle = (leg: HingedArtLeg) => `${leg.fore ? 'scapula' : 'pelvis'} ${leg.far ? 'far' : 'near'}`;
 // Each foot down for a little over half the stride, so the pairs overlap;
-// the beats in LEGS' order.
-const TROT: Gait = { stride: 8, lift: 3.2, stance: 0.55, beats: [HIND_FIRST, 0.5, 0.5 + HIND_FIRST, 0] };
+// the beats in LEGS' order. A trot's stride is as long as these legs carry
+// without a bone stretching: about 2.4 strides a second at its pace, as a
+// fox-sized canid trots (Heglund and Taylor's scaling).
+const TROT: Gait = { stride: 6, lift: 3.2, stance: 0.55, beats: [HIND_FIRST, 0.5, 0.5 + HIND_FIRST, 0] };
 // Where each leg ends: on the toes' back, as high as they stand.
 const FEET = GROUND - (TOES.height - TOES.heel.y);
 
@@ -97,7 +131,9 @@ export type FoxLook = { now: number; still: boolean };
 // What the drawing reads of a fox.
 export type RigFox = Pick<Fox, 'mode' | 'walked' | 'seed' | 'until' | 'ear' | 'look'>;
 
-type Feet = (hips: readonly Point[]) => Point[];
+// Where the feet go, from where the hips and shoulders are and where each
+// leg leaves the body, the body posed so.
+type Feet = (at: { hips: readonly Point[]; outs: readonly Point[] }) => Point[];
 // Leaping, as the pounce drawing holds its paws.
 const LEAPING = { fore: { contact: 0, fold: 0, digits: 15 }, hind: { contact: 0, fold: 0.45, digits: 0 } } as const;
 // steps: where each foot is in its step, when stepping (stepsOf); held:
@@ -105,9 +141,14 @@ const LEAPING = { fore: { contact: 0, fold: 0, digits: 15 }, hind: { contact: 0,
 type Held = { contact: number; fold: number; digits: number };
 type Stance = { body: Turn; head: number; tail: number; feet: Feet; steps?: Step[]; held?: (leg: HingedArtLeg) => Held };
 
-// Feet planted on the ledge, fore and hind each set this far from its hip.
-const planted = (foreBy: number, hindBy: number): Feet => (hips) => hips.map((h, i) => ({ x: h.x + (LEGS[i].fore ? foreBy : hindBy), y: FEET }));
-const standing = (tail: number): Stance => ({ body: turnAbout(0, HIND), head: 0, tail, feet: (hips) => restingFeet(LEGS, hips, FEET) });
+// How far each foot is ahead (1) or behind (-1) through its step, where its
+// shoulder blade swings it and its hip goes with it.
+const along = (step: Step) => (step.down ? 1 - 2 * step.t : 2 * step.t - 1);
+
+// Feet planted on the ledge, fore and hind each set this far from where
+// its leg leaves the body.
+const planted = (foreBy: number, hindBy: number): Feet => ({ outs }) => outs.map((o, i) => ({ x: o.x + (LEGS[i].fore ? foreBy : hindBy), y: FEET }));
+const standing = (tail: number): Stance => ({ body: turnAbout(0, HIND), head: 0, tail, feet: ({ hips }) => restingFeet(LEGS, hips, FEET) });
 
 // The body's turn and where the feet go, for each way the fox stands.
 function stance(fox: RigFox, look: FoxLook): Stance {
@@ -122,7 +163,8 @@ function stance(fox: RigFox, look: FoxLook): Stance {
       const walked = fox.walked / SCALE;
       const phase = gaitPhase(walked, TROT);
       const body = turnAbout(0, HIND, 0, -0.3 * Math.abs(Math.sin(2 * Math.PI * phase)));
-      return { body, head: 0.8 * Math.sin(2 * Math.PI * phase), tail: 5 * Math.sin(2 * Math.PI * phase), ...stepping(LEGS, walked, FEET, TROT) };
+      const { feet, steps } = stepping(LEGS, walked, FEET, TROT);
+      return { body, head: 0.8 * Math.sin(2 * Math.PI * phase), tail: 5 * Math.sin(2 * Math.PI * phase), feet: ({ hips }) => feet(hips), steps };
     }
     // Each tuned against its key pose (design-docs/aurora/fox-pose-*.png,
     // laid over the rig in the critters lab). A positive head turns the nose
@@ -137,17 +179,17 @@ function stance(fox: RigFox, look: FoxLook): Stance {
       // Nose up as it springs, nose down as it lands: hind legs trail, then
       // the forelegs reach for the snow.
       const t = leapt(fox, look.now);
-      const reach = (h: Point, i: number): Point => (LEGS[i].fore ? { x: h.x + 2 + 1.5 * t, y: h.y + 3.5 + 1.5 * t } : { x: h.x - 3 - 3 * t, y: h.y + 4.5 - 3 * t });
+      const reach = (o: Point, i: number): Point => (LEGS[i].fore ? { x: o.x + 2 + 1.5 * t, y: o.y + 3.5 + 1.5 * t } : { x: o.x - 3 - 3 * t, y: o.y + 4.5 - 3 * t });
       // Its paws free in the air: the forepaws reaching on from straight
       // wrists, toes tipped down for the snow, the hind paws trailing out
       // behind from opened hocks, toes in line.
-      return { body: turnAbout(-8 + 20 * t, HIND), head: 8 * t, tail: 10 - 15 * t, feet: (hips) => hips.map(reach), held: (leg) => (leg.fore ? LEAPING.fore : LEAPING.hind) };
+      return { body: turnAbout(-8 + 20 * t, HIND), head: 8 * t, tail: 10 - 15 * t, feet: ({ outs }) => outs.map(reach), held: (leg) => (leg.fore ? LEAPING.fore : LEAPING.hind) };
     }
     case 'dig': {
       // Nose in the snow, forepaws scrabbling turn about.
       const scrabble = (i: number) => Math.sin(look.now / 55 + (i === 1 ? Math.PI : 0));
-      const paw = (h: Point, i: number): Point => (LEGS[i].fore ? { x: h.x + 2.5 + 1.2 * scrabble(i), y: FEET - Math.max(0, 1.4 * scrabble(i)) } : { x: h.x - 0.4, y: FEET });
-      return { body: turnAbout(16, HIND), head: 38, tail: 2 + sway, feet: (hips) => hips.map(paw) };
+      const paw = (o: Point, i: number): Point => (LEGS[i].fore ? { x: o.x + 2.5 + 1.2 * scrabble(i), y: FEET - Math.max(0, 1.4 * scrabble(i)) } : { x: o.x - 0.4, y: FEET });
+      return { body: turnAbout(16, HIND), head: 38, tail: 2 + sway, feet: ({ outs }) => outs.map(paw) };
     }
     default:
       return standing(sway);
@@ -167,13 +209,18 @@ const FOX = tetrapod(MAMMAL, {
     { id: 'skull', parent: 'body', role: spine(0), at: NECK, name: 'head joint (neck)' },
     { id: 'tail', parent: 'body', role: spine(3), at: TAIL_ROOT, name: 'tail root' },
     { id: 'eye', parent: 'skull', role: head(0), at: EYE, name: 'eye' },
+    ...LEGS.map((leg, i): JointSpec => (leg.fore
+      ? { id: girdle(leg), parent: 'body', role: { part: 'other', index: i }, at: blade(leg.hip), name: `${leg.far ? 'far' : 'near'} shoulder blade (its top, at the withers)` }
+      : { id: girdle(leg), parent: 'body', role: { part: 'other', index: i }, at: leg.hip, name: `${leg.far ? 'far' : 'near'} side of the pelvis` })),
   ],
   bones: [
     { from: 'skull', to: 'body', name: 'neck line (head joint to the hips)' }, { from: 'body', to: 'tail', name: 'pelvis line (hips to tail root)' },
     { from: 'eye', to: 'skull', name: 'skull' },
+    ...LEGS.filter((leg) => leg.fore).map((leg) => ({ from: girdle(leg), to: `L${leg.far ? 1 : 0}J0`, name: 'scapula (shoulder blade)' })),
   ],
   legs: LEGS,
   ground: () => FEET,
+  hung: girdle,
   order: [picture('tail', 'tail', tailArt, TAIL), picture('torso', 'body', torsoArt, TORSO), picture('head', 'skull', headArt, HEAD), 'eyelid'],
   shapes: [{ id: 'eyelid', on: 'skull' }],
   guides: (at) => [
@@ -191,8 +238,15 @@ export function foxRig(fox: RigFox, look: FoxLook): RigPose {
   // Curled up asleep, or looking up from there, breathing slowly.
   if (pose === 'curled' || pose === 'alert') return (pose === 'curled' ? CURLED : LOOKING_UP)(look.still ? 1 : 1 + 0.035 * breath(fox.seed, look.now, 3400));
   const { body, head: angle, tail, feet, steps = [], held } = stance(fox, look);
-  const joints = { skull: { angle }, tail: { angle: tail } };
-  const at = feet(FOX.hips({ root: body, joints }));
+  const base = { skull: { angle }, tail: { angle: tail } };
+  const at = feet({ hips: FOX.hips({ root: body, joints: base }), outs: OUT.map((o) => turned(body, o)) });
+  // Each shoulder blade swung, each hip carried, with its foot's step; the
+  // feet set before, so a planted one never slides.
+  const girdles = Object.fromEntries(LEGS.map((leg, i) => {
+    const f = steps[i] ? along(steps[i]) : 0;
+    return [girdle(leg), leg.fore ? { angle: -SWING * f } : { shift: { x: PELVIS * f, y: 0 } }];
+  }));
+  const joints = { ...base, ...girdles };
   // A paw off the ground is kept clear of the snow its toes would dip into.
   const limbs = FOX.limbs(at.map((p, i) => ({ kind: 'plant', at: p, step: steps[i], ground: GROUND, ...held?.(LEGS[i]) })));
   const shapes = { eyelid: lidLayers(!look.still && blinking(fox.seed, look.now), EYE, 0.85, FACE) };

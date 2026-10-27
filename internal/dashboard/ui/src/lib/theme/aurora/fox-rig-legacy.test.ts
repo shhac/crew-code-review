@@ -11,7 +11,7 @@ import { foxRig as legacy } from './fox-rig-legacy';
 // hangs and folds from the bone above it (a planted one stands exactly as
 // it did, which hinge.test.ts holds it to). So all but its legs' pieces,
 // and the marks on the joints they move, must still match.
-const LEG_MARKS = ['elbow', 'wrist (carpus)', 'stifle (knee)', 'hock (ankle)', 'toes'];
+const LEG_MARKS = ['shoulder', 'hip', 'elbow', 'wrist (carpus)', 'stifle (knee)', 'hock (ankle)', 'toes'];
 const ALL_BUT_LEGS = (plan: Plan): Plan => ({
   ...plan,
   draws: plan.draws.filter((d) => d.kind !== 'image' || !/fox-(haunch|leg|toes)/.test(d.href)),

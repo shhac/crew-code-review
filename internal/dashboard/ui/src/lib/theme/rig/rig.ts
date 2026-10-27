@@ -45,6 +45,13 @@ export type LimbArt = {
   // skeleton): its one piece drawn this long from the heel up, held rigid
   // on the shin as the leg stands at rest, so it never stretches.
   shown?: number;
+  // A leg whose upper bone is longer than its piece (on a skeleton, its top
+  // hidden in the body): that piece (a haunch, a bird's drumstick) drawn
+  // this long up from the bone's lower joint, held rigid along it, so it
+  // never stretches over the hidden rest; and the middle bone's (a shank)
+  // drawn this long up from the hock, its top hidden in the haunch.
+  upperShown?: number;
+  middleShown?: number;
   // A sole walker's leg is drawn over its foot, its rounded end the heel,
   // hiding the foot's back; otherwise the foot is drawn over the leg's end.
   overFoot?: boolean;

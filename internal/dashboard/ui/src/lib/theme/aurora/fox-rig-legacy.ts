@@ -84,7 +84,10 @@ const LEGS: ArtLeg[] = [
 ];
 // Each foot down for a little over half the stride, so the pairs overlap;
 // the beats in LEGS' order.
-const TROT: Gait = { stride: 8, lift: 3.2, stance: 0.55, beats: [HIND_FIRST, 0.5, 0.5 + HIND_FIRST, 0] };
+// Its stride is the rig's now, shorter than it was, so the body still
+// bounces and the head and tail still swing with the rig's strides for the
+// comparison.
+const TROT: Gait = { stride: 6, lift: 3.2, stance: 0.55, beats: [HIND_FIRST, 0.5, 0.5 + HIND_FIRST, 0] };
 // Where each leg ends: on the toes' back, as high as they stand.
 const FEET = GROUND - (TOES.height - TOES.heel.y);
 

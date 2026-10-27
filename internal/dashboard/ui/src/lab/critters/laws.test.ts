@@ -13,7 +13,6 @@ const KNOWN = {
     footprintsHold: 'sniffing, the head\'s box turned nose down reaches 4.4px under the ledge, though its art does not (its picture\'s see-through margin; a re-crop would fix it); and the box of each leg\'s piece, turned with its shin, reaches up to 0.74px under it at its rounded cap\'s see-through corner',
   },
   fox: {
-    bonesKeepLength: 'trotting, a foot beyond thigh and shin straightens the leg and the shank stretches to the hock (spidergait\'s knees)',
     plantedFeetHold: 'digging, a forepaw scrapes back through the snow while it is down, as a dig does',
     footprintsHold: 'in every mode the box of each leg\'s bone up from the toes reaches up to 0.73px under the ledge at its rounded cap\'s corner, which is see-through (its fur does not); and digging, its nose goes into the snow (3.1px), crouching nearly (0.74px)',
   },
