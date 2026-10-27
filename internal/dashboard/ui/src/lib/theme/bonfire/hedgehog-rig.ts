@@ -3,10 +3,10 @@ import type { Point } from '../pointer';
 import { gaitPhase, restingFeet, stepping, type Gait, type Step } from '../rig/gait';
 import { gazeFrom } from '../rig/gaze';
 import { blinking, breath, snuffle } from '../rig/life';
-import { lidLayers, turnAbout, type ArtLeg, type Foot, type Frame, type Fur, type LimbArt, type RigPose, type Turn } from '../rig/rig';
+import { lidLayers, turnAbout, type Foot, type Frame, type Fur, type LimbArt, type RigPose, type Turn } from '../rig/rig';
 import { compose } from '../rig/skeleton/compose';
 import { wholePicture } from '../rig/skeleton/picture';
-import { head, MAMMAL, picture, spine, tetrapod } from '../rig/skeleton/tetrapod';
+import { head, MAMMAL, picture, spine, tetrapod, type HingedArtLeg } from '../rig/skeleton/tetrapod';
 import type { PoseSpec } from '../rig/skeleton/types';
 import { moving, type Hog } from './hedgehog';
 import ballArt from './hedgehog-ball.webp';
@@ -41,27 +41,46 @@ const NOSE = { x: 25.2, y: 11 };
 // The standing drawing, for the lab to lay over the rig: where it sits.
 export const REFERENCE = { x: 1, y: 1, width: 24.42, height: 16.58 };
 const BALL = { name: 'ball', src: ballArt, width: 17, height: 16.58 };
-// Too short to show a knee: one stubby piece, hip to heel, on its sole. The
-// front feet are short and broad like little hands, the hind ones longer.
+// The front feet are short and broad like little hands, the hind ones
+// longer; each with where its leg comes down onto it.
 const HAND: Foot = { src: handArt, fur: handFurArt, width: 3.42, height: 2, heel: { x: 1.16, y: 0.65 } };
 const HIND_FOOT: Foot = { src: hindArt, fur: hindFurArt, width: 4, height: 2, heel: { x: 1.16, y: 0.65 } };
-const legArtOn = (foot: Foot): LimbArt => ({ bone: legArt, boneFur: legFurArt, knee: false, overFoot: true, foot });
 const LEG_WIDTH = 2.6;
 // Where each leg ends: its heel, as high as the foot under it stands.
 const FEET = GROUND - (HIND_FOOT.height - HIND_FOOT.heel.y);
 const FACE: Fur = { fill: '#fdd79b', outline: '#140c05' };
 
-// Hips just inside the belly, over the feet as the drawing stands them; the
-// far pair a little apart from the near, as it would be seen. Each foot's
-// heel peels up over the tips of its toes as it pushes off.
-const soleOf = (foot: Foot) => ({ kind: 'sole', toes: { x: foot.width - foot.heel.x, y: foot.height - foot.heel.y }, peel: 30 }) as const;
-const HIND = { reach: 0, thigh: 1, shin: 1, bend: 1, fore: false, art: legArtOn(HIND_FOOT), width: LEG_WIDTH, walksOn: soleOf(HIND_FOOT) } as const;
-const FORE = { reach: 0.2, thigh: 1, shin: 1, bend: -1, fore: true, art: legArtOn(HAND), width: LEG_WIDTH, walksOn: soleOf(HAND) } as const;
-const LEGS: ArtLeg[] = [
-  { ...HIND, hip: { x: 5.9, y: 14.6 }, far: false },
-  { ...FORE, hip: { x: 15.5, y: 14.6 }, far: false },
-  { ...HIND, hip: { x: 9.9, y: 14.8 }, far: true },
-  { ...FORE, hip: { x: 18.7, y: 14.4 }, far: true },
+// The legs as a hedgehog's are, longer than they look: the hip (or
+// shoulder) high in the body under the skirt of spines, the femur down and
+// forward to a knee hidden there too (the humerus down and back to the
+// elbow), and the shin down to the heel, which is all that shows: one
+// stubby piece from the heel up into the body, held rigid on the shin as it
+// stood in the drawing, so it never stretches. Bones long enough for its
+// stride (thigh and shin 2.3 drawing units each, the hip HIDDEN above where
+// the drawn leg disappears into the body), so a foot is reached with the
+// knee bent, as a hedgehog walks, crouched. Each foot turns against the
+// shin (rig/skeleton/hinge.ts): lifted, it opens from it toes down as its
+// step swings it, SOLE_FOLD degrees at most, and is lifted clear of the
+// ledge; planted, its heel peels up over its toes as it pushes off.
+const HIDDEN = 1.6;
+const SOLE_FOLD = 30;
+const KNEE = { min: 30, max: 178 };
+const PAW = { min: -60, max: 100 };
+const legArtOn = (foot: Foot): LimbArt => ({ bone: legArt, boneFur: legFurArt, knee: false, overFoot: true, foot });
+const soleOf = (foot: Foot) => ({ kind: 'sole', toes: { x: foot.width - foot.heel.x, y: foot.height - foot.heel.y }, peel: 30, fold: SOLE_FOLD }) as const;
+const HIND = { reach: 0, thigh: 2.3, shin: 2.3, bend: 1, jointLimits: KNEE, fore: false, art: legArtOn(HIND_FOOT), width: LEG_WIDTH, walksOn: soleOf(HIND_FOOT), paw: { limits: PAW } } as const;
+const FORE = { reach: 0.2, thigh: 2.3, shin: 2.3, bend: -1, jointLimits: KNEE, fore: true, art: legArtOn(HAND), width: LEG_WIDTH, walksOn: soleOf(HAND), paw: { limits: PAW } } as const;
+// Over the feet as the drawing stands them; the far pair a little apart
+// from the near, as it would be seen. `drawn` is where the drawn leg's top
+// sat in the drawing, where its piece goes into the body.
+const legAt = (spec: typeof HIND | typeof FORE, drawn: Point, far: boolean): HingedArtLeg => ({
+  ...spec, far, hip: { x: drawn.x, y: drawn.y - HIDDEN }, art: { ...spec.art, shown: FEET - drawn.y + LEG_WIDTH / 2 },
+});
+const LEGS: HingedArtLeg[] = [
+  legAt(HIND, { x: 5.9, y: 14.6 }, false),
+  legAt(FORE, { x: 15.5, y: 14.6 }, false),
+  legAt(HIND, { x: 9.9, y: 14.8 }, true),
+  legAt(FORE, { x: 18.7, y: 14.4 }, true),
 ];
 // Peeking, the foot it raises to creep out: its near fore.
 const CREEPING = 1;
@@ -118,7 +137,10 @@ function stance(hog: Hog, look: HogLook): Stance {
   if (moving(hog.mode)) {
     const { gait, raised } = hog.mode === 'flee' ? TROTTING : WALKING;
     const step = sway(gaitPhase(walked, gait));
-    return { body: turnAbout(step.rock, ANCHOR, 0, step.bob - raised), head: step.nod, neck: 0, ...stepping(LEGS, walked, FEET, gait) };
+    // Set from where the hips stand at rest, not where the rocking body
+    // carries them, so a planted foot stays put as the body rocks over it.
+    const { feet, steps } = stepping(LEGS, walked, FEET, gait);
+    return { body: turnAbout(step.rock, ANCHOR, 0, step.bob - raised), head: step.nod, neck: 0, feet: () => feet(LEGS.map((l) => l.hip)), steps };
   }
   if (hog.mode === 'sniff') {
     // Nose to the ground, the front of the body dipped a little, snuffling.
@@ -138,13 +160,14 @@ function stance(hog: Hog, look: HogLook): Stance {
 
 // Its skeleton: the body turning about where it stands, the head on its
 // neck with the eye and nose on it, and each leg from its hip (or
-// shoulder): too short to show a knee, it is one piece from there to the
-// heel, the knee and ankle inside it, and the foot flat on its sole. Drawn
-// with the far legs behind it, the near legs' fur over its edge.
-const oneLeg = (joints: readonly [string, string, string, string, string], bones: readonly [string, string], foot: string) => ({ joints, bones: [...bones, '', foot] as const });
+// shoulder), the hip and knee hidden in the body, the shin's end showing,
+// and the foot flat on its sole. Drawn with every leg behind it, the near
+// legs' fur too, since a piece turned with its shin would show its top over
+// the spines.
+const soleLeg = (joints: readonly [string, string, string, string, string], bones: readonly [string, string], foot: string) => ({ joints, bones: [...bones, '', foot] as const });
 const HOG = tetrapod({ ...MAMMAL, legs: {
-  fore: oneLeg(['shoulder', 'elbow (inside the leg)', 'wrist', 'forefoot (its heel)', 'toe tip'], ['humerus (inside the one piece)', 'radius and ulna (inside the one piece)'], 'forefoot (metacarpus and toes)'),
-  hind: oneLeg(['hip', 'knee (inside the leg)', 'ankle', 'hind foot (its heel)', 'toe tip'], ['femur (inside the one piece)', 'tibia and fibula (inside the one piece)'], 'hind foot (metatarsus and toes)'),
+  fore: soleLeg(['shoulder', 'elbow (in the body)', 'wrist', 'forefoot (its heel)', 'toe tip'], ['humerus (in the body)', 'radius and ulna (its end showing)'], 'forefoot (metacarpus and toes)'),
+  hind: soleLeg(['hip', 'knee (in the body)', 'ankle', 'hind foot (its heel)', 'toe tip'], ['femur (in the body)', 'tibia and fibula (its end showing)'], 'hind foot (metatarsus and toes)'),
 } }, {
   frame: FRAME,
   root: 'body',
@@ -169,6 +192,7 @@ const HOG = tetrapod({ ...MAMMAL, legs: {
   ],
 });
 const BALL_PICTURE = wholePicture(FRAME, BALL);
+const UNDER = HOG.furUnder('near');
 
 // The pose its stance makes: each foot set from where its hip is now.
 function poseOf(hog: Hog, look: HogLook): PoseSpec {
@@ -176,7 +200,7 @@ function poseOf(hog: Hog, look: HogLook): PoseSpec {
   const joints = { skull: { angle, shift: { x: neck, y: 0 } } };
   const at = feet(HOG.hips({ root: body, joints }));
   return {
-    root: body, joints, limbs: HOG.limbs(at.map((p, i) => ({ kind: 'plant', at: p, step: steps[i] }))), show: {}, z: {},
+    root: body, joints, limbs: HOG.limbs(at.map((p, i) => ({ kind: 'plant', at: p, step: steps[i], ground: GROUND }))), show: {}, z: UNDER,
     shapes: { eyelid: lidLayers(!look.still && blinking(hog.seed, look.now), EYE, 0.95, FACE) },
   };
 }

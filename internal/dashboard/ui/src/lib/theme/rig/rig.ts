@@ -41,6 +41,10 @@ export type LimbArt = {
   shank?: { src: string; fur: string; anchors?: BoneAnchors };
   foot: Foot;
   knee: boolean;
+  // A leg too short to show a knee but bent at one hidden in the body (on a
+  // skeleton): its one piece drawn this long from the heel up, held rigid
+  // on the shin as the leg stands at rest, so it never stretches.
+  shown?: number;
   // A sole walker's leg is drawn over its foot, its rounded end the heel,
   // hiding the foot's back; otherwise the foot is drawn over the leg's end.
   overFoot?: boolean;

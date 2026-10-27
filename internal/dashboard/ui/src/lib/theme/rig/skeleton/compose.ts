@@ -165,6 +165,11 @@ function placing(at: Attachment, posed: Posed): Placing {
     }
     case 'bar': {
       const [from, to] = [posed.point(at.from), posed.point(at.to)];
+      const { held } = at;
+      if (held) {
+        const box = () => ({ x: -held.length, y: -at.thick / 2, width: held.length + at.thick / 2, height: at.thick });
+        return { matrix: product(translate(to.x, to.y), rotate(direction(from, to) + held.turn)), anchor: { x: 0, y: 0 }, box };
+      }
       const box = (draw: Draw) => {
         const { x, y, width, height } = bone(from, to, at.thick, !!draw.flush, at.anchors);
         return { x, y, width, height };

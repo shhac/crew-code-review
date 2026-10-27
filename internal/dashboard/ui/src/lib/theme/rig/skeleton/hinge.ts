@@ -233,12 +233,16 @@ export function depth(foot: { width: number; height: number; heel: Point }, paw:
 const CLEARANCE = 1e-4;
 
 // Lifted as far as `under` says it is under the ground still, a few times
-// over, since a lift may turn the foot or move its reach.
+// over, since a lift may turn the foot or move its reach; where that does
+// not settle (a lift that turns the toes further down), by twice what is
+// still under each time, until it clears.
 export function cleared(posed: (lift: number) => Limb, under: (limb: Limb) => number): Limb {
-  return Array.from({ length: 12 }).reduce<{ limb: Limb; lift: number }>(({ limb, lift }) => {
+  const step = (by: number) => ({ limb, lift }: { limb: Limb; lift: number }) => {
     const more = under(limb);
-    return more ? { limb: posed(lift + more + CLEARANCE), lift: lift + more + CLEARANCE } : { limb, lift };
-  }, { limb: posed(0), lift: 0 }).limb;
+    return more ? { limb: posed(lift + by * more + CLEARANCE), lift: lift + by * more + CLEARANCE } : { limb, lift };
+  };
+  const settled = Array.from({ length: 12 }).reduce(step(1), { limb: posed(0), lift: 0 });
+  return Array.from({ length: 12 }).reduce(step(2), settled).limb;
 }
 
 // The leg posed toward its goal; given the ground, a foot not planted

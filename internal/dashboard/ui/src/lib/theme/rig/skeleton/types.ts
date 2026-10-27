@@ -148,8 +148,11 @@ export type Attachment =
   // it keeps its thickness.
   | { kind: 'span'; from: Handle; to: Handle; art: { from: Point; to: Point }; fixed?: number }
   // A leg bar exactly as rig.ts's bone() lays it: caps half its thickness
-  // past each joint, or registered anchors; stretched to its box.
-  | { kind: 'bar'; from: string; to: string; thick: number; anchors?: { start: number; end: number } };
+  // past each joint, or registered anchors; stretched to its box. `held`:
+  // instead `length` long, rigid, ending (its cap past it) at `to`, turned
+  // `turn` from the bone: a piece showing only the end of a bone, the rest
+  // of it hidden in the body.
+  | { kind: 'bar'; from: string; to: string; thick: number; anchors?: { start: number; end: number }; held?: { length: number; turn: number } };
 
 // One drawing of a piece at a place in the draw order: `fur` for the pass
 // of fur alone; `flush`, a bar's fur laid from the joint exactly, over a
