@@ -1,7 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { RigPose } from './rig';
-import { flatLayers, rigBounds } from './test-rig';
-import { birdWing, flapping, flaring, foreshortening, FOLDED, gliding, settling, takingOff, wingFace, wingPoint, wingStroke, type Flap, type WingArt } from './wings';
+import { flapping, flaring, foreshortening, FOLDED, gliding, settling, takingOff, wingFace, wingStroke, type Flap } from './wings';
 
 describe('wingStroke', () => {
   it('beats its wings: down broad, up turned edge-on, the tip riding a figure-eight', () => {
@@ -117,44 +115,5 @@ describe('a wing seen from the side', () => {
     expect(foreshortening(-30)).toBeCloseTo(-0.5);
     expect(foreshortening(0)).toBeCloseTo(0.12);
     expect(foreshortening(-2)).toBeCloseTo(-0.12);
-  });
-
-  const ART: WingArt = {
-    name: 'wing', shoulder: { x: 0, y: 0 }, wrist: { x: 0, y: -10 },
-    arm: { upper: 'arm.webp', under: 'arm-under.webp', x: -3, y: -11, width: 4, height: 11.5 },
-    hand: { upper: 'hand.webp', under: 'hand-under.webp', x: -3, y: -21, width: 4, height: 12 },
-  };
-  const ROOT = { x: 20, y: 10 };
-  const posed = (layer: ReturnType<typeof birdWing>): RigPose => ({ width: 40, height: 40, anchor: { x: 20, y: 20 }, scale: 1, layers: [layer] });
-  const shown = (pose: RigPose) => flatLayers(pose.layers).flatMap((l) => (l.kind === 'image' && !l.hidden ? [l.src] : []));
-
-  it('draws both sides of each piece, only the facing one seen; folded away, neither', () => {
-    const up = posed(birdWing(ART, { lift: 60, sweep: 0, fold: 0 }, ROOT));
-    expect(shown(up)).toEqual(['hand-under.webp', 'arm-under.webp']);
-    const down = posed(birdWing(ART, { lift: -30, sweep: 0, fold: 0 }, ROOT));
-    expect(shown(down)).toEqual(['hand.webp', 'arm.webp']);
-    expect(flatLayers(down.layers).filter((l) => l.kind === 'image')).toHaveLength(4);
-    expect(shown(posed(birdWing(ART, FOLDED, ROOT, false, 0, false)))).toEqual([]);
-  });
-
-  it('raises the tip above the shoulder and lowers it below, as far as the sine says, its bounds following', () => {
-    const tip = { x: 0, y: -20 };
-    const up = wingPoint(ART, { lift: 90, sweep: 0, fold: 0 }, ROOT, tip, true);
-    expect(up).toEqual({ x: 20, y: -10 });
-    const down = wingPoint(ART, { lift: -30, sweep: 0, fold: 0 }, ROOT, tip, true);
-    expect(down.y).toBeCloseTo(20);
-    const bounds = rigBounds(posed(birdWing(ART, { lift: -30, sweep: 0, fold: 0 }, ROOT)));
-    expect(bounds.bottom).toBeCloseTo(10 + 0.5 * 21);
-    // The arm's root, half a unit past the shoulder, flipped up with it.
-    expect(bounds.top).toBeCloseTo(10 - 0.5 * 0.5);
-  });
-
-  it('folds the hand back about the wrist, and sweeps the whole wing back about the shoulder', () => {
-    const tip = { x: 0, y: -20 };
-    const folded = wingPoint(ART, { lift: 90, sweep: 0, fold: 90 }, ROOT, tip, true);
-    expect(folded.x).toBeCloseTo(10);
-    expect(folded.y).toBeCloseTo(0);
-    const swept = wingPoint(ART, { lift: 90, sweep: 30, fold: 0 }, ROOT, ART.wrist, false);
-    expect(swept.x).toBeCloseTo(20 - 10 * Math.sin(Math.PI / 6));
   });
 });

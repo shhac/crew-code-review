@@ -1,11 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { svgMatrix } from '../../christmas/parts-affine';
 import type { Point } from '../../pointer';
-// The hare as it was drawn before its skeleton: its groups are what FK is
-// held to.
-import { hareRig } from '../../hares/hare-rig-legacy';
 import { transformOf, turnAbout, turned, type Layer } from '../rig';
-import { birdWing, foreshortening, wingLayer, type WingArt } from '../wings';
+import { foreshortening, wingLayer, type WingArt, type WingPose } from '../wings';
 import { applied, product, type Affine } from './affine';
 import { forward, local } from './forward';
 import type { JointSpec, PoseSpec, Skeleton } from './types';
@@ -27,6 +24,25 @@ const placed = (layers: readonly Layer[], outer: Affine = [1, 0, 0, 1, 0, 0]): M
   if (l.kind === 'group') return [...placed(l.layers, product(outer, groupMatrix(l)))];
   return l.kind === 'image' ? [[l.name, outer] as const] : [];
 }));
+
+// A bird's wing as rigs drew it before their skeletons: moved to its root
+// and foreshortened about its shoulder, swept about the shoulder, the hand
+// folded about the wrist.
+const birdWing = (art: WingArt, pose: WingPose, root: Point): Layer => {
+  const image = (name: string): Layer => ({ kind: 'image', name, src: '', x: 0, y: 0, width: 1, height: 1 });
+  const hand: Layer = { kind: 'group', turn: turnAbout(-pose.fold, art.wrist), layers: [image(`${art.name} hand`)] };
+  const swept: Layer = { kind: 'group', turn: turnAbout(-pose.sweep, art.shoulder), layers: [hand, image(`${art.name} arm`)] };
+  return { kind: 'group', turn: turnAbout(0, art.shoulder, root.x - art.shoulder.x, root.y - art.shoulder.y), foreshorten: foreshortening(pose.lift), layers: [swept] };
+};
+// A hare sat up as it was drawn before its skeleton: its body turned about
+// its hips and breathing, its head turned and thrust inside it, its ears
+// turned inside that.
+const sittingHare = (): Layer[] => {
+  const image = (name: string): Layer => ({ kind: 'image', name, src: '', x: 0, y: 0, width: 1, height: 1 });
+  const ears: Layer = { kind: 'group', turn: turnAbout(-14, { x: 17.6, y: 3.2 }), layers: [image('ears')] };
+  const head: Layer = { kind: 'group', turn: turnAbout(7.5, { x: 16.2, y: 7.4 }, 0.3, -0.2), layers: [image('head'), ears] };
+  return [{ kind: 'group', turn: turnAbout(-9, { x: 7.6, y: 13.4 }, 0, -0.6), scaleY: 1.024, layers: [image('body'), head] }];
+};
 
 const joint = (id: string, parent: string | null, at: Point, more: Partial<JointSpec> = {}): JointSpec =>
   ({ id, parent, at, role: { part: 'other', index: 0 }, name: id, ...more });
@@ -71,8 +87,8 @@ describe('local', () => {
 });
 
 describe('forward', () => {
-  it('composes the hare\'s sitting body, turned and breathing, and its head and ears inside it, as its groups do', () => {
-    const pose = hareRig({ pose: 'sit', walked: 0, seed: 1 }, { now: 1700, gaze: 6, still: false });
+  it('composes a hare\'s sitting body, turned and breathing, and its head and ears inside it, as its groups do', () => {
+    const pose = { layers: sittingHare() };
     const body = pose.layers.find((l): l is Group => l.kind === 'group');
     const head = body?.layers.find((l): l is Group => l.kind === 'group');
     const ears = head?.layers.find((l): l is Group => l.kind === 'group');

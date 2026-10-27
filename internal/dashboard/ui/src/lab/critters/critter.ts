@@ -6,7 +6,7 @@ import type { Component } from 'svelte';
 import type { Point } from '../../lib/theme/pointer';
 import type { RigPose } from '../../lib/theme/rig/rig';
 import type { Drawing } from '../drawings';
-import type { BoneNames, Placed } from '../skeleton';
+import type { Placed } from '../skeleton';
 
 // One frame of it: what it is doing, the time, and how far it has walked.
 export type Moment = { mode: string; now: number; walked: number };
@@ -56,8 +56,6 @@ export type RigCritter = Shown & {
   // anchor; one without it does not look.
   gaze?: (dir: 1 | -1, cursor: Point | null) => number;
   drawings?: Record<string, Drawing>;
-  // What its bones are, for the lab's skeleton view.
-  bones?: BoneNames;
 };
 
 // The props a ViewCritter's view takes. `marked` is the big one on the stage,

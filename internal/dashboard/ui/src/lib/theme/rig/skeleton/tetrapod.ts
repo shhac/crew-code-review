@@ -27,8 +27,7 @@ export type Preset = { solve: 'quad' | 'bird'; legs: { fore: LegNames; hind: Leg
 
 const MAMMAL_FORE: LegNames = { joints: ['shoulder', 'elbow', 'wrist (carpus)', 'toes', 'toe tip'], bones: ['humerus', 'radius and ulna', 'metacarpus', 'toes (phalanges)'] };
 const MAMMAL_HIND: LegNames = { joints: ['hip', 'stifle (knee)', 'hock (ankle)', 'toes', 'toe tip'], bones: ['femur', 'tibia and fibula', 'metatarsus', 'toes (phalanges)'] };
-// A four-legged mammal's legs, as lab/critters/bones.ts's mammalLeg names
-// them.
+// A four-legged mammal's legs.
 export const MAMMAL: Preset = { solve: 'quad', legs: { fore: MAMMAL_FORE, hind: MAMMAL_HIND } };
 // A rabbit's or a hare's: a mammal's, standing at rest on its long hind
 // soles, so the hock is the heel and no bone rises from the hind toes.
@@ -133,7 +132,7 @@ const boxOf = (foot: Foot) => ({ src: foot.src, fur: foot.fur, box: { x: -foot.h
 // One limb's pieces, as legImages lays them, its limb coded `code` (its
 // joints `${code}J0` to J4), outlined at one z and as fur alone at another,
 // listed in the lab as `part`: for an animal that sets its limbs among its other parts itself (a cupid's
-// arms and legs, each its own pair of draws, as rig.ts's limbLayers).
+// arms and legs, each its own pair of draws).
 export function limbPieces(leg: ArtLeg, code: string, z: { outlined: number; fur: number }, part = `${leg.far ? 'far' : 'near'} legs`, ground = leg.hip.y): Piece[] {
   const side: Side = leg.far ? 'far' : 'near';
   const at = (k: number) => `${code}J${k}`;

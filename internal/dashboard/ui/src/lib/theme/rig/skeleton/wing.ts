@@ -1,5 +1,5 @@
 // A bird's wing on the skeleton (July's pigeons and hawk, August's gulls,
-// September's crows), as rig/wings.ts's birdWing draws it: the shoulder a
+// September's crows), as the birds' rigs drew it before: the shoulder a
 // joint at the wing's own root, foreshortened across by the sine of its lift
 // and swept in the wing's plane; the wrist a joint the hand folds about; the
 // wingtip a point the hand carries. A wing is a bird's forelimb (L0 the

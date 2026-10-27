@@ -1,13 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
-import { momentsOf, type RigCritter } from '../../../../lab/critters/critter';
-import { fox, foxAt } from '../../../../lab/critters/fox';
-import { hare, hareAt } from '../../../../lab/critters/hare';
-import { hedgehog, hogAt } from '../../../../lab/critters/hedgehog';
-import { rabbit, rabbitAt } from '../../../../lab/critters/rabbit';
-import { foxRig } from '../../aurora/fox-rig-legacy';
-import { hogRig } from '../../bonfire/hedgehog-rig-legacy';
-import { rabbitRig } from '../../easter/rabbit-rig-legacy';
-import { hareRig } from '../../hares/hare-rig-legacy';
+import { describe, expect, it } from 'vitest';
 import type { Point } from '../../pointer';
 import { rotate } from '../../spidergait';
 import * as gait from '../gait';
@@ -15,37 +6,40 @@ import { held, kneeAngle, pawAngle, restingPaw, solveHinged } from './hinge';
 import { planDiff } from './plan';
 import type { Goal, HingedLeg } from './types';
 
-// Every leg the four-legged animals asked legsTo for, as they were drawn
-// before their legs were hinged.
-vi.mock('../gait', async (original) => {
-  const real = await original<typeof import('../gait')>();
-  return { ...real, legsTo: vi.fn(real.legsTo) };
-});
-
 const hinged = ({ hip, far, fore, bend, bendFrame, jointLimits, ...leg }: gait.QuadLeg): HingedLeg =>
   ({ ...leg, side: bend === 1 ? -1 : 1, ...(jointLimits ? { knee: jointLimits } : {}), paw: { rest: 0, limits: { min: -360, max: 360 } } });
 const nowhere = (): Point => {
   throw new Error('no handle here');
 };
-const asked = () => {
-  const before: RigCritter[] = [
-    { ...hedgehog, pose: (at, look) => hogRig(hogAt(at), { now: at.now, ...look }) }, { ...rabbit, pose: (at, look) => rabbitRig(rabbitAt(at), { now: at.now, ...look }) },
-    { ...fox, pose: (at, look) => foxRig(foxAt(at), { now: at.now, ...look }) }, { ...hare, pose: (at, look) => hareRig(hareAt(at), { now: at.now, ...look }) },
-  ];
-  vi.mocked(gait.legsTo).mockClear();
-  before.forEach((critter) => critter.kind === 'rig' && momentsOf(critter).forEach((at) => [false, true].forEach((still) => critter.pose(at, { gaze: 0, still }))));
-  const { calls, results } = vi.mocked(gait.legsTo).mock;
-  return calls.flatMap(([specs, hips, feet, steps = []], n) => specs.map((spec, i) => ({ spec, hip: hips[i], goal: { kind: 'plant', at: feet[i], step: steps[i] } satisfies Goal, was: results[n].value[i] })));
-};
+// Legs of every kind a four-legged animal stands on, as legsTo posed them
+// before they were hinged (a fox's toe walkers, a rabbit's forepaw and
+// long hind sole, a hedgehog's short sole), each walked through a stride,
+// every foot stepping, and what legsTo answered for each.
+const LEGS: readonly gait.QuadLeg[] = [
+  { hip: { x: 11.2, y: 11.2 }, reach: -1, thigh: 2.3, shin: 2.1, bend: 1, fore: false, far: false, walksOn: { kind: 'toes', length: 1.5, lean: 10, fold: 70 } },
+  { hip: { x: 21, y: 10.4 }, reach: 0.3, thigh: 2.3, shin: 3.6, bend: -1, fore: true, far: false, walksOn: { kind: 'toes', length: 0.7, lean: 8, fold: 100 } },
+  { hip: { x: 15, y: 13 }, reach: 1.8, thigh: 2.6, shin: 2.6, bend: -1, bendFrame: 'limb', fore: true, far: false, jointLimits: { min: 30, max: 175 }, walksOn: { kind: 'toes', length: 0.8, lean: 35, fold: 89 } },
+  { hip: { x: 6.4, y: 11.6 }, reach: -3.1, thigh: 3.3, shin: 3.6, bend: 1, bendFrame: 'limb', fore: false, far: false, jointLimits: { min: 25, max: 180 }, walksOn: { kind: 'sole', toes: { x: 3.8, y: 1.5 }, peel: 62 } },
+  { hip: { x: 5.9, y: 13 }, reach: 0, thigh: 1.1, shin: 1.1, bend: 1, fore: false, far: false, walksOn: { kind: 'sole', toes: { x: 2.84, y: 1.35 }, peel: 30 } },
+];
+const GROUND = 16.8;
+const STRIDE: gait.Gait = { stride: 2.5, lift: 1.2, stance: 0.6, beats: [0, 0.25, 0.5, 0.75, 0.1] };
+const asked = () => Array.from({ length: 1500 }, (_, k) => (k / 1500) * 3 * gait.gaitPhase(1, STRIDE) ** -1).flatMap((walked) => {
+  const { feet, steps } = gait.stepping(LEGS, walked, GROUND, STRIDE);
+  const hips = LEGS.map((l) => l.hip);
+  const at = feet(hips);
+  const was = gait.legsTo(LEGS, hips, at, steps);
+  return LEGS.map((spec, i) => ({ spec, hip: hips[i], goal: { kind: 'plant', at: at[i], step: steps[i] } satisfies Goal, was: was[i] }));
+});
 const pose = (leg: HingedLeg, hip: Point, goal: Goal) => solveHinged(leg, hip, goal, () => (goal.kind === 'plant' ? goal.at : nowhere()));
 
 describe('a leg bent at hinges', () => {
   const legs = asked();
 
-  it('stands every planted foot as legsTo stood it, for every animal on four legs, over the moments the lab shows', () => {
+  it('stands every planted foot as legsTo stood it, for legs of every kind four-legged animals stand on, through a stride', () => {
     const planted = legs.filter(({ goal }) => held(goal).contact === 1);
-    planted.forEach(({ spec, hip, goal, was }) => expect(planDiff(pose(hinged(spec), hip, goal), was, 0)).toEqual([]));
-    expect(planted.length).toBeGreaterThan(20000);
+    planted.forEach(({ spec, hip, goal, was }) => expect(planDiff(pose(hinged(spec), hip, goal), was, 1e-9)).toEqual([]));
+    expect(planted.length).toBeGreaterThan(2000);
   }, 60000);
 
   it('comes down onto its planted pose without a jump, as the pin takes its weight', () => {

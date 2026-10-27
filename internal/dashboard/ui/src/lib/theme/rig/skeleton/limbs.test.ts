@@ -1,20 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
-import { momentsOf, type RigCritter } from '../../../../lab/critters/critter';
-import { crow, crowAt } from '../../../../lab/critters/crow';
-import { fox, foxAt } from '../../../../lab/critters/fox';
-import { gull, gullAt } from '../../../../lab/critters/gull';
-import { hare, hareAt } from '../../../../lab/critters/hare';
-import { hedgehog, hogAt } from '../../../../lab/critters/hedgehog';
-import { pigeon, pigeonAt } from '../../../../lab/critters/pigeon';
-import { rabbit, rabbitAt } from '../../../../lab/critters/rabbit';
+import { momentsOf } from '../../../../lab/critters/critter';
 import { CRITTERS } from '../../../../lab/critters/registry';
-import { foxRig } from '../../aurora/fox-rig-legacy';
-import { hogRig } from '../../bonfire/hedgehog-rig-legacy';
-import { rabbitRig } from '../../easter/rabbit-rig-legacy';
-import { crowRig } from '../../harvest/crow-rig-legacy';
-import { hareRig } from '../../hares/hare-rig-legacy';
-import { gullRig } from '../../seaside/gull-rig-legacy';
-import { pigeonRig } from '../../wimbledon/pigeon-rig-legacy';
 import type { Point } from '../../pointer';
 import * as bird from '../bird';
 import * as gait from '../gait';
@@ -53,24 +39,22 @@ const nowhere = (): Point => {
 };
 
 const mocks = () => ({ legs: vi.mocked(gait.legsTo).mock, birds: vi.mocked(bird.birdLegsTo).mock, air: vi.mocked(bird.airLegsTo).mock, planted: vi.mocked(bird.plantedLegs).mock });
-const callsSoFar = () => Object.values(mocks()).reduce((n, m) => n + m.calls.length, 0);
 
 describe('a limb\'s constraint', () => {
   it('poses every leg of every animal as legsTo, birdLegsTo, airLegsTo and plantedLegs do, over the moments the lab shows', () => {
     // Every moment the lab shows each animal in, moving and held still; and
-    // each animal moved onto a skeleton as it was drawn before, asking the
-    // solvers itself.
-    const drawnBefore: RigCritter[] = [
-      { ...hedgehog, pose: (at, look) => hogRig(hogAt(at), { now: at.now, ...look }) }, { ...rabbit, pose: (at, look) => rabbitRig(rabbitAt(at), { now: at.now, ...look }) },
-      { ...pigeon, pose: (at, look) => pigeonRig(pigeonAt(at), { now: at.now, ...look }) }, { ...fox, pose: (at, look) => foxRig(foxAt(at), { now: at.now, ...look }) },
-      { ...hare, pose: (at, look) => hareRig(hareAt(at), { now: at.now, ...look }) }, { ...gull, pose: (at, look) => gullRig(gullAt(at), { now: at.now, ...look }) },
-      { ...crow, pose: (at, look) => crowRig(crowAt(at), { now: at.now, ...look }) },
-    ];
-    const asked = [...CRITTERS, ...drawnBefore.map((c) => ({ ...c, name: `${c.name}, as drawn before` }))].flatMap((critter) => {
-      if (critter.kind !== 'rig') return [];
-      const before = callsSoFar();
-      momentsOf(critter).forEach((at) => [false, true].forEach((still) => critter.pose(at, { gaze: 0, still })));
-      return [{ name: critter.name, calls: callsSoFar() - before }];
+    // a bird's leg on no hinges walked through a stride and stood, as the
+    // birds were drawn before theirs were hinged.
+    CRITTERS.forEach((critter) => critter.kind === 'rig' && momentsOf(critter).forEach((at) => [false, true].forEach((still) => critter.pose(at, { gaze: 0, still }))));
+    const leg: bird.BirdLeg = {
+      hip: { x: 16.8, y: 12 }, reach: 1.1, far: false, fore: false, thigh: 1.7, shin: 1.42, bend: 1, art: { bone: '', boneFur: '', knee: true, inBody: true, foot: { src: '', fur: '', width: 4.08, height: 1.92, heel: { x: 0.82, y: 0.57 } } }, width: 0.75,
+      walksOn: { kind: 'toes', length: 2.68, lean: 14, fold: -40 }, toes: { x: 3.26, y: 1.35 }, peel: 22,
+    };
+    const walk = bird.birdWalk(4.4, 1.4);
+    Array.from({ length: 200 }, (_, k) => k * 0.05).forEach((walked) => {
+      const { feet, steps } = gait.stepping([leg], walked, 16.65, walk);
+      bird.birdLegsTo([leg], [leg.hip], feet([leg.hip]), steps, 17.2);
+      bird.plantedLegs([leg], [{ x: leg.hip.x, y: leg.hip.y + walked / 10 }], 16.65);
     });
     const { legs, birds, air, planted } = mocks();
     const checked = { legs: 0, birds: 0, air: 0, planted: 0 };
@@ -91,7 +75,6 @@ describe('a limb\'s constraint', () => {
       expect(standing(birdLimb(s, feet), hips[i])).toEqual(planted.results[n].value[i]);
       checked.planted += 1;
     }));
-    for (const name of ['hedgehog', 'fox', 'rabbit', 'hare', 'gull', 'crow', 'pigeon']) expect(asked.find((a) => a.name === `${name}, as drawn before`)?.calls, name).toBeGreaterThan(0);
     expect(checked.legs).toBeGreaterThan(1000);
     expect(Math.min(checked.birds, checked.air, checked.planted)).toBeGreaterThan(100);
   }, 60000);

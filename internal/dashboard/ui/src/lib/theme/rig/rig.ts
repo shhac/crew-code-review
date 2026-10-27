@@ -146,30 +146,6 @@ export function bone(from: Point, to: Point, thick: number, flush = false, ancho
   return { x: -start, y: -thick / 2, width: length + start + thick / 2, height: thick, transform: `translate(${from.x} ${from.y}) rotate(${angle})` };
 }
 
-const drawnLeg = (spec: ArtLeg, limb: Limb): DrawnLeg =>
-  ({ limb, art: spec.art, width: spec.width, haunch: spec.haunch ?? spec.width, fore: spec.fore, taper: !!spec.taper });
-
-// One side's legs, outlined or as fur alone.
-function legsLayer(specs: readonly ArtLeg[], limbs: readonly Limb[], far: boolean, fur: boolean): Layer {
-  const legs = specs.flatMap((s, i) => (s.far === far ? [drawnLeg(s, limbs[i])] : []));
-  return { kind: 'legs', name: far ? 'far legs' : 'near legs', legs, far, fur };
-}
-
-// The legs round the body, each where it belongs against it: they start
-// inside it, so the far legs are drawn behind it, outlined, then as fur
-// alone so no line crosses where their pieces meet; the near legs outlined
-// behind it too, their fur then over its edge, so they grow out of it with
-// no line across.
-export function legsAround(specs: readonly ArtLeg[], limbs: readonly Limb[], body: Layer): Layer[] {
-  const side = (far: boolean, fur: boolean) => legsLayer(specs, limbs, far, fur);
-  return [side(true, false), side(true, true), side(false, false), body, side(false, true)];
-}
-
-// One limb on its own, outlined then as fur alone, for an animal that sets
-// its limbs among its other parts itself.
-export const limbLayers = (name: string, leg: DrawnLeg, far: boolean): Layer[] =>
-  [false, true].map((fur) => ({ kind: 'legs', name, legs: [leg], far, fur }));
-
 // The pieces a leg is drawn with: a piece of art laid along each bone, as
 // thick as it is drawn, outlined and as fur alone.
 type Piece = { from: Point; to: Point; width: number; src: string; fur: string; anchors?: BoneAnchors };

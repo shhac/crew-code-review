@@ -1,10 +1,22 @@
 import { describe, expect, it } from 'vitest';
-import { legsTo, type Step } from '../gait';
-import { legsAround, turnAbout, turned, type ArtLeg, type Foot, type Frame, type LimbArt, type RigPose } from '../rig';
+import { legsTo, type Limb, type Step } from '../gait';
+import { turnAbout, turned, type ArtLeg, type Foot, type Frame, type Layer, type LimbArt, type RigPose } from '../rig';
 import { legsOf, solesOf } from '../test-rig';
 import { compose } from './compose';
 import { planDiff, planOf } from './plan';
 import { MAMMAL, picture, spine, tetrapod } from './tetrapod';
+
+// The legs round the body as rigs drew them before their skeletons, kept
+// as what a tetrapod's legs are held to: the far legs behind it, outlined
+// then as fur alone; the near legs outlined behind it too, their fur over
+// its edge.
+function legsAround(specs: readonly ArtLeg[], limbs: readonly Limb[], body: Layer): Layer[] {
+  const side = (far: boolean, fur: boolean): Layer => {
+    const legs = specs.flatMap((s, i) => (s.far === far ? [{ limb: limbs[i], art: s.art, width: s.width, haunch: s.haunch ?? s.width, fore: s.fore, taper: !!s.taper }] : []));
+    return { kind: 'legs', name: far ? 'far legs' : 'near legs', legs, far, fur };
+  };
+  return [side(true, false), side(true, true), side(false, false), body, side(false, true)];
+}
 
 const FRAME: Frame = { width: 30, height: 20, anchor: { x: 15, y: 18 }, scale: 1.5 };
 const TOES: Foot = { src: 'toes.webp', fur: 'toes-fur.webp', width: 2.5, height: 1.2, heel: { x: 0.4, y: 0.5 } };
@@ -23,7 +35,7 @@ const ARTS: Record<string, { art: LimbArt; taper?: boolean; toes: boolean }> = {
 
 describe('a tetrapod from a preset and its measured legs', () => {
   for (const [name, { art: drawn, taper, toes }] of Object.entries(ARTS)) {
-    it(`lays ${name} legs exactly as legsAround draws them`, () => {
+    it(`lays ${name} legs exactly as rigs drew legs round the body before their skeletons`, () => {
       const leg = (fore: boolean, far: boolean, x: number): ArtLeg => ({
         hip: { x, y: 12 }, reach: fore ? 0.4 : -0.5, thigh: 2.4, shin: 2.6, bend: fore ? -1 : 1, fore, far, art: drawn, width: 1.3, haunch: 2.2, taper: taper && !fore,
         walksOn: toes ? { kind: 'toes', length: 1.2, lean: 20, fold: 60 } : { kind: 'sole', toes: { x: TOES.width - TOES.heel.x, y: 0.7 }, peel: 30 },

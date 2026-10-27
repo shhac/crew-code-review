@@ -166,38 +166,3 @@ export function foreshortening(lift: number): number {
   return s < 0 ? -EDGE_ON : EDGE_ON;
 }
 
-// The groups a wing is turned through, outermost first: moved to its root
-// and foreshortened about its shoulder; swept about the shoulder; the hand
-// folded about the wrist.
-const placing = (art: WingArt, pose: WingPose, root: Point) => ({
-  placed: turnAbout(0, art.shoulder, root.x - art.shoulder.x, root.y - art.shoulder.y),
-  swept: turnAbout(-pose.sweep, art.shoulder),
-  folded: turnAbout(-pose.fold, art.wrist),
-});
-
-// A wing drawn at `root` (where its shoulder joins the body, in the rig's
-// drawing), held as `pose`: the hand under the arm (its cut end hidden
-// beneath the arm's rounded wrist), each piece's upper side and underside
-// both drawn and only the facing one seen. `far` for the far wing, behind
-// the body and a shade darker. Not `shown` (folded away into the body's own
-// folded wing), every piece is still drawn, unseen, so it is never reloaded
-// as it opens.
-export function birdWing(art: WingArt, pose: WingPose, root: Point, far = false, view = 0, shown = true): Layer {
-  const face = wingFace(pose.lift, far, view);
-  const sides = (piece: WingPiece, part: string): Layer[] => (['upper', 'under'] as const).map((side) => ({
-    kind: 'image', name: `${art.name} ${part}${side === 'under' ? ', underside' : ''}`, src: piece[side],
-    x: piece.x, y: piece.y, width: piece.width, height: piece.height, far, hidden: !shown || side !== face,
-  }));
-  const { placed, swept, folded } = placing(art, pose, root);
-  const hand: Layer = { kind: 'group', turn: folded, layers: sides(art.hand, 'hand') };
-  return { kind: 'group', turn: placed, foreshorten: foreshortening(pose.lift), layers: [{ kind: 'group', turn: swept, layers: [hand, ...sides(art.arm, 'arm')] }] };
-}
-
-// Where a point of the wing's flat drawing is drawn (on the hand, or on the
-// arm), with the wing held as `pose` at `root`: for guides and tests.
-export function wingPoint(art: WingArt, pose: WingPose, root: Point, p: Point, onHand: boolean): Point {
-  const { placed, swept, folded } = placing(art, pose, root);
-  const inPlane = turned(swept, onHand ? turned(folded, p) : p);
-  const s = foreshortening(pose.lift);
-  return turned(placed, { x: inPlane.x, y: art.shoulder.y + (inPlane.y - art.shoulder.y) * s });
-}

@@ -3,7 +3,7 @@
 // forward.test.ts: a group's transformOf (rig.ts) is T(d) R(a) S(1, s)
 // about its pivot, the squash first and in the group's own axes, then the
 // turn; a bird's wing foreshortens in an outer group and sweeps inside it
-// (wings.ts's birdWing). A joint carries both:
+// (as birds' rigs drew them before their skeletons). A joint carries both:
 //
 //   local(j) = T(at + shift) F(foreshorten) R(angle) Q(squash) T(-at)
 import type { Point } from '../../pointer';
