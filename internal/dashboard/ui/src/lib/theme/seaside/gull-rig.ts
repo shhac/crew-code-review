@@ -193,8 +193,10 @@ function callPose(t: number): { angle: number; lift: number; open: number } {
 }
 
 // Stood on the ledge (or taking off before its feet leave it, or settled
-// after touchdown): each foot planted under its hip.
-const planted = (hips: readonly Point[]): Goal[] => LEGS.map((leg, i) => ({ kind: 'plant', at: { x: hips[i].x + leg.reach, y: FEET } }));
+// after touchdown): each foot planted under where its hip stands at rest,
+// not where the turning body carries it, so a foot never slides as the
+// body pitches, crouches or rises over it.
+const planted = (): Goal[] => LEGS.map((leg) => ({ kind: 'plant', at: { x: leg.hip.x + leg.reach, y: FEET } }));
 
 // How it stands on the ledge: the body's turn; the neck's, which nods,
 // stretches and bobs the head from its base; the head's own small turns on
@@ -322,7 +324,7 @@ function flying(gull: RigGull, look: GullLook): RigPose {
   const hips = IN_AIR.hips({ root: body, joints });
   // Down until its feet leave; then stretched down and back as they push
   // off (GULL_AIR), close to where they stood, tucked, or reaching to land.
-  const goals: Goal[] = pose.airborne ? LEGS.map(() => ({ kind: 'air', reach: pose.legs, legs: GULL_AIR, carried: true })) : planted(hips);
+  const goals: Goal[] = pose.airborne ? LEGS.map(() => ({ kind: 'air', reach: pose.legs, legs: GULL_AIR, carried: true })) : planted();
   // The body with its wing folded has its own tail, tucked under the
   // primaries: the flight tail behind it would show above them.
   const seen = (shown: boolean) => (shown ? 'drawn' : false);

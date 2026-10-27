@@ -194,7 +194,11 @@ function pecking(t: number): { body: number; head: number; down: number } {
 // or, pecking, the head and neck's together (at the neck's base), each
 // foot's goal from where its hip is, and the tail's turn.
 type Ground = { body: Turn; skull: JointPose; neck: JointPose; goals: (hips: readonly Point[]) => Goal[]; tail: number };
-const planted = (hips: readonly Point[]): Goal[] => LEGS.map((leg, i) => ({ kind: 'plant', at: { x: hips[i].x + leg.reach, y: FEET } }));
+// Stood on the ledge (or taking off before its feet leave it, or settled
+// after touchdown): each foot planted under where its hip stands at rest,
+// not where the turning body carries it, so a foot never slides as the
+// body pitches, crouches or rises over it.
+const planted = (): Goal[] => LEGS.map((leg) => ({ kind: 'plant', at: { x: leg.hip.x + leg.reach, y: FEET } }));
 
 // On the ledge: standing, walking with the head bob, pecking or alert.
 function onGround(pigeon: RigPigeon, look: PigeonLook): Ground {
@@ -302,7 +306,7 @@ function flying(pigeon: RigPigeon, look: PigeonLook): RigPose {
   // ledge rather than through it, and fanned as far as the pose has it.
   const joints = { ...far.joints, ...near.joints, tail: { angle: 1.3 * pose.pitch }, 'tail fan': { angle: -2 * pose.tail } };
   const hips = IN_AIR.hips({ root: body, joints });
-  const goals: Goal[] = pose.airborne ? LEGS.map(() => ({ kind: 'air', reach: pose.legs, legs: PIGEON_AIR, carried: true })) : planted(hips);
+  const goals: Goal[] = pose.airborne ? LEGS.map(() => ({ kind: 'air', reach: pose.legs, legs: PIGEON_AIR, carried: true })) : planted();
   const tucked = pose.airborne && Math.abs(pose.legs) < 0.25;
   const show: PoseSpec['show'] = { ...far.show, ...near.show, ...feetShown(goals), tail: pose.tail >= 0.5 ? false : 'drawn', 'tail, fanned': pose.tail < 0.5 ? false : 'drawn', 'folded wing': folded ? 'drawn' : false };
   return compose(IN_AIR.body, () => ({ root: body, joints, limbs: IN_AIR.limbs(goals), show, z: tucked ? IN_AIR.furUnder('near') : {}, shapes: eyelid(pigeon, look) }), look.now);

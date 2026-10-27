@@ -26,17 +26,14 @@ const KNOWN = {
   cupid: { footprintsHold: 'dodging, the drawing reaches up to 0.16px over its footprint\'s top' },
   bee: { footprintsHold: 'lifting off, the drawing reaches 0.18px past its footprint\'s left' },
   gull: {
-    plantedFeetHold: 'taking off and settling, the feet are set under the hips the body turns (plantedLegs from the turned hips)',
     anklesBehindToes: 'walking, the tarsus swings with the leg like a pendulum from the foot (bird.ts\'s swungBy), so late in the stance the ankle passes ahead of the toes',
   },
   crow: {
-    plantedFeetHold: 'pecking, taking off and settling, the feet are set under the hips the body turns (plantedLegs from the turned hips)',
     anklesBehindToes: 'walking, the tarsus swings with the leg like a pendulum from the foot (bird.ts\'s swungBy), so late in the stance the ankle passes ahead of the toes',
     footprintsHold: 'flaring, the drawing reaches 0.55px past its footprint\'s left',
   },
   pigeon: {
     bonesKeepLength: 'walking, a foot beyond reach straightens the leg and the drumstick stretches (spidergait\'s knees)',
-    plantedFeetHold: 'pecking, taking off and settling, the feet are set under the hips the body turns (plantedLegs from the turned hips)',
     anklesBehindToes: 'walking, the tarsus swings with the leg like a pendulum from the foot (bird.ts\'s swungBy), so late in the stance the ankle passes ahead of the toes',
     footprintsHold: 'landing, the drawing reaches 0.07px past its footprint\'s right',
   },

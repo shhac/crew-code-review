@@ -171,7 +171,11 @@ type CrowLook = { now: number; still: boolean; gaze: number };
 // The tail about its root: lifted (degrees, up positive) and fanned.
 const tailOf = (lift: number, fan: number): JointPose => ({ angle: lift, squash: { by: 1 + 0.4 * fan } });
 
-const planted = (hips: readonly Point[]): Goal[] => LEGS.map((leg, i) => ({ kind: 'plant', at: { x: hips[i].x + leg.reach, y: FEET } }));
+// Stood on the ledge (or taking off before its feet leave it, or settled
+// after touchdown): each foot planted under where its hip stands at rest,
+// not where the turning body carries it, so a foot never slides as the
+// body pitches, crouches or rises over it.
+const planted = (): Goal[] => LEGS.map((leg) => ({ kind: 'plant', at: { x: leg.hip.x + leg.reach, y: FEET } }));
 
 // How it stands on the ledge: the body's turn; the neck's, which stretches,
 // bobs and reaches down to peck from its base; the head's own small turns
@@ -319,7 +323,7 @@ function flying(crow: RigCrow, look: CrowLook): RigPose {
   // level as the body tips forward under it.
   const joints = { ...far.joints, ...near.joints, tail: tailOf(0.75 * Math.max(0, pose.pitch - level) - 4 * pose.tail, pose.tail), 'neck base': { angle: -0.8 * level } };
   const hips = IN_AIR.hips({ root: body, joints });
-  const goals: Goal[] = pose.airborne ? LEGS.map(() => ({ kind: 'air', reach: pose.legs, legs: CROW_AIR, carried: true })) : planted(hips);
+  const goals: Goal[] = pose.airborne ? LEGS.map(() => ({ kind: 'air', reach: pose.legs, legs: CROW_AIR, carried: true })) : planted();
   const show: PoseSpec['show'] = { ...far.show, ...near.show, ...feetShown(goals), 'folded wing': folded ? 'drawn' : false };
   // Tucked up in flight, the legs are hidden in the belly feathers, so even
   // the near leg's fur goes behind the body.
