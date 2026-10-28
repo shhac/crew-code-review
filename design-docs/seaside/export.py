@@ -25,7 +25,7 @@ from pathlib import Path
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from art import EyeScale, crop, cut, export, keyed, knobbed, opaque  # noqa: E402
+from art import EyeScale, crop, cut, export, keyed, knobbed, opaque, wristed  # noqa: E402
 import numpy as np  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
@@ -50,6 +50,9 @@ KEY_POSES = {
 # bird), the hand (the primaries) a little the longer.
 WINGS = ['gull-arm', 'gull-hand', 'gull-arm-under', 'gull-hand-under']
 WING_LENGTH = {'gull-arm': 10.5, 'gull-hand': 11.5, 'gull-arm-under': 10.5, 'gull-hand-under': 11.5}
+# How far the arm runs on past its wrist, from its top (gull-rig.ts's WING),
+# to be faded out there (art.py's wristed).
+PAST = 1.2
 # The leg's pieces, left to right in gull-limbs-3.png: the drumstick (its
 # feathered end at the knee), the tarsus, the foot standing flat and the
 # foot with its toes drawn together. The bars by their thickness, measured
@@ -114,7 +117,10 @@ def main() -> None:
         gull.placed(name, tails[name], OUT, gull.on_eye('gull-standing.png'), 1, None)
     wings = cut(keyed(HERE / 'gull-wings.png'), WINGS)
     for name, art in wings.items():
-        w, h = export(art, OUT, name, WING_LENGTH[name] * RES / art.shape[0])
+        scale = WING_LENGTH[name] * RES / art.shape[0]
+        if name.startswith('gull-arm'):
+            art = wristed(art, PAST, RES / scale)
+        w, h = export(art, OUT, name, scale)
         print(f'{name}: {gull.units((w, h))}')
     limbs = cut(keyed(HERE / 'gull-limbs-3.png'), LIMBS)
     for name, thick in [('gull-drumstick', DRUMSTICK), ('gull-tarsus', TARSUS)]:

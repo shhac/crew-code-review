@@ -230,6 +230,35 @@ def knobbed(rgba: np.ndarray, heel: tuple[float, float], radius: float, line: fl
     return out.astype(np.uint8)
 
 
+def ramp(t: np.ndarray) -> np.ndarray:
+    t = np.clip(t, 0, 1)
+    return t * t * (3 - 2 * t)
+
+
+def faded(art: np.ndarray, fade: np.ndarray) -> np.ndarray:
+    out = art.copy()
+    out[..., 3] = (art[..., 3] * fade).astype(np.uint8)
+    return out
+
+
+# How far before the wrist (toward the shoulder) an arm piece starts to fade
+# out, and how far past it it is gone, in drawing units.
+WRIST_KEPT = 0.5
+WRIST_GONE = 0.7
+
+
+def wristed(arm: np.ndarray, past: float, per_unit: float) -> np.ndarray:
+    """A wing's arm piece, stood span up, faded out across its wrist: past is
+    how far it runs on beyond the wrist (drawing units from its top, where
+    the rig puts the wrist), per_unit its pixels to a unit. The arm is drawn
+    over the hand to hide the hand's cut base, but drawn whole it ends in a
+    rounded, outlined tip of its own lying across the hand's feathers, a
+    second wingtip; faded out there, it runs on into the hand as the
+    secondaries do into the primaries."""
+    d = (np.arange(arm.shape[0], dtype=np.float32) + 0.5) / per_unit
+    return faded(arm, ramp((d - (past - WRIST_GONE)) / (WRIST_GONE + WRIST_KEPT))[:, None])
+
+
 def span_up(piece: np.ndarray) -> np.ndarray:
     """A wing piece drawn lying down, root left and leading edge on top,
     stood up as the bird kit draws one: span up the picture, root at the

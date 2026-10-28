@@ -31,7 +31,7 @@ from PIL import Image
 from scipy import ndimage
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from art import MARGIN, EyeScale, crop, crop_origin, cut, export, export_with_fur, keyed, knobbed, lum, opaque, place, poses, rescaled, rows, span_up  # noqa: E402
+from art import MARGIN, EyeScale, crop, crop_origin, cut, export, export_with_fur, keyed, knobbed, lum, opaque, place, poses, rescaled, rows, span_up, wristed  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
 OUT = HERE.parents[1] / 'internal/dashboard/ui/src/lib/theme/harvest'
@@ -71,6 +71,9 @@ RUMP_OVERLAP = 0.25
 # the bird's lengths (bill tip to tail tip): a carrion crow's span is about
 # 2.1 times its length, less the body between the shoulders.
 WING_LENGTH = 0.95
+# How far the arm runs on past its wrist, from its top (crow-rig.ts's WING),
+# to be faded out there (art.py's wristed).
+PAST = 1.2
 # The legs, measured off the reference: the bare tarsus's thickness, outline
 # included, and the foot's length, claws included, in drawing units; and
 # where on the foot (fractions of its box) the tarsus comes down, where the
@@ -325,6 +328,7 @@ def crow(check: Path | None) -> None:
     # is the upper side greyed rather than another drawing.
     arm, hand = (span_up(crop(p)) for p in poses(crow_keyed(HERE / 'crow-wing.png'), 2))
     k = WING_LENGTH * length * RES / (arm.shape[0] + hand.shape[0])
+    arm = wristed(arm, PAST, RES / k)
     for name, art in [('crow-wing-arm', arm), ('crow-wing-hand', hand)]:
         w, h = export(art, OUT, name, k)
         export(underside(art), OUT, f'{name}-under', k)

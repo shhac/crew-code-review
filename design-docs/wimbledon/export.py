@@ -24,7 +24,7 @@ from pathlib import Path
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from art import EyeScale, by_colour, crop, cut, export, feature, keyed, knobbed, lum, rescaled, span_up  # noqa: E402
+from art import EyeScale, by_colour, crop, cut, export, faded, feature, keyed, knobbed, lum, ramp, rescaled, span_up, wristed  # noqa: E402
 import numpy as np  # noqa: E402
 from PIL import Image  # noqa: E402
 
@@ -97,15 +97,23 @@ WINGS = ['arm', 'hand', 'arm-under', 'hand-under']
 # primaries are about half of it. The arm is drawn on the same scale.
 PIGEON_HAND = 10.0
 HAWK_HAND = 15.3
+# How far each arm runs on past its wrist, from its top (the rigs' WING), to
+# be faded out there (art.py's wristed).
+PIGEON_PAST = 1.2
+HAWK_PAST = 1.6
 
 
-def wings(sheet: str, prefix: str, hand: float, names: list[str]) -> dict[str, np.ndarray]:
+def wings(sheet: str, prefix: str, hand: float, past: float, names: list[str]) -> dict[str, np.ndarray]:
     """The wing pieces of sheet, stood span up, all on the scale that makes
-    the hand hand units long. The rig shades the far wing itself."""
+    the hand hand units long, the arm's faded out past units beyond its
+    wrist. The rig shades the far wing itself."""
     pieces = cut(keyed(HERE / sheet), names)
     scale = hand * RES / pieces['hand'].shape[1]
     for name in WINGS:
-        w, h = export(span_up(pieces[name]), OUT, f'{prefix}-{name}', scale)
+        piece = span_up(pieces[name])
+        if name.startswith('arm'):
+            piece = wristed(piece, past, RES / scale)
+        w, h = export(piece, OUT, f'{prefix}-{name}', scale)
         print(f'{prefix}-{name}: {w / RES:.2f}x{h / RES:.2f}')
     return pieces
 
@@ -117,17 +125,6 @@ def across(line: tuple[tuple[float, float], tuple[float, float]], xs: np.ndarray
     (ax, ay), (bx, by) = line
     length = np.hypot(bx - ax, by - ay)
     return ((bx - ax) * (ys - ay) - (by - ay) * (xs - ax)) / -length
-
-
-def ramp(t: np.ndarray) -> np.ndarray:
-    t = np.clip(t, 0, 1)
-    return t * t * (3 - 2 * t)
-
-
-def faded(art: np.ndarray, fade: np.ndarray) -> np.ndarray:
-    out = art.copy()
-    out[..., 3] = (art[..., 3] * fade).astype(np.uint8)
-    return out
 
 
 def grid(art: np.ndarray, at: tuple[float, float], per_unit: float) -> tuple[np.ndarray, np.ndarray]:
@@ -236,7 +233,7 @@ def main() -> None:
     for name, (length, heel) in FEET.items():
         per_unit = limbs[name].shape[1] / length
         pigeon.foot(name, knobbed(limbs[name], heel, KNOB * per_unit, KNOB_LINE * per_unit), OUT, length, heel)
-    flight = wings('pigeon-wings.png', 'pigeon', PIGEON_HAND, [*WINGS, 'tail-fan'])
+    flight = wings('pigeon-wings.png', 'pigeon', PIGEON_HAND, PIGEON_PAST, [*WINGS, 'tail-fan'])
     # The fanned tail as long as the closed one.
     closed = parts['pigeon-tail']
     length = closed.shape[1] * pigeon.on_eye('pigeon-parts.png')
@@ -249,7 +246,7 @@ def main() -> None:
     hawk.reference('hawk-pose-glide-2.png', LAB, 'hawk-pose-glide')
     hawk.key_poses('hawk-pose-', HAWK_POSES, LAB)
     hawk.parts(cut(keyed(HERE / 'hawk-parts.png'), HAWK_PARTS), 'hawk-parts.png', OUT, mask=by_colour)
-    wings('hawk-wings.png', 'hawk', HAWK_HAND, WINGS)
+    wings('hawk-wings.png', 'hawk', HAWK_HAND, HAWK_PAST, WINGS)
 
 
 if __name__ == '__main__':
