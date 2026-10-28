@@ -10,7 +10,7 @@ import { CRITTERS } from './registry';
 // it comes off this list then.
 const KNOWN = {
   hedgehog: {
-    footprintsHold: 'sniffing, the head\'s box turned nose down reaches 4.4px under the ledge, though its art does not (its picture\'s see-through margin; a re-crop would fix it); and the box of each leg\'s piece, turned with its shin, reaches up to 0.74px under it at its rounded cap\'s see-through corner',
+    footprintsHold: 'sniffing, the head\'s box turned nose down reaches 4.4px under the ledge, though its art stays 0.9px over it: the box\'s empty corner under the chin, which no crop can take off, as the cheek\'s ruff fills the box\'s bottom and the chin slopes up from it to the nose; and the box of each leg\'s piece, turned with its shin, reaches up to 0.74px under it at its rounded cap\'s see-through corner',
   },
   fox: {
     plantedFeetHold: 'digging, a forepaw scrapes back through the snow while it is down, as a dig does',

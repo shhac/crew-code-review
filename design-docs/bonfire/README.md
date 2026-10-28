@@ -84,9 +84,16 @@ walking sprite and the legs were sized by guesswork.
   try tucked the head behind the body, whose outline then crossed it).
 - **Legs.** A hedgehog walks on its soles (plantigrade), its belly about an
   inch off the ground, its legs mostly hidden under the skirt of spines and
-  only really seen when it runs. Each leg is one stubby piece laid from hip to
-  heel (too short to show a knee), drawn over its foot, its rounded end the
-  heel. The front feet are short and broad like little hands; the hind ones
+  only really seen when it runs. Its legs are longer than they look: the hip
+  (or shoulder) high in the body under the skirt, the thigh down to a knee
+  (or elbow) hidden there too, and the shin down to the heel, which is all
+  that shows: one stubby piece from the heel up into the body, held rigid on
+  the shin, drawn over its foot, its rounded end the heel. No pose shows a
+  thigh, so the leg is not drawn split at the knee (2026-10-28): over every
+  moment the lab plays, the thighs lie inside the body's and the head's art,
+  all but the far foreleg's, whose knee dips at most about half a unit under
+  the chest's edge as it walks or hurries, behind the near legs; a thigh
+  piece would only ever show as a sliver there. The front feet are short and broad like little hands; the hind ones
   are longer. Legs and feet share the belly's cream, so no change of shade
   shows where they cross each other or the belly's edge. Each piece is drawn
   twice: outlined, then as fur alone with its outline taken out, so outlines
