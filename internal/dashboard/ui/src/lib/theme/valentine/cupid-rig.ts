@@ -18,6 +18,7 @@ import openHandFurArt from './cupid-hand-open-fur.webp';
 import openHandArt from './cupid-hand-open.webp';
 import handArt from './cupid-hand.webp';
 import headArt from './cupid-head.webp';
+import { CUPID_ARM, CUPID_BODY, CUPID_FOOT, CUPID_HAND, CUPID_HAND_OPEN, CUPID_HEAD, CUPID_SHIN, CUPID_THIGH, CUPID_WING } from './outlines';
 import shinFurArt from './cupid-shin-fur.webp';
 import shinArt from './cupid-shin.webp';
 import thighFurArt from './cupid-thigh-fur.webp';
@@ -61,14 +62,14 @@ const ROSE = '#e8436b';
 
 // The arms and legs: two pieces each along posed bones, a fist or a foot at
 // the end, each piece outlined and then as fur alone.
-const HAND = { src: handArt, fur: handFurArt, width: 2.42, height: 2.08, heel: { x: 0.35, y: 1.04 } };
+const HAND = { src: handArt, fur: handFurArt, width: 2.42, height: 2.08, heel: { x: 0.35, y: 1.04 }, outline: CUPID_HAND };
 // The near hand flung open as it dodges, as the dodge drawing's is: its
 // second picture, which a rig shows in place of the fist (the slot a
 // bird's curled toes take), its wrist as far into it as the fist's.
-const OPEN_HAND = { src: openHandArt, fur: openHandFurArt, width: 3.08, height: 3, heel: { x: 0.35, y: 1.72 } };
-const FOOT = { src: footArt, fur: footFurArt, width: 3.17, height: 2.5, heel: { x: 1.2, y: 0.55 } };
-const ARM_ART: LimbArt = { bone: armArt, boneFur: armFurArt, thigh: { src: armArt, fur: armFurArt }, knee: true, foot: HAND };
-const LEG_ART: LimbArt = { bone: shinArt, boneFur: shinFurArt, thigh: { src: thighArt, fur: thighFurArt }, knee: true, foot: FOOT };
+const OPEN_HAND = { src: openHandArt, fur: openHandFurArt, width: 3.08, height: 3, heel: { x: 0.35, y: 1.72 }, outline: CUPID_HAND_OPEN };
+const FOOT = { src: footArt, fur: footFurArt, width: 3.17, height: 2.5, heel: { x: 1.2, y: 0.55 }, outline: CUPID_FOOT };
+const ARM_ART: LimbArt = { bone: armArt, boneFur: armFurArt, boneOutline: CUPID_ARM, thigh: { src: armArt, fur: armFurArt, outline: CUPID_ARM }, knee: true, foot: HAND };
+const LEG_ART: LimbArt = { bone: shinArt, boneFur: shinFurArt, boneOutline: CUPID_SHIN, thigh: { src: thighArt, fur: thighFurArt, outline: CUPID_THIGH }, knee: true, foot: FOOT };
 const ARM = { upper: 2.5, fore: 2.4, width: 1.9 };
 const LEG = { thigh: 2.6, shin: 2.6, haunch: 2.7, width: 2.15 };
 // Shoulders and hips, in the body's own frame: the near arm hangs at the
@@ -358,7 +359,7 @@ const limbZ = (l: Member) => {
   return { outlined: z, fur: z + 1 };
 };
 const wingPiece = (far: boolean) => ({
-  ...picture(far ? 'far wing' : 'near wing', far ? 'W1' : 'W0', wingArt, far ? { ...WING, x: WING.x + FAR_WING.x, y: WING.y + FAR_WING.y } : WING),
+  ...picture(far ? 'far wing' : 'near wing', far ? 'W1' : 'W0', wingArt, far ? { ...WING, x: WING.x + FAR_WING.x, y: WING.y + FAR_WING.y } : WING, CUPID_WING),
   side: far ? 'far' : 'near',
 } as const);
 const withZ = <P extends { draws: readonly { id: string; z: number }[] }>(p: P, z: number): P => ({ ...p, draws: p.draws.map((d) => ({ ...d, z })) });
@@ -368,7 +369,7 @@ const CUPID: Body = {
   pieces: [
     withZ(wingPiece(true), Z.wings), withZ(wingPiece(false), Z.wings),
     ...LIMBS.flatMap((l) => limbPieces(artLeg(l), l.code, limbZ(l), `${l.far ? 'far' : 'near'} ${l.arm ? 'arm' : 'leg'}`)),
-    withZ(picture('body', 'body', bodyArt, BODY), Z.body), withZ(picture('head', 'skull', headArt, HEAD), Z.head),
+    withZ(picture('body', 'body', bodyArt, BODY, CUPID_BODY), Z.body), withZ(picture('head', 'skull', headArt, HEAD, CUPID_HEAD), Z.head),
   ],
   shapes: [{ id: 'stave', on: 'L1J3', z: Z.stave }, { id: 'eyelid', on: 'skull', z: Z.eyelid }, { id: 'string', on: 'L0J3', z: Z.string }, { id: 'arrow', on: 'L0J3', z: Z.arrow }],
   stands: 'hovers here',

@@ -4,7 +4,7 @@ import { antennaLayer, flicking, turnedBy, type Antenna } from '../rig/antennae'
 import { airGoals, insectGait, legLayers, standingGoals, strideFor, walkingGoals, type InsectLeg, type LegLook, type Limb } from '../rig/hexapod';
 import { hangAt, hoverBob, pitchAt, type Pitching } from '../rig/insect-flight';
 import { breath } from '../rig/life';
-import { turnAbout, turned, type Layer, type RigPose, type Turn } from '../rig/rig';
+import { turnAbout, turned, type Layer, type Outline, type RigPose, type Turn } from '../rig/rig';
 import { compose } from '../rig/skeleton/compose';
 import { insect, localized, sprawledLegs, type Segments } from '../rig/skeleton/insect';
 import type { Goal, PoseSpec } from '../rig/skeleton/types';
@@ -13,6 +13,7 @@ import type { WaspPose } from './footprints';
 import foldedArt from './wasp-wing-folded.webp';
 import gasterArt from './wasp-gaster.webp';
 import headArt from './wasp-head.webp';
+import { WASP_GASTER, WASP_HEAD, WASP_THORAX, WASP_WING, WASP_WING_FOLDED } from './outlines';
 import thoraxArt from './wasp-thorax.webp';
 import wingArt from './wasp-wing.webp';
 
@@ -158,8 +159,8 @@ function hold(w: RigWasp, now: number): Hold {
   }
 }
 
-const image = (name: string, src: string, at: typeof HEAD, far = false): Layer => ({ kind: 'image', name, src, ...at, far });
-const blurWing = (far: boolean): BlurWing => ({ picture: image(far ? 'far wing' : 'wing', wingArt, OPEN_AT, far), hinge: HINGE, axis: OPEN.axis, length: WING });
+const image = (name: string, src: string, at: typeof HEAD, outline: Outline, far = false): Layer => ({ kind: 'image', name, src, ...at, far, outline });
+const blurWing = (far: boolean): BlurWing => ({ picture: image(far ? 'far wing' : 'wing', wingArt, OPEN_AT, WASP_WING, far), hinge: HINGE, axis: OPEN.axis, length: WING });
 
 // One side's wings: folded along the back, fading out as the blur fades in;
 // the third wing at a new place in the stroke each frame.
@@ -167,7 +168,7 @@ function wingsOf(far: boolean, beating: number, swept: number, seed: number, now
   const side = far ? FAR_BEAT : BEAT;
   const beat = { ...side, front: side.front - swept, back: side.back - swept / 2 };
   const shimmering = { ...beat, mid: { at: still ? 0.5 : shimmer(seed + (far ? 3 : 0), now), opacity: beat.mid?.opacity ?? 0 } };
-  const folded: Layer = { kind: 'group', turn: turnAbout(far ? -4 : 0, HINGE), opacity: beating > 0 ? 1 - beating : undefined, layers: [image(far ? 'far folded wings' : 'folded wings', foldedArt, FOLDED, far)] };
+  const folded: Layer = { kind: 'group', turn: turnAbout(far ? -4 : 0, HINGE), opacity: beating > 0 ? 1 - beating : undefined, layers: [image(far ? 'far folded wings' : 'folded wings', foldedArt, FOLDED, WASP_WING_FOLDED, far)] };
   const blur = wingBlur(blurWing(far), shimmering, beating, far ? 'far wing blur' : 'wing blur');
   return beating >= 1 ? blur : [folded, ...blur];
 }
@@ -176,7 +177,7 @@ function wingsOf(far: boolean, beating: number, swept: number, seed: number, now
 const antenna = (name: string, a: Antenna): Layer[] =>
   [antennaLayer(name, a, ANTENNA_WIDTH + 2 * LOOK.outline, INK), antennaLayer(name, a, ANTENNA_WIDTH, ANTENNA)];
 
-const picture = (id: string, on: string, src: string, box: typeof HEAD) => ({ id, art: { drawn: { src, box } }, at: { kind: 'joint', to: on }, draws: [{ id, z: 0 }] }) as const;
+const picture = (id: string, on: string, src: string, box: typeof HEAD, outline: Outline) => ({ id, art: { drawn: { src, box, outline } }, at: { kind: 'joint', to: on }, draws: [{ id, z: 0 }] }) as const;
 
 // Her skeleton: the body turning about where she moves, the gaster on its
 // petiole and the head on its neck, the antennae's sockets on the head, the
@@ -201,7 +202,7 @@ const WASP = insect({
   ground: GROUND,
   order: [
     { shape: 'far wings', on: 'body' }, { shape: 'far legs', on: 'body' }, { shape: 'far antenna', on: 'head' },
-    picture('gaster', 'gaster', gasterArt, GASTER), picture('thorax', 'body', thoraxArt, THORAX), picture('head', 'head', headArt, HEAD),
+    picture('gaster', 'gaster', gasterArt, GASTER, WASP_GASTER), picture('thorax', 'body', thoraxArt, THORAX, WASP_THORAX), picture('head', 'head', headArt, HEAD, WASP_HEAD),
     { shape: 'near antenna', on: 'head' }, { shape: 'near legs', on: 'body' }, { shape: 'wings', on: 'body' },
   ],
   stands: 'body (moves here)',

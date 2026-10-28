@@ -10,20 +10,18 @@ import { CRITTERS } from './registry';
 // it comes off this list then.
 const KNOWN = {
   hedgehog: {
-    footprintsHold: 'sniffing, the head\'s box turned nose down reaches 4.4px under the ledge, though its art stays 0.9px over it: the box\'s empty corner under the chin, which no crop can take off, as the cheek\'s ruff fills the box\'s bottom and the chin slopes up from it to the nose; and the box of each leg\'s piece, turned with its shin, reaches up to 0.74px under it at its rounded cap\'s see-through corner',
+    footprintsHold: 'walking and hurrying, the rounded heel of each leg\'s stub, turned with its shin, reaches up to 0.09px under the ledge: its own ink, not a see-through corner',
   },
   fox: {
     plantedFeetHold: 'digging, a forepaw scrapes back through the snow while it is down, as a dig does',
-    footprintsHold: 'in every mode the box of each leg\'s bone up from the toes reaches up to 0.73px under the ledge at its rounded cap\'s corner, which is see-through (its fur does not); and digging, its nose goes into the snow (3.1px), crouching nearly (0.74px)',
+    footprintsHold: 'in every mode the rounded end of a leg\'s bone up from the toes (stretching, of its upper arm too) reaches up to 0.38px under the ledge in its own ink, digging the most; and alert, its art 0.04px over the top',
   },
-  rabbit: { footprintsHold: 'the box of a forepaw\'s metacarpus reaches 0.29px under the ledge at its rounded cap\'s corner, which is see-through, as the page has always drawn it (counted as squares round each joint, as legs were before its skeleton, it never showed)' },
   bee: {
     anklesBehindToes: 'she stands on her tarsi, not on toes with a bone rising from them: the hind legs\' tarsi lie back along the bell from the tibiotarsal joint, ahead of the claws, as an insect\'s do',
   },
   wasp: {
     anklesBehindToes: 'she stands on her tarsi, not on toes with a bone rising from them: the middle and hind legs\' tarsi lie back along the surface from the tibiotarsal joint, ahead of the claws, as an insect\'s do',
   },
-  hare: { footprintsHold: 'alert, its breath lifts its back up to 0.32px over the 27px it keeps to day to day (hare.ts\'s CLEAR); held shallow enough to fit, it would hardly breathe' },
 } satisfies Record<string, Partial<Record<LawName, string>>>;
 
 const knownFor = (rig: string, law: string): string | undefined =>

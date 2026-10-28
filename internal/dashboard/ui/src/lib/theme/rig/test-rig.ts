@@ -1,7 +1,7 @@
 // Queries over a rig's drawing, shared by the animals' rig tests.
 import type { Point } from '../pointer';
 import { degrees } from '../math';
-import { bone, footBox, footInUse, piecesOf, turnAbout, turned, type DrawnLeg, type Layer, type RigPose } from './rig';
+import { artCorners, bone, footBox, footInUse, piecesOf, turnAbout, turned, type DrawnLeg, type Layer, type RigPose } from './rig';
 import { applied } from './skeleton/affine';
 
 export const flatLayers = (layers: readonly Layer[]): Layer[] => layers.flatMap((l) => (l.kind === 'group' || l.kind === 'frame' ? [l, ...flatLayers(l.layers)] : [l]));
@@ -32,11 +32,12 @@ export const solesOf = (pose: RigPose) => pose.skeleton?.limbs.map((l) => l.sole
 
 export const guideAt = (pose: RigPose, name: string) => pose.guides?.find((g) => g.name === name)?.at;
 
-// The points a layer's drawing reaches, in its own group's coordinates.
+// The points a layer's drawing reaches, in its own group's coordinates: a
+// picture's art, by its outline where it has one.
 function reach(l: Exclude<Layer, { kind: 'group' | 'frame' }>): Point[] {
   switch (l.kind) {
-    case 'image': return corners(l.x, l.y, l.x + l.width, l.y + l.height);
-    case 'piece': return corners(l.box.x, l.box.y, l.box.x + l.box.width, l.box.y + l.box.height).map((p) => applied(l.matrix, p));
+    case 'image': return artCorners(l, l.outline);
+    case 'piece': return artCorners(l.box, l.outline).map((p) => applied(l.matrix, p));
     case 'lid': return corners(l.at.x - l.r, l.at.y - l.r, l.at.x + l.r, l.at.y + l.r);
     case 'stroke': return [...l.points];
     case 'legs': {

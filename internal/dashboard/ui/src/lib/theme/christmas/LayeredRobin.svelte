@@ -1,6 +1,7 @@
 <script lang="ts">
   import manifest from './robin-parts/manifest.json' with { type: 'json' };
   import { partsPose, partsSlotLayers, partsViewport, type PartId, type PartsPose } from './parts-pose';
+  import * as OUTLINES from './robin-parts/outlines';
 
   export let elapsed = 0;
   export let mode = 'alive';
@@ -15,6 +16,12 @@
   const assets = import.meta.glob<string>('./robin-parts/*.webp', { eager: true, query: '?url', import: 'default' });
   const urls = Object.fromEntries(Object.entries(manifest.parts).map(([id, p]) => [id, assets['./robin-parts/' + p.file]]));
   const parts = manifest.parts;
+  // Where each drawing's art lies in its box, for the checks of what the
+  // page's drawings cover (robin-parts/outlines.ts).
+  const outlineOf = (id: PartId) => {
+    const outline: unknown = Reflect.get(OUTLINES, id.toUpperCase().replaceAll('-', '_'));
+    return typeof outline === 'string' ? outline : undefined;
+  };
   $: pose = reduced ? partsPose(0, 'still') : poseOverride ?? partsPose(elapsed, mode);
   $: slots = partsSlotLayers(pose, exploded, showNeck, hidden);
   $: viewport = fitted ? partsViewport(mode, reduced) : [0, 0, 128, 112];
@@ -22,7 +29,7 @@
 
 {#snippet part(id: PartId, weight: number)}
   {#if !hidden.includes(id)}
-    <image data-part={id} href={urls[id]} x={parts[id].x} y={parts[id].y} width={parts[id].width} height={parts[id].height} visibility={weight > 0 ? null : 'hidden'} />
+    <image data-part={id} href={urls[id]} x={parts[id].x} y={parts[id].y} width={parts[id].width} height={parts[id].height} visibility={weight > 0 ? null : 'hidden'} data-outline={outlineOf(id)} />
   {/if}
 {/snippet}
 

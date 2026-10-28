@@ -16,6 +16,7 @@ import forefootArt from './hare-forefoot.webp';
 import forelegFurArt from './hare-foreleg-fur.webp';
 import forelegArt from './hare-foreleg.webp';
 import headArt from './hare-head.webp';
+import { HARE_BODY, HARE_EARS, HARE_FORE_TOES, HARE_FOREFOOT, HARE_FORELEG, HARE_HEAD, HARE_HIND_FOOT, HARE_HIND_TOES, HARE_SHANK, HARE_THIGH, HARE_UPPER_ARM } from './outlines';
 import hindFootFurArt from './hare-hind-foot-fur.webp';
 import hindFootArt from './hare-hind-foot.webp';
 import hindToesFurArt from './hare-hind-toes-fur.webp';
@@ -63,20 +64,20 @@ const HIPS = { x: 7.4, y: 13.6 };
 export const REFERENCE = { x: 1, y: 1, width: 22.5, height: 22.42 };
 
 const FACE: Fur = { fill: '#d39552', outline: '#0b0503' };
-const HIND_TOES: Foot = { src: hindToesArt, fur: hindToesFurArt, width: 2.58, height: 1.17, heel: { x: 0.41, y: 0.54 } };
-const FORE_TOES: Foot = { src: foreToesArt, fur: foreToesFurArt, width: 1.67, height: 0.75, heel: { x: 0.33, y: 0.13 } };
+const HIND_TOES: Foot = { src: hindToesArt, fur: hindToesFurArt, width: 2.58, height: 1.17, heel: { x: 0.41, y: 0.54 }, outline: HARE_HIND_TOES };
+const FORE_TOES: Foot = { src: foreToesArt, fur: foreToesFurArt, width: 1.67, height: 0.75, heel: { x: 0.33, y: 0.13 }, outline: HARE_FORE_TOES };
 // Each bone its own piece: the hind leg's haunch, its lean shank narrowing
 // to the heel's point, and its long furred foot; the foreleg's upper arm,
 // slim forearm and short forefoot. In the thigh picture, the hip lies
 // inside the rounded haunch, and the knee inside its narrow tip; both image
 // passes use those same centres.
 const HIND_ART: LimbArt = {
-  bone: hindFootArt, boneFur: hindFootFurArt, knee: true, foot: HIND_TOES,
-  thigh: { src: thighArt, fur: thighFurArt, anchors: { start: 0.25, end: 0.88 } }, shank: { src: shankArt, fur: shankFurArt },
+  bone: hindFootArt, boneFur: hindFootFurArt, boneOutline: HARE_HIND_FOOT, knee: true, foot: HIND_TOES,
+  thigh: { src: thighArt, fur: thighFurArt, anchors: { start: 0.25, end: 0.88 }, outline: HARE_THIGH }, shank: { src: shankArt, fur: shankFurArt, outline: HARE_SHANK },
 };
 const FORE_ART: LimbArt = {
-  bone: forefootArt, boneFur: forefootFurArt, knee: true, foot: FORE_TOES,
-  thigh: { src: upperArmArt, fur: upperArmFurArt }, shank: { src: forelegArt, fur: forelegFurArt },
+  bone: forefootArt, boneFur: forefootFurArt, boneOutline: HARE_FOREFOOT, knee: true, foot: FORE_TOES,
+  thigh: { src: upperArmArt, fur: upperArmFurArt, outline: HARE_UPPER_ARM }, shank: { src: forelegArt, fur: forelegFurArt, outline: HARE_FORELEG },
 };
 const LEG_WIDTH = 1.25;
 // A long foot laid flat rests its bone on the ledge, as thick as the leg,
@@ -293,7 +294,7 @@ const HARE = tetrapod(MAMMAL, {
   bones: [{ from: 'skull', to: 'body', name: 'neck line (head joint to the hips)' }, { from: 'nose', to: 'skull', name: 'skull' }],
   legs: LEGS,
   ground: () => FEET,
-  order: [picture('body', 'body', bodyArt, BODY), picture('ears', 'ears', earsArt, EARS), picture('head', 'skull', headArt, HEAD), 'eyelid'],
+  order: [picture('body', 'body', bodyArt, BODY, HARE_BODY), picture('ears', 'ears', earsArt, EARS, HARE_EARS), picture('head', 'skull', headArt, HEAD, HARE_HEAD), 'eyelid'],
   shapes: [{ id: 'eyelid', on: 'skull' }],
   guides: (at) => [
     { name: 'neck', at: 'skull', unsquashed: true }, { name: 'ear base', at: 'ears', unsquashed: true },

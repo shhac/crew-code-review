@@ -16,12 +16,37 @@ import type { PosedSkeleton } from './skeleton/types';
 // Turned by angle degrees about pivot, then moved by (dx, dy).
 export type Turn = { angle: number; pivot: Point; dx: number; dy: number };
 export type Fur = { fill: string; outline: string };
+// Where a picture's art lies in its box, as the theme's export wrote it
+// (its outlines.ts, from design-docs/art.py's outline): a polygon holding
+// every opaque pixel, its corners as fractions of the box, "x,y x,y ...".
+// What the footprint checks measure, rather than the box, whose corners
+// (round a rounded piece, under a chin) can be see-through.
+export type Outline = string;
 // A foot (a paw, toes, a little hand), standing flat, toes forward; `heel`
 // is where the leg's end meets it, in its own box.
-export type Foot = { src: string; fur: string; width: number; height: number; heel: Point };
+export type Foot = { src: string; fur: string; width: number; height: number; heel: Point; outline?: Outline };
 // Joint centres within a horizontal limb picture, as fractions of its
 // width. Its rounded cap can surround the joint instead of starting at it.
 type BoneAnchors = { start: number; end: number };
+
+// Each outline's corners, read once.
+const corners = new Map<Outline, readonly Point[]>();
+const cornersOf = (outline: Outline): readonly Point[] => {
+  const had = corners.get(outline);
+  if (had) return had;
+  const read = outline.split(' ').map((pair) => {
+    const [x, y] = pair.split(',').map(Number);
+    return { x, y };
+  });
+  corners.set(outline, read);
+  return read;
+};
+// The points a picture's art reaches in the box it is drawn in: its
+// outline's corners, or, with none, the box's.
+export function artCorners(box: { x: number; y: number; width: number; height: number }, outline?: Outline): Point[] {
+  const at = outline ? cornersOf(outline) : [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 0, y: 1 }, { x: 1, y: 1 }];
+  return at.map((p) => ({ x: box.x + p.x * box.width, y: box.y + p.y * box.height }));
+}
 // A limb's art: a bone piece (straight, lying along x, rounded at both
 // ends) laid along each bone, and the foot standing at its end. Each comes
 // twice: as drawn, and as fur alone with the outline taken out, which is
@@ -33,13 +58,15 @@ export type LimbArt = {
   boneFur: string;
   // The upper bone's own piece (thick at the hip, tapering to the knee), if
   // the limb has one; drawn as thick as each leg's haunch.
-  thigh?: { src: string; fur: string; anchors?: BoneAnchors };
+  thigh?: { src: string; fur: string; anchors?: BoneAnchors; outline?: Outline };
   // The middle bone's own piece (a shank from the knee to the hock, a
   // forearm from the elbow to the wrist), if the limb has one; otherwise a
   // tapering shank is drawn with the thigh's piece, and any other with the
   // bone piece.
-  shank?: { src: string; fur: string; anchors?: BoneAnchors };
+  shank?: { src: string; fur: string; anchors?: BoneAnchors; outline?: Outline };
   foot: Foot;
+  // The bone piece's outline.
+  boneOutline?: Outline;
   // How thick the bone piece is drawn where it is not the leg's width: a
   // long foot slimmer than the shank above it.
   boneThick?: number;
@@ -85,7 +112,7 @@ export type Layer =
   | { kind: 'lid'; at: Point; r: number; fur: Fur }
   // `hidden`: drawn but unseen, so showing it again never reloads it (a
   // wing's upper side and its underside, turned in turn).
-  | { kind: 'image'; name: string; src: string; x: number; y: number; width: number; height: number; far?: boolean; hidden?: boolean }
+  | { kind: 'image'; name: string; src: string; x: number; y: number; width: number; height: number; far?: boolean; hidden?: boolean; outline?: Outline }
   // A line drawn in code through points (a bow's stave, its string), or
   // with `fill` a closed shape (an arrow's heart).
   | { kind: 'stroke'; name: string; points: readonly Point[]; width: number; colour: string; fill?: string }
@@ -100,15 +127,15 @@ export type Layer =
   // 'none'. `id` names its paint slot, which keeps its place in the drawing
   // from frame to frame.
   // `leg`: one of a limb's pieces, which tests and the lab find by it.
-  | { kind: 'piece'; id: string; name: string; src: string; box: { x: number; y: number; width: number; height: number }; aspect: 'none' | 'default'; matrix: Affine; far?: boolean; hidden?: boolean; opacity?: number; leg?: boolean }
+  | { kind: 'piece'; id: string; name: string; src: string; box: { x: number; y: number; width: number; height: number }; aspect: 'none' | 'default'; matrix: Affine; far?: boolean; hidden?: boolean; opacity?: number; leg?: boolean; outline?: Outline }
   // Parts drawn in code (an eyelid, a stroke) hung on a skeleton's joint,
   // in its frame: in rest space, as they would be drawn in its group.
   | { kind: 'frame'; id: string; matrix: Affine; layers: readonly Layer[] };
 
 // A part's picture laid in its box in the drawing; `hidden`, drawn but
 // unseen (see Layer).
-export const imageLayer = (name: string, src: string, box: { x: number; y: number; width: number; height: number }, hidden = false): Layer =>
-  ({ kind: 'image', name, src, ...box, hidden });
+export const imageLayer = (name: string, src: string, box: { x: number; y: number; width: number; height: number }, hidden = false, outline?: Outline): Layer =>
+  ({ kind: 'image', name, src, ...box, hidden, ...(outline ? { outline } : {}) });
 
 // Guides: where its joints are, for the lab and the debug overlay to mark.
 export type Guide = { name: string; at: Point };
@@ -200,7 +227,7 @@ export const footInUse = (leg: DrawnLeg): Foot => (leg.limb.curled && leg.art.cu
 export const lidLayers = (shut: boolean, at: Point, r: number, fur: Fur): Layer[] => (shut ? [{ kind: 'lid', at, r, fur }] : []);
 
 // One picture standing on the frame's anchor, squashed by a breath.
-export function stillPicture(frame: Frame, art: { name: string; src: string; width: number; height: number }, squash: number): RigPose {
+export function stillPicture(frame: Frame, art: { name: string; src: string; width: number; height: number; outline?: Outline }, squash: number): RigPose {
   const image: Layer = { kind: 'image', x: frame.anchor.x - art.width / 2, y: frame.anchor.y - art.height, ...art };
   return { ...frame, layers: [{ kind: 'group', turn: turnAbout(0, frame.anchor), scaleY: squash, layers: [image] }], guides: [{ name: 'stands here', at: frame.anchor }] };
 }

@@ -144,8 +144,8 @@ swing, held to the chest alert or washing the face, sits at the angle it
 did (54 degrees back of upright), its picture turned a little further
 toes down. A rig test holds every planted forepaw's wrist behind its toes.
 The hind foot is two bones (2026-10-28): the long foot (the metatarsus)
-from the hock to the ball of the foot, 2.09 units sloping down 21 degrees,
-and the toes (the phalanges) on from the ball, 1.99 units to their tips,
+from the hock to the ball of the foot, 2.07 units sloping down 19 degrees,
+and the toes (the phalanges) on from the ball, 2.01 units to their tips,
 which stay where the one-piece foot put them. Sitting and standing both lie
 flat. Pushing off, the heel peels up about the ball and the toes stay flat
 on the ledge, the hock behind and above them (rabbits move digitigrade, on
@@ -485,7 +485,7 @@ back on the haunch's piece) is no longer exported.
 | `rabbit-parts.png` | `rabbit-tail.webp`, `rabbit-body.webp`, `rabbit-head.webp`, `rabbit-ears.webp` | 3.5x4.6, 13.8x8.3, 7.7x6.3, 4.6x6.2 units, at (1, 7.84), (3.35, 6.81), (13.78, 4.27), (13.67, 1) |
 | `rabbit-limbs.png` | `rabbit-haunch`, `rabbit-foreleg`, `rabbit-paw`, each with a `-fur` version (its leg bar and long hind foot, once `rabbit-leg` and `rabbit-foot`, are superseded) | haunch 3.2 thick, foreleg 1.45; paw 1.9x1.2 units |
 | `rabbit-limbs-2.png` | nothing now (superseded by `rabbit-limbs-3.png`) | |
-| `rabbit-limbs-3.png` | `rabbit-shank`, `rabbit-hind-foot`, `rabbit-hind-toes`, each with a `-fur` version | shank 2.2 thick at the knee, long foot 1.5 thick; toes 2.5x1.33, the ball 0.65 in and 0.59 down |
+| `rabbit-limbs-3.png` | `rabbit-shank`, `rabbit-hind-foot`, `rabbit-hind-toes`, each with a `-fur` version | shank 2.2 thick at the knee, long foot 1.5 thick; toes 2.5x1.33, the ball 0.65 in and 0.54 down |
 
 The shipped files are under `ui/src/lib/theme/easter/` unless named. Every
 rabbit picture is exported so its eye is 1.5 drawing units, at 12 file

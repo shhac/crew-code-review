@@ -11,7 +11,7 @@ import { degrees } from '../../math';
 import type { Point } from '../../pointer';
 import { BIRD_JOINTS, hingedLegOf, isHingedBird, type BirdLeg } from '../bird';
 import { jointBeside } from '../limb';
-import type { ArtLeg, Foot, Frame } from '../rig';
+import type { ArtLeg, Foot, Frame, Outline } from '../rig';
 import { rootsOf } from './forward';
 import { restingPaw } from './hinge';
 import type { Body, BoneSpec, Draw, Goal, Handle, Hinge, JointSpec, LimbSpec, Piece, Role, Shape, Side, Skeleton } from './types';
@@ -46,10 +46,10 @@ export const BIRD: Preset = { solve: 'bird', legs: { fore: BIRD_LEG, hind: BIRD_
 export const spine = (index: number): Role => ({ part: 'spine', index });
 export const head = (index: number): Role => ({ part: 'head', index });
 
-// One picture on a joint, where it sits in the drawing; `part`, what the lab
-// lists it as where that is not its id.
-export const picture = (id: string, on: string, src: string, box: { x: number; y: number; width: number; height: number }): Piece =>
-  ({ id, art: { drawn: { src, box } }, at: { kind: 'joint', to: on }, draws: [{ id, z: 0 }] });
+// One picture on a joint, where it sits in the drawing, and where its art
+// lies in its box.
+export const picture = (id: string, on: string, src: string, box: { x: number; y: number; width: number; height: number }, outline?: Outline): Piece =>
+  ({ id, art: { drawn: { src, box, ...(outline ? { outline } : {}) } }, at: { kind: 'joint', to: on }, draws: [{ id, z: 0 }] });
 
 // Where something is drawn between the near legs' outlines and their fur,
 // in order: a piece (all its draws there), a few pieces together (a wing),
@@ -101,7 +101,7 @@ export type Tetrapod<L extends ArtLeg> = {
 
 const Z = { farLegs: 0, farFur: 1, nearLegs: 2, under: 2.5, parts: 3 } as const;
 
-type Bar = { from: number; to: number; art: { src: string; fur: string; anchors?: { start: number; end: number } }; thick: number; held?: { length: number; turn: number } };
+type Bar = { from: number; to: number; art: { src: string; fur: string; anchors?: { start: number; end: number }; outline?: Outline }; thick: number; held?: { length: number; turn: number } };
 // A leg's pieces as rig.ts's piecesOf lays them along its bones: one from
 // the hip to the foot on a leg too short to show a knee; from the knee on a
 // bird's, its femur in the body; otherwise the upper bone as thick as the
@@ -110,7 +110,7 @@ type Bar = { from: number; to: number; art: { src: string; fur: string; anchors?
 function barsOf(leg: ArtLeg, ground: number): Bar[] {
   const { art, width } = leg;
   const haunch = leg.haunch ?? width;
-  const plain = { src: art.bone, fur: art.boneFur };
+  const plain = { src: art.bone, fur: art.boneFur, ...(art.boneOutline ? { outline: art.boneOutline } : {}) };
   if (!art.knee && art.shown !== undefined) {
     // Laid from the knee to the heel, turned from the shin as far as it
     // stands from straight up at rest.
@@ -129,7 +129,7 @@ function barsOf(leg: ArtLeg, ground: number): Bar[] {
   return [{ from: 0, to: 1, art: art.thigh ?? plain, thick: haunch, ...upper }, { from: 1, to: 2, ...shank }, ...toes];
 }
 
-const boxOf = (foot: Foot) => ({ src: foot.src, fur: foot.fur, box: { x: -foot.heel.x, y: -foot.heel.y, width: foot.width, height: foot.height } });
+const boxOf = (foot: Foot) => ({ src: foot.src, fur: foot.fur, box: { x: -foot.heel.x, y: -foot.heel.y, width: foot.width, height: foot.height }, ...(foot.outline ? { outline: foot.outline } : {}) });
 
 // One limb's pieces, as legImages lays them, its limb coded `code` (its
 // joints `${code}J0` to J4), outlined at one z and as fur alone at another,
@@ -140,7 +140,7 @@ export function limbPieces(leg: ArtLeg, code: string, z: { outlined: number; fur
   const at = (k: number) => `${code}J${k}`;
   const draws = (id: string, flush: boolean): Draw[] => [{ id, z: z.outlined, part }, { id: `${id}, fur`, z: z.fur, fur: true, flush, part: `${part}, fur` }];
   const bars = barsOf(leg, ground).map((b, i): Piece => ({
-    id: `${code}B${b.from}`, side, art: { drawn: { src: b.art.src, fur: b.art.fur } },
+    id: `${code}B${b.from}`, side, art: { drawn: { src: b.art.src, fur: b.art.fur, ...(b.art.outline ? { outline: b.art.outline } : {}) } },
     at: { kind: 'bar', from: at(b.from), to: at(b.to), thick: b.thick, anchors: b.art.anchors, ...(b.held ? { held: b.held } : {}) }, draws: draws(`${code}B${b.from}`, i === 0),
   }));
   const { curled } = leg.art;

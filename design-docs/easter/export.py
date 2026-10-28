@@ -24,7 +24,7 @@ from pathlib import Path
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from art import EyeScale, crop, cut, export, export_with_fur, keyed, lum, opaque, poses  # noqa: E402
+from art import EyeScale, crop, cut, export, export_with_fur, keyed, lum, opaque, poses, write_outlines  # noqa: E402
 import numpy as np  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
@@ -63,7 +63,7 @@ PAW = (1.9, (0.24, 0.3))
 # keeps its box above the ledge.
 SHANK = 2.2
 HIND_FOOT = 1.5
-HIND_TOES = (2.5, (0.26, 0.44))
+HIND_TOES = (2.5, (0.26, 0.405))
 
 
 def inked(rgba: np.ndarray) -> np.ndarray:
@@ -121,6 +121,7 @@ def main() -> None:
         print(f'egg-{i}: display {w / EGG[1]:g}x{h / EGG[1]:g}')
     for name, (w, h) in rabbit().items():
         print(f'{name}: {w}x{h}, drawing units {w / RES:.2f}x{h / RES:.2f}')
+    write_outlines(OUT, 'design-docs/easter/export.py')
 
 
 if __name__ == '__main__':

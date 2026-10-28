@@ -60,12 +60,12 @@ export function watchFrames(page: Page, groups: readonly Drawn[], { ms, slack = 
 
     type Box = { left: number; right: number; top: number; bottom: number; width: number; height: number };
     const overlap = (a: Box, b: Box, slack: number) => a.left < b.right - slack && b.left < a.right - slack && a.top < b.bottom - slack && b.top < a.bottom - slack && b.width > 0 && b.height > 0;
-    // What of a picture shows: its box cut to every clip on it or around
-    // it, a rect clip-path (an egg is drawn sunk below its ledge and clipped
-    // at the line) or a CSS inset (July's fliers are clipped at the rail's
-    // edge, so a bird past it is behind the rail). A box ignores clipping, so
-    // without this a hidden egg on a ledge with a control right under its
-    // line reads as covering the control.
+    // What of a picture shows: where its art is, cut to every clip on it or
+    // around it, a rect clip-path (an egg is drawn sunk below its ledge and
+    // clipped at the line) or a CSS inset (July's fliers are clipped at the
+    // rail's edge, so a bird past it is behind the rail). A box ignores
+    // clipping, so without this a hidden egg on a ledge with a control right
+    // under its line reads as covering the control.
     const lineage = (el: Element | null): Element[] => (el ? [el, ...lineage(el.parentElement)] : []);
     const rectClip = (at: Element): Box | null => {
       const id = at.getAttribute('clip-path')?.match(/^url\(#(.+)\)$/)?.[1];
@@ -84,8 +84,24 @@ export function watchFrames(page: Page, groups: readonly Drawn[], { ms, slack = 
       const b = at.getBoundingClientRect();
       return { left: b.left + left, right: b.right - right, top: b.top + top, bottom: b.bottom - bottom, width: 0, height: 0 };
     };
+    // Where a picture's art is: its outline (data-outline, corners as
+    // fractions of its box) carried onto the page, or its whole box where it
+    // has none. A box's corners, round a rounded piece or under a chin, can
+    // be see-through.
+    const drawnAt = (picture: Element) => {
+      const outline = picture.getAttribute('data-outline');
+      const m = picture instanceof SVGImageElement ? picture.getScreenCTM() : null;
+      if (!outline || !m || !(picture instanceof SVGImageElement)) return picture.getBoundingClientRect();
+      const [x, y, w, h] = [picture.x, picture.y, picture.width, picture.height].map((a) => a.baseVal.value);
+      const corners = outline.split(' ').map((pair) => {
+        const [u, v] = pair.split(',').map(Number);
+        return new DOMPoint(x + u * w, y + v * h).matrixTransform(m);
+      });
+      const xs = corners.map((c) => c.x), ys = corners.map((c) => c.y);
+      return { left: Math.min(...xs), right: Math.max(...xs), top: Math.min(...ys), bottom: Math.max(...ys) };
+    };
     const shown = (picture: Element): Box => {
-      const box = picture.getBoundingClientRect();
+      const box = drawnAt(picture);
       const cut = lineage(picture).flatMap((at) => [rectClip(at), insetClip(at)].flatMap((c) => c ?? [])).reduce((c, clip) => ({
         left: Math.max(c.left, clip.left), right: Math.min(c.right, clip.right), top: Math.max(c.top, clip.top), bottom: Math.min(c.bottom, clip.bottom),
       }), { left: box.left, right: box.right, top: box.top, bottom: box.bottom });

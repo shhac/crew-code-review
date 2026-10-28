@@ -12,6 +12,7 @@ import curledArt from './fox-curled.webp';
 import haunchFurArt from './fox-haunch-fur.webp';
 import haunchArt from './fox-haunch.webp';
 import headArt from './fox-head.webp';
+import { FOX_ALERT, FOX_CURLED, FOX_HAUNCH, FOX_HEAD, FOX_LEG, FOX_TAIL, FOX_TOES, FOX_TORSO } from './outlines';
 import legFurArt from './fox-leg-fur.webp';
 import legArt from './fox-leg.webp';
 import tailArt from './fox-tail.webp';
@@ -41,7 +42,7 @@ const TAIL = { x: 1, y: 1.56, width: 11.83, height: 10.25 };
 const TAIL_ROOT = { x: 12, y: 8 };
 const TORSO = { x: 9.95, y: 5.91, width: 15.42, height: 7.75 };
 const HEAD = { x: 19.91, y: 1, width: 10.33, height: 9.75 };
-const PICTURES = { curled: { name: 'curled', src: curledArt, width: 15.33, height: 12.42 }, alert: { name: 'looking up', src: alertArt, width: 15.33, height: 14.17 } };
+const PICTURES = { curled: { name: 'curled', src: curledArt, width: 15.33, height: 12.42, outline: FOX_CURLED }, alert: { name: 'looking up', src: alertArt, width: 15.33, height: 14.17, outline: FOX_ALERT } };
 const NECK = { x: 21.8, y: 8.8 };
 const EYE = { x: 27.2, y: 5.15 };
 // The body turns about its hips.
@@ -53,10 +54,10 @@ const FACE: Fur = { fill: '#fbfcfc', outline: '#0a0809' };
 // A fox stands on its toes. Each leg: a haunch from hip to knee (shoulder
 // to elbow), thick where it meets the body; the leg on down to the hock (or
 // wrist); a bone from there to the toes, which stand on the ledge.
-const TOES = { src: toesArt, fur: toesFurArt, width: 3.33, height: 1.42, heel: { x: 1, y: 0.42 } };
+const TOES = { src: toesArt, fur: toesFurArt, width: 3.33, height: 1.42, heel: { x: 1, y: 0.42 }, outline: FOX_TOES };
 const LEG_ART: LimbArt = {
-  bone: legArt, boneFur: legFurArt, knee: true,
-  thigh: { src: haunchArt, fur: haunchFurArt },
+  bone: legArt, boneFur: legFurArt, boneOutline: FOX_LEG, knee: true,
+  thigh: { src: haunchArt, fur: haunchFurArt, outline: FOX_HAUNCH },
   foot: TOES,
 };
 const LEG_WIDTH = 2.1;
@@ -221,7 +222,7 @@ const FOX = tetrapod(MAMMAL, {
   legs: LEGS,
   ground: () => FEET,
   hung: girdle,
-  order: [picture('tail', 'tail', tailArt, TAIL), picture('torso', 'body', torsoArt, TORSO), picture('head', 'skull', headArt, HEAD), 'eyelid'],
+  order: [picture('tail', 'tail', tailArt, TAIL, FOX_TAIL), picture('torso', 'body', torsoArt, TORSO, FOX_TORSO), picture('head', 'skull', headArt, HEAD, FOX_HEAD), 'eyelid'],
   shapes: [{ id: 'eyelid', on: 'skull' }],
   guides: (at) => [
     { name: 'tail root', at: 'tail' }, { name: 'neck', at: 'skull' }, { name: 'eye', at: 'eye' },

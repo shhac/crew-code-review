@@ -13,7 +13,7 @@ from pathlib import Path
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from art import EyeScale, crop, cut, export, export_with_fur, keyed, rows  # noqa: E402
+from art import EyeScale, crop, cut, export, export_with_fur, keyed, rows, write_outlines  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
 OUT = HERE.parents[1] / 'internal/dashboard/ui/src/lib/theme/aurora'
@@ -70,6 +70,7 @@ def main() -> None:
     fox.foot('fox-toes', crop(keyed(HERE / 'fox-toes.png')), OUT, TOES, HEEL)
     for name, (w, h) in units.items():
         print(f'{name}: {w}x{h}, drawing units {w / RES:.2f}x{h / RES:.2f}')
+    write_outlines(OUT, 'design-docs/aurora/export.py')
 
 
 if __name__ == '__main__':

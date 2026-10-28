@@ -12,6 +12,7 @@ import { moving, type Hog } from './hedgehog';
 import ballArt from './hedgehog-ball.webp';
 import bodyArt from './hedgehog-body.webp';
 import headArt from './hedgehog-head.webp';
+import { HEDGEHOG_BALL, HEDGEHOG_BODY, HEDGEHOG_HAND, HEDGEHOG_HEAD, HEDGEHOG_HIND, HEDGEHOG_LEG } from './outlines';
 import handFurArt from './hedgehog-hand-fur.webp';
 import handArt from './hedgehog-hand.webp';
 import hindFurArt from './hedgehog-hind-fur.webp';
@@ -40,11 +41,11 @@ const EYE = { x: 20.1, y: 10.25 };
 const NOSE = { x: 25.2, y: 11 };
 // The standing drawing, for the lab to lay over the rig: where it sits.
 export const REFERENCE = { x: 1, y: 1, width: 24.42, height: 16.58 };
-const BALL = { name: 'ball', src: ballArt, width: 17, height: 16.58 };
+const BALL = { name: 'ball', src: ballArt, width: 17, height: 16.58, outline: HEDGEHOG_BALL };
 // The front feet are short and broad like little hands, the hind ones
 // longer; each with where its leg comes down onto it.
-const HAND: Foot = { src: handArt, fur: handFurArt, width: 3.42, height: 2, heel: { x: 1.16, y: 0.65 } };
-const HIND_FOOT: Foot = { src: hindArt, fur: hindFurArt, width: 4, height: 2, heel: { x: 1.16, y: 0.65 } };
+const HAND: Foot = { src: handArt, fur: handFurArt, width: 3.42, height: 2, heel: { x: 1.16, y: 0.65 }, outline: HEDGEHOG_HAND };
+const HIND_FOOT: Foot = { src: hindArt, fur: hindFurArt, width: 4, height: 2, heel: { x: 1.16, y: 0.65 }, outline: HEDGEHOG_HIND };
 const LEG_WIDTH = 2.6;
 // Where each leg ends: its heel, as high as the foot under it stands.
 const FEET = GROUND - (HIND_FOOT.height - HIND_FOOT.heel.y);
@@ -66,7 +67,7 @@ const HIDDEN = 1.6;
 const SOLE_FOLD = 30;
 const KNEE = { min: 30, max: 178 };
 const PAW = { min: -60, max: 100 };
-const legArtOn = (foot: Foot): LimbArt => ({ bone: legArt, boneFur: legFurArt, knee: false, overFoot: true, foot });
+const legArtOn = (foot: Foot): LimbArt => ({ bone: legArt, boneFur: legFurArt, boneOutline: HEDGEHOG_LEG, knee: false, overFoot: true, foot });
 const soleOf = (foot: Foot) => ({ kind: 'sole', toes: { x: foot.width - foot.heel.x, y: foot.height - foot.heel.y }, peel: 30, fold: SOLE_FOLD }) as const;
 const HIND = { reach: 0, thigh: 2.3, shin: 2.3, bend: 1, jointLimits: KNEE, fore: false, art: legArtOn(HIND_FOOT), width: LEG_WIDTH, walksOn: soleOf(HIND_FOOT), paw: { limits: PAW } } as const;
 const FORE = { reach: 0.2, thigh: 2.3, shin: 2.3, bend: -1, jointLimits: KNEE, fore: true, art: legArtOn(HAND), width: LEG_WIDTH, walksOn: soleOf(HAND), paw: { limits: PAW } } as const;
@@ -184,7 +185,7 @@ const HOG = tetrapod({ ...MAMMAL, legs: {
   ],
   legs: LEGS,
   ground: () => FEET,
-  order: [picture('body', 'body', bodyArt, BODY), picture('head', 'skull', headArt, HEAD), 'eyelid'],
+  order: [picture('body', 'body', bodyArt, BODY, HEDGEHOG_BODY), picture('head', 'skull', headArt, HEAD, HEDGEHOG_HEAD), 'eyelid'],
   shapes: [{ id: 'eyelid', on: 'skull' }],
   guides: (at) => [
     { name: 'neck', at: { on: 'body', at: NECK } }, { name: 'eye', at: 'eye' }, { name: 'nose', at: 'nose' },

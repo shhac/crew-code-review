@@ -26,7 +26,7 @@ from pathlib import Path
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from art import EyeScale, blob, crop, crop_origin, cut, export, keyed, lum, opaque, search  # noqa: E402
+from art import EyeScale, blob, crop, crop_origin, cut, export, keyed, lum, opaque, search, write_outlines  # noqa: E402
 import numpy as np  # noqa: E402
 from PIL import Image  # noqa: E402
 
@@ -128,6 +128,7 @@ def main() -> None:
     OUT.mkdir(exist_ok=True)
     table()
     wasp()
+    write_outlines(OUT, 'design-docs/fete/export.py')
 
 
 if __name__ == '__main__':

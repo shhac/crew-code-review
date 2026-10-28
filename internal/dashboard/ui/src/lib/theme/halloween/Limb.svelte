@@ -6,6 +6,7 @@
   import type { Leg, Point } from '../spidergait';
   import shinArt from './leg-shin.webp';
   import thighArt from './leg-thigh.webp';
+  import { LEG_SHIN, LEG_THIGH } from './outlines';
 
   export let leg: Leg;
   // The same leg at rest, which settles which way its art faces.
@@ -40,5 +41,5 @@
   $: thigh = bone(leg.hip, leg.knee, THIGH, mirrorThigh);
 </script>
 
-<image href={shinArt} x={shin.offset} y={shin.offset} width={shin.width} height={shin.height} transform={shin.transform} preserveAspectRatio="none" />
-<image href={thighArt} x={thigh.offset} y={thigh.offset} width={thigh.width} height={thigh.height} transform={thigh.transform} preserveAspectRatio="none" />
+<image href={shinArt} x={shin.offset} y={shin.offset} width={shin.width} height={shin.height} transform={shin.transform} preserveAspectRatio="none" data-outline={LEG_SHIN} />
+<image href={thighArt} x={thigh.offset} y={thigh.offset} width={thigh.width} height={thigh.height} transform={thigh.transform} preserveAspectRatio="none" data-outline={LEG_THIGH} />

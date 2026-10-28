@@ -17,7 +17,7 @@ from pathlib import Path
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from art import EyeScale, crop, cut, export, keyed, opaque, place, rescaled, rows  # noqa: E402
+from art import EyeScale, crop, cut, export, keyed, opaque, place, rescaled, rows, write_outlines  # noqa: E402
 import numpy as np  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
@@ -113,6 +113,7 @@ def main() -> None:
         hare.bar(name, pieces[name], OUT, thick)
     for name, (length, heel) in TOES.items():
         hare.foot(name, pieces[name], OUT, length, heel)
+    write_outlines(OUT, 'design-docs/hares/export.py')
 
 
 if __name__ == '__main__':

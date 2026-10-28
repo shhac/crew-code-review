@@ -47,6 +47,7 @@ halo: the exported alpha was inspected composited onto white and in the browser.
 ```sh
 uv run design-docs/christmas/animation/parts-prototype/legs.py
 node design-docs/christmas/animation/parts-prototype/prepare.mjs
+uv run design-docs/outlines.py
 node --experimental-strip-types design-docs/christmas/animation/parts-prototype/render.mjs
 # Export the isolated movement loops:
 node --experimental-strip-types design-docs/christmas/animation/parts-prototype/render.mjs --mode=hop

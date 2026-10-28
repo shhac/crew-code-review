@@ -5,7 +5,7 @@ import type { Gait } from '../rig/gait';
 import { airGoals, insectGait, legLayers, podAlong, standingGoals, strideFor, walkingGoals, type InsectLeg, type LegLook, type Limb } from '../rig/hexapod';
 import { hangAt, hoverBob, pitchAt, type Pitching } from '../rig/insect-flight';
 import { breath } from '../rig/life';
-import { turnAbout, turned, type Layer, type RigPose, type Turn } from '../rig/rig';
+import { turnAbout, turned, type Layer, type Outline, type RigPose, type Turn } from '../rig/rig';
 import { compose } from '../rig/skeleton/compose';
 import { insect, localized, sprawledLegs, type Segments } from '../rig/skeleton/insect';
 import type { Goal, PoseSpec } from '../rig/skeleton/types';
@@ -13,6 +13,7 @@ import { wingBlur, type BlurWing, type WingBeat } from '../rig/wing-blur';
 import { cycleLength } from '../spidergait';
 import abdomenArt from './bee-abdomen.webp';
 import headArt from './bee-head.webp';
+import { BEE_ABDOMEN, BEE_HEAD, BEE_THORAX, BEE_WINGS } from './outlines';
 import thoraxArt from './bee-thorax.webp';
 import wingsArt from './bee-wings.webp';
 
@@ -236,9 +237,9 @@ function hold(b: RigBee, now: number): Hold {
   }
 }
 
-const image = (name: string, src: string, at: typeof HEAD, far = false): Layer => ({ kind: 'image', name, src, ...at, far });
-const nearWings = image('near wings', wingsArt, WINGS);
-const farWings = image('far wings', wingsArt, WINGS, true);
+const image = (name: string, src: string, at: typeof HEAD, outline: Outline, far = false): Layer => ({ kind: 'image', name, src, ...at, far, outline });
+const nearWings = image('near wings', wingsArt, WINGS, BEE_WINGS);
+const farWings = image('far wings', wingsArt, WINGS, BEE_WINGS, true);
 const blurWing = (picture: Layer): BlurWing => ({ picture, hinge: HINGE, axis: WING_AXIS, length: WING_LENGTH });
 
 // One side's wings: folded along the back, fading out as the blur fades in.
@@ -262,7 +263,7 @@ function pollen(limbs: readonly Limb[]): Layer {
 const antenna = (name: string, a: Antenna): Layer[] =>
   [antennaLayer(name, a, ANTENNA_WIDTH + 2 * LOOK.outline, INK), antennaLayer(name, a, ANTENNA_WIDTH, ANTENNA)];
 
-const picture = (id: string, on: string, src: string, box: typeof HEAD) => ({ id, art: { drawn: { src, box } }, at: { kind: 'joint', to: on }, draws: [{ id, z: 0 }] }) as const;
+const picture = (id: string, on: string, src: string, box: typeof HEAD, outline: Outline) => ({ id, art: { drawn: { src, box, outline } }, at: { kind: 'joint', to: on }, draws: [{ id, z: 0 }] }) as const;
 
 // Her skeleton: the body turning about her thorax's middle, where she
 // moves, the abdomen on its waist and the head on its neck, the antennae's
@@ -288,8 +289,8 @@ const BEE = insect({
   ground: GROUND,
   order: [
     { shape: 'far wings', on: 'body' }, { shape: 'far legs', on: 'body' }, { shape: 'far antenna', on: 'head' },
-    picture('abdomen', 'abdomen', abdomenArt, ABDOMEN), picture('head', 'head', headArt, HEAD), { shape: 'near antenna', on: 'head' },
-    picture('thorax', 'body', thoraxArt, THORAX), { shape: 'near legs', on: 'body' }, { shape: 'pollen', on: 'body' }, { shape: 'wings', on: 'body' },
+    picture('abdomen', 'abdomen', abdomenArt, ABDOMEN, BEE_ABDOMEN), picture('head', 'head', headArt, HEAD, BEE_HEAD), { shape: 'near antenna', on: 'head' },
+    picture('thorax', 'body', thoraxArt, THORAX, BEE_THORAX), { shape: 'near legs', on: 'body' }, { shape: 'pollen', on: 'body' }, { shape: 'wings', on: 'body' },
   ],
   stands: 'thorax (moves here)',
   guides: (code) => [

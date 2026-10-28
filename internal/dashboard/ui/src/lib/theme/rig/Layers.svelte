@@ -8,15 +8,17 @@
 
   // A piece keeps its node by its slot's id, so a change of draw order moves
   // it rather than loading another picture into it; every other layer is
-  // kept by its place in the list, as an unkeyed list keeps it.
+  // kept by its place in the list, as an unkeyed list keeps it. Each picture
+  // carries where its art lies in its box (data-outline), for the checks of
+  // what the page's drawings cover; it never changes, so it is written once.
   const slot = (layer: Layer, i: number) => (layer.kind === 'piece' || layer.kind === 'frame' ? `${layer.kind} ${layer.id}` : i);
 </script>
 
 {#each layers as layer, i (slot(layer, i))}
   {#if layer.kind === 'image' && layer.far}
-    <image class="far" href={layer.src} x={layer.x} y={layer.y} width={layer.width} height={layer.height} visibility={layer.hidden ? 'hidden' : undefined} />
+    <image class="far" href={layer.src} x={layer.x} y={layer.y} width={layer.width} height={layer.height} visibility={layer.hidden ? 'hidden' : undefined} data-outline={layer.outline} />
   {:else if layer.kind === 'image'}
-    <image href={layer.src} x={layer.x} y={layer.y} width={layer.width} height={layer.height} visibility={layer.hidden ? 'hidden' : undefined} />
+    <image href={layer.src} x={layer.x} y={layer.y} width={layer.width} height={layer.height} visibility={layer.hidden ? 'hidden' : undefined} data-outline={layer.outline} />
   {:else if layer.kind === 'legs'}
     <g data-legs={layer.fur ? 'fur' : 'outlined'} class:far={layer.far}>
       {#each layer.legs as leg}
@@ -29,7 +31,7 @@
     <circle data-lid cx={layer.at.x} cy={layer.at.y} r={layer.r} fill={layer.fur.fill} />
     <path d="M{layer.at.x - layer.r} {layer.at.y}h{2 * layer.r}" stroke={layer.fur.outline} stroke-width={layer.r * 0.6} />
   {:else if layer.kind === 'piece'}
-    <image class:far={layer.far} href={layer.src} x={layer.box.x} y={layer.box.y} width={layer.box.width} height={layer.box.height} preserveAspectRatio={layer.aspect === 'none' ? 'none' : undefined} transform={matrixText(layer.matrix)} opacity={layer.opacity} visibility={layer.hidden ? 'hidden' : undefined} data-leg={layer.leg ? '' : undefined} />
+    <image class:far={layer.far} href={layer.src} x={layer.box.x} y={layer.box.y} width={layer.box.width} height={layer.box.height} preserveAspectRatio={layer.aspect === 'none' ? 'none' : undefined} transform={matrixText(layer.matrix)} opacity={layer.opacity} visibility={layer.hidden ? 'hidden' : undefined} data-leg={layer.leg ? '' : undefined} data-outline={layer.outline} />
   {:else if layer.kind === 'frame'}
     <g transform={matrixText(layer.matrix)}><Layers layers={layer.layers} /></g>
   {:else if layer.kind === 'stroke'}

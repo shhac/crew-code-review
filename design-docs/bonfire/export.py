@@ -19,7 +19,7 @@ from pathlib import Path
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from art import EyeScale, crop, cut, export, export_with_fur, keyed, lum, pale, poses  # noqa: E402
+from art import EyeScale, crop, cut, export, export_with_fur, keyed, lum, pale, poses, write_outlines  # noqa: E402
 import numpy as np  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
@@ -92,6 +92,7 @@ def main() -> None:
         print(f'{name}: display {w:g}x{h:g}')
     for name, (w, h) in units.items():
         print(f'{name}: {w}x{h}, drawing units {w / RES:.2f}x{h / RES:.2f}')
+    write_outlines(OUT, 'design-docs/bonfire/export.py')
 
 
 if __name__ == '__main__':

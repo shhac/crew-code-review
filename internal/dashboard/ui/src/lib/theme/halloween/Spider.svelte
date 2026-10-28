@@ -8,6 +8,7 @@
   // stepping in turn, and generated frames could not keep them in step.
   import { crouched, cycleLength, legsAt, restingLeg, tucked, type LegSpec } from '../spidergait';
   import Limb from './Limb.svelte';
+  import { SPIDER_BODY } from './outlines';
   import body from './spider-body.webp';
   import hangingStrip from './spider-hanging.webp';
 
@@ -71,7 +72,7 @@
         {#each far as leg, i}<Limb {leg} rest={farRest[i]} />{/each}
       </g>
     {/if}
-    {#if !hidden.includes('body')}<image href={body} x="16" y={11 + bob + sink} width="38" height="22.3" />{/if}
+    {#if !hidden.includes('body')}<image href={body} x="16" y={11 + bob + sink} width="38" height="22.3" data-outline={SPIDER_BODY} />{/if}
     {#if !hidden.includes('near legs')}{#each near as leg, i}<Limb {leg} rest={nearRest[i]} />{/each}{/if}
   </svg>
 {/if}

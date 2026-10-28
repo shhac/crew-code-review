@@ -28,7 +28,7 @@ import numpy as np
 from PIL import Image
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from art import EyeScale, blob, crop, cut, export, keyed, opaque, pale, poses  # noqa: E402
+from art import EyeScale, blob, crop, cut, export, keyed, opaque, pale, poses, write_outlines  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
 OUT = HERE.parents[1] / 'internal/dashboard/ui/src/lib/theme/bluebells'
@@ -174,6 +174,7 @@ def bee() -> None:
 def main() -> None:
     flowers()
     bee()
+    write_outlines(OUT, 'design-docs/bluebells/export.py')
 
 
 if __name__ == '__main__':

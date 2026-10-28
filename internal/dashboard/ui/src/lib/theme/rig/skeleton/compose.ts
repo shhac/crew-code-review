@@ -226,7 +226,7 @@ function paints(piece: Piece, draw: Draw, show: Shown | undefined, place: Placin
     const id = variants.length > 1 ? `${draw.id} (${key})` : draw.id;
     return {
       kind: 'piece', id, name: draw.part ?? draw.id, src, box, aspect: piece.at.kind === 'bar' ? 'none' : 'default', matrix: product(mirror(art.seen), place.matrix),
-      far: piece.side === 'far' || undefined, ...look, ...(leg ? { leg } : {}),
+      far: piece.side === 'far' || undefined, ...look, ...(leg ? { leg } : {}), ...(art.outline ? { outline: art.outline } : {}),
     };
   });
 }
@@ -375,7 +375,8 @@ export function compose(body: Body, poseAt: (now: number) => PoseSpec, now: numb
     angle: pose.joints[j.id]?.angle ?? 0, ...(j.limits ? { limits: j.limits } : {}),
   }));
   // How low a limb's foot reaches: its foot's pictures as seen, or the foot
-  // itself where nothing is hung on it.
+  // itself where nothing is hung on it. By their boxes, not their art: a
+  // box's bottom is the sole a rig stands on the ledge.
   const posedLimbs: PosedLimb[] = limbs.map(({ limb, goal, now: l }, n) => {
     const feet = layout.feet[n];
     const onFoot = painted.flatMap(({ piece, layers: drawn }) => (piece !== undefined && feet.includes(piece) ? drawn.flatMap((d) => (d.kind === 'piece' && seenLayer(d) ? [d] : [])) : []));

@@ -19,7 +19,7 @@ import numpy as np
 from PIL import Image
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from art import EyeScale, crop, cut, export, export_with_fur, opaque, pale  # noqa: E402
+from art import EyeScale, crop, cut, export, export_with_fur, opaque, pale, write_outlines  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
 OUT = HERE.parents[1] / 'internal/dashboard/ui/src/lib/theme/valentine'
@@ -118,6 +118,7 @@ def main() -> None:
     open_hand = crop(cupid('cupid-hand-open'))
     w, h = export_with_fur(open_hand, OUT, 'cupid-hand-open', OPEN_HAND * RES / open_hand.shape[1])
     print(f'cupid-hand-open: {w / RES:.2f}x{h / RES:.2f} units')
+    write_outlines(OUT, 'design-docs/valentine/export.py')
 
 
 if __name__ == '__main__':

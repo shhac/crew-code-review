@@ -7,7 +7,7 @@ import type { Point } from '../../pointer';
 import type { AirLegs, BirdLeg } from '../bird';
 import type { SprawledLeg } from '../hexapod';
 import type { Limb, QuadLeg, Step } from '../gait';
-import type { Frame, Layer, Turn } from '../rig';
+import type { Frame, Layer, Outline, Turn } from '../rig';
 
 export type Side = 'near' | 'far';
 export type Box = { x: number; y: number; width: number; height: number };
@@ -136,12 +136,13 @@ export type PoseSpec = {
 export type Drawn = readonly Layer[] | ((posed: { limb: (id: string) => Limb; local: (p: Point) => Point }) => readonly Layer[]);
 
 // A variant of a piece's picture, its box in rest space (or in its joint's
-// own frame), and the same picture as fur alone, outline taken out, if it
-// has one. `seen`: which way the joint `from` is foreshortened in the
-// picture (a near wing's underside is of it raised, 1; its upper side, of
-// it lowered, -1); posed foreshortened the other way, it is drawn mirrored
-// across the joint's line, on the side it is a picture of.
-export type Art = { src: string; box: Box; fur?: string; seen?: { from: string; sign: 1 | -1 } };
+// own frame), the same picture as fur alone, outline taken out, if it has
+// one, and where its art lies in the box (both pictures alike). `seen`:
+// which way the joint `from` is foreshortened in the picture (a near wing's
+// underside is of it raised, 1; its upper side, of it lowered, -1); posed
+// foreshortened the other way, it is drawn mirrored across the joint's
+// line, on the side it is a picture of.
+export type Art = { src: string; box: Box; fur?: string; outline?: Outline; seen?: { from: string; sign: 1 | -1 } };
 
 export type Attachment =
   // A joint's frame. Box in rest space, or `local` in the joint's own frame
