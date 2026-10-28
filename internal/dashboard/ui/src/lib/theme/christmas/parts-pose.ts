@@ -1,5 +1,6 @@
 import manifest from './robin-parts/manifest.json' with { type: 'json' };
 import { smooth } from '../math';
+import { jointBeside } from '../rig/limb';
 import { transformPoint } from './parts-affine';
 
 const pulse = (time: number, start: number, duration: number) => {
@@ -8,7 +9,8 @@ const pulse = (time: number, start: number, duration: number) => {
 };
 
 export const partsModes = ['alive', 'still', 'breathing', 'blink', 'tilt', 'tail', 'hop', 'peck', 'flight', 'flight-up', 'flight-high-fall', 'flight-forward', 'flight-low-fall', 'flight-down', 'flight-low-rise', 'flight-recovery', 'flight-high-rise'];
-export type PartId = 'body' | 'body-peck' | 'head' | 'neck' | 'wing' | 'tail' | 'leg-near' | 'leg-far' | 'eyelid'
+export type PartId = 'body' | 'body-peck' | 'head' | 'neck' | 'wing' | 'tail' | 'eyelid'
+  | 'leg-near-drumstick' | 'leg-near-tarsus' | 'leg-near-toes' | 'leg-far-drumstick' | 'leg-far-tarsus' | 'leg-far-toes'
   | 'wing-up' | 'wing-down' | 'wing-far-up' | 'wing-far-down' | 'wing-forward' | 'wing-recovery'
   | 'wing-far-forward' | 'wing-far-recovery' | 'leg-near-tucked' | 'leg-far-tucked' | 'wing-shoulder'
   | 'wing-high-fall' | 'wing-low-fall' | 'wing-low-rise' | 'wing-high-rise'
@@ -107,14 +109,16 @@ export function mixPartsPose(from: PartsPose, to: PartsPose, amount: number): Pa
 // the lab's skeleton. The head's small turns (a tilt, a look up) are at the
 // skull, behind the eye; past those it nods from the neck's base, as a
 // peck does. The body leans about the hip and breathes from its belly's
-// floor. A grounded leg squashes from its foot and, tucked up in a hop,
-// turns where it leaves the belly; a tucked flight leg turns there too.
+// floor. A grounded leg bends at its knee in the belly and its ankle where
+// it leaves it, and, tucked up in a hop, turns at the ankle; a tucked flight
+// leg turns where it leaves the belly.
 const at = ([x, y]: readonly number[]): readonly [number, number] => [x, y];
 const { joints } = manifest;
 export const partsPivots = {
   skull: at(joints.skull), neckBase: at(joints.neckBase), hip: at(joints.hip), body: at(joints.body), tail: at(joints.tail),
   shoulder: at(joints.shoulder), farShoulder: at(joints.farShoulder),
-  nearLegRoot: at(joints.nearLegRoot), farLegRoot: at(joints.farLegRoot), nearFoot: at(joints.nearFoot), farFoot: at(joints.farFoot),
+  nearKnee: at(joints.nearKnee), nearAnkle: at(joints.nearAnkle), nearToes: at(joints.nearToes),
+  farKnee: at(joints.farKnee), farAnkle: at(joints.farAnkle), farToes: at(joints.farToes), nearFoot: at(joints.nearFoot), farFoot: at(joints.farFoot),
   nearTucked: at(joints.nearTucked), farTucked: at(joints.farTucked),
 };
 // How far the head turns at the skull at most, either way; the rest of a
@@ -125,21 +129,52 @@ export const headTurns = (angle: number) => {
   return { skull, neck: angle - skull };
 };
 
+// A standing leg as a bird's: the knee in the belly, carried by the body
+// as it crouches and leans (not by its breath, which is the belly's), the
+// drumstick down and back from it to the ankle, and the bare tarsus down
+// and forward to the toes, which stay planted. Each bone keeps its length,
+// so a crouch closes the ankle and bends the knee, as a bird's do, rather
+// than squashing the leg. Each piece is turned about its joint from where it
+// stands at rest.
+type Pt = readonly [number, number];
+type StandingLeg = { knee: Pt; ankle: Pt; toes: Pt };
+const apart = (a: Pt, b: Pt) => Math.hypot(b[0] - a[0], b[1] - a[1]);
+const direction = (a: Pt, b: Pt) => Math.atan2(b[1] - a[1], b[0] - a[0]) * 180 / Math.PI;
+const ankleAt = (leg: StandingLeg, knee: Pt, side: 1 | -1): Pt => {
+  const at = jointBeside({ x: knee[0], y: knee[1] }, { x: leg.toes[0], y: leg.toes[1] }, apart(leg.knee, leg.ankle), apart(leg.ankle, leg.toes), side);
+  return [at.x, at.y];
+};
+// Of the two places the ankle could be, the one where it stands at rest:
+// behind the line from the knee to the toes.
+const ankleSide = (leg: StandingLeg): 1 | -1 => (apart(ankleAt(leg, leg.knee, 1), leg.ankle) <= apart(ankleAt(leg, leg.knee, -1), leg.ankle) ? 1 : -1);
+const NEAR_LEG: StandingLeg = { knee: partsPivots.nearKnee, ankle: partsPivots.nearAnkle, toes: partsPivots.nearToes };
+const FAR_LEG: StandingLeg = { knee: partsPivots.farKnee, ankle: partsPivots.farAnkle, toes: partsPivots.farToes };
+const SIDES = { near: ankleSide(NEAR_LEG), far: ankleSide(FAR_LEG) };
+
+// The leg's pieces' turns, the body's bones placed by `skeletal`; tucked
+// up in a hop, the whole leg turned `tuck` degrees at the ankle.
+function standing(leg: StandingLeg, side: 1 | -1, skeletal: string, tuck: number) {
+  const [kx, ky] = transformPoint(skeletal, leg.knee[0], leg.knee[1]);
+  const knee: Pt = [kx, ky], ankle = ankleAt(leg, knee, side);
+  const tucked = `rotate(${tuck} ${ankle[0]} ${ankle[1]})`;
+  return {
+    drumstick: `${tucked} translate(${ankle[0] - leg.ankle[0]} ${ankle[1] - leg.ankle[1]}) rotate(${direction(ankle, knee) - direction(leg.ankle, leg.knee)} ${leg.ankle[0]} ${leg.ankle[1]})`,
+    tarsus: `${tucked} rotate(${direction(leg.toes, ankle) - direction(leg.toes, leg.ankle)} ${leg.toes[0]} ${leg.toes[1]})`,
+    toes: tucked,
+  };
+}
+
 // Shared by the live SVG rig and the deterministic exported motion preview.
 export function partsTransforms(pose: ReturnType<typeof partsPose>, exploded = false) {
   const wing = (stroke: ReturnType<typeof wingStroke>, x: number, y: number) =>
     `translate(${x} ${y}) rotate(${stroke.angle - stroke.drawing.angle - pose.lean}) scale(${stroke.span / stroke.drawing.span}) translate(${-x} ${-y})`;
   const { skull: [kx, ky], neckBase: [nx, ny], hip: [px, py], body: [bx, by], tail: [tx, ty], shoulder: [sx, sy], farShoulder: [fx, fy],
-    nearLegRoot, farLegRoot, nearFoot, farFoot, nearTucked, farTucked } = partsPivots;
+    nearTucked, farTucked } = partsPivots;
   const turns = headTurns(pose.headAngle);
-  const body = `translate(0 ${pose.crouch}) rotate(${pose.lean} ${px} ${py}) translate(${bx} ${by}) scale(${1 + pose.breathing * .012} ${1 + pose.breathing * .018}) translate(${-bx} ${-by})`;
-  // A grounded leg stays on its body: turned about its foot to where the
-  // body carries the top of it as it leans, as the ankle flexes.
-  const attached = (root: readonly [number, number], foot: readonly [number, number]) => {
-    const [x, y] = transformPoint(body, root[0], root[1]);
-    const turn = Math.atan2(y - foot[1], x - foot[0]) - Math.atan2(root[1] - foot[1], root[0] - foot[0]);
-    return `rotate(${turn * 180 / Math.PI} ${foot[0]} ${foot[1]})`;
-  };
+  const skeletal = `translate(0 ${pose.crouch}) rotate(${pose.lean} ${px} ${py})`;
+  const body = `${skeletal} translate(${bx} ${by}) scale(${1 + pose.breathing * .012} ${1 + pose.breathing * .018}) translate(${-bx} ${-by})`;
+  const near = standing(NEAR_LEG, SIDES.near, skeletal, pose.tuck * 12), far = standing(FAR_LEG, SIDES.far, skeletal, -pose.tuck * 10);
+  const leg = (transform: string, spread: string) => (exploded ? spread : transform);
   return {
     rig: exploded ? '' : `translate(${-5 * pose.flightMix} ${pose.lift + (-12 + pose.bob) * pose.flightMix})`,
     body: exploded ? 'translate(0 15)' : body,
@@ -152,8 +187,8 @@ export function partsTransforms(pose: ReturnType<typeof partsPose>, exploded = f
     // The cover's feathers point down-left (150 degrees) in its source.
     // Align them to the continuous wing trajectory, not the selected drawing.
     shoulder: exploded ? 'translate(-17 -8)' : `rotate(${pose.nearWing.angle + 360 - 150 - pose.lean} ${sx} ${sy})`,
-    farLeg: exploded ? 'translate(-8 5)' : `${attached(farLegRoot, farFoot)} translate(${farFoot[0]} ${farFoot[1]}) scale(1 ${1 - pose.crouch * .055}) translate(${-farFoot[0]} ${-farFoot[1]}) rotate(${-pose.tuck * 10} ${farLegRoot[0]} ${farLegRoot[1]})`,
-    nearLeg: exploded ? 'translate(8 5)' : `${attached(nearLegRoot, nearFoot)} translate(${nearFoot[0]} ${nearFoot[1]}) scale(1 ${1 - pose.crouch * .055}) translate(${-nearFoot[0]} ${-nearFoot[1]}) rotate(${pose.tuck * 12} ${nearLegRoot[0]} ${nearLegRoot[1]})`,
+    farDrumstick: leg(far.drumstick, 'translate(-8 5)'), farTarsus: leg(far.tarsus, 'translate(-8 5)'), farToes: leg(far.toes, 'translate(-8 5)'),
+    nearDrumstick: leg(near.drumstick, 'translate(8 5)'), nearTarsus: leg(near.tarsus, 'translate(8 5)'), nearToes: leg(near.toes, 'translate(8 5)'),
     flightFarLeg: exploded ? 'translate(-8 5)' : `rotate(-28 ${farTucked[0]} ${farTucked[1]})`,
     flightNearLeg: exploded ? 'translate(8 5)' : `rotate(-28 ${nearTucked[0]} ${nearTucked[1]})`,
   };
@@ -176,7 +211,10 @@ export function partsLayers(pose: ReturnType<typeof partsPose>, exploded = false
   return [
     ...(airborne ? [fade(flightWing(true, pose.farWing, t.farWing), pose.flightMix),
       fade(layer('leg-far-tucked', t.rig, t.body, t.flightFarLeg), pose.flightMix)] : []),
-    ...(grounded ? [fade(layer('leg-far', t.rig, t.farLeg), 1 - pose.flightMix)] : []),
+    // Both legs come down from under the belly; only the near toes are
+    // drawn over the rest.
+    ...(grounded ? [layer('leg-far-drumstick', t.rig, t.farDrumstick), layer('leg-far-tarsus', t.rig, t.farTarsus), layer('leg-far-toes', t.rig, t.farToes),
+      layer('leg-near-drumstick', t.rig, t.nearDrumstick), layer('leg-near-tarsus', t.rig, t.nearTarsus)].map((l) => fade(l, 1 - pose.flightMix)) : []),
     { ...layer(pose.peckMix === 1 ? 'body-peck' : 'body', t.rig, t.body),
       ...(pose.peckMix > 0 && pose.peckMix < 1 ? { nextId: 'body-peck' as const, blend: pose.peckMix } : {}) },
     layer('tail', t.rig, t.body, t.tail),
@@ -187,7 +225,7 @@ export function partsLayers(pose: ReturnType<typeof partsPose>, exploded = false
     ...(grounded ? [fade(layer('wing', t.rig, t.body, t.foldedWing), 1 - pose.flightMix)] : []),
     ...(airborne ? [fade(flightWing(false, pose.nearWing, t.wing), pose.flightMix),
       fade(layer('wing-shoulder', t.rig, t.body, t.shoulder), pose.flightMix)] : []),
-    ...(grounded ? [fade(layer('leg-near', t.rig, t.nearLeg), 1 - pose.flightMix)] : []),
+    ...(grounded ? [fade(layer('leg-near-toes', t.rig, t.nearToes), 1 - pose.flightMix)] : []),
   ];
 }
 
@@ -197,9 +235,10 @@ export function partsLayers(pose: ReturnType<typeof partsPose>, exploded = false
 // in the new place until the file arrives, a flash wherever it is uncached.
 export const partsSlots: readonly (readonly PartId[])[] = [
   ['wing-far-up', 'wing-far-high-fall', 'wing-far-forward', 'wing-far-low-fall', 'wing-far-down', 'wing-far-low-rise', 'wing-far-recovery', 'wing-far-high-rise'],
-  ['leg-far-tucked'], ['leg-far'], ['body', 'body-peck'], ['tail'], ['neck'], ['head'], ['eyelid'], ['leg-near-tucked'], ['wing'],
+  ['leg-far-tucked'], ['leg-far-drumstick'], ['leg-far-tarsus'], ['leg-far-toes'], ['leg-near-drumstick'], ['leg-near-tarsus'],
+  ['body', 'body-peck'], ['tail'], ['neck'], ['head'], ['eyelid'], ['leg-near-tucked'], ['wing'],
   ['wing-up', 'wing-high-fall', 'wing-forward', 'wing-low-fall', 'wing-down', 'wing-low-rise', 'wing-recovery', 'wing-high-rise'],
-  ['wing-shoulder'], ['leg-near'],
+  ['wing-shoulder'], ['leg-near-toes'],
 ];
 
 // The plan laid onto the fixed slots: a slot the plan leaves out, and a

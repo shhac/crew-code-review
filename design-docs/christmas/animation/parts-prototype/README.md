@@ -16,8 +16,8 @@ motion preference on mount; the checkbox permits an explicit lab override.
 
 ## Artwork
 
-Twenty-eight active components are exported from `sources/`, with earlier artwork revisions retained: torso, head, neck,
-foreground folded wing, tail, foreground leg/foot, background leg/foot and closed
+Thirty-two active components are exported from `sources/`, with earlier artwork revisions retained: torso, head, neck,
+foreground folded wing, tail, each standing leg as three bones (drumstick, tarsus, toes) and closed
 eyelid. The open eye and beak remain part of the head. The far folded wing is
 occluded in the standing view. Eight flight profiles per wing and two flight legs are generated separately against the accepted assembly. The raised/lowered wings and hanging toes also use the user-supplied flight photograph as an anatomy reference while retaining the illustrated style. A pecking torso lowers
 the upright neck attachment while retaining the standing belly baseline.
@@ -45,6 +45,7 @@ halo: the exported alpha was inspected composited onto white and in the browser.
 ## Reproduction
 
 ```sh
+uv run design-docs/christmas/animation/parts-prototype/legs.py
 node design-docs/christmas/animation/parts-prototype/prepare.mjs
 node --experimental-strip-types design-docs/christmas/animation/parts-prototype/render.mjs
 # Export the isolated movement loops:
@@ -56,7 +57,7 @@ npm --prefix internal/dashboard/ui test
 make dashboard
 ```
 
-Preparation uses ImageMagick 7.1.2-32 and Node, with no Pillow requirement.
+Preparation uses ImageMagick 7.1.2-32 (7.1.2-34 writes the same files) and Node, with no Pillow requirement; `legs.py` alone, which cuts the standing legs from their keyed sheet, pins Pillow and NumPy as the theme export scripts do.
 The render command requires Node 22.6+ for TypeScript stripping. A harmless
 MODULE_TYPELESS_PACKAGE_JSON warning can appear because the dashboard package
 does not declare its module type.
@@ -74,13 +75,24 @@ bounding-box sizes.
 Preparation exports lossless WebP and a manifest recording original bounds,
 source/export SHA-256 hashes, native dimensions and registration. Motion uses
 SVG groups containing the raster artwork. The legs are outside the breathing
-group, so the feet stay planted. In this right-facing view the near leg is on
-the left: it draws above the torso, while the far leg draws behind it. Their
-component widths are 15.2 and 14.5 native pixels, respectively. The near leg
-sits three pixels farther right than the preceding revision, overlapping the
-belly outline, and its foot registers at approximately y=102.1 versus the far
-foot's y=101.0. Different component aspect ratios and torso overlap make full
-image height a poor comparison for the visible legs. The folded wing is 59
+group, so the feet stay planted. Each standing leg is three pieces on a bird's
+bones (2026-10-28, `legs.py` and `generation-legs.json`): the knee in the
+belly, carried by the body as it crouches and leans, the drumstick's
+feathered end down and back from it to the ankle, where the leg leaves the
+belly, and the bare tarsus down and forward to the toes' pad, the toes
+planted. Each bone keeps its length (tibiotarsus 1.4 times the tarsus, as a
+robin's), so a crouch closes the ankle and bends the knee rather than
+squashing the leg, as the one-piece legs were squashed to 72.5% of their
+height. One sheet, `sources/robin-legs-sheet.png`, draws the three pieces
+straight; `legs.py` keys it, turns each to the angle its bone stands at
+rest and writes it as a source registered by its joint, the far leg's a
+shade darker (0.8), and its joints into the manifest. The toes are as wide
+as the one-piece legs' toes (12.4 units) and the claws come down where
+theirs did; the tarsi keep their slope. In this right-facing view the near
+leg is on the left; both legs' drumsticks and tarsi draw behind the torso,
+coming down from under the belly, and only the near toes draw over the rest.
+The one-piece legs (`leg-near.png`, `leg-far.png`) are kept in `sources/`
+but no longer exported. The folded wing is 59
 native pixels wide (up from 55), positioned at x=29, y=32 with a shoulder pivot
 at (79, 43). It overlaps the back bump while sitting below the head; the latest
 adjustment moves it two pixels left and 2.5 pixels down without changing size.
@@ -112,7 +124,9 @@ Live and exported views share both the camera and the complete layer plan.
 ## Movement registration
 
 - Hop: a short planted anticipation, a 25-native-pixel lift with both feet,
-  slight independent leg curl, then a landing compression and recovery.
+  slight independent leg curl (each whole leg turned at its ankle), then a
+  landing compression and recovery; each crouch bends the legs at their
+  joints.
 - Peck: a 20-degree torso lean and a lower neck pivot at (82, 52) let the
   head reach the ground with three short taps. The torso remains above the
   feet. Both foot anchors remain planted during the whole motion.

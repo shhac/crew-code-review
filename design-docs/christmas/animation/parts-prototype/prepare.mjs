@@ -11,6 +11,7 @@ const magick = (...args) => execFileSync('magick', args, { encoding: 'utf8' }).t
 const hash = file => createHash('sha256').update(readFileSync(file)).digest('hex');
 // Native registration is anatomical, manually calibrated against the canonical.
 // Each generated component has its own scale; variants of a component must share it.
+const legs = JSON.parse(readFileSync(resolve(here, 'sources', 'legs-registration.json'), 'utf8'));
 const placements = {
   body: { x: 35, y: 25, width: 75, pivot: [64, 83] },
   // The shortened peck attachment keeps the same belly baseline as standing.
@@ -21,11 +22,6 @@ const placements = {
   // The root edit retains the original source canvas. Preserve that registration
   // instead of scaling/recentring the tail when its feathered alpha bounds change.
   tail: { source: 'tail-feather-root.png', x: 8, y: 58, width: 43, pivot: [46, 65], registrationBounds: [97, 174, 1399, 691] },
-  // The visible near leg sits on the left in this right-facing view.
-  // Compare the visible feet rather than full-image height; near width +5%.
-  // The near foot sits slightly lower to reflect its position in perspective.
-  'leg-near': { x: 57, y: 85, width: 15.2, pivot: [64, 99.1] },
-  'leg-far': { x: 70, y: 78.8, width: 14.5, pivot: [78, 98] },
   // Align the drawn lid, which is off-centre within its feather patch, to the
   // open eye at approximately (98.1, 24.0). Both inherit the head transform.
   // The feather patch must also cover the entire open-eye perimeter.
@@ -51,7 +47,22 @@ const placements = {
   'wing-shoulder': { x: 58.8, y: 35.71, width: 28, pivot: [79, 43] },
   'leg-near-tucked': { source: 'leg-near-flight-anatomy.png', x: 63.11, y: 85.14, width: 16.5, pivot: [65.85, 88.61] },
   'leg-far-tucked': { source: 'leg-far-flight-anatomy.png', x: 75.61, y: 78.1, width: 15, pivot: [77.71, 81.75] },
-
+  // A standing leg is three pieces, each turned to its bone and registered
+  // by its joint, as the flight wings are (legs.py cuts them and measures
+  // where): the drumstick's end and the tarsus from the ankle, the toes
+  // from their pad.
+  ...legs.parts,
+};
+// Where each part turns, in the robin's units, measured on the drawing: the
+// rig (parts-pose.ts) and the lab's skeleton read them. A leg's knee is in
+// the belly, its ankle where the tarsus leaves it, its toes' pad where the
+// tarsus comes down, its foot where it stands.
+const joints = {
+  skull: [88, 36], neckBase: [84, 52], hip: [64, 76], body: [64, 83], tail: [46, 65],
+  shoulder: [79, 43], farShoulder: [90, 42],
+  ...legs.joints,
+  nearFoot: [64, 102.1], farFoot: [78, 101],
+  nearTucked: [65.85, 88.61], farTucked: [77.71, 81.75],
 };
 const parts = {};
 for (const [id, placement] of Object.entries(placements)) {
@@ -90,5 +101,5 @@ for (const [id, placement] of Object.entries(placements)) {
     sourceSha256: hash(source), sha256: hash(target) };
 }
 writeFileSync(resolve(output, 'manifest.json'), JSON.stringify({ version: 1, status: 'prototype',
-  canvas: [128, 112], scale: 0.35, anchor: [64, 100], parts }, null, 2) + '\n');
+  canvas: [128, 112], scale: 0.35, anchor: [64, 100], joints, parts }, null, 2) + '\n');
 console.log('Prepared ' + Object.keys(parts).length + ' alpha-bounded components.');

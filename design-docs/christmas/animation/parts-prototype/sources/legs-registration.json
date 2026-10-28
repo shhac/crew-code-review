@@ -1,0 +1,126 @@
+{
+  "joints": {
+    "nearKnee": [
+      67.17,
+      78.86
+    ],
+    "nearAnkle": [
+      60.12,
+      88.93
+    ],
+    "nearToes": [
+      63.51,
+      97.0
+    ],
+    "farKnee": [
+      80.45,
+      77.68
+    ],
+    "farAnkle": [
+      73.4,
+      87.75
+    ],
+    "farToes": [
+      76.34,
+      96.0
+    ]
+  },
+  "parts": {
+    "leg-near-drumstick": {
+      "source": "leg-near-drumstick.png",
+      "rootSource": [
+        337,
+        670
+      ],
+      "tipSource": [
+        405.94,
+        571.53
+      ],
+      "projectedSpan": 2.7705,
+      "pivot": [
+        60.12,
+        88.93
+      ]
+    },
+    "leg-near-tarsus": {
+      "source": "leg-near-tarsus.png",
+      "rootSource": [
+        327,
+        395
+      ],
+      "tipSource": [
+        474.18,
+        745.37
+      ],
+      "projectedSpan": 8.7591,
+      "pivot": [
+        60.12,
+        88.93
+      ]
+    },
+    "leg-near-toes": {
+      "source": "leg-near-toes.png",
+      "rootSource": [
+        427,
+        635
+      ],
+      "tipSource": [
+        527.0,
+        635.0
+      ],
+      "projectedSpan": 2.3048,
+      "pivot": [
+        63.51,
+        97.0
+      ]
+    },
+    "leg-far-drumstick": {
+      "source": "leg-far-drumstick.png",
+      "rootSource": [
+        337,
+        670
+      ],
+      "tipSource": [
+        405.94,
+        571.53
+      ],
+      "projectedSpan": 2.7705,
+      "pivot": [
+        73.4,
+        87.75
+      ]
+    },
+    "leg-far-tarsus": {
+      "source": "leg-far-tarsus.png",
+      "rootSource": [
+        327,
+        395
+      ],
+      "tipSource": [
+        454.57,
+        752.98
+      ],
+      "projectedSpan": 8.7591,
+      "pivot": [
+        73.4,
+        87.75
+      ]
+    },
+    "leg-far-toes": {
+      "source": "leg-far-toes.png",
+      "rootSource": [
+        427,
+        635
+      ],
+      "tipSource": [
+        527.0,
+        635.0
+      ],
+      "projectedSpan": 2.3048,
+      "pivot": [
+        76.34,
+        96.0
+      ]
+    }
+  }
+}

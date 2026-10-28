@@ -23,15 +23,15 @@ it.each(['perch', 'alert', 'flight'] as const)('renders the %s pose using layere
   if (pose === 'flight') {
     expect(shown(body)).toContain('wing-up');
     expect(shown(body)).toContain('leg-near-tucked');
-    expect(shown(body)).not.toContain('leg-near');
-  } else expect(shown(body)).toContain('leg-near');
+    expect(shown(body)).not.toContain('leg-near-toes');
+  } else expect(shown(body)).toContain('leg-near-toes');
 });
 
 it('holds the standing geometry under reduced motion, even with stale flight articulation', () => {
   const { body } = render(RobinArt, { props: { pose: 'flight', articulation: partsPose(300, 'flight'), reduced: true } });
   expect(body).toContain('data-flight-weight="0"');
   expect(body).toContain('data-head-angle="0"');
-  expect(shown(body)).toContain('leg-near');
+  expect(shown(body)).toContain('leg-near-toes');
   expect(shown(body)).not.toContain('wing-down');
 });
 

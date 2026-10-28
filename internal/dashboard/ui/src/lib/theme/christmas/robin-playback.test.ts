@@ -41,7 +41,7 @@ it.each([450, 600, 750])('joins standing and flight without a body jump over a %
     expect(pose.flightMix).toBeGreaterThanOrEqual(0);
     expect(pose.flightMix).toBeLessThanOrEqual(1);
     if (pose.flightMix > 0 && pose.flightMix < 1) {
-      const standingLeg = layers.find(layer => layer.id === 'leg-near')!;
+      const standingLeg = layers.find(layer => layer.id === 'leg-near-toes')!;
       const tuckedLeg = layers.find(layer => layer.id === 'leg-near-tucked')!;
       expect(standingLeg.opacity! + tuckedLeg.opacity!).toBeCloseTo(1);
     }

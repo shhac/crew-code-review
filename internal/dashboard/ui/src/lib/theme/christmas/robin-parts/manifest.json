@@ -39,13 +39,29 @@
       90,
       42
     ],
-    "nearLegRoot": [
-      59,
-      86
+    "nearKnee": [
+      67.17,
+      78.86
     ],
-    "farLegRoot": [
-      72,
-      80
+    "nearAnkle": [
+      60.12,
+      88.93
+    ],
+    "nearToes": [
+      63.51,
+      97
+    ],
+    "farKnee": [
+      80.45,
+      77.68
+    ],
+    "farAnkle": [
+      73.4,
+      87.75
+    ],
+    "farToes": [
+      76.34,
+      96
     ],
     "nearFoot": [
       64,
@@ -191,46 +207,6 @@
       ],
       "sourceSha256": "41f1ebae03a974270b668a8e64391ac6033fd8a5970cbd19b75083f91e5f7bad",
       "sha256": "f4eaa4e7ebdeb3f6e64ec0a9881cbc494a2de2141aaf92b9e000b97de09554b5"
-    },
-    "leg-near": {
-      "x": 57,
-      "y": 85,
-      "width": 15.2,
-      "pivot": [
-        64,
-        99.1
-      ],
-      "sourceFile": "leg-near.png",
-      "height": 17.09679595278246,
-      "file": "leg-near.webp",
-      "sourceBounds": [
-        446,
-        289,
-        593,
-        667
-      ],
-      "sourceSha256": "406da2f5aaeb5123109da340e479ac52e28ecea7ff86c87b649170a5514f9bec",
-      "sha256": "869373b3f36f9db9a3093c2fb340a9dd0b5f36698bd2f5e5825eacef22a57517"
-    },
-    "leg-far": {
-      "x": 70,
-      "y": 78.8,
-      "width": 14.5,
-      "pivot": [
-        78,
-        98
-      ],
-      "sourceFile": "leg-far.png",
-      "height": 22.223618090452263,
-      "file": "leg-far.webp",
-      "sourceBounds": [
-        531,
-        290,
-        398,
-        610
-      ],
-      "sourceSha256": "5f0a797c92c877fa814e9f6780eb620bf8961aa007c9e52f96d8aef73b9d8996",
-      "sha256": "8a34fcefc86e1012a302893033c083ce72fab0b3d25d4fabb1efbba10be2a8eb"
     },
     "eyelid": {
       "x": 89,
@@ -781,6 +757,186 @@
       ],
       "sourceSha256": "aacc5a98b7e779b9448f6c370b42705d31ffa5bf469011f51f1ddaf5b9a33c20",
       "sha256": "da9bae058801e965efa652029af7e21d36bf74b57aff345b19ca628dbaa7a144"
+    },
+    "leg-near-drumstick": {
+      "source": "leg-near-drumstick.png",
+      "rootSource": [
+        337,
+        670
+      ],
+      "tipSource": [
+        405.94,
+        571.53
+      ],
+      "projectedSpan": 2.7705,
+      "pivot": [
+        60.12,
+        88.93
+      ],
+      "sourceFile": "leg-near-drumstick.png",
+      "x": 59.35940716573132,
+      "y": 85.38056677341285,
+      "width": 3.664674565112713,
+      "height": 4.263929525445609,
+      "file": "leg-near-drumstick.webp",
+      "sourceBounds": [
+        304,
+        516,
+        159,
+        185
+      ],
+      "sourceSha256": "ece39af1ecfa47dc2ac61c4497701ab05070e521663413e6d0050e91142c789f",
+      "sha256": "533228ebe3405f18502ce5213cdf93307885e7c5c9e0e6820240db774ebfddd5"
+    },
+    "leg-near-tarsus": {
+      "source": "leg-near-tarsus.png",
+      "rootSource": [
+        327,
+        395
+      ],
+      "tipSource": [
+        474.18,
+        745.37
+      ],
+      "projectedSpan": 8.7591,
+      "pivot": [
+        60.12,
+        88.93
+      ],
+      "sourceFile": "leg-near-tarsus.png",
+      "x": 58.96757099388407,
+      "y": 87.89281389449567,
+      "width": 5.600804969723409,
+      "height": 10.118326673697847,
+      "file": "leg-near-tarsus.webp",
+      "sourceBounds": [
+        277,
+        350,
+        243,
+        439
+      ],
+      "sourceSha256": "91ff389baf89b2fdbefd00b8c8f62afa1cfbb6ab770deff3ff03b75269a6cf00",
+      "sha256": "ec563c02fc88ff5a26dd10ebf5c73c5da22ce531c1153e1a0e0c27036065eb35"
+    },
+    "leg-near-toes": {
+      "source": "leg-near-toes.png",
+      "rootSource": [
+        427,
+        635
+      ],
+      "tipSource": [
+        527,
+        635
+      ],
+      "projectedSpan": 2.3048,
+      "pivot": [
+        63.51,
+        97
+      ],
+      "sourceFile": "leg-near-toes.png",
+      "x": 59.499648,
+      "y": 96.07808,
+      "width": 12.791640000000001,
+      "height": 5.7620000000000005,
+      "file": "leg-near-toes.webp",
+      "sourceBounds": [
+        253,
+        595,
+        555,
+        250
+      ],
+      "sourceSha256": "b6eba5499d23bdf019eb46486834661a651507f7f51aa08509e4aca8861f4f26",
+      "sha256": "bf94faa71301d883d9886b9826fdba6f20fd6d422aa2ee4958d9769613eb7bc8"
+    },
+    "leg-far-drumstick": {
+      "source": "leg-far-drumstick.png",
+      "rootSource": [
+        337,
+        670
+      ],
+      "tipSource": [
+        405.94,
+        571.53
+      ],
+      "projectedSpan": 2.7705,
+      "pivot": [
+        73.4,
+        87.75
+      ],
+      "sourceFile": "leg-far-drumstick.png",
+      "x": 72.63940716573133,
+      "y": 84.20056677341285,
+      "width": 3.664674565112713,
+      "height": 4.263929525445609,
+      "file": "leg-far-drumstick.webp",
+      "sourceBounds": [
+        304,
+        516,
+        159,
+        185
+      ],
+      "sourceSha256": "ece3a0704371eec9cf2c6f5ffbad818341c9d38806265de994f677a344cc33fe",
+      "sha256": "f5efb037230956eb0760282a82e5859555aaf2c6dad3b982f4dfe7210cbedb97"
+    },
+    "leg-far-tarsus": {
+      "source": "leg-far-tarsus.png",
+      "rootSource": [
+        327,
+        395
+      ],
+      "tipSource": [
+        454.57,
+        752.98
+      ],
+      "projectedSpan": 8.7591,
+      "pivot": [
+        73.4,
+        87.75
+      ],
+      "sourceFile": "leg-far-tarsus.png",
+      "x": 72.22453338530067,
+      "y": 86.75892030525351,
+      "width": 5.208930488667612,
+      "height": 10.233474057382388,
+      "file": "leg-far-tarsus.webp",
+      "sourceBounds": [
+        276,
+        352,
+        226,
+        444
+      ],
+      "sourceSha256": "dc93b86b9fbc5834df7ad41e3ff10bb4291669491d089dab6aeb00591fa2e064",
+      "sha256": "10e006cea73bb925bb3482a49bc5e71fac333ec3cf6142b48b06e74bc66b2d68"
+    },
+    "leg-far-toes": {
+      "source": "leg-far-toes.png",
+      "rootSource": [
+        427,
+        635
+      ],
+      "tipSource": [
+        527,
+        635
+      ],
+      "projectedSpan": 2.3048,
+      "pivot": [
+        76.34,
+        96
+      ],
+      "sourceFile": "leg-far-toes.png",
+      "x": 72.329648,
+      "y": 95.07808,
+      "width": 12.791640000000001,
+      "height": 5.7620000000000005,
+      "file": "leg-far-toes.webp",
+      "sourceBounds": [
+        253,
+        595,
+        555,
+        250
+      ],
+      "sourceSha256": "6eb30e12c8ae917c64a5dab2642434916f929d1996ca13bc229a291c2c86ec14",
+      "sha256": "c53dc7e8703ee8818ee2dd5f76e2256f19c1cd11e0f79226085b1626508250ed"
     }
   }
 }

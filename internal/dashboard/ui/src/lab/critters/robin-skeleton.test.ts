@@ -24,12 +24,15 @@ describe("the robin's skeleton", () => {
     expect(joint('peck', 1120, 'SJ0')?.y).toBeGreaterThan((joint('peck', 0, 'SJ0')?.y ?? 0) + 5);
   });
 
-  it("gives a standing leg its ankle, where it turns in a hop, over the foot it squashes from", () => {
+  it("gives a standing leg its knee in the belly, its ankle where it leaves it and its toes, which stay put as it crouches", () => {
     const s = robinSkeleton('hop', 1250, false, false);
-    expect(s.joints.filter((j) => j.code.startsWith('L2') || j.code.startsWith('L3')).map((j) => j.code)).toEqual(['L3J2', 'L3J3', 'L2J2', 'L2J3']);
-    expect(s.bones.filter((b) => b.code.startsWith('L')).map((b) => [b.code, b.from, b.to])).toEqual([['L2B2', 'L2J2', 'L2J3'], ['L3B2', 'L3J2', 'L3J3']]);
-    const ankle = joint('alive', 0, 'L2J2'), foot = joint('alive', 0, 'L2J3');
-    expect(ankle && foot && foot.y - ankle.y).toBeGreaterThan(10);
+    expect(s.joints.filter((j) => j.code.startsWith('L2') || j.code.startsWith('L3')).map((j) => j.code)).toEqual(['L3J1', 'L3J2', 'L3J3', 'L2J1', 'L2J2', 'L2J3']);
+    expect(s.bones.filter((b) => b.code.startsWith('L')).map((b) => [b.code, b.from, b.to])).toEqual([['L2B1', 'L2J1', 'L2J2'], ['L2B2', 'L2J2', 'L2J3'], ['L3B1', 'L3J1', 'L3J2'], ['L3B2', 'L3J2', 'L3J3']]);
+    const knee = joint('alive', 0, 'L2J1'), ankle = joint('alive', 0, 'L2J2'), toes = joint('alive', 0, 'L2J3');
+    expect(knee && ankle && ankle.y - knee.y).toBeGreaterThan(5);
+    expect(ankle && toes && toes.y - ankle.y).toBeGreaterThan(5);
+    const crouched = joint('hop', 940, 'L2J2');
+    expect(crouched && toes && [crouched.y > ankle!.y, joint('hop', 940, 'L2J3')]).toEqual([true, toes]);
     expect(joint('flight', 100, 'L2J1')).toBeTruthy();
   });
 });

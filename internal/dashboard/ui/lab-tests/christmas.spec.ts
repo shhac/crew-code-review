@@ -123,7 +123,7 @@ test('both live robins use idle, peck, hop and all eight wing profiles, and chan
   await advance(11000);
   await expect(first).toHaveAttribute('data-action', 'hop');
   await advance(11135);
-  await expect(rig.locator('[data-part="leg-near"]:not([visibility])')).toBeAttached();
+  await expect(rig.locator('[data-part="leg-near-toes"]:not([visibility])')).toBeAttached();
   await advance(11300);
   const origin = await first.getAttribute('data-floor');
   await advance(22300);

@@ -1,6 +1,6 @@
 import manifest from './robin-parts/manifest.json';
 import { describe, expect, it } from 'vitest';
-import { mixPartsPose, partsPose, partsLayers, partsSlotLayers, partsSlots, partsTransforms, partsModes } from './parts-pose';
+import { mixPartsPose, partsPivots, partsPose, partsLayers, partsSlotLayers, partsSlots, partsTransforms, partsModes } from './parts-pose';
 import { svgMatrix, transformPoint } from './parts-affine';
 
 describe('layered robin timing', () => {
@@ -34,7 +34,7 @@ describe('layered robin timing', () => {
   it('plants both feet through a peck and brings the beak down to their ground plane', () => {
     for (const time of [0, 850, 1120, 1350, 1580, 2000, 2500]) {
       const layers = partsLayers(partsPose(time, 'peck'));
-      for (const [id, x, y] of [['leg-near', 64, 102.1], ['leg-far', 78, 101]] as const) {
+      for (const [id, x, y] of [['leg-near-toes', 64, 102.1], ['leg-far-toes', 78, 101]] as const) {
         const layer = layers.find(layer => layer.id === id)!;
         const foot = transformPoint(layer.transform, x, y);
         expect(foot[0]).toBeCloseTo(x, 5);
@@ -50,11 +50,38 @@ describe('layered robin timing', () => {
     expect(partsPose(940, 'hop').crouch).toBeGreaterThan(4);
     expect(partsPose(940, 'hop').lift).toBe(0);
     const airborne = partsLayers(partsPose(1250, 'hop'));
-    for (const [id, x, y] of [['leg-near', 64, 102.1], ['leg-far', 78, 101]] as const) {
+    for (const [id, x, y] of [['leg-near-toes', 64, 102.1], ['leg-far-toes', 78, 101]] as const) {
       const foot = transformPoint(airborne.find(layer => layer.id === id)!.transform, x, y);
       expect(foot[1]).toBeLessThan(80);
     }
     expect(partsPose(2000, 'hop')).toEqual(partsPose(0, 'hop'));
+  });
+  it('crouches on its bones: the ankle closes and the knee bends, no bone squashed or pulled apart', () => {
+    const { nearKnee, nearAnkle, nearToes, farKnee, farAnkle, farToes } = partsPivots;
+    const legs = [['near', nearKnee, nearAnkle, nearToes], ['far', farKnee, farAnkle, farToes]] as const;
+    const apart = (a: readonly number[], b: readonly number[]) => Math.hypot(b[0] - a[0], b[1] - a[1]);
+    const ankleAngle = (time: number, side: string) => {
+      const layers = partsLayers(partsPose(time, time > 2500 ? 'peck' : 'hop'));
+      const leg = legs.find(([s]) => s === side)!;
+      const piece = (name: string) => layers.find(layer => layer.id === `leg-${side}-${name}`)!.transform;
+      const knee = transformPoint(piece('drumstick'), leg[1][0], leg[1][1]);
+      const ankle = transformPoint(piece('drumstick'), leg[2][0], leg[2][1]);
+      expect(apart(transformPoint(piece('tarsus'), leg[2][0], leg[2][1]), ankle)).toBeLessThan(1e-6);
+      expect(apart(transformPoint(piece('tarsus'), leg[3][0], leg[3][1]), transformPoint(piece('toes'), leg[3][0], leg[3][1]))).toBeLessThan(1e-6);
+      expect(apart(knee, ankle)).toBeCloseTo(apart(leg[1], leg[2]), 6);
+      for (const name of ['drumstick', 'tarsus', 'toes']) {
+        const [a, b, c, d] = svgMatrix(piece(name));
+        expect(a * d - b * c).toBeCloseTo(1, 9);
+      }
+      const toes = transformPoint(piece('toes'), leg[3][0], leg[3][1]);
+      return Math.acos(((knee[0] - ankle[0]) * (toes[0] - ankle[0]) + (knee[1] - ankle[1]) * (toes[1] - ankle[1])) / (apart(knee, ankle) * apart(toes, ankle))) * 180 / Math.PI;
+    };
+    for (const [side] of legs) {
+      // Crouched to hop (940ms) and pecking (1120ms into the peck), the
+      // ankle is more closed than standing.
+      expect(ankleAngle(940, side)).toBeLessThan(ankleAngle(0, side) - 10);
+      expect(ankleAngle(4000 + 1120, side)).toBeLessThan(ankleAngle(0, side));
+    }
   });
   it('keeps wing roots fixed through both stroke changes and draws the far wing behind the body', () => {
     for (const time of [0, 149, 150, 151, 300, 449, 450, 451]) {
@@ -66,8 +93,8 @@ describe('layered robin timing', () => {
       }
       const layers = partsLayers(pose).map(layer => layer.id);
       expect(layers[0]).toMatch(/^wing-far-/);
-      expect(layers).not.toContain('leg-near');
-      expect(layers).not.toContain('leg-far');
+      expect(layers).not.toContain('leg-near-toes');
+      expect(layers).not.toContain('leg-far-toes');
       expect(layers.indexOf('body')).toBeGreaterThan(0);
       expect(layers.at(-1)).toBe('wing-shoulder');
       expect(layers.at(-2)).toMatch(/^wing-/);

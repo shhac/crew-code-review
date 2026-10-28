@@ -2,8 +2,9 @@ import { transformPoint } from '../../lib/theme/christmas/parts-affine';
 import { partsLayers, partsPivots, partsPose, type PartId } from '../../lib/theme/christmas/parts-pose';
 import type { Bone, Group, Joint, Skeleton } from '../skeleton';
 
-// The robin is whole pictures, each turned about its joints, with no leg
-// or wing posed bone by bone, so its skeleton is where each part it shows
+// The robin is whole pictures, each turned about its joints, with no wing
+// posed bone by bone (a standing leg is, its bones each a picture), so its
+// skeleton is where each part it shows
 // turns now, as the rig turns it about the joints measured on its drawing
 // (partsPivots, the manifest's joints), coded as skeleton.ts codes them,
 // and a spine through those of them it runs through: the head's own joint
@@ -21,10 +22,9 @@ function spotsOf(id: PartId): Spot[] {
   if (id === 'body' || id === 'body-peck') return [{ code: 'SJ2', name: 'hip (the body leans about it)', at: p.hip }];
   if (id === 'tail') return [{ code: 'SJ3', name: 'tail root', at: p.tail }];
   if (id.endsWith('-tucked')) return [{ code: `L${2 + far}J1`, name: 'knee (the drumstick\'s top; the tucked leg turns here)', at: far ? p.farTucked : p.nearTucked }];
-  if (id.startsWith('leg-')) return [
-    { code: `L${2 + far}J2`, name: 'ankle (where the leg leaves the belly; it turns here in a hop)', at: far ? p.farLegRoot : p.nearLegRoot },
-    { code: `L${2 + far}J3`, name: 'foot (where it stands; the leg squashes from here and turns as the body leans)', at: far ? p.farFoot : p.nearFoot },
-  ];
+  if (id.endsWith('-drumstick')) return [{ code: `L${2 + far}J1`, name: 'knee (in the belly, carried by the body as it crouches and leans)', at: far ? p.farKnee : p.nearKnee }];
+  if (id.endsWith('-tarsus')) return [{ code: `L${2 + far}J2`, name: 'ankle (where the leg leaves the belly; it closes as the robin crouches)', at: far ? p.farAnkle : p.nearAnkle }];
+  if (id.endsWith('-toes')) return [{ code: `L${2 + far}J3`, name: 'toes (where the tarsus comes down onto them, planted)', at: far ? p.farToes : p.nearToes }];
   if (id.startsWith('wing') && id !== 'wing-shoulder') return [{ code: `L${far}J0`, name: 'shoulder (the wing turns here)', at: far ? p.farShoulder : p.shoulder }];
   return [];
 }
@@ -54,11 +54,15 @@ export function robinSkeleton(mode: string, now: number, still: boolean, separat
   });
   const spine = path.slice(1).map((to, k): Bone =>
     ({ code: `SB${k}`, name: `${path[k].line ?? 'line'} (${path[k].name} to ${to.name})`, from: path[k].code, to: to.code, far: false }));
-  // A grounded leg's one picture is the tarsometatarsus and the toes.
+  // A grounded leg's pieces are its bones from the knee down: the
+  // drumstick's end, the tarsus and the toes.
   const legs = [0, 1].flatMap((far): Bone[] => {
     const code = `L${2 + far}`;
-    const ankle = joints.find((j) => j.code === `${code}J2`), foot = joints.find((j) => j.code === `${code}J3`);
-    return ankle && foot ? [{ code: `${code}B2`, name: 'tarsometatarsus', from: ankle.code, to: foot.code, far: far === 1 }] : [];
+    const bone = (k: number, name: string): Bone[] => {
+      const [from, to] = [joints.find((j) => j.code === `${code}J${k}`), joints.find((j) => j.code === `${code}J${k + 1}`)];
+      return from && to ? [{ code: `${code}B${k}`, name, from: from.code, to: to.code, far: far === 1 }] : [];
+    };
+    return [...bone(1, 'tibiotarsus (drumstick)'), ...bone(2, 'tarsometatarsus')];
   });
   return { groups, joints, bones: [...legs, ...spine] };
 }
