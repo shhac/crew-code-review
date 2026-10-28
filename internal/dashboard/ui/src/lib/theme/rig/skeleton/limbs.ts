@@ -67,7 +67,9 @@ const SOLVERS: { [K in LimbKind]: Solver<K> } = {
     if (goal.kind !== 'plant' && goal.kind !== 'reach') throw new Error(`skeleton: ${limb.id} is not posed by a ${goal.kind} goal`);
     const at = target(goal, handle);
     const knee = jointBeside(root, at, limb.leg.thigh, limb.leg.shin, goal.side ?? limb.leg.side ?? 1);
-    return { hip: root, knee, ankle: at, foot: at, paw: direction(knee, at) };
+    // The hand along the forearm, or turned at the wrist as far as the goal
+    // turns its digits (a hand flung open, bent back).
+    return { hip: root, knee, ankle: at, foot: at, paw: direction(knee, at) + (goal.digits ?? 0) };
   },
 };
 const solverOf = <K extends LimbKind>(limb: Extract<LimbSpec, { solve: K }>): Solver<K> => SOLVERS[limb.solve];

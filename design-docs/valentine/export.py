@@ -62,6 +62,11 @@ LIMB_SIZE = {
     'cupid-arm': (2.0, 'height'), 'cupid-hand': (2.1, 'height'), 'cupid-thigh': (2.8, 'height'),
     'cupid-shin': (2.2, 'height'), 'cupid-foot': (3.2, 'width'),
 }
+# The open hand (cupid-hand-open.png, its own sheet), flung up and back as
+# it dodges, by its length: as much bigger than the fist as the dodge
+# drawing's open hand is than its fist, its wrist then a little thicker than
+# the fist's, both hidden in the forearm's end.
+OPEN_HAND = 3.05
 
 
 def keyed_on(path: Path, channel: int) -> np.ndarray:
@@ -110,6 +115,9 @@ def main() -> None:
         scale = thick * RES / (art.shape[0] if by == 'height' else art.shape[1])
         w, h = export_with_fur(art, OUT, name, scale)
         print(f'{name}: {w / RES:.2f}x{h / RES:.2f} units')
+    open_hand = crop(cupid('cupid-hand-open'))
+    w, h = export_with_fur(open_hand, OUT, 'cupid-hand-open', OPEN_HAND * RES / open_hand.shape[1])
+    print(f'cupid-hand-open: {w / RES:.2f}x{h / RES:.2f} units')
 
 
 if __name__ == '__main__':

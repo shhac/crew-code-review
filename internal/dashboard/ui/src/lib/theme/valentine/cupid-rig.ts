@@ -14,6 +14,8 @@ import bodyArt from './cupid-body.webp';
 import footFurArt from './cupid-foot-fur.webp';
 import footArt from './cupid-foot.webp';
 import handFurArt from './cupid-hand-fur.webp';
+import openHandFurArt from './cupid-hand-open-fur.webp';
+import openHandArt from './cupid-hand-open.webp';
 import handArt from './cupid-hand.webp';
 import headArt from './cupid-head.webp';
 import shinFurArt from './cupid-shin-fur.webp';
@@ -60,6 +62,10 @@ const ROSE = '#e8436b';
 // The arms and legs: two pieces each along posed bones, a fist or a foot at
 // the end, each piece outlined and then as fur alone.
 const HAND = { src: handArt, fur: handFurArt, width: 2.42, height: 2.08, heel: { x: 0.35, y: 1.04 } };
+// The near hand flung open as it dodges, as the dodge drawing's is: its
+// second picture, which a rig shows in place of the fist (the slot a
+// bird's curled toes take), its wrist as far into it as the fist's.
+const OPEN_HAND = { src: openHandArt, fur: openHandFurArt, width: 3.08, height: 3, heel: { x: 0.35, y: 1.72 } };
 const FOOT = { src: footArt, fur: footFurArt, width: 3.17, height: 2.5, heel: { x: 1.2, y: 0.55 } };
 const ARM_ART: LimbArt = { bone: armArt, boneFur: armFurArt, thigh: { src: armArt, fur: armFurArt }, knee: true, foot: HAND };
 const LEG_ART: LimbArt = { bone: shinArt, boneFur: shinFurArt, thigh: { src: thighArt, fur: thighFurArt }, knee: true, foot: FOOT };
@@ -168,7 +174,8 @@ function heart(p: Point, aim: number, size: number): Point[] {
 
 // How it holds itself for each pose: the body's turn, the wings' stroke, the
 // arms' ends, the legs' swing, how far the bow is bent and where its string
-// is, and whether an arrow is nocked. An arm's end is set from its shoulder
+// is, and whether an arrow is nocked; whether the near hand is flung open,
+// and how far it is bent back at the wrist. An arm's end is set from its shoulder
 // on the page, or, held to the body (the hand at the jaw), put on the page
 // from the body's own frame by `at`.
 type Arm = (shoulder: Point, at: (p: Point) => Point) => { wrist: Point; side: 1 | -1 };
@@ -183,6 +190,7 @@ type Hold = {
   drawing: boolean;
   arrow: boolean;
   legs: { swing: number; bend: number };
+  flung?: number;
 };
 
 // Hanging loose: the near arm down at its side, the far one holding the bow
@@ -263,12 +271,13 @@ function hold(c: RigCupid, now: number): Hold {
       };
     }
     case 'dodge':
-      // Startled: leaning back away, arms flung up and out, legs tucked,
-      // wings flared and fluttering.
+      // Startled: leaning back away, arms flung up and out, the near hand
+      // open and bent back up from the wrist, legs tucked, wings flared and
+      // fluttering.
       return {
         body: turnAbout(-18, ANCHOR), stroke: wingStroke(c.beat, 20, 60), head: -10,
         near: reachOut(-150, 4.2), far: reachOut(-40, 4.4), aim: -60, bend: BRACED, drawing: false, arrow: false,
-        legs: { swing: 55, bend: 100 },
+        legs: { swing: 55, bend: 100 }, flung: 55,
       };
     default:
       return {
@@ -324,7 +333,7 @@ function limbSpec(l: Member): LimbSpec {
 // Each limb's art as rigs lay it (tetrapod.ts's limbPieces): an arm's or a
 // leg's two pieces and its fist or foot.
 const artLeg = (l: Member): ArtLeg => (l.arm
-  ? { hip: l.root, reach: 0, thigh: ARM.upper, shin: ARM.fore, bend: 1, fore: true, far: l.far, art: ARM_ART, width: ARM.width, haunch: ARM.width }
+  ? { hip: l.root, reach: 0, thigh: ARM.upper, shin: ARM.fore, bend: 1, fore: true, far: l.far, art: l.far ? ARM_ART : { ...ARM_ART, curled: OPEN_HAND }, width: ARM.width, haunch: ARM.width }
   : { hip: l.root, reach: 0, thigh: LEG.thigh, shin: LEG.shin, bend: 1, fore: true, far: l.far, art: LEG_ART, width: LEG.width, haunch: LEG.haunch });
 const SKELETON: Skeleton = {
   joints: [
@@ -402,7 +411,8 @@ export function cupidRig(cupid: RigCupid, look: CupidLook): RigPose {
     const swing = h.legs.swing + offset + 0.3 * h.body.angle;
     return { kind: 'angles', swing, bend: h.legs.bend };
   };
-  const limbs = { L0: reach('L0', h.near), L1: reach('L1', h.far), L2: swung(0), L3: swung(-16) };
+  const near = reach('L0', h.near);
+  const limbs = { L0: h.flung === undefined ? near : { ...near, digits: h.flung }, L1: reach('L1', h.far), L2: swung(0), L3: swung(-16) };
   // The bow in the far fist, its string through the drawing fist; drawing,
   // the arrow lies from the nock over the bow fist, resting on it, and the
   // bow stands square to it.
@@ -420,5 +430,6 @@ export function cupidRig(cupid: RigCupid, look: CupidLook): RigPose {
     string: ({ limb, local }) => inFrame([drawnBow(limb).string], local),
     arrow: ({ limb, local }) => (h.arrow ? inFrame(drawnBow(limb).arrow, local) : []),
   };
-  return compose(CUPID, () => ({ root: body, joints, limbs, show: {}, z: {}, shapes }), now);
+  const show = h.flung === undefined ? {} : { 'L0 foot': 'curled' };
+  return compose(CUPID, () => ({ root: body, joints, limbs, show, z: {}, shapes }), now);
 }

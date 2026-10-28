@@ -389,6 +389,14 @@ an edit of that drawing:
   and the near wing.
 - `cupid-limbs.png`: an arm piece, a fist, a thigh piece, a shin piece and a
   foot seen from the side, cut from its own limbs.
+- `cupid-hand-open.png` (2026-10-28, Codex `gpt-6.1-sol`, one round, on
+  green): the open hand of the dodge drawing, asked for with the reference,
+  `cupid-limbs.png` (the fist's colours, outline, scale and flat unoutlined
+  wrist) and `cupid-pose-dodge.png` as references: one chubby hand lying as
+  the fist lies, wrist left, palm to the viewer, fingers spread a little and
+  the thumb splayed. Startled, the near arm shows it in place of its fist,
+  turned 55 degrees back up at the wrist, as the drawing's is; everywhere
+  else the hands stay fists along the forearm.
 - `cupid-pose-flit.png`, `-aim.png`, `-release.png`, `-dodge.png`: the key
   poses (hovering is the reference itself).
 
@@ -399,6 +407,7 @@ an edit of that drawing:
 | `cupid-pose-*.png` | `ui/src/lab/cupid-pose-*.webp` (the lab's overlays) | on the same eye scale; `export.py` prints each one's eye, which the lab lines up with the rig's |
 | `cupid-parts.png` | `cupid-body.webp`, `cupid-head.webp`, `cupid-wing.webp` | 10.33x12.58 at (5.64, 8.9), 11.58x11 at (6.32, 1.03), 8.33x11.17 at (1.3, 5) |
 | `cupid-limbs.png` | `cupid-arm.webp`, `cupid-hand.webp`, `cupid-thigh.webp`, `cupid-shin.webp`, `cupid-foot.webp`, each with a `-fur` version | arm 2 units thick, fist 2.08 tall, thigh 2.83 and shin 2.17 thick, foot 3.17 long |
+| `cupid-hand-open.png` | `cupid-hand-open.webp`, with a `-fur` version | 3.08x3 units, the wrist 0.35 in and 1.72 down |
 
 The cupid's pictures are in drawing units, all on one scale: each sheet's
 eye is measured (`art.py`'s `feature`, from a seed point set in
