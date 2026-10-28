@@ -1,4 +1,4 @@
-import { clamp, smooth } from '../math';
+import { clamp, rad, smooth } from '../math';
 import type { Point } from '../pointer';
 import { birdStepping, birdWalk, curledIn, feetLine, headBob, INTERTARSAL_HINGE, rehung, stepRise, type AirLegs, type HingedBirdLeg } from '../rig/bird';
 import { flightAt, flightsOf, gaitPhase, type Gait } from '../rig/gait';
@@ -7,7 +7,7 @@ import { blinking, breath } from '../rig/life';
 import { lidLayers, turnAbout, type Frame, type Fur, type LimbArt, type RigPose, type Turn } from '../rig/rig';
 import { compose } from '../rig/skeleton/compose';
 import { BIRD, head, picture, spine, tetrapod } from '../rig/skeleton/tetrapod';
-import type { Goal, JointPose, PoseSpec } from '../rig/skeleton/types';
+import type { Goal, JointPose, Piece, PoseSpec } from '../rig/skeleton/types';
 import { wingOf } from '../rig/skeleton/wing';
 import { flaring, flapping, gliding, settling, takingOff, type Flap, type FlightPose, type WingArt, type WingPose } from '../rig/wings';
 import bodyArt from './crow-body.webp';
@@ -18,6 +18,8 @@ import curledArt from './crow-foot-curled.webp';
 import footFurArt from './crow-foot-fur.webp';
 import footArt from './crow-foot.webp';
 import headArt from './crow-head.webp';
+import neckFurArt from './crow-neck-fur.webp';
+import neckArt from './crow-neck.webp';
 import rumpArt from './crow-rump.webp';
 import tailArt from './crow-tail.webp';
 import tarsusFurArt from './crow-tarsus-fur.webp';
@@ -49,7 +51,7 @@ const GROUND = 27.75;
 const ANCHOR = { x: 21.7, y: GROUND };
 const FRAME: Frame = { width: 41, height: 28.8, anchor: ANCHOR, scale: SCALE };
 export const REFERENCE = { x: 1, y: 1, width: 39, height: 27 };
-const BODY = { x: 15.25, y: 5.66, width: 17.67, height: 16.33 };
+const BODY = { x: 15.25, y: 7.29, width: 17.67, height: 14.75 };
 // The rump and undertail coverts behind the body, drawn as one with it and
 // cut away only so the body's box stays where its feathers are: running
 // back over the tail's root, so no gap shows between the tail and the
@@ -85,6 +87,37 @@ const LOOK_UP = 2;
 // is a nod of the neck.
 const SKULL_DOWN = 7;
 const looking = (gaze: number) => ({ neck: { angle: gaze - Math.min(gaze, SKULL_DOWN) }, head: { angle: Math.min(gaze, SKULL_DOWN) } });
+// Looking so with the head bobbed by `bob` along the body, however far the
+// neck is nodded: the head's shift is in the nodded neck's frame.
+function bobbing(gaze: number, bob: Point): { neck: JointPose; head: JointPose } {
+  const { neck, head } = looking(gaze);
+  const back = rad(-neck.angle);
+  return { neck, head: { ...head, shift: { x: bob.x * Math.cos(back) - bob.y * Math.sin(back), y: bob.x * Math.sin(back) + bob.y * Math.cos(back) } } };
+}
+// The neck: the feathers between the body's shoulders and the head, cut
+// from where they sat (the body and the head are each cut short of them),
+// and stretched to the head wherever it has gone, as the pigeon's is, so
+// the head bobbing as it walks, stretched up alert or reaching down to
+// peck stays joined to the body by its own neck rather than sliding its
+// nape and throat hackles over the breast. Drawn outlined under the body,
+// its base outlined where it ends there, and as fur alone over the body's
+// outlined cut, so standing it is the drawing as it was.
+const NECK_PIECE = { x: 23.5, y: 4.23, width: 10.5, height: 7.92 };
+// It hangs from the neck's base, so it swings down with it to peck; as the
+// head bobs along the body or stretches up alert, the neck between them
+// leans after it rather than turning, its base held where it lies along
+// the body's cut (whose middle is its root) and every line across it
+// further up carried with the head in step, up to its top, on the head's
+// line, parallel to the cut. The neck line stretches as far as the head
+// goes.
+const NECK_STRETCH = { min: 3.2, max: 5.5 };
+const NECK_ROOT = { x: 29.7, y: 9.3 };
+const NECK_TOP = { x: 30.95, y: 6.59 };
+const NECK_SPAN: Piece = {
+  id: 'neck', art: { drawn: { src: neckArt, fur: neckFurArt, box: NECK_PIECE } },
+  at: { kind: 'span', from: { on: 'neck base', at: NECK_ROOT }, to: { on: 'skull', at: NECK_TOP }, art: { from: NECK_ROOT, to: NECK_TOP }, sheared: true },
+  draws: [{ id: 'neck', z: 0 }, { id: 'neck, fur', z: 0, fur: true }],
+};
 // The nictitating membrane: pale blue-grey, drawn across the eye.
 const MEMBRANE: Fur = { fill: '#aab9c7', outline: '#0b0c0e' };
 
@@ -205,9 +238,10 @@ const tailOf = (lift: number, fan: number): JointPose => ({ angle: lift, squash:
 // body pitches, crouches or rises over it.
 const planted = (): Goal[] => LEGS.map((leg) => ({ kind: 'plant', at: { x: leg.hip.x + leg.reach, y: FEET } }));
 
-// How it stands on the ledge: the body's turn; the neck's, which stretches,
-// bobs and reaches down to peck from its base; the head's own small turns
-// on the neck's top (toward the cursor, sleeked up alert); the tail's; and
+// How it stands on the ledge: the body's turn; the neck's, which reaches
+// down to peck from its base; the head's on the neck's top, which bobs,
+// stretches up alert and makes its own small turns (toward the cursor,
+// sleeked up alert), the neck piece stretching after it; the tail's; and
 // each foot's goal from where its hip is.
 type Ground = { body: Turn; neck: JointPose; head: JointPose; tail: number; goals: (hips: readonly Point[]) => Goal[] };
 
@@ -226,7 +260,7 @@ function onGround(crow: RigCrow, look: CrowLook): Ground {
   }
   if (crow.pose === 'alert') {
     // Body up, neck stretched, sleeked.
-    return { body: turnAbout(-12, HIPS, 0, -breathe), neck: { shift: { x: 0.4, y: -1.1 } }, head: { angle: gaze - 6 }, tail: 10, goals: planted };
+    return { body: turnAbout(-12, HIPS, 0, -breathe), neck: {}, head: { angle: gaze - 6, shift: { x: 0.4, y: -1.1 } }, tail: 10, goals: planted };
   }
   if (crow.pose === 'peck') {
     // Tipped forward from the hips between pecks, further at each strike,
@@ -240,8 +274,7 @@ function onGround(crow: RigCrow, look: CrowLook): Ground {
   const { feet, steps } = birdStepping(LEGS, walked, FEET, WALK);
   return {
     body: turnAbout(0, MIDDLE, 0, -rise),
-    neck: { ...looking(gaze).neck, shift: { x: headBob(walked, WALK, THRUST), y: rise } },
-    head: looking(gaze).head,
+    ...bobbing(gaze, { x: headBob(walked, WALK, THRUST), y: rise }),
     tail: 0,
     goals: (hips) => feet(hips).map((at, i) => ({ kind: 'plant', at, step: steps[i], ground: GROUND })),
   };
@@ -260,8 +293,7 @@ function skipping(walked: number, gaze: number): Ground {
   const { feet, steps } = birdStepping(LEGS, walked, FEET, SKIP);
   return {
     body: turnAbout(0, MIDDLE, 0, -rise),
-    neck: { ...looking(gaze).neck, shift: { x: reach, y: 0 } },
-    head: looking(gaze).head,
+    ...bobbing(gaze, { x: reach, y: 0 }),
     tail: 0,
     goals: (hips) => feet(hips).map((at, i) => ({ kind: 'plant', at, step: steps[i], ground: GROUND })),
   };
@@ -318,8 +350,8 @@ function levelled(crow: RigCrow): number {
 const NEAR_WING = wingOf({ art: WING, side: 'near', parent: 'body', root: NEAR_SHOULDER, tip: TIP, z: 0 });
 const FAR_WING = wingOf({ art: WING, side: 'far', parent: 'body', root: FAR_SHOULDER, tip: TIP, z: 0 });
 const PARTS = [
-  picture('tail', 'tail', tailArt, TAIL), picture('rump', 'body', rumpArt, RUMP), picture('body', 'body', bodyArt, BODY),
-  picture('folded wing', 'body', foldedArt, FOLDED_WING), picture('head', 'skull', headArt, HEAD), 'eyelid',
+  picture('tail', 'tail', tailArt, TAIL), picture('rump', 'body', rumpArt, RUMP), 'neck', picture('body', 'body', bodyArt, BODY),
+  picture('folded wing', 'body', foldedArt, FOLDED_WING), 'neck, fur', picture('head', 'skull', headArt, HEAD), 'eyelid',
 ];
 const crowOf = (air: boolean) => tetrapod(BIRD, {
   frame: FRAME,
@@ -334,15 +366,16 @@ const crowOf = (air: boolean) => tetrapod(BIRD, {
     ...(air ? [...FAR_WING.joints, ...NEAR_WING.joints] : []),
   ],
   bones: [
-    { from: 'skull', to: 'neck base', name: 'neck line' },
-    // Its neck stretches and shortens from its base as the head bobs,
-    // stretches up alert and reaches down to peck.
+    // Its neck stretches and shortens to the head as it bobs and stretches
+    // up alert, and from its base as it reaches down to peck.
+    { from: 'skull', to: 'neck base', name: 'neck line', stretch: NECK_STRETCH },
     { from: 'neck base', to: 'body', name: 'back line', stretch: { min: 5.4, max: 8.9 } }, { from: 'body', to: 'tail', name: 'pelvis line (to the tail root)' },
     ...(air ? [...FAR_WING.bones, ...NEAR_WING.bones] : []),
   ],
   legs: LEGS,
   ground: () => FEET,
   order: air ? [FAR_WING.pieces, ...PARTS, NEAR_WING.pieces] : PARTS,
+  pieces: [NECK_SPAN],
   shapes: [{ id: 'eyelid', on: 'skull' }],
   guides: (at) => [
     ...(air

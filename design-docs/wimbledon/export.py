@@ -24,9 +24,8 @@ from pathlib import Path
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from art import EyeScale, by_colour, crop, cut, export, faded, feature, keyed, knobbed, lum, ramp, rescaled, span_up, wristed  # noqa: E402
+from art import EyeScale, Neck, by_colour, crop, cut, export, feature, keyed, knobbed, rescaled, span_up, wristed  # noqa: E402
 import numpy as np  # noqa: E402
-from PIL import Image  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
 OUT = HERE.parents[1] / 'internal/dashboard/ui/src/lib/theme/wimbledon'
@@ -57,31 +56,15 @@ PIGEON_PARTS = ['pigeon-body', 'pigeon-wing', 'pigeon-tail', 'pigeon-head']
 BODY_SHEET = ['pigeon-body', 'pigeon-head']
 HAWK_PARTS = ['hawk-body', 'hawk-head', 'hawk-tail']
 # The pieces left to right in pigeon-limbs.png (its first, a neck piece, no
-# longer used: see NECK_BODY), and how thick each bar is drawn, outline
+# longer used: see NECK), and how thick each bar is drawn, outline
 # included, in drawing units, measured from the reference: the feathered
 # tibiotarsus where it leaves the belly, and the bare coral tarsometatarsus
 # below the ankle.
 LIMBS = ['pigeon-neck', 'pigeon-thigh', 'pigeon-shank', 'pigeon-foot', 'pigeon-foot-curled']
 THICK = {'pigeon-thigh': 1.7, 'pigeon-shank': 0.45}
-# Where the neck is parted from the body and from the head: a line across
-# it each (drawing units, nape side to throat side). The body is cut off at
-# the lower line and outlined along it, LINE thick (the drawings' outlines)
-# in their INK; the head is kept to the upper line and fades out past it
-# over SOFT. The neck piece is what lies between, cut from the body and
-# head laid together where they sat, NECK_SIDES across, running on UNDER
-# under the head. Its fur runs back over the body's new outline and fades
-# out over RUN; outlined, it runs back as far again and is outlined where it
-# ends, so the neck turned out from under the body has an outlined base.
-NECK_BODY = ((13.9, 6.3), (19.9, 8.4))
-NECK_HEAD = ((14.8, 4.4), (19.3, 5.0))
-NECK_SIDES = (13.5, 20.5)
-SOFT = 0.7
-UNDER = 0.3
-LINE = 0.22
-RUN = 0.6
-INK = (22, 24, 30)
-# Working pixels to a unit, laying the parts together to cut the neck from.
-WORK = 48
+# Where the neck is parted from the body and from the head (art.py's Neck),
+# in the drawings' ink; the two are laid together 23 by 19 units.
+NECK = Neck(body=((13.9, 6.3), (19.9, 8.4)), head=((14.8, 4.4), (19.3, 5.0)), sides=(13.5, 20.5), ink=(22, 24, 30), size=(23, 19))
 # Feet: length in drawing units (the reference's near foot, hallux tip to
 # middle claw), and where on them (fractions of their box) the shank comes
 # down, where the toes part. Each keeps of the shank drawn above that only a
@@ -118,96 +101,35 @@ def wings(sheet: str, prefix: str, hand: float, past: float, names: list[str]) -
     return pieces
 
 
-def across(line: tuple[tuple[float, float], tuple[float, float]], xs: np.ndarray, ys: np.ndarray) -> np.ndarray:
-    """How far points (drawing units) are past a line across the neck,
-    nape side to throat side, toward the head: negative on the body's
-    side."""
-    (ax, ay), (bx, by) = line
-    length = np.hypot(bx - ax, by - ay)
-    return ((bx - ax) * (ys - ay) - (by - ay) * (xs - ax)) / -length
-
-
-def grid(art: np.ndarray, at: tuple[float, float], per_unit: float) -> tuple[np.ndarray, np.ndarray]:
-    """Each pixel's middle in drawing units, for a picture at per_unit
-    pixels a unit with its top left at at."""
-    ys, xs = np.mgrid[0:art.shape[0], 0:art.shape[1]].astype(np.float32)
-    return at[0] + (xs + 0.5) / per_unit, at[1] + (ys + 0.5) / per_unit
-
-
 def where(pigeon: EyeScale, art: np.ndarray, sheet: str) -> tuple[float, float]:
     """Where a part sat in the reference, its top left in drawing units."""
     y, x = pigeon.find(rescaled(art, pigeon.px(pigeon.standing_sheet) / pigeon.px(sheet)), by_colour)
     return x / pigeon.per_unit() + pigeon.margin, y / pigeon.per_unit() + pigeon.margin
 
 
-def inked(art: np.ndarray, past: np.ndarray, per_unit: float) -> np.ndarray:
-    """A picture outlined along the line it was cut at, where past (how far
-    each pixel is past the line, in drawing units) is within LINE of it."""
-    ink = ramp((past + LINE) * per_unit + 0.5) * ramp(-past * per_unit + 0.5)
-    out = art.astype(np.float32)
-    out[..., :3] = out[..., :3] * (1 - ink[..., None]) + np.array(INK) * ink[..., None]
-    return out.astype(np.uint8)
-
-
-def feathers(rgba: np.ndarray) -> np.ndarray:
-    """The neck's fur alone: art.py's fill_only takes out everything as dark
-    as an outline's edge, which on the neck is its violet and slate too, so
-    only the ink itself is taken out here."""
-    return faded(rgba, ramp((lum(rgba) - 30) / 25))
-
-
 def parted(pigeon: EyeScale, body: np.ndarray, head: np.ndarray) -> np.ndarray:
     """Writes the body and the head with the neck taken off each, printing
     where each sat, and gives back the two laid together where they sat,
-    whole, at WORK pixels a unit."""
+    whole, at the neck's working pixels a unit."""
     sheets = {'pigeon-body': (body, 'pigeon-body-3.png'), 'pigeon-head': (head, 'pigeon-parts.png')}
-    laid = Image.new('RGBA', (23 * WORK, 19 * WORK))
+    parts = []
     for name, (art, sheet) in sheets.items():
         at = where(pigeon, art, sheet)
         per_unit = pigeon.px(sheet) / PIGEON_EYE
-        xs, ys = grid(art, at, per_unit)
-        if name == 'pigeon-body':
-            past = across(NECK_BODY, xs, ys)
-            kept = inked(faded(art, ramp(0.5 - past * per_unit)), past, per_unit)
-        else:
-            kept = faded(art, ramp(1 + across(NECK_HEAD, xs, ys) / SOFT))
+        kept = NECK.body_cut(art, at, per_unit) if name == 'pigeon-body' else NECK.head_kept(art, at, per_unit)
         w, h = export(kept, OUT, name, pigeon.on_eye(sheet))
         print(f'{name}: {pigeon.units((w, h))} at {at[0]:.2f}, {at[1]:.2f}')
-        k = WORK / per_unit
-        img = Image.fromarray(art, 'RGBA').resize((round(art.shape[1] * k), round(art.shape[0] * k)), Image.LANCZOS)
-        laid.alpha_composite(img, (round(at[0] * WORK), round(at[1] * WORK)))
-    return np.asarray(laid)
+        parts.append((art, at, per_unit))
+    return NECK.laid(parts)
 
 
 def neck(pigeon: EyeScale, whole: np.ndarray) -> None:
     """Writes the neck piece between the body and the head, outlined and as
     fur alone, cut from the two laid together, and prints where it sat."""
-    xs, ys = grid(whole, (0, 0), WORK)
-    past = across(NECK_BODY, xs, ys)
-    under_head = ramp(1 - across(NECK_HEAD, xs, ys) / UNDER)
-    # Past the line the fur is the neck's own feathers only, not the pale
-    # back and breast round them, which would show as a pale fringe once
-    # the neck leans away from where they are.
-    sheen = np.where(past < 0, ramp((185 - lum(whole)) / 30), 1)
-    fur = feathers(faded(whole, ramp((past + 2 * LINE + RUN) / RUN) * under_head * sheen))
-    # Outlined, past the line it is the neck's feathers mirrored in it.
-    between = faded(whole, (past >= 0) * under_head)
-    (ax, ay), (bx, by) = NECK_BODY
-    up = np.array([by - ay, ax - bx]) / np.hypot(bx - ax, by - ay)
-    mx = np.clip(((xs - 2 * np.minimum(past, 0) * up[0]) * WORK).astype(int), 0, whole.shape[1] - 1)
-    my = np.clip(((ys - 2 * np.minimum(past, 0) * up[1]) * WORK).astype(int), 0, whole.shape[0] - 1)
-    depth = 3 * LINE + RUN
-    mirrored = faded(between[my, mx], ramp((past + depth) * WORK + 0.5))
-    outlined = inked(np.where((past < 0)[..., None], mirrored, between), past + depth - LINE, WORK)
-    # The fur kept inside the outlined piece's own, so it never spreads past
-    # its outline where the neck stands out from the body.
-    pieces = {'pigeon-neck': outlined, 'pigeon-neck-fur': faded(fur, feathers(outlined)[..., 3] / 255)}
-    left, right = (round(x * WORK) for x in NECK_SIDES)
-    rows = np.nonzero(outlined[:, left:right, 3].max(axis=1) > 0)[0]
-    top, bottom = rows.min(), rows.max() + 1
-    for name, piece in pieces.items():
-        w, h = export(piece[top:bottom, left:right], OUT, name, RES / WORK)
-    print(f'pigeon-neck: {pigeon.units((w, h))} at {NECK_SIDES[0]:.2f}, {top / WORK:.2f}')
+    outlined, fur, top = NECK.pieces(whole)
+    for name, piece in {'pigeon-neck': outlined, 'pigeon-neck-fur': fur}.items():
+        w, h = export(piece, OUT, name, RES / NECK.work)
+    print(f'pigeon-neck: {pigeon.units((w, h))} at {NECK.sides[0]:.2f}, {top:.2f}')
 
 
 def main() -> None:

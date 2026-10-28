@@ -31,7 +31,7 @@ from PIL import Image
 from scipy import ndimage
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from art import MARGIN, EyeScale, crop, crop_origin, cut, export, export_with_fur, keyed, knobbed, lum, opaque, place, poses, rescaled, rows, span_up, wristed  # noqa: E402
+from art import MARGIN, EyeScale, Neck, crop, crop_origin, cut, export, export_with_fur, keyed, knobbed, lum, opaque, place, poses, rescaled, rows, span_up, wristed  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
 OUT = HERE.parents[1] / 'internal/dashboard/ui/src/lib/theme/harvest'
@@ -67,6 +67,13 @@ BODY_SHEET = ['crow-body', 'crow-head']
 # the crow's footprint.
 RUMP = 15.5
 RUMP_OVERLAP = 0.25
+# Where the neck is parted from the body and from the head (art.py's Neck,
+# the pigeon's way), so the head bobbing as the crow walks stays joined to
+# the body by its own neck feathers rather than sliding its ragged nape and
+# throat over the breast: the body cut below the head's throat hackles and
+# nape, the head kept to above them. The crow's ink is near black, its
+# darkest feathers not much lighter.
+NECK = Neck(body=((26.0, 7.6), (33.4, 11.0)), head=((26.0, 4.32), (34.0, 8.0)), sides=(23.5, 34.0), ink=(2, 2, 4), size=(42, 30), fur=(6, 12))
 # The spread wing, shoulder to the longest primary's tip, is this many of
 # the bird's lengths (bill tip to tail tip): a carrion crow's span is about
 # 2.1 times its length, less the body between the shoulders.
@@ -277,9 +284,9 @@ def overlay(whole: np.ndarray, parts: list[tuple[int, int, np.ndarray]], out: Pa
 def rump_and_body(scale: EyeScale, body: np.ndarray, first: np.ndarray, sheet: str) -> tuple[float, float]:
     """The redrawn body, on sheet's scale as the first body is, placed where
     the first body sits (its front by line work over the first's, which the
-    rig's legs and wing were fitted to), then written cut across at RUMP,
-    each piece cropped and printed with where it sits; returns where the
-    whole body sits, in drawing units."""
+    rig's legs and wing were fitted to), then written with its neck cut off
+    and cut across at RUMP, each piece cropped and printed with where it
+    sits; returns where the whole body sits, in drawing units."""
     per_unit = scale.per_unit()
     y, x = scale.find(rescaled(first, scale.px(scale.standing_sheet) / scale.px(sheet)), ink)
     on_sheet = scale.px(sheet) / scale.eye
@@ -289,6 +296,7 @@ def rump_and_body(scale: EyeScale, body: np.ndarray, first: np.ndarray, sheet: s
     behind = body.shape[1] - first.shape[1] - 20
     fy, fx = place(body[:, behind:], under, mask=ink, step=2)
     at = (x / per_unit + scale.margin + (fx - pad - behind) / on_sheet, y / per_unit + scale.margin + (fy - pad) / on_sheet)
+    body = NECK.body_cut(body, at, on_sheet)
     column = round((RUMP - at[0]) * on_sheet)
     overlap = round(RUMP_OVERLAP * on_sheet)
     for name, left, piece in [('crow-rump', 0, body[:, :column + overlap]), ('crow-body', column - overlap, body[:, column - overlap:])]:
@@ -296,6 +304,21 @@ def rump_and_body(scale: EyeScale, body: np.ndarray, first: np.ndarray, sheet: s
         size = export(crop(piece), OUT, name, scale.on_eye(sheet))
         print(f'{name}: {scale.units(size)} at {at[0] + (left + dx) / on_sheet:.2f}, {at[1] + dy / on_sheet:.2f}')
     return at
+
+
+def neck(scale: EyeScale, body: np.ndarray, body_at: tuple[float, float], head: np.ndarray, sheet: str) -> None:
+    """Writes the head kept to its neck, placed by its bill and eye, and
+    the neck piece between it and the body, outlined and as fur alone, cut
+    from the two laid together where they sat; prints where each sat."""
+    on_sheet = scale.px(sheet) / scale.eye
+    y, x = scale.find(rescaled(head, scale.px(scale.standing_sheet) / scale.px(sheet)), bill_and_eye)
+    head_at = (x / scale.per_unit() + scale.margin, y / scale.per_unit() + scale.margin)
+    size = export(NECK.head_kept(head, head_at, on_sheet), OUT, 'crow-head', scale.on_eye(sheet))
+    print(f'crow-head: {scale.units(size)} at {head_at[0]:.2f}, {head_at[1]:.2f}')
+    outlined, fur, top = NECK.pieces(NECK.laid([(body, body_at, on_sheet), (head, head_at, on_sheet)]))
+    for name, piece in {'crow-neck': outlined, 'crow-neck-fur': fur}.items():
+        size = export(piece, OUT, name, RES / NECK.work)
+    print(f'crow-neck: {scale.units(size)} at {NECK.sides[0]:.2f}, {top:.2f}')
 
 
 def crow(check: Path | None) -> None:
@@ -306,12 +329,14 @@ def crow(check: Path | None) -> None:
     parts = {name: art for row, names in zip(rows(sheet, 2), CROW_ROWS) for name, art in cut(row, names).items()}
     first = parts.pop('crow-body')
     masks = {'crow-head': bill_and_eye, 'crow-body': ink, 'crow-wing-folded': ink, 'crow-tail': None}
+    head = parts.pop('crow-head')
     scale.parts(parts, 'crow-parts.png', OUT, masks=masks)
     body = matched(unreddened(cut(crow_keyed(HERE / 'crow-body-4.png'), BODY_SHEET)['crow-body']), first)
     # The redraw came back a little bigger than the first body beside the
     # same head, so it is drawn as tall as that body was.
     body = rescaled(body, (first.shape[0] - 2 * MARGIN) / (body.shape[0] - 2 * MARGIN))
     body_at = rump_and_body(scale, body, first, 'crow-parts.png')
+    neck(scale, body, body_at, head, 'crow-parts.png')
     onto = scale.px(scale.standing_sheet) / scale.px('crow-parts.png')
     ty, tx = tip_at(rescaled(parts['crow-tail'], onto), scale.standing)
     print(f'crow-tail: placed by its tip at {tx / scale.per_unit() + scale.margin:.2f}, {ty / scale.per_unit() + scale.margin:.2f}')
@@ -346,7 +371,7 @@ def crow(check: Path | None) -> None:
     if check:
         laid = []
         for name in ['crow-tail', 'crow-body', 'crow-wing-folded', 'crow-head']:
-            art = rescaled(body if name == 'crow-body' else parts[name], onto)
+            art = rescaled({'crow-body': body, 'crow-head': head}.get(name, parts.get(name)), onto)
             if name == 'crow-body':
                 x, y = (round((u - scale.margin) * per_unit) for u in body_at)
             else:

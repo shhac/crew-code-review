@@ -134,6 +134,20 @@ function orderOf(body: Body, z: PoseSpec['z']): readonly Slot[] {
 
 type Posed = { frame: (id: string) => Affine; point: (id: string) => Point; rest: (id: string) => Point; turn: (id: string) => number; handle: (h: Handle) => Point };
 
+// A sheared span's matrix, from its art onto its hanging joint's rest
+// space: what lies across the art's axis at `held` along it stays put, and
+// what lies further along leans with the target, x carried along the axis
+// by a share of the way from art.to to `to` as far as it is along it.
+function leaning(art: { from: Point; to: Point }, from: Point, to: Point, held: number): Affine {
+  const length = apart(art.from, art.to);
+  const along = { x: (art.to.x - art.from.x) / length, y: (art.to.y - art.from.y) / length };
+  const fixed = { x: from.x + held * along.x, y: from.y + held * along.y };
+  const was = { x: art.from.x + held * along.x, y: art.from.y + held * along.y };
+  const d = { x: (to.x - fixed.x) / (length - held) - along.x, y: (to.y - fixed.y) / (length - held) - along.y };
+  const lean: Affine = [1 + d.x * along.x, d.y * along.x, d.x * along.y, 1 + d.y * along.y, 0, 0];
+  return product(translate(fixed.x, fixed.y), lean, translate(-was.x, -was.y));
+}
+
 // Where an attachment puts its art: the matrix from the art's own space (rest
 // space, or a joint's own frame, or a bar's), and the point its extra pose
 // turns about. A bar's box is bone()'s, for its draw.
@@ -160,6 +174,7 @@ function placing(at: Attachment, posed: Posed): Placing {
       const from = typeof at.from === 'string' ? posed.rest(at.from) : at.from.at;
       const to = applied(inverse(base), posed.handle(at.to));
       const held = at.fixed ?? 0;
+      if (at.sheared) return { matrix: product(base, leaning(at.art, from, to, held)), anchor: at.art.from };
       const stretch = (apart(from, to) - held) / (apart(at.art.from, at.art.to) - held);
       const matrix = product(
         base, translate(from.x, from.y), rotate(direction(from, to)), translate(held, 0), scale(stretch, 1), translate(-held, 0),

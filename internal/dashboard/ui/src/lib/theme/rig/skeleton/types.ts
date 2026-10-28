@@ -151,8 +151,11 @@ export type Attachment =
   // picture, fixing the source axis. The picture turns about `from` onto
   // the target and scales along that axis about the point `fixed` (a
   // distance from `art.from`) along it, which stays put; across the axis
-  // it keeps its thickness.
-  | { kind: 'span'; from: Handle; to: Handle; art: { from: Point; to: Point }; fixed?: number }
+  // it keeps its thickness. `sheared`: it leans instead of turning, the
+  // line across the axis through `fixed` held where it lies and every line
+  // beyond it carried toward the target in step, as a short neck flexes
+  // under a head bobbing along the body.
+  | { kind: 'span'; from: Handle; to: Handle; art: { from: Point; to: Point }; fixed?: number; sheared?: boolean }
   // A leg bar exactly as rig.ts's bone() lays it: caps half its thickness
   // past each joint, or registered anchors; stretched to its box. `held`:
   // instead `length` long, rigid, ending (its cap past it) at `to`, turned
