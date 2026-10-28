@@ -45,9 +45,10 @@ export function wingOf({ art, side, parent, root, tip, z }: WingSpec): Wing {
   const raised = side === 'far' ? 'upper' : 'under';
   const seen = (face: 'upper' | 'under') => ({ from: ids.shoulder, sign: face === raised ? 1 : -1 } as const);
   const piece = (part: 'hand' | 'arm', to: string): Piece => {
-    const { upper, under, ...box } = art[part];
+    const { upper, under, outlines, ...box } = art[part];
+    const lies = (face: 'upper' | 'under') => (outlines ? { outline: outlines[face] } : {});
     return {
-      id: `${code} ${part}`, side, art: { upper: { src: upper, box, seen: seen('upper') }, under: { src: under, box, seen: seen('under') } },
+      id: `${code} ${part}`, side, art: { upper: { src: upper, box, seen: seen('upper'), ...lies('upper') }, under: { src: under, box, seen: seen('under'), ...lies('under') } },
       at: { kind: 'joint', to }, draws: [{ id: `${code} ${part}`, z, part: `${art.name} ${part}` }],
     };
   };

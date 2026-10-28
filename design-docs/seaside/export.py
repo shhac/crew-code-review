@@ -25,7 +25,7 @@ from pathlib import Path
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from art import EyeScale, crop, cut, export, keyed, knobbed, opaque, wristed  # noqa: E402
+from art import EyeScale, crop, cut, export, keyed, knobbed, opaque, wristed, write_outlines  # noqa: E402
 import numpy as np  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
@@ -139,6 +139,7 @@ def main() -> None:
     curled = limbs['gull-toes-curled']
     gull.foot('gull-toes-curled', knobbed(curled, CURLED, *knob), OUT, curled.shape[1] / per_unit, CURLED)
 
+    write_outlines(OUT, 'design-docs/seaside/export.py')
 
 if __name__ == '__main__':
     main()

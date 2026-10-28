@@ -27,6 +27,7 @@ import curledFurArt from './gull-toes-curled-fur.webp';
 import curledArt from './gull-toes-curled.webp';
 import toesFurArt from './gull-toes-fur.webp';
 import toesArt from './gull-toes.webp';
+import { GULL_ARM, GULL_ARM_UNDER, GULL_BODY, GULL_DRUMSTICK, GULL_FLIGHT_BODY, GULL_HAND, GULL_HAND_UNDER, GULL_HEAD_UPPER, GULL_MANDIBLE, GULL_TAIL, GULL_TAIL_FANNED, GULL_TARSUS, GULL_TOES, GULL_TOES_CURLED } from './outlines';
 
 // The herring gull put together from its parts, on the bird kit
 // (rig/bird.ts's legs and walk, rig/wings.ts's wings and flight poses): a
@@ -88,12 +89,12 @@ const FACE: Fur = { fill: '#e9edf0', outline: '#1a1a1a' };
 // to where the toes part, which is its joint; the picture keeps of the
 // tarsus only a knob round it (design-docs/art.py's knobbed), so it turns
 // there without a stub standing out from the bar.
-const TOES = { src: toesArt, fur: toesFurArt, width: 4.08, height: 1.92, heel: { x: 0.82, y: 0.57 } };
-const CURLED = { src: curledArt, fur: curledFurArt, width: 2.17, height: 2.5, heel: { x: 0.48, y: 0.5 } };
+const TOES = { src: toesArt, fur: toesFurArt, width: 4.08, height: 1.92, heel: { x: 0.82, y: 0.57 }, outline: GULL_TOES };
+const CURLED = { src: curledArt, fur: curledFurArt, width: 2.17, height: 2.5, heel: { x: 0.48, y: 0.5 }, outline: GULL_TOES_CURLED };
 const HAUNCH = 0.92;
 const LEG_ART: LimbArt = {
-  bone: tarsusArt, boneFur: tarsusFurArt, knee: true, inBody: true, upperShown: 1.42 + HAUNCH / 2,
-  thigh: { src: drumstickArt, fur: drumstickFurArt }, foot: TOES, curled: CURLED,
+  bone: tarsusArt, boneFur: tarsusFurArt, boneOutline: GULL_TARSUS, knee: true, inBody: true, upperShown: 1.42 + HAUNCH / 2,
+  thigh: { src: drumstickArt, fur: drumstickFurArt, outline: GULL_DRUMSTICK }, foot: TOES, curled: CURLED,
 };
 const LEG = {
   art: LEG_ART, width: 0.75, haunch: HAUNCH, thigh: 2.3, shin: 4.3, bend: 1, fore: false,
@@ -124,8 +125,8 @@ const THRUST = 0.5;
 // it there.
 const WING: WingArt = {
   name: 'wing', shoulder: { x: 0, y: 0 }, wrist: { x: -1.2, y: -9.1 },
-  arm: { upper: armArt, under: armUnderArt, x: -4.2, y: -10.3, width: 5.75, height: 10.5 },
-  hand: { upper: handArt, under: handUnderArt, x: -5.2, y: -18.6, width: 4.92, height: 11.5 },
+  arm: { upper: armArt, under: armUnderArt, outlines: { upper: GULL_ARM, under: GULL_ARM_UNDER }, x: -4.2, y: -10.3, width: 5.75, height: 10.5 },
+  hand: { upper: handArt, under: handUnderArt, outlines: { upper: GULL_HAND, under: GULL_HAND_UNDER }, x: -5.2, y: -18.6, width: 4.92, height: 11.5 },
 };
 const NEAR_SHOULDER = { x: 15.2, y: 7.2 };
 const FAR_SHOULDER = { x: 17.4, y: 6.6 };
@@ -286,7 +287,7 @@ function inAir(gull: RigGull, now: number): FlightPose {
 const TIP = { x: -1.5, y: -18.2 };
 const NEAR_WING = wingOf({ art: WING, side: 'near', parent: 'body', root: NEAR_SHOULDER, tip: TIP, z: 0 });
 const FAR_WING = wingOf({ art: WING, side: 'far', parent: 'body', root: FAR_SHOULDER, tip: TIP, z: 0 });
-const HEAD_PARTS = ['gape', picture('lower mandible', 'jaw', mandibleArt, MANDIBLE), picture('head', 'skull', headArt, HEAD), 'eyelid'];
+const HEAD_PARTS = ['gape', picture('lower mandible', 'jaw', mandibleArt, MANDIBLE, GULL_MANDIBLE), picture('head', 'skull', headArt, HEAD, GULL_HEAD_UPPER), 'eyelid'];
 const gullOf = (air: boolean) => tetrapod(BIRD, {
   frame: FRAME,
   root: 'body',
@@ -312,9 +313,9 @@ const gullOf = (air: boolean) => tetrapod(BIRD, {
   legs: LEGS,
   ground: () => FEET,
   order: air
-    ? [FAR_WING.pieces, picture('tail', 'tail', tailArt, TAIL), picture('tail, fanned', 'tail fan', tailFannedArt, TAIL_FANNED),
-      picture('body', 'body', bodyArt, BODY), picture('body in flight', 'body', flightBodyArt, FLIGHT_BODY), ...HEAD_PARTS, NEAR_WING.pieces]
-    : [picture('body', 'body', bodyArt, BODY), ...HEAD_PARTS],
+    ? [FAR_WING.pieces, picture('tail', 'tail', tailArt, TAIL, GULL_TAIL), picture('tail, fanned', 'tail fan', tailFannedArt, TAIL_FANNED, GULL_TAIL_FANNED),
+      picture('body', 'body', bodyArt, BODY, GULL_BODY), picture('body in flight', 'body', flightBodyArt, FLIGHT_BODY, GULL_FLIGHT_BODY), ...HEAD_PARTS, NEAR_WING.pieces]
+    : [picture('body', 'body', bodyArt, BODY, GULL_BODY), ...HEAD_PARTS],
   shapes: [{ id: 'gape', on: 'skull' }, { id: 'eyelid', on: 'skull' }],
   guides: (at) => [
     ...(air ? [{ name: 'shoulder', at: NEAR_WING.ids.shoulder }, { name: 'wrist', at: NEAR_WING.ids.wrist }, { name: 'wingtip', at: NEAR_WING.ids.tip }] : [{ name: 'eye', at: 'eye' }, { name: 'gape', at: 'jaw' }]),

@@ -11,6 +11,7 @@ import handUnderArt from './hawk-hand-under.webp';
 import handArt from './hawk-hand.webp';
 import headArt from './hawk-head.webp';
 import tailArt from './hawk-tail.webp';
+import { HAWK_ARM, HAWK_ARM_UNDER, HAWK_BODY, HAWK_HAND, HAWK_HAND_UNDER, HAWK_HEAD, HAWK_TAIL } from './outlines';
 
 // The Harris's hawk put together from its parts on the bird kit's wings: a
 // gliding body with its feet tucked under the tail painted on (it never
@@ -44,8 +45,8 @@ const MEMBRANE: Fur = { fill: '#d9d2c4', outline: '#3a2a1c' };
 // 120cm of span, is nearly the bird's length).
 const WING: WingArt = {
   name: 'wing', shoulder: { x: 0, y: 0 }, wrist: { x: -1.4, y: -12.6 },
-  arm: { upper: armArt, under: armUnderArt, x: -5.6, y: -14.2, width: 7.67, height: 14.42 },
-  hand: { upper: handArt, under: handUnderArt, x: -6.6, y: -25.4, width: 8.92, height: 15.33 },
+  arm: { upper: armArt, under: armUnderArt, outlines: { upper: HAWK_ARM, under: HAWK_ARM_UNDER }, x: -5.6, y: -14.2, width: 7.67, height: 14.42 },
+  hand: { upper: handArt, under: handUnderArt, outlines: { upper: HAWK_HAND, under: HAWK_HAND_UNDER }, x: -6.6, y: -25.4, width: 8.92, height: 15.33 },
 };
 const TIP = { x: -2.5, y: -25 };
 const NEAR_SHOULDER = { x: 23.4, y: 3.4 };
@@ -79,7 +80,7 @@ const HAWK = tetrapod(BIRD, {
   bones: [{ from: 'skull', to: 'body', name: 'neck and back line' }, ...FAR_WING.bones, ...NEAR_WING.bones],
   legs: [],
   ground: () => BELLY,
-  order: [FAR_WING.pieces, picture('tail', 'body', tailArt, TAIL), picture('body', 'body', bodyArt, BODY), picture('head', 'skull', headArt, HEAD), 'eyelid', NEAR_WING.pieces],
+  order: [FAR_WING.pieces, picture('tail', 'body', tailArt, TAIL, HAWK_TAIL), picture('body', 'body', bodyArt, BODY, HAWK_BODY), picture('head', 'skull', headArt, HEAD, HAWK_HEAD), 'eyelid', NEAR_WING.pieces],
   shapes: [{ id: 'eyelid', on: 'skull' }],
   stands: 'belly line',
   guides: () => [{ name: 'eye', at: 'eye' }, { name: 'shoulder', at: NEAR_WING.ids.shoulder }, { name: 'wrist', at: NEAR_WING.ids.wrist }, { name: 'wingtip', at: NEAR_WING.ids.tip }],

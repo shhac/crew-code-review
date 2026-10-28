@@ -10,6 +10,7 @@ import { BIRD, head, picture, spine, tetrapod } from '../rig/skeleton/tetrapod';
 import type { Goal, JointPose, Piece, PoseSpec } from '../rig/skeleton/types';
 import { wingOf } from '../rig/skeleton/wing';
 import { flaring, flapping, settling, takingOff, type Flap, type FlightPose, type WingArt, type WingPose } from '../rig/wings';
+import { PIGEON_ARM, PIGEON_ARM_UNDER, PIGEON_BODY, PIGEON_FOOT, PIGEON_FOOT_CURLED, PIGEON_HAND, PIGEON_HAND_UNDER, PIGEON_HEAD, PIGEON_NECK, PIGEON_SHANK, PIGEON_TAIL, PIGEON_TAIL_FAN, PIGEON_THIGH, PIGEON_WING } from './outlines';
 import armUnderArt from './pigeon-arm-under.webp';
 import armArt from './pigeon-arm.webp';
 import bodyArt from './pigeon-body.webp';
@@ -83,12 +84,12 @@ const MEMBRANE: Fur = { fill: '#dfe6ea', outline: '#5b6670' };
 // a knob round the joint where the toes part (design-docs/art.py's
 // knobbed), so the toes turn there without a stub standing out from the
 // bar.
-const TOES = { src: footArt, fur: footFurArt, width: 4.67, height: 2.42, heel: { x: 1.59, y: 0.72 } };
-const CURLED = { src: curledArt, fur: curledFurArt, width: 2.83, height: 2.75, heel: { x: 1.28, y: 0.71 } };
+const TOES = { src: footArt, fur: footFurArt, width: 4.67, height: 2.42, heel: { x: 1.59, y: 0.72 }, outline: PIGEON_FOOT };
+const CURLED = { src: curledArt, fur: curledFurArt, width: 2.83, height: 2.75, heel: { x: 1.28, y: 0.71 }, outline: PIGEON_FOOT_CURLED };
 const HAUNCH = 1.4;
 const LEG_ART: LimbArt = {
-  bone: shankArt, boneFur: shankFurArt, knee: true, inBody: true, upperShown: 1 + HAUNCH / 2,
-  thigh: { src: thighArt, fur: thighFurArt }, foot: TOES, curled: CURLED,
+  bone: shankArt, boneFur: shankFurArt, boneOutline: PIGEON_SHANK, knee: true, inBody: true, upperShown: 1 + HAUNCH / 2,
+  thigh: { src: thighArt, fur: thighFurArt, outline: PIGEON_THIGH }, foot: TOES, curled: CURLED,
 };
 // How long the neck line (head joint to its base) and the back line (the
 // base to the body's pivot) are at their shortest and longest, through its
@@ -127,8 +128,8 @@ const BRISK_THRUST = 0.6;
 // overlapping it there.
 const WING: WingArt = {
   name: 'wing', shoulder: { x: 0, y: 0 }, wrist: { x: -0.9, y: -8 },
-  arm: { upper: armArt, under: armUnderArt, x: -3.15, y: -9.2, width: 4.83, height: 9.42 },
-  hand: { upper: handArt, under: handUnderArt, x: -4, y: -16.6, width: 5.67, height: 10 },
+  arm: { upper: armArt, under: armUnderArt, outlines: { upper: PIGEON_ARM, under: PIGEON_ARM_UNDER }, x: -3.15, y: -9.2, width: 4.83, height: 9.42 },
+  hand: { upper: handArt, under: handUnderArt, outlines: { upper: PIGEON_HAND, under: PIGEON_HAND_UNDER }, x: -4, y: -16.6, width: 5.67, height: 10 },
 };
 const TIP = { x: -1.6, y: -16.2 };
 const NEAR_SHOULDER = { x: 14.2, y: 7.6 };
@@ -196,7 +197,7 @@ const NECK_HELD = ((NECK_FROM.x - NECK_ROOT.x) * (NECK_TOP.x - NECK_ROOT.x) + (N
 // the body's cut, and turned to where the head has gone: a span from the
 // body to the head.
 const NECK_SPAN: Piece = {
-  id: 'neck', art: { drawn: { src: neckArt, fur: neckFurArt, box: NECK_PIECE } },
+  id: 'neck', art: { drawn: { src: neckArt, fur: neckFurArt, box: NECK_PIECE, outline: PIGEON_NECK } },
   at: { kind: 'span', from: { on: 'body', at: NECK_ROOT }, to: { on: 'skull', at: NECK_TOP }, art: { from: NECK_ROOT, to: NECK_TOP }, fixed: NECK_HELD },
   draws: [{ id: 'neck', z: 0 }, { id: 'neck, fur', z: 0, fur: true }],
 };
@@ -280,8 +281,8 @@ function inAir(pigeon: RigPigeon): FlightPose {
 const NEAR_WING = wingOf({ art: WING, side: 'near', parent: 'body', root: NEAR_SHOULDER, tip: TIP, z: 0 });
 const FAR_WING = wingOf({ art: WING, side: 'far', parent: 'body', root: FAR_SHOULDER, tip: TIP, z: 0 });
 const PARTS = [
-  picture('tail', 'tail', tailArt, TAIL), picture('tail, fanned', 'tail fan', tailFanArt, TAIL_FAN), 'neck', picture('body', 'body', bodyArt, BODY), 'neck, fur',
-  picture('folded wing', 'body', foldedArt, FOLDED_WING), picture('head', 'skull', headArt, HEAD), 'eyelid',
+  picture('tail', 'tail', tailArt, TAIL, PIGEON_TAIL), picture('tail, fanned', 'tail fan', tailFanArt, TAIL_FAN, PIGEON_TAIL_FAN), 'neck', picture('body', 'body', bodyArt, BODY, PIGEON_BODY), 'neck, fur',
+  picture('folded wing', 'body', foldedArt, FOLDED_WING, PIGEON_WING), picture('head', 'skull', headArt, HEAD, PIGEON_HEAD), 'eyelid',
 ];
 const pigeonOf = (wings: boolean) => tetrapod(BIRD, {
   frame: FRAME,

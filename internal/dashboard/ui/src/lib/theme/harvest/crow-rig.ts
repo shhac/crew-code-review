@@ -29,6 +29,7 @@ import armArt from './crow-wing-arm.webp';
 import foldedArt from './crow-wing-folded.webp';
 import handUnderArt from './crow-wing-hand-under.webp';
 import handArt from './crow-wing-hand.webp';
+import { CROW_BODY, CROW_DRUMSTICK, CROW_FOOT, CROW_FOOT_CURLED, CROW_HEAD, CROW_NECK, CROW_RUMP, CROW_TAIL, CROW_TARSUS, CROW_WING_ARM, CROW_WING_ARM_UNDER, CROW_WING_FOLDED, CROW_WING_HAND, CROW_WING_HAND_UNDER } from './outlines';
 
 // The carrion crow put together from its parts on the bird kit
 // (rig/bird.ts's legs, walk and head bob; rig/wings.ts's wings and flight
@@ -117,7 +118,7 @@ const NAPE = { x: 24.5, y: 6.91 };
 const NECK_ROOT = { x: 29.7, y: 9.3 };
 const NECK_TOP = { x: 30.95, y: 6.59 };
 const NECK_SPAN: Piece = {
-  id: 'neck', art: { drawn: { src: neckArt, fur: neckFurArt, box: NECK_PIECE } },
+  id: 'neck', art: { drawn: { src: neckArt, fur: neckFurArt, box: NECK_PIECE, outline: CROW_NECK } },
   at: { kind: 'span', from: { on: 'neck root', at: NECK_ROOT }, to: { on: 'skull', at: NECK_TOP }, art: { from: NECK_ROOT, to: NECK_TOP }, fixed: -1.26, sheared: true },
   draws: [{ id: 'neck', z: 0 }, { id: 'neck, fur', z: 0, fur: true }],
 };
@@ -141,12 +142,12 @@ const MEMBRANE: Fur = { fill: '#aab9c7', outline: '#0b0c0e' };
 // which is its joint; the picture keeps of the tarsus only a knob round it
 // (design-docs/art.py's knobbed), so it turns there without a stub standing
 // out from the bar.
-const FOOT = { src: footArt, fur: footFurArt, width: 5.58, height: 2.5, heel: { x: 2.18, y: 0.85 } };
-const CURLED = { src: curledArt, fur: curledFurArt, width: 2.42, height: 2.67, heel: { x: 0.85, y: 0.69 } };
+const FOOT = { src: footArt, fur: footFurArt, width: 5.58, height: 2.5, heel: { x: 2.18, y: 0.85 }, outline: CROW_FOOT };
+const CURLED = { src: curledArt, fur: curledFurArt, width: 2.42, height: 2.67, heel: { x: 0.85, y: 0.69 }, outline: CROW_FOOT_CURLED };
 const HAUNCH = 1.6;
 const LEG_ART: LimbArt = {
-  bone: tarsusArt, boneFur: tarsusFurArt, knee: true, inBody: true, upperShown: 2.4 + HAUNCH / 2,
-  thigh: { src: drumstickArt, fur: drumstickFurArt }, foot: FOOT, curled: CURLED,
+  bone: tarsusArt, boneFur: tarsusFurArt, boneOutline: CROW_TARSUS, knee: true, inBody: true, upperShown: 2.4 + HAUNCH / 2,
+  thigh: { src: drumstickArt, fur: drumstickFurArt, outline: CROW_DRUMSTICK }, foot: FOOT, curled: CURLED,
 };
 const LEG = {
   art: LEG_ART, width: 0.85, haunch: HAUNCH, thigh: 3.4, shin: 6, bend: 1, fore: false,
@@ -190,8 +191,8 @@ const fract = (n: number) => n - Math.floor(n);
 // primary's tip is about the bird's length.
 const WING: WingArt = {
   name: 'wing', shoulder: { x: 0, y: 0 }, wrist: { x: -1.6, y: -14.2 },
-  arm: { upper: armArt, under: armUnderArt, x: -6.6, y: -15.4, width: 9.42, height: 16.33 },
-  hand: { upper: handArt, under: handUnderArt, x: -6, y: -34, width: 8.83, height: 20.67 },
+  arm: { upper: armArt, under: armUnderArt, outlines: { upper: CROW_WING_ARM, under: CROW_WING_ARM_UNDER }, x: -6.6, y: -15.4, width: 9.42, height: 16.33 },
+  hand: { upper: handArt, under: handUnderArt, outlines: { upper: CROW_WING_HAND, under: CROW_WING_HAND_UNDER }, x: -6, y: -34, width: 8.83, height: 20.67 },
 };
 const TIP = { x: -1.5, y: -33.6 };
 const NEAR_SHOULDER = { x: 25.2, y: 10.6 };
@@ -355,8 +356,8 @@ function levelled(crow: RigCrow): number {
 const NEAR_WING = wingOf({ art: WING, side: 'near', parent: 'body', root: NEAR_SHOULDER, tip: TIP, z: 0 });
 const FAR_WING = wingOf({ art: WING, side: 'far', parent: 'body', root: FAR_SHOULDER, tip: TIP, z: 0 });
 const PARTS = [
-  picture('tail', 'tail', tailArt, TAIL), picture('rump', 'body', rumpArt, RUMP), 'neck', picture('body', 'body', bodyArt, BODY),
-  picture('folded wing', 'body', foldedArt, FOLDED_WING), 'neck, fur', picture('head', 'skull', headArt, HEAD), 'eyelid',
+  picture('tail', 'tail', tailArt, TAIL, CROW_TAIL), picture('rump', 'body', rumpArt, RUMP, CROW_RUMP), 'neck', picture('body', 'body', bodyArt, BODY, CROW_BODY),
+  picture('folded wing', 'body', foldedArt, FOLDED_WING, CROW_WING_FOLDED), 'neck, fur', picture('head', 'skull', headArt, HEAD, CROW_HEAD), 'eyelid',
 ];
 const crowOf = (air: boolean) => tetrapod(BIRD, {
   frame: FRAME,

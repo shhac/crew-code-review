@@ -1,6 +1,6 @@
 import { degrees, smooth } from '../math';
 import type { Point } from '../pointer';
-import { turnAbout, turned, type Layer } from './rig';
+import { turnAbout, turned, type Layer, type Outline } from './rig';
 
 // A beating wing: a picture turned about its root through each stroke,
 // broad on the downstroke and turned edge-on on the upstroke.
@@ -162,9 +162,9 @@ export function wingFaces(lift: number, far: boolean, view = 0): Faces {
 }
 
 // A wing's art: each piece's upper side and underside, as images placed in
-// the wing's own flat drawing (drawing units), with the shoulder and the
-// wrist where they sit in it.
-type WingPiece = { upper: string; under: string; x: number; y: number; width: number; height: number };
+// the wing's own flat drawing (drawing units), and where each one's art
+// lies in its box, with the shoulder and the wrist where they sit in it.
+type WingPiece = { upper: string; under: string; outlines?: { upper: Outline; under: Outline }; x: number; y: number; width: number; height: number };
 export type WingArt = { name: string; arm: WingPiece; hand: WingPiece; shoulder: Point; wrist: Point };
 
 // The smallest share of its span a wing is drawn at, seen nearly edge-on,
