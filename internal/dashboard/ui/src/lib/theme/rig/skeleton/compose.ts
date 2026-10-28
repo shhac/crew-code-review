@@ -40,15 +40,19 @@ const apart = (a: Point, b: Point) => Math.hypot(b.x - a.x, b.y - a.y);
 // paw they stand at (`turns`), as a foot's box is turned from its heel.
 type Rest = { points: ReadonlyMap<string, Point>; limbs: ReadonlyMap<string, Limb>; turns: ReadonlyMap<string, number> };
 // The hinges a leg was posed with, for the laws: its paw's limits as turns
-// from the shin.
+// from the shin. A sole's long foot of two bones (its `ball`) is read as a
+// toe walker's bone up from the toes: its hinge turns the whole foot, the
+// long foot running from the heel at its own angle to the ball.
 function hingesOf(leg: HingedLeg, goal: Goal): PosedHinges {
-  const rest = leg.paw.rest ?? 0;
   const stands = goal.kind === 'plant' || goal.kind === 'reach' ? goal : undefined;
+  const on = stands?.walksOn ?? leg.walksOn;
+  const ball = on?.kind === 'sole' ? on.ball : undefined;
+  const rest = (leg.paw.rest ?? 0) + (ball ? degrees(Math.atan2(ball.y, ball.x)) : 0);
   const { planted } = leg.paw;
   return {
     side: stands?.side ?? leg.side, knee: leg.knee ?? STRAIGHT, paw: { min: rest + leg.paw.limits.min, max: rest + leg.paw.limits.max },
     ...(planted ? { planted: { min: rest + planted.min, max: rest + planted.max } } : {}),
-    toes: (stands?.walksOn ?? leg.walksOn)?.kind === 'toes',
+    toes: on?.kind === 'toes' || !!ball,
   };
 }
 

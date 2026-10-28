@@ -16,7 +16,9 @@ unit is on the page. The parts are cut from rabbit-standing.png (the whole
 rabbit standing on all four feet, its anatomy reference) into
 rabbit-parts.png, each printed with where it sat in the reference: its place
 in the rig. The leg pieces (rabbit-limbs.png) are cut from its near legs and
-sized to them.
+sized to them; the long hind foot is drawn as two, the foot up to the ball
+and its toes (rabbit-limbs-2.png), so the toes can lie flat as the heel
+lifts.
 """
 from pathlib import Path
 import sys
@@ -47,12 +49,19 @@ KEY_POSES = {
 }
 # Measured from the reference's near legs, in drawing units, outline
 # included: the haunch's thickness at the hip, the hind leg's and the
-# foreleg's; the hind foot's and the forepaw's length. Each foot's heel
-# (where the leg comes down onto it) as fractions of its box.
+# foreleg's; the forepaw's length, and its heel (where the leg comes down
+# onto it) as fractions of its box.
 HAUNCH = 3.2
 HIND_LEG = 1.9
 FORELEG = 1.45
-FEET = {'rabbit-foot': (4.4, (0.14, 0.32)), 'rabbit-paw': (1.9, (0.24, 0.3))}
+PAW = (1.9, (0.24, 0.3))
+# The long hind foot in rabbit-limbs-2.png: the foot from the heel to the
+# ball, a bar as thick as its toes' end, and the toes by their length, with
+# the ball (where the foot comes down onto them) as fractions of their box:
+# far enough in that their rounded back tucks under the foot's end, and as
+# high as the middle of the foot's end laid flat on their sole.
+HIND_FOOT = 1.35
+HIND_TOES = (2.2, (0.26, 0.4))
 
 
 def inked(rgba: np.ndarray) -> np.ndarray:
@@ -72,12 +81,14 @@ def rabbit() -> dict:
     scale.key_poses('rabbit-pose-', KEY_POSES, LAB)
     units.update(scale.parts(cut(keyed(HERE / 'rabbit-parts.png'), PARTS), 'rabbit-parts.png', OUT, mask=inked))
     # Each piece also as fur alone, its outline taken out.
-    haunch, leg, foot, foreleg, paw = (crop(p) for p in poses(keyed(HERE / 'rabbit-limbs.png'), 5))
+    haunch, leg, _, foreleg, paw = (crop(p) for p in poses(keyed(HERE / 'rabbit-limbs.png'), 5))
     units['rabbit-haunch'] = export_with_fur(haunch, OUT, 'rabbit-haunch', HAUNCH * RES / haunch.shape[0])
     units['rabbit-leg'] = export_with_fur(leg, OUT, 'rabbit-leg', HIND_LEG * RES / leg.shape[0])
     units['rabbit-foreleg'] = export_with_fur(foreleg, OUT, 'rabbit-foreleg', FORELEG * RES / foreleg.shape[0])
-    for (name, (length, heel)), art in zip(FEET.items(), (foot, paw)):
-        scale.foot(name, art, OUT, length, heel)
+    scale.foot('rabbit-paw', paw, OUT, *PAW)
+    foot, toes = (crop(p) for p in poses(keyed(HERE / 'rabbit-limbs-2.png'), 2))
+    units['rabbit-hind-foot'] = scale.bar('rabbit-hind-foot', foot, OUT, HIND_FOOT)
+    scale.foot('rabbit-hind-toes', toes, OUT, *HIND_TOES)
     return units
 
 

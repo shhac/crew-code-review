@@ -10,15 +10,15 @@ import { head, LEPORID, picture, spine, tetrapod, type HingedArtLeg } from '../r
 import type { Goal, PoseSpec } from '../rig/skeleton/types';
 import bodyArt from './rabbit-body.webp';
 import earsArt from './rabbit-ears.webp';
-import footFurArt from './rabbit-foot-fur.webp';
-import footArt from './rabbit-foot.webp';
 import forelegFurArt from './rabbit-foreleg-fur.webp';
 import forelegArt from './rabbit-foreleg.webp';
 import haunchFurArt from './rabbit-haunch-fur.webp';
 import haunchArt from './rabbit-haunch.webp';
 import headArt from './rabbit-head.webp';
-import legFurArt from './rabbit-leg-fur.webp';
-import legArt from './rabbit-leg.webp';
+import hindFootFurArt from './rabbit-hind-foot-fur.webp';
+import hindFootArt from './rabbit-hind-foot.webp';
+import hindToesFurArt from './rabbit-hind-toes-fur.webp';
+import hindToesArt from './rabbit-hind-toes.webp';
 import pawFurArt from './rabbit-paw-fur.webp';
 import pawArt from './rabbit-paw.webp';
 import tailArt from './rabbit-tail.webp';
@@ -56,27 +56,36 @@ const HIND = { x: 7, y: 12 };
 export const REFERENCE = { x: 1, y: 1, width: 20.5, height: 17.17 };
 const FACE: Fur = { fill: '#a89273', outline: '#120d09' };
 
-// The long hind foot, standing flat from the hock to the toes, and the small
-// forepaw; each with where its leg comes down onto it.
-const FOOT: Foot = { src: footArt, fur: footFurArt, width: 4.42, height: 2.17, heel: { x: 0.62, y: 0.69 } };
+// The long hind foot's toes, with the ball of the foot where the long foot
+// comes down onto them, and the small forepaw, with where its leg comes down
+// onto it.
+const HIND_TOES: Foot = { src: hindToesArt, fur: hindToesFurArt, width: 2.17, height: 1.25, heel: { x: 0.56, y: 0.5 } };
 const PAW: Foot = { src: pawArt, fur: pawFurArt, width: 1.92, height: 1.17, heel: { x: 0.46, y: 0.35 } };
+// Laid flat, the ball of the foot from the hock: as far ahead and down as
+// keeps the toes' tips where the foot drawn in one piece put them, so the
+// long foot slopes down from the heel to the toes as the reference's does.
+const BALL = { x: 2.19, y: 0.73 };
+const SOLE = { x: BALL.x + HIND_TOES.width - HIND_TOES.heel.x, y: BALL.y + HIND_TOES.height - HIND_TOES.heel.y };
+// The long foot its own bone, from the heel to the ball, slimmer than the
+// shank, drawn over its toes' rounded back.
 const HIND_ART: LimbArt = {
-  bone: legArt, boneFur: legFurArt, knee: true, overFoot: true,
+  bone: hindFootArt, boneFur: hindFootFurArt, boneThick: 1.33, knee: true, overFoot: true,
   thigh: { src: haunchArt, fur: haunchFurArt },
-  foot: FOOT,
+  foot: HIND_TOES,
 };
 const FORE_ART: LimbArt = { bone: forelegArt, boneFur: forelegFurArt, knee: true, foot: PAW };
 // Where each leg ends: the hind leg on its heel, as high as the foot under it
 // stands; a foreleg's toes on the ledge.
-const HEEL = GROUND - (FOOT.height - FOOT.heel.y);
+const HEEL = GROUND - SOLE.y;
 const TOES = GROUND - (PAW.height - PAW.heel.y);
 
 // The legs as a rabbit's: a hind leg's hip in the haunch, its thigh running
 // down and forward to the stifle (the knee) at the belly, the shank back
 // down to the hock, tapering to its point, and the long hind foot from the
-// hock to the toes, flat on the ground when it sits and standing; pushing
-// off, the heel peels up over the toes (it walks on its soles and hops on
-// its toes). A foreleg's shoulder in the chest, the upper arm back to the
+// hock to the ball of the foot, its toes on from there, all flat on the
+// ground when it sits and standing; pushing off, the heel peels up about
+// the ball, the toes left flat (it walks on its soles and hops on its
+// toes), and off the ground the toes curl a little toward the sole. A foreleg's shoulder in the chest, the upper arm back to the
 // elbow, the forearm down to the wrist (the carpus), and a short bone, the
 // metacarpus, sloping down and forward from it to the forepaw (35 degrees,
 // as the standing skeleton's), which folds back as it swings, its toes
@@ -99,7 +108,7 @@ const TOES = GROUND - (PAW.height - PAW.heel.y);
 // heel peels up as it pushes off, and open from it again as the leg trails.
 const HIND_LEG = {
   art: HIND_ART, width: 1.9, thigh: 3.3, shin: 3.6, bend: 1, jointLimits: { min: 25, max: 180 }, fore: false, haunch: 3.2, taper: true, reach: -3.1,
-  walksOn: { kind: 'sole', toes: { x: FOOT.width - FOOT.heel.x, y: FOOT.height - FOOT.heel.y }, peel: 62, fold: 150 }, paw: { limits: { min: -15, max: 135 } },
+  walksOn: { kind: 'sole', toes: SOLE, ball: BALL, peel: 62, fold: 150 }, paw: { limits: { min: -15, max: 135 } }, digits: 15,
 } as const;
 const FORE_LEG = { art: FORE_ART, width: 1.45, thigh: 2.6, shin: 2.6, bend: -1, jointLimits: { min: 30, max: 175 }, fore: true, haunch: 1.7, reach: 1.8, walksOn: { kind: 'toes', length: 0.8, lean: 35, fold: 89 }, paw: { limits: { min: -70, max: 95 }, planted: { min: -70, max: -12 } }, digits: -15 } as const;
 const LEGS: HingedArtLeg[] = [
@@ -295,7 +304,7 @@ const RABBIT = tetrapod(LEPORID, {
     ...LEGS.map((leg) => ({ name: leg.fore ? 'shoulder' : 'hip', at: at(leg, 0) })),
     ...LEGS.flatMap((leg) => (leg.fore
       ? [{ name: 'elbow', at: at(leg, 1) }, { name: 'wrist (carpus)', at: at(leg, 2) }, { name: 'forepaw', at: at(leg, 3) }]
-      : [{ name: 'stifle (knee)', at: at(leg, 1) }, { name: 'hock (heel)', at: at(leg, 2) }])),
+      : [{ name: 'stifle (knee)', at: at(leg, 1) }, { name: 'hock (heel)', at: at(leg, 2) }, { name: 'ball of the foot', at: at(leg, 3) }])),
   ],
 });
 

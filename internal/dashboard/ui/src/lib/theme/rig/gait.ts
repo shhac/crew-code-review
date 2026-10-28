@@ -28,8 +28,12 @@ export type Toes = { kind: 'toes'; length: number; lean: number; fold: number };
 // (where the leg comes down), and how far (degrees) the heel peels up over
 // them as the foot pushes off; on a leg bent at hinges (skeleton/hinge.ts),
 // how far (degrees) the foot opens from the shank off the ground as its
-// step swings it (`fold`), streaming out behind a leg that has pushed off.
-export type Sole = { kind: 'sole'; toes: Point; peel: number; fold?: number };
+// step swings it (`fold`), streaming out behind a leg that has pushed off;
+// and on such a leg, where the ball of the foot (the joint at the toes'
+// root) is from the heel, as the foot lies flat (`ball`): the foot is then
+// two bones, the long foot up to the ball and the toes on from it, and
+// pushing off, the heel peels up about the ball, the toes left flat.
+export type Sole = { kind: 'sole'; toes: Point; peel: number; fold?: number; ball?: Point };
 
 // When each leg steps is the gait's (a walk and a trot move the same legs in
 // different orders), so a leg has no beat of its own.

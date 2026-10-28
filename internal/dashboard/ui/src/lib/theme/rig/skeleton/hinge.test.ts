@@ -127,4 +127,30 @@ describe('a leg bent at hinges', () => {
     expect(pawAngle(pose(opening, { x: 7, y: 11 }, { kind: 'plant', at, contact: 0, fold: 0.5 }), false)).toBeCloseTo(-50, 9);
     expect(pawAngle(pose(opening, { x: 7, y: 11 }, { kind: 'plant', at, contact: 0, fold: 1 }), false)).toBeCloseTo(-40, 9);
   });
+
+  it('pushes a long foot of two bones off on its toes, the heel peeling up about the ball and the toes left flat', () => {
+    const ball = { x: 2.2, y: 0.7 };
+    const one: HingedLeg = { reach: -3.1, thigh: 3.3, shin: 3.6, side: -1, walksOn: { kind: 'sole', toes: { x: 3.8, y: 1.5 }, peel: 62 }, paw: { rest: -70, limits: { min: -30, max: 30 } } };
+    const two: HingedLeg = { ...one, walksOn: { kind: 'sole', toes: { x: 3.8, y: 1.5 }, peel: 62, ball }, digits: 15 };
+    const [hip, at] = [{ x: 7, y: 11 }, { x: 4, y: 16 }];
+    const dir = (a: Point, b: Point) => (Math.atan2(b.y - a.y, b.x - a.x) * 180) / Math.PI;
+    // Flat, the heel where the one-piece foot's was, the ball on it.
+    const flat = pose(two, hip, { kind: 'plant', at });
+    expect(planDiff({ ...flat, foot: flat.ankle }, pose(one, hip, { kind: 'plant', at }), 1e-9)).toEqual([]);
+    expect([flat.foot.x, flat.foot.y, flat.paw]).toEqual([expect.closeTo(at.x + ball.x, 9), expect.closeTo(at.y + ball.y, 9), 0]);
+    const step = { down: true, t: 0.9 };
+    const pushing = pose(two, hip, { kind: 'plant', at, step });
+    expect([pushing.foot.x, pushing.foot.y, pushing.paw]).toEqual([expect.closeTo(at.x + ball.x, 9), expect.closeTo(at.y + ball.y, 9), 0]);
+    expect(dir(pushing.ankle, pushing.foot) - dir({ x: 0, y: 0 }, ball)).toBeCloseTo(62 * gait.roll(step), 9);
+    // Free, it hangs as the one-piece foot does, its toes curled `digits`
+    // on from the long foot.
+    const free = pose(two, hip, { kind: 'plant', at, contact: 0 });
+    const whole = pose(one, hip, { kind: 'plant', at, contact: 0 });
+    expect([free.knee.x, free.knee.y, free.ankle.x, free.ankle.y]).toEqual([whole.knee.x, whole.knee.y, whole.ankle.x, whole.ankle.y].map((v) => expect.closeTo(v, 9)));
+    expect(dir(free.ankle, free.foot) - dir({ x: 0, y: 0 }, ball)).toBeCloseTo(whole.paw, 9);
+    expect(free.paw).toBeCloseTo(whole.paw + 15, 9);
+    // Lifting, the toes ease off flat as the foot takes its weight off them.
+    const lifting = pose(two, hip, { kind: 'plant', at, contact: 0.999999 });
+    expect(Math.abs(lifting.paw)).toBeLessThan(1e-3);
+  });
 });

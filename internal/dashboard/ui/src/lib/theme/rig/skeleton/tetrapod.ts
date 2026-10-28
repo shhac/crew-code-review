@@ -29,11 +29,12 @@ const MAMMAL_FORE: LegNames = { joints: ['shoulder', 'elbow', 'wrist (carpus)', 
 const MAMMAL_HIND: LegNames = { joints: ['hip', 'stifle (knee)', 'hock (ankle)', 'toes', 'toe tip'], bones: ['femur', 'tibia and fibula', 'metatarsus', 'toes (phalanges)'] };
 // A four-legged mammal's legs.
 export const MAMMAL: Preset = { solve: 'quad', legs: { fore: MAMMAL_FORE, hind: MAMMAL_HIND } };
-// A rabbit's or a hare's: a mammal's, standing at rest on its long hind
-// soles, so the hock is the heel and no bone rises from the hind toes.
+// A rabbit's: a mammal's, standing at rest on its long hind soles, so the
+// hock is the heel, the long foot running flat from it to the ball, where
+// the toes join it.
 export const LEPORID: Preset = {
   ...MAMMAL,
-  legs: { fore: { ...MAMMAL_FORE, joints: ['shoulder', 'elbow', 'wrist (carpus)', 'forepaw', 'toe tip'] }, hind: { joints: ['hip', 'stifle (knee)', 'hock (heel)', 'hind foot (its heel)', 'toe tip'], bones: ['femur', 'tibia and fibula', '', 'hind foot (metatarsus and toes)'] } },
+  legs: { fore: { ...MAMMAL_FORE, joints: ['shoulder', 'elbow', 'wrist (carpus)', 'forepaw', 'toe tip'] }, hind: { joints: ['hip', 'stifle (knee)', 'hock (heel)', 'ball of the foot', 'toe tip'], bones: ['femur', 'tibia and fibula', 'long foot (metatarsus)', 'toes (phalanges)'] } },
 };
 // A bird's legs (rig/bird.ts), its wings its forelimbs.
 const BIRD_LEG: LegNames = {
@@ -123,7 +124,8 @@ function barsOf(leg: ArtLeg, ground: number): Bar[] {
   if (art.inBody) return [{ from: 1, to: 2, art: art.thigh ?? plain, thick: haunch, ...upper }, { from: 2, to: 3, art: plain, thick: width }];
   const middle = art.middleShown === undefined ? {} : { held: { length: art.middleShown, turn: 0 } };
   const shank = leg.taper ? { art: art.shank ?? art.thigh ?? plain, thick: width * 1.15, ...middle } : { art: art.shank ?? plain, thick: width, ...middle };
-  const toes = leg.walksOn?.kind === 'toes' ? [{ from: 2, to: 3, art: plain, thick: width }] : [];
+  const footed = leg.walksOn?.kind === 'toes' || (leg.walksOn?.kind === 'sole' && leg.walksOn.ball);
+  const toes = footed ? [{ from: 2, to: 3, art: plain, thick: art.boneThick ?? width }] : [];
   return [{ from: 0, to: 1, art: art.thigh ?? plain, thick: haunch, ...upper }, { from: 1, to: 2, ...shank }, ...toes];
 }
 

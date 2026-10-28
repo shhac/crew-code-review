@@ -11,7 +11,7 @@
 import { clamp, degrees, rad, smooth } from '../../math';
 import type { Point } from '../../pointer';
 import { rotate } from '../../spidergait';
-import { flexion, liftedBy, roll, type Limb, type Step, type Toes } from '../gait';
+import { flexion, liftedBy, roll, type Limb, type Sole, type Step, type Toes } from '../gait';
 import { jointBeside } from '../limb';
 import type { Goal, HingedLeg, Limits } from './types';
 
@@ -213,12 +213,35 @@ function posedHinged(leg: HingedLeg, hip: Point, goal: Goal, target: () => Point
   const opened = (on.fold ?? 0) * fold;
   const soled = (l: Omit<Limb, 'paw'>): Limb => ({ hip, knee: l.knee, ankle: l.ankle, foot: l.ankle, paw: wrap(dir(l.ankle, l.foot) - flat) });
   const free = bentTo(leg, side, hip, opened ? rotate(tips, to, opened) : tips, within(paw, paw.rest + opened) + flat, Math.hypot(on.toes.x, on.toes.y));
+  if (on.ball) return balled(leg, side, hip, goal, to, { ...on, ball: on.ball }, contact, free);
   if (!contact) return soled(free);
   const peel = on.peel * roll(goal.step);
   const heel = peel ? rotate(to, tips, peel) : to;
   const knee = jointBeside(hip, heel, leg.thigh, leg.shin, side);
   if (contact === 1) return { hip, knee, ankle: heel, foot: heel, paw: peel };
   return soled(between(free, { hip, knee, ankle: heel, foot: tips }, contact));
+}
+
+// On its sole, its long foot two bones (the sole's `ball`): its foot is the
+// ball, its paw the toes' turn from flat. Free, the whole foot hangs as one
+// sole's does, the toes turned `digits` on from the foot (toward the sole);
+// planted, the toes lie flat and the heel peels up about the ball, so it
+// pushes off on its toes rather than tipping a board up onto their tips;
+// lifting or landing, the two mixed as a toe walker's are.
+function balled(leg: HingedLeg, side: 1 | -1, hip: Point, goal: Extract<Goal, { kind: 'plant' | 'reach' }>, to: Point, on: Sole & { ball: Point }, contact: number, free: Omit<Limb, 'paw'>): Limb {
+  const lies = dir({ x: 0, y: 0 }, on.ball);
+  const digits = goal.digits ?? leg.digits ?? 0;
+  const board = wrap(dir(free.ankle, free.foot) - dir({ x: 0, y: 0 }, on.toes));
+  const hanging = { hip, knee: free.knee, ankle: free.ankle, foot: rotate({ x: free.ankle.x + on.ball.x, y: free.ankle.y + on.ball.y }, free.ankle, board) };
+  if (!contact) return { ...hanging, paw: board + digits };
+  const ball = { x: to.x + on.ball.x, y: to.y + on.ball.y };
+  const peel = on.peel * roll(goal.step);
+  const heel = peel ? rotate(to, ball, peel) : to;
+  const planted = { hip, knee: jointBeside(hip, heel, leg.thigh, leg.shin, side), ankle: heel, foot: ball };
+  if (contact === 1) return { ...planted, paw: 0 };
+  const lifting = between(hanging, planted, contact);
+  const off = 1 - contact;
+  return { ...lifting, paw: off * wrap(dir(lifting.ankle, lifting.foot) - lies + digits * off * off) };
 }
 
 // How far below the foot's joint its picture reaches, turned `paw` degrees

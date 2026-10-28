@@ -40,6 +40,9 @@ export type LimbArt = {
   // bone piece.
   shank?: { src: string; fur: string; anchors?: BoneAnchors };
   foot: Foot;
+  // How thick the bone piece is drawn where it is not the leg's width: a
+  // long foot slimmer than the shank above it.
+  boneThick?: number;
   knee: boolean;
   // A leg too short to show a knee but bent at one hidden in the body (on a
   // skeleton): its one piece drawn this long from the heel up, held rigid
