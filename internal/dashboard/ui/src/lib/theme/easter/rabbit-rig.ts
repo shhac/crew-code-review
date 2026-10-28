@@ -21,6 +21,8 @@ import hindToesFurArt from './rabbit-hind-toes-fur.webp';
 import hindToesArt from './rabbit-hind-toes.webp';
 import pawFurArt from './rabbit-paw-fur.webp';
 import pawArt from './rabbit-paw.webp';
+import shankFurArt from './rabbit-shank-fur.webp';
+import shankArt from './rabbit-shank.webp';
 import tailArt from './rabbit-tail.webp';
 
 // The European rabbit put together from its parts: a tail, a body, a head
@@ -59,18 +61,21 @@ const FACE: Fur = { fill: '#a89273', outline: '#120d09' };
 // The long hind foot's toes, with the ball of the foot where the long foot
 // comes down onto them, and the small forepaw, with where its leg comes down
 // onto it.
-const HIND_TOES: Foot = { src: hindToesArt, fur: hindToesFurArt, width: 2.17, height: 1.25, heel: { x: 0.56, y: 0.5 } };
+const HIND_TOES: Foot = { src: hindToesArt, fur: hindToesFurArt, width: 2.5, height: 1.33, heel: { x: 0.65, y: 0.59 } };
 const PAW: Foot = { src: pawArt, fur: pawFurArt, width: 1.92, height: 1.17, heel: { x: 0.46, y: 0.35 } };
 // Laid flat, the ball of the foot from the hock: as far ahead and down as
 // keeps the toes' tips where the foot drawn in one piece put them, so the
 // long foot slopes down from the heel to the toes as the reference's does.
-const BALL = { x: 2.19, y: 0.73 };
+const BALL = { x: 1.95, y: 0.74 };
 const SOLE = { x: BALL.x + HIND_TOES.width - HIND_TOES.heel.x, y: BALL.y + HIND_TOES.height - HIND_TOES.heel.y };
-// The long foot its own bone, from the heel to the ball, slimmer than the
-// shank, drawn over its toes' rounded back.
+// Each bone its own piece: the haunch; the shank from its full calf at the
+// knee to the narrow hock, the heel's point at its lower corner (in its
+// picture the knee lies inside the rounded calf and the hock inside the
+// narrow end); and the long foot, from the heel to the ball, thick and
+// furred as the reference's, drawn over its toes' rounded back.
 const HIND_ART: LimbArt = {
-  bone: hindFootArt, boneFur: hindFootFurArt, boneThick: 1.33, knee: true, overFoot: true,
-  thigh: { src: haunchArt, fur: haunchFurArt },
+  bone: hindFootArt, boneFur: hindFootFurArt, boneThick: 1.5, knee: true, overFoot: true,
+  thigh: { src: haunchArt, fur: haunchFurArt }, shank: { src: shankArt, fur: shankFurArt, anchors: { start: 0.16, end: 0.92 } },
   foot: HIND_TOES,
 };
 const FORE_ART: LimbArt = { bone: forelegArt, boneFur: forelegFurArt, knee: true, foot: PAW };

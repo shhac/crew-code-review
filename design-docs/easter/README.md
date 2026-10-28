@@ -144,8 +144,8 @@ swing, held to the chest alert or washing the face, sits at the angle it
 did (54 degrees back of upright), its picture turned a little further
 toes down. A rig test holds every planted forepaw's wrist behind its toes.
 The hind foot is two bones (2026-10-28): the long foot (the metatarsus)
-from the hock to the ball of the foot, 2.31 units sloping down 18 degrees,
-and the toes (the phalanges) on from the ball, 1.78 units to their tips,
+from the hock to the ball of the foot, 2.09 units sloping down 21 degrees,
+and the toes (the phalanges) on from the ball, 1.99 units to their tips,
 which stay where the one-piece foot put them. Sitting and standing both lie
 flat. Pushing off, the heel peels up about the ball and the toes stay flat
 on the ledge, the hock behind and above them (rabbits move digitigrade, on
@@ -374,11 +374,13 @@ cuts a tapered haunch, a hind leg bar, the long hind foot, a foreleg bar and
 a forepaw from its near legs, so their thickness is the drawing's.
 
 - **Hind leg**: three bones as a rabbit's: hip in the haunch to stifle
-  (the haunch piece, thick at the hip), stifle to hock (the shank,
-  tapering to the hock's point), and the long hind foot from the hock,
+  (the haunch piece, thick at the hip), stifle to hock (the shank's own
+  piece, from its full calf at the knee tapering to the hock, the heel's
+  point at its lower corner; until 2026-10-28 the haunch piece squashed),
+  and the long hind foot from the hock,
   standing flat as a sole walker's foot (`walksOn: sole`), in two pieces:
-  the long foot to the ball (`ball`), drawn over the rounded back of its
-  toes, and the toes, which stay flat as the heel peels up about the ball
+  the long foot to the ball (`ball`), as thick and furred as the
+  reference's, drawn over the rounded back of its toes, and the toes, which stay flat as the heel peels up about the ball
   pushing off. At rest the hock is under the hip ("The skeleton" above).
 - **Foreleg**: shoulder to elbow to wrist, a slim bar, and a short bone on
   to the small forepaw, which folds back as the paw lifts (`walksOn: toes`).
@@ -460,6 +462,20 @@ tall as its toe end and its fur grey-olive; the second narrowed the heel and
 warmed the fur but came out orange; the third, an edit of the second,
 recoloured it to the old foot's muted tan.
 
+`rabbit-limbs-3.png` (2026-10-28, Codex `gpt-6.1-sol`, two rounds) replaces
+it, and gives the shank its own piece: on `rabbit-limbs-2.png`'s foot the
+leg read as a pale, thin, glossy stick below the haunch, and the shank was
+still the haunch squashed. Asked for, with `rabbit-standing.png`,
+`rabbit-limbs.png` (the haunch's and leg bar's fur, which all three must
+match), `rabbit-limbs-2.png` (the shapes to keep, not their colour) and
+`hares/hare-limbs-2.png` (structure only): the shank tapering from the knee
+to a bony hock with the heel's point, the long foot thick all along with a
+soft paler lower edge, and the toes as tall as the foot's end. The second
+round, a recolour edit, came out barely less yellow than the first, so
+`export.py` tones the three pieces channel by channel to the haunch's fur
+(`toned`). `rabbit-leg` (the leg bar, never drawn: a tapering shank fell
+back on the haunch's piece) is no longer exported.
+
 | Source | Shipped as | Display size |
 | --- | --- | --- |
 | `basket-chicks.png` | `basket.webp` | 141x64, at twice that |
@@ -467,8 +483,9 @@ recoloured it to the old foot's muted tan.
 | `rabbit-standing.png` | `ui/src/lab/rabbit-reference.webp` (the lab's overlay) | 20.5x17.2 units |
 | `rabbit-pose-*.png` (seven key poses) | `ui/src/lab/rabbit-pose-*.webp` (the lab's overlays) | on the same eye scale |
 | `rabbit-parts.png` | `rabbit-tail.webp`, `rabbit-body.webp`, `rabbit-head.webp`, `rabbit-ears.webp` | 3.5x4.6, 13.8x8.3, 7.7x6.3, 4.6x6.2 units, at (1, 7.84), (3.35, 6.81), (13.78, 4.27), (13.67, 1) |
-| `rabbit-limbs.png` | `rabbit-haunch`, `rabbit-leg`, `rabbit-foreleg`, `rabbit-paw`, each with a `-fur` version (its long hind foot, once `rabbit-foot`, superseded by `rabbit-limbs-2.png`) | haunch 3.2 thick, hind leg 1.9, foreleg 1.45; paw 1.9x1.2 units |
-| `rabbit-limbs-2.png` | `rabbit-hind-foot`, `rabbit-hind-toes`, each with a `-fur` version | long foot 1.33 thick; toes 2.2x1.25, the ball 0.56 in and 0.5 down |
+| `rabbit-limbs.png` | `rabbit-haunch`, `rabbit-foreleg`, `rabbit-paw`, each with a `-fur` version (its leg bar and long hind foot, once `rabbit-leg` and `rabbit-foot`, are superseded) | haunch 3.2 thick, foreleg 1.45; paw 1.9x1.2 units |
+| `rabbit-limbs-2.png` | nothing now (superseded by `rabbit-limbs-3.png`) | |
+| `rabbit-limbs-3.png` | `rabbit-shank`, `rabbit-hind-foot`, `rabbit-hind-toes`, each with a `-fur` version | shank 2.2 thick at the knee, long foot 1.5 thick; toes 2.5x1.33, the ball 0.65 in and 0.59 down |
 
 The shipped files are under `ui/src/lib/theme/easter/` unless named. Every
 rabbit picture is exported so its eye is 1.5 drawing units, at 12 file
