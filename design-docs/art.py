@@ -262,6 +262,22 @@ def wristed(arm: np.ndarray, past: float, per_unit: float) -> np.ndarray:
     return faded(arm, ramp((d - (past - WRIST_GONE)) / (WRIST_GONE + WRIST_KEPT))[:, None])
 
 
+def inside(mask: np.ndarray, n: int) -> np.ndarray:
+    """What of mask lies more than n pixels (side by side steps) inside
+    its edge."""
+    out = mask.copy()
+    for _ in range(n):
+        step = out.copy()
+        step[1:] &= out[:-1]
+        step[:-1] &= out[1:]
+        step[:, 1:] &= out[:, :-1]
+        step[:, :-1] &= out[:, 1:]
+        step[[0, -1], :] = False
+        step[:, [0, -1]] = False
+        out = step
+    return out
+
+
 def across(line: Line, xs: np.ndarray, ys: np.ndarray) -> np.ndarray:
     """How far points (drawing units) are past a line across the neck,
     nape side to throat side, toward the head: negative on the body's
@@ -293,7 +309,13 @@ class Neck:
     outlined where it ends, so the neck turned out from under the body has
     an outlined base. Fur is what is lighter than ink by fur's first
     (luminance), fully so fur's second above it. Parts are laid together at
-    work pixels a unit, on a canvas size units across."""
+    work pixels a unit, on a canvas size units across. ends: the neck runs
+    back under the body only along the body's line, between its ends, so
+    nothing of it lies under the body beyond them to swing out over the
+    back when the neck nods about the line's nape end. bare: the body's cut
+    is not outlined within that many drawing units of its silhouette, where
+    its own outline already runs, so no stub of the cut's outline stands
+    out at the back or the breast once the neck has moved off its ends."""
     body: Line
     head: Line
     sides: tuple[float, float]
@@ -305,6 +327,8 @@ class Neck:
     run: float = 0.6
     fur: tuple[float, float] = (30, 25)
     work: int = 48
+    ends: bool = False
+    bare: float = 0
 
     def inked(self, art: np.ndarray, past: np.ndarray, per_unit: float) -> np.ndarray:
         """A picture outlined along the line it was cut at, where past (how
@@ -326,7 +350,11 @@ class Neck:
         at the lower line and outlined along it."""
         xs, ys = grid(art, at, per_unit)
         past = across(self.body, xs, ys)
-        return self.inked(faded(art, ramp(0.5 - past * per_unit)), past, per_unit)
+        kept = faded(art, ramp(0.5 - past * per_unit))
+        if not self.bare:
+            return self.inked(kept, past, per_unit)
+        inner = inside(opaque(art), round(self.bare * per_unit))
+        return self.inked(kept, np.where(inner, past, np.inf), per_unit)
 
     def head_kept(self, art: np.ndarray, at: tuple[float, float], per_unit: float) -> np.ndarray:
         """The head kept to the upper line, fading out past it."""
@@ -344,10 +372,13 @@ class Neck:
             laid.alpha_composite(img, (round(at[0] * self.work), round(at[1] * self.work)))
         return np.asarray(laid)
 
-    def pieces(self, whole: np.ndarray) -> tuple[np.ndarray, np.ndarray, float]:
+    def pieces(self, whole: np.ndarray, body: np.ndarray | None = None) -> tuple[np.ndarray, np.ndarray, float]:
         """The neck piece between the body and the head, outlined and as fur
         alone, cut from the two laid together; and its top (drawing units:
-        its left is sides' first)."""
+        its left is sides' first). Given the body laid alone, what of it
+        runs back under the body is kept inside the body's silhouette, so
+        none of it shows past the body's edge (a throat's outline mirrored
+        down past the breast)."""
         work = self.work
         xs, ys = grid(whole, (0, 0), work)
         past = across(self.body, xs, ys)
@@ -356,15 +387,20 @@ class Neck:
         # back and breast round them, which would show as a pale fringe
         # once the neck leans away from where they are.
         sheen = np.where(past < 0, ramp((185 - lum(whole)) / 30), 1)
-        fur = self.feathers(faded(whole, ramp((past + 2 * self.line + self.run) / self.run) * under_head * sheen))
+        (ax, ay), (bx, by) = self.body
+        length = np.hypot(bx - ax, by - ay)
+        along = ((xs - ax) * (bx - ax) + (ys - ay) * (by - ay)) / length
+        beside = (past >= 0) | ((along >= 0) & (along <= length)) if self.ends else np.ones(past.shape, bool)
+        if body is not None:
+            beside = beside & ((past >= 0) | (body[..., 3] > 128))
+        fur = self.feathers(faded(whole, ramp((past + 2 * self.line + self.run) / self.run) * under_head * sheen * beside))
         # Outlined, past the line it is the neck's feathers mirrored in it.
         between = faded(whole, (past >= 0) * under_head)
-        (ax, ay), (bx, by) = self.body
-        up = np.array([by - ay, ax - bx]) / np.hypot(bx - ax, by - ay)
+        up = np.array([by - ay, ax - bx]) / length
         mx = np.clip(((xs - 2 * np.minimum(past, 0) * up[0]) * work).astype(int), 0, whole.shape[1] - 1)
         my = np.clip(((ys - 2 * np.minimum(past, 0) * up[1]) * work).astype(int), 0, whole.shape[0] - 1)
         depth = 3 * self.line + self.run
-        mirrored = faded(between[my, mx], ramp((past + depth) * work + 0.5))
+        mirrored = faded(between[my, mx], ramp((past + depth) * work + 0.5) * beside)
         outlined = self.inked(np.where((past < 0)[..., None], mirrored, between), past + depth - self.line, work)
         # The fur kept inside the outlined piece's own, so it never spreads
         # past its outline where the neck stands out from the body.

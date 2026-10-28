@@ -27,8 +27,10 @@ export const wings = (page: Page, wing: string) => big(page).locator(`image[href
 // its body at the neck), how far the edge of either there has come out from
 // under the other, in drawing units, at each of the lab's addresses `at`:
 // past a little, the join opens into a notch. Read off the pictures' own
-// pixels, which only a browser decodes.
-export const seamOpening = (page: Page, over: string, under: string, at: readonly string[]) => page.evaluate(async ({ over, under, at }) => {
+// pixels, which only a browser decodes. `also`: other pictures drawn over
+// both, which may cover the lower one's edge where the upper has moved off
+// it (a head over a neck's join with the body).
+export const seamOpening = (page: Page, over: string, under: string, at: readonly string[], also: readonly string[] = []) => page.evaluate(async ({ over, under, at, also }) => {
   const picture = (name: string) => {
     const el = document.querySelector<SVGImageElement>(`[data-stage] [data-critter] image[href*="${name}"]`);
     if (!el) throw new Error(`no ${name} drawn at ${location.hash}`);
@@ -62,25 +64,31 @@ export const seamOpening = (page: Page, over: string, under: string, at: readonl
     return solid && open ? [centre(m, k)] : [];
   });
   const [top, bottom] = [await maskOf(picture(over)), await maskOf(picture(under))];
+  const covers = await Promise.all(also.map(async (name) => ({ name, mask: await maskOf(picture(name)) })));
   // Each one's edge where the other covered it as drawn, and the other's
   // whole edge, the nearest of it how far that has come out.
   const pairs = [
-    { edge: edge(top).filter((p) => solidAt(bottom, p)), from: over, to: under, mask: bottom, rim: edge(bottom) },
-    { edge: edge(bottom).filter((p) => solidAt(top, p)), from: under, to: over, mask: top, rim: edge(top) },
+    { edge: edge(top).filter((p) => solidAt(bottom, p)), from: over, to: under, mask: bottom, rim: edge(bottom), covers: [] as typeof covers },
+    { edge: edge(bottom).filter((p) => solidAt(top, p)), from: under, to: over, mask: top, rim: edge(top), covers },
   ];
-  const opened = (pair: (typeof pairs)[number]) => {
-    // From one picture's drawing units into the other's, as posed now.
-    const onScreen = (name: string) => {
-      const m = picture(name).getScreenCTM();
-      if (!m) throw new Error(`${name} not placed`);
-      return DOMMatrix.fromMatrix(m);
-    };
-    const into = onScreen(pair.to).inverse().multiply(onScreen(pair.from));
-    const placed = (p: Point) => {
+  // From one picture's drawing units into another's, as posed now.
+  const onScreen = (name: string) => {
+    const m = picture(name).getScreenCTM();
+    if (!m) throw new Error(`${name} not placed`);
+    return DOMMatrix.fromMatrix(m);
+  };
+  const mapping = (from: string, to: string) => {
+    const into = onScreen(to).inverse().multiply(onScreen(from));
+    return (p: Point) => {
       const q = into.transformPoint(new DOMPoint(p.x, p.y));
       return { x: q.x, y: q.y };
     };
-    return Math.max(0, ...pair.edge.map(placed).filter((p) => !solidAt(pair.mask, p)).map((p) => Math.min(...pair.rim.map((c) => Math.hypot(c.x - p.x, c.y - p.y)))));
+  };
+  const opened = (pair: (typeof pairs)[number]) => {
+    const placed = mapping(pair.from, pair.to);
+    const others = pair.covers.map((c) => ({ mask: c.mask, placed: mapping(pair.from, c.name) }));
+    const out = pair.edge.filter((p) => !solidAt(pair.mask, placed(p)) && !others.some((o) => solidAt(o.mask, o.placed(p))));
+    return Math.max(0, ...out.map(placed).map((p) => Math.min(...pair.rim.map((c) => Math.hypot(c.x - p.x, c.y - p.y)))));
   };
   const next = () => new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done)));
   const found: { at: string; by: number }[] = [];
@@ -90,4 +98,4 @@ export const seamOpening = (page: Page, over: string, under: string, at: readonl
     found.push({ at: address, by: Math.max(...pairs.map(opened)) });
   }
   return found;
-}, { over, under, at });
+}, { over, under, at, also });

@@ -102,22 +102,27 @@ function bobbing(gaze: number, bob: Point): { neck: JointPose; head: JointPose }
 // nape and throat hackles over the breast. Drawn outlined under the body,
 // its base outlined where it ends there, and as fur alone over the body's
 // outlined cut, so standing it is the drawing as it was.
-const NECK_PIECE = { x: 23.5, y: 4.23, width: 10.5, height: 7.92 };
-// It hangs from the neck's base, so it swings down with it to peck; as the
-// head bobs along the body or stretches up alert, the neck between them
-// leans after it rather than turning, its base held where it lies along
-// the body's cut (whose middle is its root) and every line across it
-// further up carried with the head in step, up to its top, on the head's
-// line, parallel to the cut. The neck line stretches as far as the head
-// goes.
+const NECK_PIECE = { x: 23.5, y: 4.23, width: 10.5, height: 7.75 };
+// It hangs from where the neck leaves the back, the nape end of the body's
+// cut, and nods there as far as the neck's base nods, so swung down to peck
+// its base turns into the shoulder rather than out over the back. Between
+// that and the head, as the head bobs along the body, reaches down or
+// stretches up alert, the neck leans after it rather than turning, its
+// base held where it lies along the body's cut (whose middle is its root)
+// and every line across it further up carried with the head in step, up to
+// its top, on the head's line, parallel to the cut. The neck line stretches
+// as far as the head goes.
 const NECK_STRETCH = { min: 3.2, max: 5.5 };
+const NAPE = { x: 24.5, y: 6.91 };
 const NECK_ROOT = { x: 29.7, y: 9.3 };
 const NECK_TOP = { x: 30.95, y: 6.59 };
 const NECK_SPAN: Piece = {
   id: 'neck', art: { drawn: { src: neckArt, fur: neckFurArt, box: NECK_PIECE } },
-  at: { kind: 'span', from: { on: 'neck base', at: NECK_ROOT }, to: { on: 'skull', at: NECK_TOP }, art: { from: NECK_ROOT, to: NECK_TOP }, sheared: true },
+  at: { kind: 'span', from: { on: 'neck root', at: NECK_ROOT }, to: { on: 'skull', at: NECK_TOP }, art: { from: NECK_ROOT, to: NECK_TOP }, fixed: -1.26, sheared: true },
   draws: [{ id: 'neck', z: 0 }, { id: 'neck, fur', z: 0, fur: true }],
 };
+// The neck's base posed, and the neck piece's root nodding with it.
+const nodding = (neck: JointPose) => ({ 'neck base': neck, 'neck root': { angle: neck.angle ?? 0 } });
 // The nictitating membrane: pale blue-grey, drawn across the eye.
 const MEMBRANE: Fur = { fill: '#aab9c7', outline: '#0b0c0e' };
 
@@ -359,6 +364,7 @@ const crowOf = (air: boolean) => tetrapod(BIRD, {
   joints: [
     { id: 'body', parent: null, role: spine(2), at: MIDDLE, name: 'body pivot (its middle, its hips, or over its legs)' },
     { id: 'neck base', parent: 'body', role: spine(1), at: NECK, name: 'neck base' },
+    { id: 'neck root', parent: 'body', role: { part: 'other', index: 0 }, at: NAPE, name: 'neck root (where it leaves the back)' },
     { id: 'skull', parent: 'neck base', role: spine(0), at: SKULL, name: 'head joint (behind the eye)' },
     { id: 'eye', parent: 'skull', role: head(0), at: EYE, name: 'eye' },
     { id: 'bill', parent: 'skull', role: head(1), at: BILL, name: 'bill' },
@@ -402,7 +408,7 @@ function flying(crow: RigCrow, look: CrowLook): RigPose {
   // Pitched up to brake, the long tail is lifted so it stays clear of the
   // ledge, fanned and pressed down a little against the air; the head held
   // level as the body tips forward under it.
-  const joints = { ...far.joints, ...near.joints, tail: tailOf(0.75 * Math.max(0, pose.pitch - level) - 4 * pose.tail, pose.tail), 'neck base': { angle: -0.8 * level } };
+  const joints = { ...far.joints, ...near.joints, tail: tailOf(0.75 * Math.max(0, pose.pitch - level) - 4 * pose.tail, pose.tail), ...nodding({ angle: -0.8 * level }) };
   const hips = IN_AIR.hips({ root: body, joints });
   const goals: Goal[] = pose.airborne ? LEGS.map(() => ({ kind: 'air', reach: pose.legs, legs: CROW_AIR, carried: true })) : planted();
   const show: PoseSpec['show'] = { ...far.show, ...near.show, ...feetShown(goals), 'folded wing': folded ? 'drawn' : false };
@@ -417,7 +423,7 @@ export const grounded = (pose: CrowPose) => GROUND_POSES.includes(pose);
 export function crowRig(crow: RigCrow, look: CrowLook): RigPose {
   if (!grounded(crow.pose) && !look.still) return flying(crow, look);
   const { body, neck, head: skull, tail, goals: goalsAt } = onGround(crow, look);
-  const joints = { 'neck base': neck, skull, tail: tailOf(tail, 0) };
+  const joints = { ...nodding(neck), skull, tail: tailOf(tail, 0) };
   const goals = goalsAt(ON_GROUND.hips({ root: body, joints }));
   return compose(ON_GROUND.body, () => ({ root: body, joints, limbs: ON_GROUND.limbs(goals), show: feetShown(goals), z: {}, shapes: eyelid(crow, look) }), look.now);
 }

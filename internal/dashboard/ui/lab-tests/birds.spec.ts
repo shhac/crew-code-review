@@ -111,10 +111,10 @@ for (const bird of BIRDS) {
 // drawn, each one's edge stays near the other as it walks, skips and
 // stands alert: before it had a neck of its own, its head bobbed along the
 // body with nothing under it, its throat hackles and nape sliding nearly
-// 2 units over the breast. Pecking, the neck swings down whole from its
-// base with the head, as the head alone did, and comes out further from
-// under the body's shoulders. Drawing units are page pixels (crow-rig.ts's
-// SCALE is 1).
+// 2 units over the breast. Pecking, the neck nods down from where it
+// leaves the back, its front swinging in under the head, so there the
+// body's edge counts as covered by either. Drawing units are page pixels
+// (crow-rig.ts's SCALE is 1).
 test('the crow\'s head stays on its neck, and its neck on its body', async ({ page }) => {
   test.setTimeout(240000);
   await page.goto('/lab/critters.html#animal=crow&mode=walk&frame=0');
@@ -125,7 +125,7 @@ test('the crow\'s head stays on its neck, and its neck on its body', async ({ pa
   const head = widest(await seamOpening(page, 'crow-head', 'crow-neck', [...standing, ...frames(['peck'])]));
   expect(head.by, head.at).toBeLessThan(0.3);
   const neck = widest(await seamOpening(page, 'crow-neck', 'crow-body', standing));
-  expect(neck.by, neck.at).toBeLessThan(1.2);
-  const pecking = widest(await seamOpening(page, 'crow-neck', 'crow-body', frames(['peck'])));
-  expect(pecking.by, pecking.at).toBeLessThan(2);
+  expect(neck.by, neck.at).toBeLessThan(1);
+  const pecking = widest(await seamOpening(page, 'crow-neck', 'crow-body', frames(['peck']), ['crow-head']));
+  expect(pecking.by, pecking.at).toBeLessThan(1);
 });

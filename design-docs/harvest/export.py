@@ -73,7 +73,7 @@ RUMP_OVERLAP = 0.25
 # throat over the breast: the body cut below the head's throat hackles and
 # nape, the head kept to above them. The crow's ink is near black, its
 # darkest feathers not much lighter.
-NECK = Neck(body=((26.0, 7.6), (33.4, 11.0)), head=((26.0, 4.32), (34.0, 8.0)), sides=(23.5, 34.0), ink=(2, 2, 4), size=(42, 30), fur=(6, 12))
+NECK = Neck(body=((26.0, 7.6), (33.4, 11.0)), head=((26.0, 4.32), (34.0, 8.0)), sides=(23.5, 34.0), ink=(2, 2, 4), size=(42, 30), fur=(6, 12), ends=True, bare=0.6)
 # The spread wing, shoulder to the longest primary's tip, is this many of
 # the bird's lengths (bill tip to tail tip): a carrion crow's span is about
 # 2.1 times its length, less the body between the shoulders.
@@ -315,7 +315,8 @@ def neck(scale: EyeScale, body: np.ndarray, body_at: tuple[float, float], head: 
     head_at = (x / scale.per_unit() + scale.margin, y / scale.per_unit() + scale.margin)
     size = export(NECK.head_kept(head, head_at, on_sheet), OUT, 'crow-head', scale.on_eye(sheet))
     print(f'crow-head: {scale.units(size)} at {head_at[0]:.2f}, {head_at[1]:.2f}')
-    outlined, fur, top = NECK.pieces(NECK.laid([(body, body_at, on_sheet), (head, head_at, on_sheet)]))
+    whole = NECK.laid([(body, body_at, on_sheet), (head, head_at, on_sheet)])
+    outlined, fur, top = NECK.pieces(whole, NECK.laid([(body, body_at, on_sheet)]))
     for name, piece in {'crow-neck': outlined, 'crow-neck-fur': fur}.items():
         size = export(piece, OUT, name, RES / NECK.work)
     print(f'crow-neck: {scale.units(size)} at {NECK.sides[0]:.2f}, {top:.2f}')
