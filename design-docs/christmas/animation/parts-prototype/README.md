@@ -58,7 +58,7 @@ make dashboard
 ```
 
 Preparation uses ImageMagick 7.1.2-32 (7.1.2-34 writes the same files) and Node, with no Pillow requirement; `legs.py` alone, which cuts the standing legs from their keyed sheet, pins Pillow and NumPy as the theme export scripts do.
-The render command requires Node 22.6+ for TypeScript stripping. A harmless
+The render command requires Node 22.15+ for TypeScript stripping and `module.registerHooks`, which resolves the dashboard's extensionless imports as Vite does. A harmless
 MODULE_TYPELESS_PACKAGE_JSON warning can appear because the dashboard package
 does not declare its module type.
 

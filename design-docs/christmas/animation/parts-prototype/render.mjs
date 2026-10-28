@@ -2,9 +2,29 @@ import { execFileSync } from 'node:child_process';
 import { readFileSync, mkdtempSync, rmSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
+import { registerHooks } from 'node:module';
 import { fileURLToPath } from 'node:url';
-import { partsPose, partsLayers, partsViewport } from '../../../../internal/dashboard/ui/src/lib/theme/christmas/parts-pose.ts';
-import { svgMatrix, multiply } from '../../../../internal/dashboard/ui/src/lib/theme/christmas/parts-affine.ts';
+
+// The dashboard's TypeScript imports its own modules without extensions, as
+// Vite resolves them; node, stripping the types, needs them spelled out.
+registerHooks({
+  resolve(specifier, context, next) {
+    try {
+      return next(specifier, context);
+    } catch (error) {
+      if (!specifier.startsWith('.') || /\.[a-z]+$/.test(specifier)) throw error;
+      return next(specifier + '.ts', context);
+    }
+  },
+});
+const { partsPose, partsLayers, partsViewport } = await import('../../../../internal/dashboard/ui/src/lib/theme/christmas/parts-pose.ts');
+const { svgMatrix } = await import('../../../../internal/dashboard/ui/src/lib/theme/christmas/parts-affine.ts');
+// SVG's matrix product, as parts-affine.ts composes transforms.
+const multiply = (a, b) => [
+  a[0] * b[0] + a[2] * b[1], a[1] * b[0] + a[3] * b[1],
+  a[0] * b[2] + a[2] * b[3], a[1] * b[2] + a[3] * b[3],
+  a[0] * b[4] + a[2] * b[5] + a[4], a[1] * b[4] + a[3] * b[5] + a[5],
+];
 
 const here = dirname(fileURLToPath(import.meta.url));
 const assets = resolve(here, '../../../../internal/dashboard/ui/src/lib/theme/christmas/robin-parts');
