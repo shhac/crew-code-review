@@ -1,4 +1,4 @@
-import { smooth } from '../math';
+import { degrees, smooth } from '../math';
 import type { Point } from '../pointer';
 import { turnAbout, turned, type Layer } from './rig';
 
@@ -144,9 +144,20 @@ export function settling(t: number, raised: WingPose, upright = 60): FlightPose 
 // turns up and in, away from a side-on eye, which sees its underside;
 // lowered, its upper side; the far wing the other way about. `view` is how
 // far above level the eye looks from (degrees): seen a little from above,
-// a near wing shows its upper side until it is raised past that.
-export const wingFace = (lift: number, far: boolean, view = 0): 'upper' | 'under' =>
-  ((far ? lift > -view : lift < view) ? 'upper' : 'under');
+// a near wing shows its upper side until it is raised past that. Turning
+// from one side to the other the wing passes edge-on, drawn no thinner than
+// EDGE_ON, so a swap there would show as a pop; across the EDGE_BAND either
+// side of it the side it turns to is drawn over the other instead, more of
+// it the further it has turned (each face's opacity), the other held whole
+// beneath so the wing never shows through.
+export type Faces = 'upper' | 'under' | { upper: number; under: number };
+export function wingFaces(lift: number, far: boolean, view = 0): Faces {
+  const past = far ? -view - lift : lift - view;
+  const under = smooth((past + EDGE_BAND) / (2 * EDGE_BAND));
+  if (under === 0) return 'upper';
+  if (under === 1) return 'under';
+  return { upper: 1, under };
+}
 
 // A wing's art: each piece's upper side and underside, as images placed in
 // the wing's own flat drawing (drawing units), with the shoulder and the
@@ -155,8 +166,10 @@ type WingPiece = { upper: string; under: string; x: number; y: number; width: nu
 export type WingArt = { name: string; arm: WingPiece; hand: WingPiece; shoulder: Point; wrist: Point };
 
 // The smallest share of its span a wing is drawn at, seen nearly edge-on,
-// so it never thins to a hairline.
+// so it never thins to a hairline; the lift below which it is held there
+// is the band its faces cross over in.
 const EDGE_ON = 0.12;
+const EDGE_BAND = degrees(Math.asin(EDGE_ON));
 
 // How far a wing at this lift is foreshortened across: the sine of its
 // angle, kept to at least EDGE_ON either way.

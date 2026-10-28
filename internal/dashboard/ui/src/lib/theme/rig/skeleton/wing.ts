@@ -5,11 +5,11 @@
 // wingtip a point the hand carries. A wing is a bird's forelimb (L0 the
 // near, L1 the far), its joints authored, posed from its WingPose. Each
 // piece, the arm and the hand, is drawn with its upper side and its
-// underside, the one facing the eye shown; folded away into the body's own
-// folded wing, neither.
+// underside, the one facing the eye shown (both, crossing over, as it
+// passes edge-on); folded away into the body's own folded wing, neither.
 import type { Point } from '../../pointer';
-import { foreshortening, wingFace, type WingArt, type WingPose } from '../wings';
-import type { BoneSpec, JointPose, JointSpec, Piece, PoseSpec, Side } from './types';
+import { foreshortening, wingFaces, type WingArt, type WingPose } from '../wings';
+import type { BoneSpec, JointPose, JointSpec, Piece, PoseSpec, Shown, Side } from './types';
 
 // The wing's art, which side it is on, the joint it hangs from and where on
 // the bird its shoulder is (in that joint's rest space), the wingtip in the
@@ -44,7 +44,7 @@ export function wingOf({ art, side, parent, root, tip, z }: WingSpec): Wing {
   };
   const pieces = [piece('hand', ids.wrist), piece('arm', ids.shoulder)];
   const pose = (wing: WingPose, view = 0, shown = true) => {
-    const face: string | false = shown ? wingFace(wing.lift, side === 'far', view) : false;
+    const face: Shown = shown ? wingFaces(wing.lift, side === 'far', view) : false;
     const posed: Record<string, JointPose> = {
       [ids.shoulder]: { angle: -wing.sweep, foreshorten: foreshortening(wing.lift), shift: { x: root.x - art.shoulder.x, y: root.y - art.shoulder.y } },
       [ids.wrist]: { angle: -wing.fold },

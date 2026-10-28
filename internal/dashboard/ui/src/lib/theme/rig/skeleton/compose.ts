@@ -13,7 +13,7 @@ import { angleOf, applied, IDENTITY, inverse, linear, product, rotate, scale, tr
 import { frames, local } from './forward';
 import { STRAIGHT } from './hinge';
 import { ownedBy, ownedFrames, ownedPoints, solveLimb, standing } from './limbs';
-import type { Attachment, Body, Draw, Goal, Handle, HingedLeg, JointSpec, Piece, PosedBone, PosedHinges, PosedJoint, PosedLimb, PoseSpec, Role, Skeleton } from './types';
+import type { Attachment, Body, Draw, Goal, Handle, HingedLeg, JointSpec, Piece, PosedBone, PosedHinges, PosedJoint, PosedLimb, PoseSpec, Role, Shown, Skeleton } from './types';
 
 type PieceLayer = Extract<Layer, { kind: 'piece' }>;
 
@@ -186,18 +186,27 @@ function placing(at: Attachment, posed: Posed): Placing {
 // A piece's art by variant, a bar's with no box of its own.
 const artOf = (piece: Piece): readonly [string, { src: string; fur?: string; box?: { x: number; y: number; width: number; height: number } }][] => Object.entries(piece.art);
 
-// One draw of a piece: every variant of it, the one not shown unseen.
-function paints(piece: Piece, draw: Draw, show: string | false | undefined, place: Placing, leg: boolean): PieceLayer[] {
+// How much of each variant a pose shows: its one (its first where it does
+// not say) whole, or a blend's own.
+function opacities(piece: Piece, show: Shown | undefined, keys: readonly string[]): Readonly<Record<string, number>> {
+  const shown = show === undefined ? { [keys[0]]: 1 } : show === false ? {} : typeof show === 'string' ? { [show]: 1 } : show;
+  const missing = Object.keys(shown).filter((k) => !keys.includes(k));
+  if (missing.length) throw new Error(`skeleton: ${piece.id} has no ${missing.join(', ')}`);
+  return shown;
+}
+
+// One draw of a piece: every variant of it, those not shown unseen.
+function paints(piece: Piece, draw: Draw, show: Shown | undefined, place: Placing, leg: boolean): PieceLayer[] {
   const variants = artOf(piece);
-  const shown = show === false ? null : show ?? variants[0][0];
-  if (shown !== null && !variants.some(([k]) => k === shown)) throw new Error(`skeleton: ${piece.id} has no ${shown}`);
+  const shown = opacities(piece, show, variants.map(([k]) => k));
   return variants.map(([key, art]) => {
     const src = draw.fur ? art.fur : art.src;
     const box = place.box?.(draw) ?? art.box;
     if (src === undefined) throw new Error(`skeleton: ${piece.id} (${key}) has no fur`);
     if (!box) throw new Error(`skeleton: ${piece.id} (${key}) has no box`);
-    const seen = key === shown;
-    const look = piece.hide === 'opacity' ? { opacity: seen ? 1 : 0 } : { hidden: !seen };
+    const opacity = shown[key] ?? 0;
+    const partly = opacity > 0 && opacity < 1 ? { opacity } : {};
+    const look = piece.hide === 'opacity' ? { opacity } : { hidden: opacity === 0, ...partly };
     const id = variants.length > 1 ? `${draw.id} (${key})` : draw.id;
     return {
       kind: 'piece', id, name: draw.part ?? draw.id, src, box, aspect: piece.at.kind === 'bar' ? 'none' : 'default', matrix: place.matrix,

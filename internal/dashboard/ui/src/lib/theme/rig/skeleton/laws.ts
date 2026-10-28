@@ -190,12 +190,14 @@ const everyPieceDrawn: Law = ({ moving, still }) => {
 };
 
 // Two pictures drawn one after the other in the same place are one part's
-// variants (a wing's upper side and its underside): never both seen.
+// variants (a wing's upper side and its underside): never both seen whole.
+// Crossing over (a wing passing edge-on) the second is drawn see-through
+// over the first.
 const oneVariantShows: Law = ({ moving, still }) => [...moving, ...still].flatMap((s) => s.plan.draws.flatMap((d, i) => {
   const next = s.plan.draws[i + 1];
   if (d.kind !== 'image' || next?.kind !== 'image' || d.href === next.href) return [];
   if (planDiff(d.place, next.place, 1e-9).length) return [];
-  return shown(d) && shown(next) ? [`${d.href} and ${next.href} both seen ${where(s)}`] : [];
+  return shown(d) && shown(next) && next.opacity === 1 ? [`${d.href} and ${next.href} both seen ${where(s)}`] : [];
 }));
 
 // What is on the far side is drawn before the body (its largest near

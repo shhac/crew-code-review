@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Point } from '../../pointer';
 import { turnAbout, turned, type Frame, type Layer, type RigPose } from '../rig';
-import { FOLDED, foreshortening, wingFace, type WingArt, type WingPose } from '../wings';
+import { FOLDED, foreshortening, wingFaces, type WingArt, type WingPose } from '../wings';
 import { compose } from './compose';
 import { planDiff, planOf } from './plan';
 import type { Body } from './types';
@@ -12,18 +12,24 @@ import { skeletonFromPosed } from '../../../../lab/skeleton';
 // the skeleton's wing is held to: moved to its root and foreshortened about
 // its shoulder, swept about the shoulder, the hand folded about the wrist
 // and drawn under the arm, each piece's upper side and underside both drawn
-// and only the facing one seen; folded away, neither.
+// and only the facing one seen (passing edge-on, the one it turns to drawn
+// over the other at its share); folded away, neither.
 const placing = (art: WingArt, pose: WingPose, root: Point) => ({
   placed: turnAbout(0, art.shoulder, root.x - art.shoulder.x, root.y - art.shoulder.y),
   swept: turnAbout(-pose.sweep, art.shoulder),
   folded: turnAbout(-pose.fold, art.wrist),
 });
 function birdWing(art: WingArt, pose: WingPose, root: Point, far: boolean, shown: boolean): Layer {
-  const face = wingFace(pose.lift, far, 0);
-  const sides = (piece: WingArt['arm'], part: string): Layer[] => (['upper', 'under'] as const).map((side) => ({
-    kind: 'image', name: `${art.name} ${part}${side === 'under' ? ', underside' : ''}`, src: piece[side],
-    x: piece.x, y: piece.y, width: piece.width, height: piece.height, far, hidden: !shown || side !== face,
-  }));
+  const face = wingFaces(pose.lift, far, 0);
+  const share = (side: 'upper' | 'under') => (typeof face === 'string' ? Number(side === face) : face[side]);
+  const sides = (piece: WingArt['arm'], part: string): Layer[] => (['upper', 'under'] as const).map((side) => {
+    const image: Layer = {
+      kind: 'image', name: `${art.name} ${part}${side === 'under' ? ', underside' : ''}`, src: piece[side],
+      x: piece.x, y: piece.y, width: piece.width, height: piece.height, far, hidden: !shown || share(side) === 0,
+    };
+    const o = share(side);
+    return shown && o > 0 && o < 1 ? { kind: 'group', turn: turnAbout(0, { x: 0, y: 0 }), opacity: o, layers: [image] } : image;
+  });
   const { placed, swept, folded } = placing(art, pose, root);
   const hand: Layer = { kind: 'group', turn: folded, layers: sides(art.hand, 'hand') };
   return { kind: 'group', turn: placed, foreshorten: foreshortening(pose.lift), layers: [{ kind: 'group', turn: swept, layers: [hand, ...sides(art.arm, 'arm')] }] };

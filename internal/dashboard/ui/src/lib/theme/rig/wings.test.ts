@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { flapping, flaring, foreshortening, FOLDED, gliding, settling, takingOff, wingFace, wingStroke, type Flap } from './wings';
+import { flapping, flaring, foreshortening, FOLDED, gliding, settling, takingOff, wingFaces, wingStroke, type Flap } from './wings';
 
 describe('wingStroke', () => {
   it('beats its wings: down broad, up turned edge-on, the tip riding a figure-eight', () => {
@@ -101,12 +101,23 @@ describe('flaring and settling', () => {
 
 describe('a wing seen from the side', () => {
   it('shows a raised near wing\'s underside and a lowered one\'s upper side; the far wing the other way', () => {
-    expect(wingFace(40, false)).toBe('under');
-    expect(wingFace(-30, false)).toBe('upper');
-    expect(wingFace(40, true)).toBe('upper');
-    expect(wingFace(-30, true)).toBe('under');
+    expect(wingFaces(40, false)).toBe('under');
+    expect(wingFaces(-30, false)).toBe('upper');
+    expect(wingFaces(40, true)).toBe('upper');
+    expect(wingFaces(-30, true)).toBe('under');
     // Seen a little from above, a near wing just raised still shows its top.
-    expect(wingFace(5, false, 10)).toBe('upper');
+    expect(wingFaces(-5, false, 10)).toBe('upper');
+  });
+
+  it('crosses its faces over as it passes edge-on, the one it turns to drawn over the other, held whole', () => {
+    expect(wingFaces(0, false)).toEqual({ upper: 1, under: 0.5 });
+    expect(wingFaces(0, true)).toEqual({ upper: 1, under: 0.5 });
+    const rising = [-6, -3, 0, 3, 6].map((lift) => wingFaces(lift, false));
+    const shares = rising.map((f) => (typeof f === 'string' ? Number(f === 'under') : f.under));
+    for (let i = 1; i < shares.length; i++) expect(shares[i]).toBeGreaterThan(shares[i - 1]);
+    // Past the band, which is where it is held at its thinnest, one face.
+    expect(wingFaces(7, false)).toBe('under');
+    expect(wingFaces(-7, true)).toBe('under');
   });
 
   it('is shortened across to the sine of its lift, flipped below level, never to a hairline', () => {

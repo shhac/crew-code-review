@@ -136,7 +136,11 @@ const FLAP: Flap = { top: 50, bottom: -35, down: 0.55, fold: 70, sweep: 20 };
 const UPRIGHT = 34;
 // The dive: wings half folded and swept back, wrists forward.
 const STOOP: WingPose = { lift: 25, sweep: 75, fold: 40 };
-const SOAR: WingPose = { lift: 6, sweep: 0, fold: 8 };
+// Soaring, its wings held spread in a shallow dihedral, high enough above
+// level that a side-on eye sees them as wings, not edge-on slivers (side
+// views cheat a glide's dihedral up for that), rocking as the air moves
+// them.
+const SOAR: WingPose = { lift: 17, sweep: 0, fold: 8 };
 // Pushing off, a gull's legs are stretched down and back, not trailed out
 // behind as a raptor's; reaching to land, its webbed toes spread forward and
 // down to meet the ground (the flare drawing).
@@ -377,6 +381,6 @@ type Footprint = { width: number; height: number; down?: number };
 export const FOOTPRINTS: Record<GullPose, Footprint> = {
   stand: { width: 39.5, height: 26.5 }, strut: { width: 36.5, height: 26 }, forage: { width: 41.5, height: 26 },
   eye: { width: 42.5, height: 27 }, call: { width: 44.5, height: 27 },
-  takeoff: { width: 44, height: 45, down: 6 }, flap: { width: 41, height: 39 }, glide: { width: 41, height: 26 },
+  takeoff: { width: 44, height: 45, down: 6 }, flap: { width: 41, height: 39 }, glide: { width: 41, height: 26.5 },
   stoop: { width: 48, height: 26 }, flare: { width: 48, height: 44, down: 6 }, settle: { width: 44, height: 44 },
 };

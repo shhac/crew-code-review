@@ -111,16 +111,21 @@ export type Goal =
   | { kind: 'air'; reach: number; legs?: AirLegs; carried?: boolean }
   | { kind: 'angles'; swing: number; bend: number };
 
+// Which variant of a piece shows: one, none (false), or several at once,
+// each at its opacity, those it leaves out unseen (a wing's two faces
+// crossing over as it passes edge-on).
+export type Shown = string | false | Readonly<Record<string, number>>;
+
 // One moment's pose: the root's turn (the one joint that may turn about a
 // different point in each pose), each authored joint's pose, each limb's
-// goal, which variant of a piece shows (false for none; its first
-// otherwise), draws moved to another z, and what each shape draws now (an
-// eyelid while the eye is shut), in its joint's rest space.
+// goal, which variant of a piece shows (its first where it does not say),
+// draws moved to another z, and what each shape draws now (an eyelid while
+// the eye is shut), in its joint's rest space.
 export type PoseSpec = {
   root: Turn;
   joints: Readonly<Partial<Record<string, JointPose>>>;
   limbs: Readonly<Partial<Record<string, Goal>>>;
-  show: Readonly<Partial<Record<string, string | false>>>;
+  show: Readonly<Partial<Record<string, Shown>>>;
   z: Readonly<Partial<Record<string, number>>>;
   shapes?: Readonly<Partial<Record<string, Drawn>>>;
 };
