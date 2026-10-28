@@ -13,7 +13,7 @@ import { angleOf, applied, IDENTITY, inverse, linear, product, rotate, scale, tr
 import { frames, local } from './forward';
 import { STRAIGHT } from './hinge';
 import { ownedBy, ownedFrames, ownedPoints, solveLimb, standing } from './limbs';
-import type { Attachment, Body, Draw, Goal, Handle, HingedLeg, JointSpec, Piece, PosedBone, PosedHinges, PosedJoint, PosedLimb, PoseSpec, Role, Shown, Skeleton } from './types';
+import type { Art, Attachment, Body, Draw, Goal, Handle, HingedLeg, JointSpec, Piece, PosedBone, PosedHinges, PosedJoint, PosedLimb, PoseSpec, Role, Shown, Skeleton } from './types';
 
 type PieceLayer = Extract<Layer, { kind: 'piece' }>;
 
@@ -199,7 +199,7 @@ function placing(at: Attachment, posed: Posed): Placing {
 }
 
 // A piece's art by variant, a bar's with no box of its own.
-const artOf = (piece: Piece): readonly [string, { src: string; fur?: string; box?: { x: number; y: number; width: number; height: number } }][] => Object.entries(piece.art);
+const artOf = (piece: Piece): readonly [string, Omit<Art, 'box'> & { box?: Art['box'] }][] => Object.entries(piece.art);
 
 // How much of each variant a pose shows: its one (its first where it does
 // not say) whole, or a blend's own.
@@ -210,8 +210,9 @@ function opacities(piece: Piece, show: Shown | undefined, keys: readonly string[
   return shown;
 }
 
-// One draw of a piece: every variant of it, those not shown unseen.
-function paints(piece: Piece, draw: Draw, show: Shown | undefined, place: Placing, leg: boolean): PieceLayer[] {
+// One draw of a piece: every variant of it, those not shown unseen, each
+// mirrored as `mirror` has it.
+function paints(piece: Piece, draw: Draw, show: Shown | undefined, place: Placing, leg: boolean, mirror: (seen: Art['seen']) => Affine): PieceLayer[] {
   const variants = artOf(piece);
   const shown = opacities(piece, show, variants.map(([k]) => k));
   return variants.map(([key, art]) => {
@@ -224,7 +225,7 @@ function paints(piece: Piece, draw: Draw, show: Shown | undefined, place: Placin
     const look = piece.hide === 'opacity' ? { opacity } : { hidden: opacity === 0, ...partly };
     const id = variants.length > 1 ? `${draw.id} (${key})` : draw.id;
     return {
-      kind: 'piece', id, name: draw.part ?? draw.id, src, box, aspect: piece.at.kind === 'bar' ? 'none' : 'default', matrix: place.matrix,
+      kind: 'piece', id, name: draw.part ?? draw.id, src, box, aspect: piece.at.kind === 'bar' ? 'none' : 'default', matrix: product(mirror(art.seen), place.matrix),
       far: piece.side === 'far' || undefined, ...look, ...(leg ? { leg } : {}),
     };
   });
@@ -326,6 +327,19 @@ export function compose(body: Body, poseAt: (now: number) => PoseSpec, now: numb
     return extra ? { ...place, matrix: product(place.matrix, local({ at: place.anchor }, extra)) } : place;
   });
   const layout = layoutOf(body);
+  // A picture of a joint foreshortened one way, posed the other: its joint's
+  // frame with the foreshortening's sign turned back, the joint's own frame
+  // mirrored across its line (where it sits, along its parent's axis).
+  const mirror = (seen: Art['seen']): Affine => {
+    const f = seen ? pose.joints[seen.from]?.foreshorten ?? 1 : 1;
+    if (!seen || Math.sign(f) !== -seen.sign) return IDENTITY;
+    const joint = skeleton.joints.find((j) => j.id === seen.from);
+    if (!joint) throw new Error(`skeleton: no joint ${seen.from}`);
+    const p = pose.joints[seen.from] ?? {};
+    const above = product(posed.frame(seen.from), inverse(local(joint, p)));
+    const at = { x: joint.at.x + (p.shift?.x ?? 0), y: joint.at.y + (p.shift?.y ?? 0) };
+    return product(above, translate(at.x, at.y), scale(1, -1), translate(-at.x, -at.y), inverse(above));
+  };
   const painted = orderOf(body, pose.z).map((slot): { piece?: number; layers: readonly Layer[] } => {
     if ('shape' in slot) {
       const shape = (body.shapes ?? [])[slot.shape];
@@ -336,7 +350,7 @@ export function compose(body: Body, poseAt: (now: number) => PoseSpec, now: numb
       return { layers: [frame] };
     }
     const p = body.pieces[slot.piece];
-    return { piece: slot.piece, layers: paints(p, p.draws[slot.draw], pose.show[p.id], placings[slot.piece], layout.legs[slot.piece]) };
+    return { piece: slot.piece, layers: paints(p, p.draws[slot.draw], pose.show[p.id], placings[slot.piece], layout.legs[slot.piece], mirror) };
   });
   const layers = painted.flatMap((p) => p.layers);
 

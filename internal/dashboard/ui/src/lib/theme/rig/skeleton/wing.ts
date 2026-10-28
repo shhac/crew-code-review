@@ -5,8 +5,9 @@
 // wingtip a point the hand carries. A wing is a bird's forelimb (L0 the
 // near, L1 the far), its joints authored, posed from its WingPose. Each
 // piece, the arm and the hand, is drawn with its upper side and its
-// underside, the one facing the eye shown (both, crossing over, as it
-// passes edge-on); folded away into the body's own folded wing, neither.
+// underside, the one facing the eye shown (both, each on its own side of
+// level, crossing over as it passes edge-on); folded away into the body's
+// own folded wing, neither.
 import type { Point } from '../../pointer';
 import { foreshortening, wingFaces, type WingArt, type WingPose } from '../wings';
 import type { BoneSpec, JointPose, JointSpec, Piece, PoseSpec, Shown, Side } from './types';
@@ -38,9 +39,17 @@ export function wingOf({ art, side, parent, root, tip, z }: WingSpec): Wing {
   const bones = [{ from: ids.shoulder, to: ids.wrist, name: 'arm (humerus, radius and ulna; no elbow)' }, { from: ids.wrist, to: ids.tip, name: 'hand and primaries' }];
   // The hand under the arm, its cut end hidden beneath the arm's rounded
   // wrist.
+  // Each face a picture of the wing to one side of level, its underside
+  // raised for the near wing (lowered for the far), drawn there however the
+  // shoulder is foreshortened (wings.ts's wingFaces).
+  const raised = side === 'far' ? 'upper' : 'under';
+  const seen = (face: 'upper' | 'under') => ({ from: ids.shoulder, sign: face === raised ? 1 : -1 } as const);
   const piece = (part: 'hand' | 'arm', to: string): Piece => {
     const { upper, under, ...box } = art[part];
-    return { id: `${code} ${part}`, side, art: { upper: { src: upper, box }, under: { src: under, box } }, at: { kind: 'joint', to }, draws: [{ id: `${code} ${part}`, z, part: `${art.name} ${part}` }] };
+    return {
+      id: `${code} ${part}`, side, art: { upper: { src: upper, box, seen: seen('upper') }, under: { src: under, box, seen: seen('under') } },
+      at: { kind: 'joint', to }, draws: [{ id: `${code} ${part}`, z, part: `${art.name} ${part}` }],
+    };
   };
   const pieces = [piece('hand', ids.wrist), piece('arm', ids.shoulder)];
   const pose = (wing: WingPose, view = 0, shown = true) => {

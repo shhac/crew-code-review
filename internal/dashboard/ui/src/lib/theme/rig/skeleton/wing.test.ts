@@ -12,27 +12,33 @@ import { skeletonFromPosed } from '../../../../lab/skeleton';
 // the skeleton's wing is held to: moved to its root and foreshortened about
 // its shoulder, swept about the shoulder, the hand folded about the wrist
 // and drawn under the arm, each piece's upper side and underside both drawn
-// and only the facing one seen (passing edge-on, the one it turns to drawn
-// over the other at its share); folded away, neither.
+// and only the facing one seen; folded away, neither. Each face is drawn on
+// its own side of level (the near wing's underside raised, its upper side
+// lowered), so passing edge-on, where both are seen at their shares, one of
+// them is foreshortened the other way.
 const placing = (art: WingArt, pose: WingPose, root: Point) => ({
   placed: turnAbout(0, art.shoulder, root.x - art.shoulder.x, root.y - art.shoulder.y),
   swept: turnAbout(-pose.sweep, art.shoulder),
   folded: turnAbout(-pose.fold, art.wrist),
 });
-function birdWing(art: WingArt, pose: WingPose, root: Point, far: boolean, shown: boolean): Layer {
+function birdWing(art: WingArt, pose: WingPose, root: Point, far: boolean, shown: boolean): Layer[] {
   const face = wingFaces(pose.lift, far, 0);
   const share = (side: 'upper' | 'under') => (typeof face === 'string' ? Number(side === face) : face[side]);
-  const sides = (piece: WingArt['arm'], part: string): Layer[] => (['upper', 'under'] as const).map((side) => {
-    const image: Layer = {
-      kind: 'image', name: `${art.name} ${part}${side === 'under' ? ', underside' : ''}`, src: piece[side],
-      x: piece.x, y: piece.y, width: piece.width, height: piece.height, far, hidden: !shown || share(side) === 0,
-    };
-    const o = share(side);
-    return shown && o > 0 && o < 1 ? { kind: 'group', turn: turnAbout(0, { x: 0, y: 0 }), opacity: o, layers: [image] } : image;
-  });
+  const f = foreshortening(pose.lift);
+  const raised = far ? 'upper' : 'under';
   const { placed, swept, folded } = placing(art, pose, root);
-  const hand: Layer = { kind: 'group', turn: folded, layers: sides(art.hand, 'hand') };
-  return { kind: 'group', turn: placed, foreshorten: foreshortening(pose.lift), layers: [{ kind: 'group', turn: swept, layers: [hand, ...sides(art.arm, 'arm')] }] };
+  const side = (piece: WingArt['arm'], part: 'hand' | 'arm', which: 'upper' | 'under'): Layer => {
+    const o = share(which);
+    const image: Layer = {
+      kind: 'image', name: `${art.name} ${part}${which === 'under' ? ', underside' : ''}`, src: piece[which],
+      x: piece.x, y: piece.y, width: piece.width, height: piece.height, far, hidden: !shown || o === 0,
+    };
+    const seen: Layer = shown && o > 0 && o < 1 ? { kind: 'group', turn: turnAbout(0, { x: 0, y: 0 }), opacity: o, layers: [image] } : image;
+    const inPlane: Layer = { kind: 'group', turn: swept, layers: [part === 'hand' ? { kind: 'group', turn: folded, layers: [seen] } : seen] };
+    const sign = which === raised ? 1 : -1;
+    return { kind: 'group', turn: placed, foreshorten: Math.sign(f) === -sign ? -f : f, layers: [inPlane] };
+  };
+  return (['hand', 'arm'] as const).flatMap((part) => (['upper', 'under'] as const).map((which) => side(art[part], part, which)));
 }
 // Where a point of the wing's flat drawing was drawn, on the hand or the arm.
 function wingPoint(art: WingArt, pose: WingPose, root: Point, p: Point, onHand: boolean): Point {
@@ -63,7 +69,7 @@ const posed = (wing: WingPose, shown: boolean): RigPose => {
   return compose(BODY, () => ({ root: ROOT, joints: { ...a.joints, ...b.joints }, limbs: {}, show: { ...a.show, ...b.show }, z: {} }), 0);
 };
 const drawn = (wing: WingPose, shown: boolean): RigPose =>
-  ({ ...FRAME, layers: [{ kind: 'group', turn: ROOT, layers: [birdWing(ART, wing, FAR, true, shown), birdWing(ART, wing, NEAR, false, shown)] }] });
+  ({ ...FRAME, layers: [{ kind: 'group', turn: ROOT, layers: [...birdWing(ART, wing, FAR, true, shown), ...birdWing(ART, wing, NEAR, false, shown)] }] });
 const POSES: WingPose[] = [
   { lift: 40, sweep: 20, fold: 30 }, { lift: -55, sweep: -10, fold: 120 }, { lift: 3, sweep: 50, fold: 150 }, { lift: -2, sweep: 0, fold: 0 },
   { lift: 60, sweep: 0, fold: 0 }, { lift: -30, sweep: 0, fold: 0 }, { lift: 90, sweep: 0, fold: 90 }, { lift: 90, sweep: 30, fold: 0 }, FOLDED,
@@ -73,6 +79,13 @@ describe('a wing on the skeleton', () => {
   it('draws as the birds drew their wings, either side, its facing side seen, and folded away unseen', () => {
     for (const wing of POSES) for (const shown of [true, false]) {
       expect(planDiff({ ...planOf(posed(wing, shown)), guides: [] }, { ...planOf(drawn(wing, shown)), guides: [] }), JSON.stringify(wing)).toEqual([]);
+    }
+  });
+
+  it('passes level with no jump: just above and just below, the same two pictures, each on its own side', () => {
+    for (const sweep of [0, 20]) {
+      const [above, below] = [0.01, -0.01].map((lift) => planOf(posed({ lift, sweep, fold: 30 }, true)));
+      expect(planDiff({ ...above, guides: [] }, { ...below, guides: [] }, 0.01)).toEqual([]);
     }
   });
 

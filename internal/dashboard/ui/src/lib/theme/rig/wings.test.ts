@@ -109,12 +109,18 @@ describe('a wing seen from the side', () => {
     expect(wingFaces(-5, false, 10)).toBe('upper');
   });
 
-  it('crosses its faces over as it passes edge-on, the one it turns to drawn over the other, held whole', () => {
-    expect(wingFaces(0, false)).toEqual({ upper: 1, under: 0.5 });
-    expect(wingFaces(0, true)).toEqual({ upper: 1, under: 0.5 });
+  it('crosses its faces over as it passes edge-on, the one it turns to fading in as the other fades out', () => {
+    // Level, both whole, each on its own side.
+    expect(wingFaces(0, false)).toEqual({ upper: 1, under: 1 });
+    expect(wingFaces(0, true)).toEqual({ upper: 1, under: 1 });
     const rising = [-6, -3, 0, 3, 6].map((lift) => wingFaces(lift, false));
-    const shares = rising.map((f) => (typeof f === 'string' ? Number(f === 'under') : f.under));
-    for (let i = 1; i < shares.length; i++) expect(shares[i]).toBeGreaterThan(shares[i - 1]);
+    const share = (side: 'upper' | 'under') => rising.map((f) => (typeof f === 'string' ? Number(f === side) : f[side]));
+    for (let i = 1; i < rising.length; i++) {
+      expect(share('under')[i]).toBeGreaterThanOrEqual(share('under')[i - 1]);
+      expect(share('upper')[i]).toBeLessThanOrEqual(share('upper')[i - 1]);
+    }
+    expect(share('under')[0]).toBeLessThan(1);
+    expect(share('upper')[4]).toBeLessThan(1);
     // Past the band, which is where it is held at its thinnest, one face.
     expect(wingFaces(7, false)).toBe('under');
     expect(wingFaces(-7, true)).toBe('under');

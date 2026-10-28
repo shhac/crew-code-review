@@ -145,18 +145,20 @@ export function settling(t: number, raised: WingPose, upright = 60): FlightPose 
 // lowered, its upper side; the far wing the other way about. `view` is how
 // far above level the eye looks from (degrees): seen a little from above,
 // a near wing shows its upper side until it is raised past that. Turning
-// from one side to the other the wing passes edge-on, drawn no thinner than
-// EDGE_ON, so a swap there would show as a pop; across the EDGE_BAND either
-// side of it the side it turns to is drawn over the other instead, more of
-// it the further it has turned (each face's opacity), the other held whole
-// beneath so the wing never shows through.
+// from one side to the other the wing passes edge-on, where it is drawn no
+// thinner than EDGE_ON either side of level, so it would jump from one
+// side to the other there. Across the EDGE_BAND it is drawn both ways at
+// once instead, each face on its own side (a picture of the wing raised,
+// its underside; lowered, its upper side), the one it turns to fading in
+// to whole as the other fades out from whole: a pass drawing, the two
+// meeting halfway, both whole.
 export type Faces = 'upper' | 'under' | { upper: number; under: number };
 export function wingFaces(lift: number, far: boolean, view = 0): Faces {
   const past = far ? -view - lift : lift - view;
   const under = smooth((past + EDGE_BAND) / (2 * EDGE_BAND));
   if (under === 0) return 'upper';
   if (under === 1) return 'under';
-  return { upper: 1, under };
+  return { upper: Math.min(1, 2 * (1 - under)), under: Math.min(1, 2 * under) };
 }
 
 // A wing's art: each piece's upper side and underside, as images placed in

@@ -137,8 +137,11 @@ export type Drawn = readonly Layer[] | ((posed: { limb: (id: string) => Limb; lo
 
 // A variant of a piece's picture, its box in rest space (or in its joint's
 // own frame), and the same picture as fur alone, outline taken out, if it
-// has one.
-export type Art = { src: string; box: Box; fur?: string };
+// has one. `seen`: which way the joint `from` is foreshortened in the
+// picture (a near wing's underside is of it raised, 1; its upper side, of
+// it lowered, -1); posed foreshortened the other way, it is drawn mirrored
+// across the joint's line, on the side it is a picture of.
+export type Art = { src: string; box: Box; fur?: string; seen?: { from: string; sign: 1 | -1 } };
 
 export type Attachment =
   // A joint's frame. Box in rest space, or `local` in the joint's own frame
