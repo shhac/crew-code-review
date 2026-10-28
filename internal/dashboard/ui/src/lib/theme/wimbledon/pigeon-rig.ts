@@ -127,7 +127,7 @@ const BRISK_THRUST = 0.6;
 // overlapping it there.
 const WING: WingArt = {
   name: 'wing', shoulder: { x: 0, y: 0 }, wrist: { x: -0.9, y: -8 },
-  arm: { upper: armArt, under: armUnderArt, x: -3.9, y: -9.2, width: 5.58, height: 9.42 },
+  arm: { upper: armArt, under: armUnderArt, x: -3.15, y: -9.2, width: 4.83, height: 9.42 },
   hand: { upper: handArt, under: handUnderArt, x: -4, y: -16.6, width: 5.67, height: 10 },
 };
 const TIP = { x: -1.6, y: -16.2 };

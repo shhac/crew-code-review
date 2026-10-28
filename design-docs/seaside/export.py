@@ -116,6 +116,13 @@ def main() -> None:
     for name in ['gull-tail', 'gull-tail-fanned']:
         gull.placed(name, tails[name], OUT, gull.on_eye('gull-standing.png'), 1, None)
     wings = cut(keyed(HERE / 'gull-wings.png'), WINGS)
+    # The underside's arm redrawn as the inner half of one wing, its
+    # secondaries hanging back to the trailing edge (gull-arm-under-2.png):
+    # narrower than the upper side, it is widened to its box with clear
+    # pixels behind, so its leading edge lies on the upper side's.
+    under = crop(keyed(HERE / 'gull-arm-under-2.png'))
+    wide = round(wings['gull-arm'].shape[1] * WING_LENGTH['gull-arm'] / wings['gull-arm'].shape[0] * under.shape[0] / WING_LENGTH['gull-arm-under'])
+    wings['gull-arm-under'] = np.pad(under, ((0, 0), (max(0, wide - under.shape[1]), 0), (0, 0)))
     for name, art in wings.items():
         scale = WING_LENGTH[name] * RES / art.shape[0]
         if name.startswith('gull-arm'):

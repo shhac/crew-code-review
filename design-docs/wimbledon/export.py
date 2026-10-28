@@ -86,17 +86,24 @@ PIGEON_PAST = 1.2
 HAWK_PAST = 1.6
 
 
-def wings(sheet: str, prefix: str, hand: float, past: float, names: list[str]) -> dict[str, np.ndarray]:
+def wings(sheet: str, prefix: str, hand: float, past: float, names: list[str], arms: str | None = None) -> dict[str, np.ndarray]:
     """The wing pieces of sheet, stood span up, all on the scale that makes
     the hand hand units long, the arm's faded out past units beyond its
-    wrist. The rig shades the far wing itself."""
+    wrist. arms: a sheet of the arm pieces redrawn, which replace sheet's,
+    each as long as sheet's arm. The rig shades the far wing itself."""
     pieces = cut(keyed(HERE / sheet), names)
     scale = hand * RES / pieces['hand'].shape[1]
+    scales = {name: scale for name in WINGS}
+    if arms:
+        redrawn = cut(keyed(HERE / arms), ['arm', 'arm-under'])
+        k = scale * pieces['arm'].shape[1] / redrawn['arm'].shape[1]
+        pieces.update(redrawn)
+        scales.update({name: k for name in redrawn})
     for name in WINGS:
         piece = span_up(pieces[name])
         if name.startswith('arm'):
-            piece = wristed(piece, past, RES / scale)
-        w, h = export(piece, OUT, f'{prefix}-{name}', scale)
+            piece = wristed(piece, past, RES / scales[name])
+        w, h = export(piece, OUT, f'{prefix}-{name}', scales[name])
         print(f'{prefix}-{name}: {w / RES:.2f}x{h / RES:.2f}')
     return pieces
 
@@ -155,7 +162,7 @@ def main() -> None:
     for name, (length, heel) in FEET.items():
         per_unit = limbs[name].shape[1] / length
         pigeon.foot(name, knobbed(limbs[name], heel, KNOB * per_unit, KNOB_LINE * per_unit), OUT, length, heel)
-    flight = wings('pigeon-wings.png', 'pigeon', PIGEON_HAND, PIGEON_PAST, [*WINGS, 'tail-fan'])
+    flight = wings('pigeon-wings.png', 'pigeon', PIGEON_HAND, PIGEON_PAST, [*WINGS, 'tail-fan'], arms='pigeon-arms-2.png')
     # The fanned tail as long as the closed one.
     closed = parts['pigeon-tail']
     length = closed.shape[1] * pigeon.on_eye('pigeon-parts.png')
