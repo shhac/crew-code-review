@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Request } from '@playwright/test';
 
 test('shipped dashboard keeps robin memory bounded across animation and navigation', async ({ page }, info) => {
   test.setTimeout(120000);
@@ -14,7 +14,18 @@ test('shipped dashboard keeps robin memory bounded across animation and navigati
   await expect(page.locator('.robin')).toHaveCount(2);
   const session = await page.context().newCDPSession(page);
   await session.send('Performance.enable');
+  // A page left while its fetch is still out stays reachable from that fetch's
+  // continuation until the response lands, and no collection frees it before
+  // then. Ten quick navigations queue ten fetches behind one store, so under
+  // load a measurement taken at once counted hundreds of nodes that were
+  // freed a second later, and grew batch by batch as the backlog did.
+  const inFlight = new Set<Request>();
+  page.on('request', request => inFlight.add(request));
+  page.on('requestfinished', request => inFlight.delete(request));
+  page.on('requestfailed', request => inFlight.delete(request));
   const memory = async () => {
+    await expect.poll(() => inFlight.size, { timeout: 30000 }).toBe(0);
+    await page.evaluate(() => new Promise(resolve => setTimeout(resolve)));
     await session.send('HeapProfiler.collectGarbage');
     const { metrics } = await session.send('Performance.getMetrics');
     return { heap: metrics.find(m => m.name === 'JSHeapUsedSize')!.value, ...await session.send('Memory.getDOMCounters') };
