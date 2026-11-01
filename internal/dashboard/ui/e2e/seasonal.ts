@@ -161,10 +161,21 @@ export const animals = (page: Page, set: SeasonalSet) => page.locator(`${set.hom
 // Those on the page rather than away from it.
 export const present = (page: Page, set: SeasonalSet) => page.locator(`${set.home ?? set.overlay} [data-${set.animal}]:not([data-${set.animal}="away"])`);
 
-// Waits for the page's nav to finish arriving (the config adds a link, which
-// moves the rail and so the ledges), then for the animals to be placed.
-export async function settled(page: Page, set: SeasonalSet) {
+// Waits for a freshly loaded page to finish arriving: the nav's last link
+// (the config adds one, which moves the rail and so the ledges) and the
+// route's first data, which lays the page out again (a queue that arrives
+// replaces "empty"). Under load that data lands well after the nav, so a
+// scene taken on the nav alone was taken on a page about to move. Every
+// route reports its first load through the rail's feed, which says
+// "syncing" until then.
+export async function arrived(page: Page) {
   await expect(page.locator('.rail nav a')).toHaveCount(7);
+  await expect(page.locator('.rail .feed small')).not.toHaveText('syncing');
+}
+
+// Waits for the page to arrive, then for the animals to be placed.
+export async function settled(page: Page, set: SeasonalSet) {
+  await arrived(page);
   await page.waitForTimeout(set.settle);
 }
 

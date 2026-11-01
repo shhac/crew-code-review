@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { watchFrames } from './content';
-import { seedRandom } from './seasonal';
+import { arrived, seedRandom } from './seasonal';
 
 // The seaside: chips, a bucket and spade and a 99 on the shelf, drifts of
 // sand with shells along the ledges, and herring gulls that strut them,
@@ -41,7 +41,7 @@ test('a cursor left still in clear air is swooped at by one gull, through clear 
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/?theme=seaside&theme-cue=swoop');
   await expect.poll(() => gulls(page).count()).toBeGreaterThanOrEqual(2);
-  await expect(page.locator('.rail nav a')).toHaveCount(7);
+  await arrived(page);
   await page.waitForTimeout(1000);
   // Over the empty stretch of the heading, between its subtitle and the
   // box to queue a pull request.
@@ -62,7 +62,7 @@ test('reduced motion stands every gull still, and no swoop comes', async ({ page
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/?theme=seaside&theme-cue=swoop');
-  await expect(page.locator('.rail nav a')).toHaveCount(7);
+  await arrived(page);
   await expect.poll(() => gulls(page).count()).toBeGreaterThanOrEqual(2);
   await page.waitForTimeout(500);
   const where = () => gulls(page).evaluateAll((els) => els.map((el) => [el.getAttribute('data-gull'), el.getBoundingClientRect().toJSON()]));

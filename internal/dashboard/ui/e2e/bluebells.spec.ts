@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { watchFrames, type Drawn, type Region } from './content';
-import { CATCH_UP } from './seasonal';
+import { arrived, CATCH_UP } from './seasonal';
 
 // May's bluebell wood: a clump of bluebells on the shelf, moss and clumps of
 // bluebells along the ledges, and bumblebees going from flower to flower.
@@ -47,7 +47,7 @@ test('the bees keep out of the cards and bells dip under them, wide and on a pho
     await page.setViewportSize({ width, height: 900 });
     for (const route of routes) {
       await page.goto(`${route}?theme=bluebells`);
-      await expect(page.locator('.rail nav a')).toHaveCount(7);
+      await arrived(page);
       await expect.poll(() => bees(page).count(), { timeout: 20_000 }).toBeGreaterThanOrEqual(1);
       await page.waitForTimeout(CATCH_UP);
       expect((await watchFrames(page, BEES, { ms: 1500, keepOut: [CARDS] })).covered, `${width} ${route}`).toEqual([]);

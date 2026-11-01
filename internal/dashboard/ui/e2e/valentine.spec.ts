@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { coveredContent } from './content';
-import { CATCH_UP } from './seasonal';
+import { arrived, CATCH_UP } from './seasonal';
 
 // Valentine's: a shelf of chocolates, a rose and a card, rose petals on the
 // ledges, and cupids hovering in the page's open air that shoot at a still
@@ -76,7 +76,7 @@ test('the cupids keep out of the cards, wide and on a phone', async ({ page }) =
     await page.setViewportSize({ width, height: 900 });
     for (const route of routes) {
       await page.goto(`${route}?theme=valentine`);
-      await expect(page.locator('.rail nav a')).toHaveCount(7);
+      await arrived(page);
       await page.waitForTimeout(CATCH_UP);
       expect(await overCards(page), `${width} ${route}`).toEqual([]);
     }

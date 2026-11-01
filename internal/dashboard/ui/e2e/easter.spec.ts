@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { landsOnDecoration, SETS } from './seasonal';
+import { arrived, landsOnDecoration, SETS } from './seasonal';
 
 // The Easter egg hunt: a basket and chicks on the shelf, painted eggs tucked
 // into the ledges' ends with a found/total counter by the brand, and
@@ -57,7 +57,7 @@ test('the counter sits in the rail head, clear of the brand and the nav', async 
     await page.goto('/?theme=easter');
     const tally = page.locator(`${overlay} [data-tally]`);
     await expect(tally).toBeVisible();
-    await expect(page.locator('.rail nav a')).toHaveCount(7);
+    await arrived(page);
     const overlaps = await tally.evaluate((el) => {
       const t = el.getBoundingClientRect();
       const hit = (r: DOMRect) => t.left < r.right && r.left < t.right && t.top < r.bottom && r.top < t.bottom;
@@ -75,7 +75,7 @@ test('under reduced motion the cursor finds no egg: the hunt holds still too', a
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/?theme=easter');
   await expect.poll(() => page.locator('[data-rabbit]').count()).toBeGreaterThanOrEqual(2);
-  await expect(page.locator('.rail nav a')).toHaveCount(7);
+  await arrived(page);
   const hunt = async () => ({
     eggs: await page.locator(`${overlay} g[data-egg]`).evaluateAll((els) => els.map((el) => [el.getAttribute('data-egg'), el.innerHTML])),
     tally: await page.locator(`${overlay} [data-tally]`).getAttribute('data-tally'),

@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { arrived } from './seasonal';
 
 // The northern lights: a winter shelf with the aurora in the rail's free
 // space, and frost plus sleeping Arctic foxes on the page's ledges. What
@@ -55,9 +56,10 @@ test('reduced motion stills the sky and the frost', async ({ page }) => {
   await page.goto('/?theme=aurora');
   const curtains = page.locator('.aurora-shelf .curtain');
   await expect(curtains).toHaveCount(3);
-  // The nav gains a link once the config arrives, which moves the sky; a
-  // still scene is redrawn for that, so it is compared once settled.
-  await expect(page.locator('.rail nav a')).toHaveCount(7);
+  // The nav gains a link once the config arrives, which moves the sky, and
+  // the page's data lays it out again; a still scene is redrawn for each,
+  // so it is compared once both have arrived.
+  await arrived(page);
   await page.waitForTimeout(500);
   const sky = () => curtains.evaluateAll((els) => els.map((el) => el.getAttribute('d')));
   const before = await sky();
