@@ -158,13 +158,18 @@ rules give on most routes:
 
 | Pose | Used for | Footprint | Behind, ahead | Needs clear above it |
 | --- | --- | --- | --- | --- |
-| graze | grazing, nibbling | 44x26 | 18, 22 | 27px |
-| alert | crouched, ears up: the freeze, and sitting where there is no tall room | 36x27 | 18, 18 | 27px |
-| lope | the slow hop, coming up to box | 37x27 | 18, 18.5 | 27px |
-| bound | running: the chase, bolting, coming and going | 47x26 | 23.5, 21 | 27px |
-| leap | the flight between ledges | 51x25 | 25.5, 18.5 | the arc's swept box (below) |
-| sit | sitting up tall, ears up: alert, the stand-off, reduced motion | 42x38 | 21, 14 | 40px |
-| box | reared up on the long hind feet, striking | 40x39 | 20, 8 | 40px over the pair |
+| graze | grazing, nibbling | 38x24.75 | 17.5, 19 | 27px |
+| alert | crouched, ears up: the freeze, and sitting where there is no tall room | 34.5x25.5 | 16.75, 17.25 | 27px |
+| lope | the slow hop, coming up to box | 36x25.25 | 17.25, 18 | 27px |
+| bound | running: the chase, bolting, coming and going | 46.5x25.75 | 23.25, 21.25 | 27px |
+| leap | the flight between ledges | 52x24.5 | 26, 18.25 | the arc's swept box (below) |
+| sit | sitting up tall, ears up: alert, the stand-off, reduced motion | 33.5x34.75 | 16.75, 13.5 | 40px |
+| box | reared up on the long hind feet, striking | 32.5x36.5 | 16.25, 8.25 | 40px over the pair |
+
+Each is what its art's outline reaches at the furthest, plus 0.5px, rounded up to a quarter pixel, and each reach behind and ahead the same
+(2026-10-29; when the checks measured pictures' boxes they were graze
+44x26, alert 36x27, lope 37x27, bound 47x26, leap 51x25, sit 43x38 and box
+40x39; the standing pose, 38x34.5, is now 35.5x33.75).
 
 Ears up is what makes a hare tall: the reference stands 34px with them, as
 tall as it is long. So day to day it crouches (the alert pose, the freeze

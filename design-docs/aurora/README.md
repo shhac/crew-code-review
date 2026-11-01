@@ -122,11 +122,15 @@ stride, leap or sway, which `fox-rig.test.ts` checks:
 
 | Pose | Footprint | Used for | Needs clear above it |
 | --- | --- | --- | --- |
-| curled | 23.5x19 | asleep | 27px (where it may lie) |
-| alert | 23.5x21.5 | the ear twitch, waking, looking up | 27px |
-| trot | 46x26.5 | trotting, entering, leaving, settling | 27px |
-| bow | 53.5x29.5 | the stretch, the crouch | 29.5px over its width |
-| pounce | 54x29.5 | the leap and the dig | 29.5px plus the hop, over the whole leap |
+| curled | 23.5x19.5 | asleep | 27px (where it may lie) |
+| alert | 23.5x22.25 | the ear twitch, waking, looking up | 27px |
+| trot | 45.5x26 | trotting, entering, leaving, settling | 27px |
+| bow | 47.5x27.75 | the stretch, the crouch | 27.75px over its width |
+| pounce | 48x28.5 | the leap and the dig | 28.5px plus the hop, over the whole leap |
+
+Each is what its art's outline reaches at the furthest, plus 0.5px, rounded up to a quarter pixel (2026-10-29; they were 23.5x19, 23.5x21.5, 46x26.5,
+53.5x29.5 and 54x29.5 when the checks measured pictures' boxes, and the
+curled and alert poses' half pixel more breathing room in their tops).
 
 (As first drawn, as single pictures, they were trot 32x19, bow 26.5x23.5 and
 pounce 25x30, with the moving fox drawn a quarter smaller than the curled one;

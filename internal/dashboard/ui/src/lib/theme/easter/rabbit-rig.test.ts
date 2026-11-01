@@ -9,9 +9,10 @@ const look = (over: Partial<RabbitLook> = {}): RabbitLook => ({ now: 0, gaze: 0,
 const POSE_NAMES: Pose[] = ['sit', 'alert', 'groom', 'hop', 'nudge', 'thump'];
 
 // Every moment of a pose over a few seconds and several hops, both ways a
-// hop goes (walking and bolting), with the head turned either way.
+// hop goes (walking and bolting), with the head turned either way as far
+// as it turns toward a cursor (rabbit-rig.ts's LOOK).
 const momentsOf = (pose: Pose) => Array.from({ length: 300 }, (_, i) => i * 13).flatMap((now) =>
-  [false, true].flatMap((bolting) => [-8, 0, 8].map((gaze) => rabbitRig(rabbit(pose, now / 9, now, bolting), look({ now, gaze })))));
+  [false, true].flatMap((bolting) => [-10, 0, 10].map((gaze) => rabbitRig(rabbit(pose, now / 9, now, bolting), look({ now, gaze })))));
 const most = (rigs: readonly RigPose[], of: (rig: RigPose) => number) => Math.max(...rigs.map(of));
 
 // Legs are listed (legsOf, solesOf) far hind, far fore, near hind, near fore.

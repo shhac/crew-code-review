@@ -300,6 +300,13 @@ whole world is the rail, and this is their contract.
   | land | 18x15 | landing and taking off |
   | cruise | 20x13 | fleeing, coming back |
 
+  As built (`fete/footprints.ts`, 2026-10-29), each is what its art's outline reaches at the furthest, plus 0.5px, rounded up to a quarter pixel, as a
+  half width, up and down: standing 10.5/4.5/7.5, feed 10.5/3.5/7.75, hover
+  9.75/11.5/8.25, land 9.75/11/9.25, cruise 10.5/11.25/8.5 (when the checks
+  measured pictures' boxes, 10/4/7.5, 10.5/4/7.5, 9.5/11.5/11, 9.5/11/11
+  and 10/11.5/10.5). The high orbit now needs about 77px above the cake
+  (was 80).
+
 - **Swept area.** A route is eased cubic curves (as `flight-route.ts`'s) and
   is accepted only when the pose's footprint, swept along the whole route
   (each small interval enclosing the curve, as `clearArc` and `clearFlight`

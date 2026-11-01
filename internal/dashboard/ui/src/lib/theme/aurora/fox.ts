@@ -21,11 +21,11 @@ import { between, maxBy, pick, type Rand } from '../seed';
 // the ledge: the box fox-rig.ts's drawing stays inside at every moment of
 // its stride, leap or sway (its tests check this).
 export const POSES = {
-  curled: { width: 23.5, height: 19 },
-  alert: { width: 23.5, height: 21.5 },
-  trot: { width: 46, height: 26.5 },
-  bow: { width: 53.5, height: 29.5 },
-  pounce: { width: 54, height: 29.5 },
+  curled: { width: 23.5, height: 19.5 },
+  alert: { width: 23.5, height: 22.25 },
+  trot: { width: 45.5, height: 26 },
+  bow: { width: 47.5, height: 27.75 },
+  pounce: { width: 48, height: 28.5 },
 } as const;
 type Pose = keyof typeof POSES;
 

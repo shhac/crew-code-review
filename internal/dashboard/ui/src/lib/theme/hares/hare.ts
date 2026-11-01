@@ -15,28 +15,28 @@ import { REACH } from './trail';
 // the ledge: the box hare-rig.ts's drawing stays inside at every moment of
 // its motion (its tests check this).
 export const POSES: Record<HarePose, { width: number; height: number }> = {
-  stand: { width: 38, height: 34.5 },
-  graze: { width: 44, height: 26 },
-  sit: { width: 43, height: 38 },
-  alert: { width: 36, height: 27 },
-  lope: { width: 37, height: 27 },
-  bound: { width: 47, height: 26 },
-  leap: { width: 51, height: 25 },
-  box: { width: 40, height: 39 },
+  stand: { width: 35.5, height: 33.75 },
+  graze: { width: 38, height: 24.75 },
+  sit: { width: 33.5, height: 34.75 },
+  alert: { width: 34.5, height: 25.5 },
+  lope: { width: 36, height: 25.25 },
+  bound: { width: 46.5, height: 25.75 },
+  leap: { width: 52, height: 24.5 },
+  box: { width: 32.5, height: 36.5 },
 };
 // How far each pose's drawing reaches behind where it stands and ahead of
 // it (the footprint's width is twice the larger): reared up, a hare is
 // mostly behind its feet; sitting up, its haunches are. Two facing each
 // other, or one following another, keep apart by these.
 export const REACHES: Record<HarePose, { back: number; front: number }> = {
-  stand: { back: 17, front: 19 },
-  graze: { back: 18, front: 22 },
-  sit: { back: 21.5, front: 14 },
-  alert: { back: 18, front: 18 },
-  lope: { back: 18, front: 18.5 },
-  bound: { back: 23.5, front: 21 },
-  leap: { back: 25.5, front: 18.5 },
-  box: { back: 20, front: 8 },
+  stand: { back: 17, front: 17.75 },
+  graze: { back: 17.5, front: 19 },
+  sit: { back: 16.75, front: 13.5 },
+  alert: { back: 16.75, front: 17.25 },
+  lope: { back: 17.25, front: 18 },
+  bound: { back: 23.25, front: 21.25 },
+  leap: { back: 26, front: 18.25 },
+  box: { back: 16.25, front: 8.25 },
 };
 
 // Day to day it needs this much clear above the ledge (counting REACH into

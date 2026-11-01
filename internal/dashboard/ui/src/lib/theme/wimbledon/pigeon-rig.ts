@@ -363,6 +363,6 @@ export const SHY_SPEED = 35;
 // measures them.
 export type Footprint = { width: number; height: number; down?: number };
 export const FOOTPRINTS: Record<PigeonPose, Footprint> = {
-  stand: { width: 30.5, height: 25 }, walk: { width: 30, height: 24 }, peck: { width: 42.5, height: 24 }, alert: { width: 30.5, height: 27 },
-  takeoff: { width: 34, height: 39.5, down: 1 }, fly: { width: 31, height: 30.5, down: 1 }, land: { width: 46, height: 36.5, down: 1.2 }, settle: { width: 31, height: 27 },
+  stand: { width: 30.5, height: 24.5 }, walk: { width: 30.5, height: 24 }, peck: { width: 40, height: 24 }, alert: { width: 30.5, height: 27 },
+  takeoff: { width: 31.5, height: 39.5, down: 1 }, fly: { width: 30.5, height: 30.75, down: 1 }, land: { width: 43.5, height: 36, down: 1.25 }, settle: { width: 30.5, height: 26.25 },
 };

@@ -19,9 +19,9 @@ describe('the wasps\' orbits', () => {
     expect(zone0.bottom).toBeLessThanOrEqual(low.bottom);
   });
 
-  it('needs about 32px above the cake for the low orbit and 80 for the high one', () => {
+  it('needs about 32px above the cake for the low orbit and 77 for the high one', () => {
     expect(CAKE.y - bandOf(orbitOf(0, places)).top).toBeCloseTo(31.5, 0);
-    expect(CAKE.y - bandOf(orbitOf(1, places)).top).toBeCloseTo(80, 0);
+    expect(CAKE.y - bandOf(orbitOf(1, places)).top).toBeCloseTo(77, 0);
     expect([0, 1].map((id) => orbitFits(id, { air: TALL, places }))).toEqual([true, true]);
     expect([0, 1].map((id) => orbitFits(id, { air: MEDIUM, places }))).toEqual([true, false]);
     expect([0, 1].map((id) => orbitFits(id, { air: SHORT, places }))).toEqual([false, false]);

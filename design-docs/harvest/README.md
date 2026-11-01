@@ -411,6 +411,13 @@ mode (lab spec `lab-tests/crow.spec.ts`).
   51.5x51.5 with 11 below; flare 45.5x50 with 3.5 below; settle 47.5x48.5
   with 3 below. The stand needs 27.5 clear, not 27: the turned head's box
   corner (`WALKER.clear` follows when the layer is built).
+- **Footprints refitted** (2026-10-29), each to what its art's outline reaches at the furthest, plus 0.5px, rounded up to a quarter pixel, with
+  `down` only where its art or a foot's box hangs below the ledge: stand
+  39x27.25, walk 41.5x27, sidle 39x27.25, peck 41x20, alert 38.5x30; skim
+  46x27, glide 46x28.75; flap 50.5x43.5 with 5.75 below; take-off 51x51.5
+  with 4.75 below; flare 45.5x50 with 3.75 below; settle 47x48.5 with 2.75
+  below. Taking off, flaring and settling low: 50.5x30.5 with 1.75 below,
+  43x27.75 and 47x27.75 with 1.5 below.
 
 ### The layer as built (on the surfaces kit, 2026-10-10)
 

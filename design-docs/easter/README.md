@@ -290,12 +290,15 @@ drawing unit, the eye 2.1px):
 
 | Pose | Footprint | Used for |
 | --- | --- | --- |
-| sit | 31x26 | sitting, the nose twitch, looking about, the still pose |
-| alert | 31x28 | sitting up on alert, forepaws to its chest |
-| groom | 31x27 | washing its face, forepaws at its muzzle |
-| hop | 31x27 | every hop: along a ledge, in, out, bolting |
-| nudge | 40x19 | leaving an egg, head down to the ledge |
-| thump | 31x23 | the stamp before it bolts |
+| sit | 29x25.75 | sitting, the nose twitch, looking about, the still pose |
+| alert | 28.5x28 | sitting up on alert, forepaws to its chest |
+| groom | 28.5x25.75 | washing its face, forepaws at its muzzle |
+| hop | 38x26.5 | every hop: along a ledge, in, out, bolting |
+| nudge | 32.5x18.5 | leaving an egg, head down to the ledge |
+| thump | 30.5x22.75 | the stamp before it bolts |
+
+Each is what its art's outline reaches at the furthest, plus 0.5px, rounded up to a quarter pixel (2026-10-29; they were 31x26, 31x28, 31x27, 38x27,
+40x19 and 31x23 when the checks measured pictures' boxes).
 
 Sitting up on alert is the one pose over 27px: where there is not that much
 room it stays in its sit, ears pricked, and nothing else changes. No room

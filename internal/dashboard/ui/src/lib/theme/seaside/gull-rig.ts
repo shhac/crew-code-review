@@ -380,8 +380,8 @@ export const FORAGE_SPEED = 13;
 // measures them.
 type Footprint = { width: number; height: number; down?: number };
 export const FOOTPRINTS: Record<GullPose, Footprint> = {
-  stand: { width: 39.5, height: 26.5 }, strut: { width: 36.5, height: 26 }, forage: { width: 41.5, height: 26 },
-  eye: { width: 42.5, height: 27 }, call: { width: 44.5, height: 27 },
-  takeoff: { width: 44, height: 45, down: 6 }, flap: { width: 41, height: 39 }, glide: { width: 41, height: 26.5 },
-  stoop: { width: 48, height: 26 }, flare: { width: 48, height: 44, down: 6 }, settle: { width: 44, height: 44 },
+  stand: { width: 37, height: 26 }, strut: { width: 37, height: 25.75 }, forage: { width: 40.5, height: 25.5 },
+  eye: { width: 39.5, height: 26.5 }, call: { width: 39, height: 26 },
+  takeoff: { width: 43, height: 44.75, down: 5.75 }, flap: { width: 41, height: 39 }, glide: { width: 41, height: 26.5 },
+  stoop: { width: 44.5, height: 24.25 }, flare: { width: 44, height: 43.5, down: 3.5 }, settle: { width: 43, height: 43.75 },
 };

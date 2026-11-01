@@ -92,12 +92,18 @@ the models move, and mirrored with the bee's facing:
 
 | Pose | Footprint (w x h), as built | Planned | Used for | Needs |
 | --- | --- | --- | --- | --- |
-| perch | 22.5x14 | 20x13 | feeding on a bell, the warm-up shiver, reduced motion | the clump's box plus 6px above its top |
-| crawl | 22.5x14.5 | 20x13 | walking from one bell to the next | as perch |
-| land | 22.5x17.75 | 22x20 | the last 70ms before touching down | air |
-| hover | 20.5x25 | 22x21 | hovering at a flower, before a dart, after a bonk | air |
-| fly | 23.5x23.5 | 24x18 | flying between flowers, darting | air, swept along the route |
-| bonk | 24.5x19.5 | 26x22 | the knock and the bounce | the wall's air run (below) |
+| perch | 23.5x15 | 20x13 | feeding on a bell, the warm-up shiver, reduced motion | the clump's box plus 6px above its top |
+| crawl | 23.25x15 | 20x13 | walking from one bell to the next | as perch |
+| land | 23x17.75 | 22x20 | the last 70ms before touching down | air |
+| hover | 20.25x24.25 | 22x21 | hovering at a flower, before a dart, after a bonk | air |
+| fly | 23.75x22.75 | 24x18 | flying between flowers, darting | air, swept along the route |
+| bonk | 23.5x20 | 26x22 | the knock and the bounce | the wall's air run (below) |
+
+As built is what its art's outline reaches at the furthest, plus 0.5px, rounded up to a quarter pixel, behind and ahead, up and down each (bee-rig.ts's
+REACH; 2026-10-29). Measured so, a few came out a fraction larger than
+they were when the checks measured pictures' boxes (perch 22.75x14.5, crawl
+22.75x14.5, land 22.75x17.75, hover 20.5x25, fly 23.5x23.5, bonk 23x20.25):
+those had less than the half pixel to spare.
 
 The planned boxes were targets for the rig. The rig the insect kit proved
 came out bigger (perch 22.5x16, hover 22.5x27.5, fly 24.5x26), from the

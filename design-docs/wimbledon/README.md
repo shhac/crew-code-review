@@ -111,7 +111,13 @@ built on the bird kit, every box comes from the rigs' measured footprints
 (`pigeon-rig.ts`'s and `hawk-rig.ts`'s `FOOTPRINTS`, checked over every
 moment of each motion by their tests), and `pigeon.ts`'s `POSES` and
 `ENVELOPES` and `hawk.ts`'s `GLIDE` are read from them. See "Rigs, as
-built" for the numbers.
+built" for the numbers. Since 2026-10-29 each is what its art's outline
+reaches at the furthest, plus 0.5px, rounded up to a quarter pixel, with
+`down` only where its art or a foot's box hangs below the ledge: the
+pigeon stands 30.5x24.5, walks 30.5x24, pecks 40x24, is alert 30.5x27,
+takes off 31.5x39.5 (1 below), flies 30.5x30.75 (1 below), lands 43.5x36
+(1.25 below) and settles 30.5x26.25; the hawk glides 46.5x16 (0.75 below)
+and flaps 46.5x33.5 (16 below).
 
 ### The page's room, measured
 

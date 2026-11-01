@@ -16,12 +16,12 @@ import { HOP_LENGTH, type Pose } from './rabbit-rig';
 // is the one pose taller than a first-row card's 27px; a hop the widest,
 // its long hind feet streaming out behind it from opened hocks.
 export const POSES: Record<Pose, { width: number; height: number }> = {
-  sit: { width: 31, height: 26 },
-  alert: { width: 31, height: 28 },
-  groom: { width: 31, height: 27 },
-  hop: { width: 38, height: 27 },
-  nudge: { width: 40, height: 19 },
-  thump: { width: 31, height: 23 },
+  sit: { width: 29, height: 25.75 },
+  alert: { width: 28.5, height: 28 },
+  groom: { width: 28.5, height: 25.75 },
+  hop: { width: 38, height: 26.5 },
+  nudge: { width: 32.5, height: 18.5 },
+  thump: { width: 30.5, height: 22.75 },
 };
 
 // Wherever a rabbit sits or hops needs this much clear space above the

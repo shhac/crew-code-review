@@ -9,11 +9,11 @@ import { ANCHOR, GROUND, SCALE } from './wasp-rig';
 // larger than the note's first targets: the blur's ghost wings reach well
 // above her, and her long legs hang below her in the air.
 export const FOOTPRINTS = {
-  standing: { half: 10, up: 4, down: 7.5 },
-  feed: { half: 10.5, up: 4, down: 7.5 },
-  hover: { half: 9.5, up: 11.5, down: 11 },
-  land: { half: 9.5, up: 11, down: 11 },
-  cruise: { half: 10, up: 11.5, down: 10.5 },
+  standing: { half: 10.5, up: 4.5, down: 7.5 },
+  feed: { half: 10.5, up: 3.5, down: 7.75 },
+  hover: { half: 9.75, up: 11.5, down: 8.25 },
+  land: { half: 9.75, up: 11, down: 9.25 },
+  cruise: { half: 10.5, up: 11.25, down: 8.5 },
 } as const satisfies Record<string, Reach>;
 export type WaspPose = keyof typeof FOOTPRINTS;
 

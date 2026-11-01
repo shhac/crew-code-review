@@ -65,13 +65,16 @@ stretch right of a short title is usually all there is.
 
   | Footprint | Either side | Up | Down | Used for |
   | --- | --- | --- | --- | --- |
-  | hover | 24 | 28 | 17 | hovering, turning, entering |
-  | flight | 23 | 28 | 17 | flits and dodges, swept along the route |
-  | shoot | 24 | 29 | 17 | drawing, aiming and loosing |
-  | dodge | 25 | 28 | 15 | the startled first third of a dodge |
+  | hover | 23 | 27.25 | 16.25 | hovering, turning, entering |
+  | flight | 22.25 | 26.75 | 17 | flits and dodges, swept along the route |
+  | shoot | 23.25 | 27.75 | 16.75 | drawing, aiming and loosing |
+  | dodge | 23.75 | 26.5 | 14.75 | the startled first third of a dodge |
 
-  A hover spot must hold the largest of all four (50 wide, 29 up, 17
-  down), since a cupid may do any of them there. The wings beat out behind
+  Each is what its art's outline reaches at the furthest, plus 0.5px, rounded up to a quarter pixel, down also holding the feet's boxes, which the laws
+  measure (2026-10-29; they were 24/28/17, 23/28/17, 24/29/17 and
+  25/28.5/15 when the checks measured pictures' boxes). A hover spot must
+  hold the largest of all four (47.5 wide, 27.75 up, 17 down), since a
+  cupid may do any of them there. The wings beat out behind
   the back, so they set the width; the curls and the raised wing set the
   height.
 - **Hover spots**: a point where that footprint sits wholly in air, and

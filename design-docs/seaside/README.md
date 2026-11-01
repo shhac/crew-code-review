@@ -675,7 +675,12 @@ As the owner built on it:
   instead, and it carries its own tail under its primaries, so the flight
   tail is not drawn then (it showed above the primaries, a second tail).
 - **Footprints** (the rig test, the head turned every way it can): stand
-  39.5x26.5, strut 36.5x26, eye 42.5x27, call 44.5x27.
+  39.5x26.5, strut 36.5x26, eye 42.5x27, call 44.5x27. Refitted
+  (2026-10-29) to what its art's outline reaches at the furthest, plus 0.5px, rounded up to a quarter pixel, with `down` only where its art or a foot's
+  box hangs below the ledge: stand 37x26, strut 37x25.75, forage 40.5x25.5,
+  eye 39.5x26.5, call 39x26; take-off 43x44.75 with 5.75 below, flap 41x39,
+  glide 41x26.5, stoop 44.5x24.25, flare 44x43.5 with 3.5 below, settle
+  43x43.75.
 
 ## Verification (for the build)
 

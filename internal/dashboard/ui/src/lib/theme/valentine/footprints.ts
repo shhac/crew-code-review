@@ -6,10 +6,10 @@ import type { Reach } from '../floors';
 // legs' swing, its bob and its draw, either way round (its tests check
 // this). Placement, routes and spacing all work from these.
 export const FOOTPRINTS = {
-  hover: { half: 24, up: 28, down: 17 },
-  flight: { half: 23, up: 28, down: 17 },
-  shoot: { half: 24, up: 29, down: 17 },
-  dodge: { half: 25, up: 28.5, down: 15 },
+  hover: { half: 23, up: 27.25, down: 16.25 },
+  flight: { half: 22.25, up: 26.75, down: 17 },
+  shoot: { half: 23.25, up: 27.75, down: 16.75 },
+  dodge: { half: 23.75, up: 26.5, down: 14.75 },
 } as const satisfies Record<string, Reach>;
 export type Footprint = keyof typeof FOOTPRINTS;
 

@@ -443,12 +443,12 @@ export const SIDLE_SPEED = 45;
 // never the drawing; in the air, the wings below the line it flies along.
 export type Footprint = { width: number; height: number; down?: number };
 export const FOOTPRINTS: Record<CrowPose, Footprint> = {
-  stand: { width: 40, height: 27.5 }, walk: { width: 43, height: 27.5, down: 0.2 }, sidle: { width: 42.5, height: 27.5, down: 0.2 },
-  peck: { width: 46.5, height: 24, down: 0.45 }, alert: { width: 38, height: 32.5 },
-  takeoff: { width: 51.5, height: 51.5, down: 4.5 }, flap: { width: 52, height: 44, down: 6 }, skim: { width: 48, height: 28.5 },
-  glide: { width: 48, height: 29.5 }, flare: { width: 47, height: 50, down: 3.5 }, settle: { width: 47.5, height: 48.5, down: 3 },
+  stand: { width: 39, height: 27.25 }, walk: { width: 41.5, height: 27 }, sidle: { width: 39, height: 27.25 },
+  peck: { width: 41, height: 20 }, alert: { width: 38.5, height: 30 },
+  takeoff: { width: 51, height: 51.5, down: 4.75 }, flap: { width: 50.5, height: 43.5, down: 5.75 }, skim: { width: 46, height: 27 },
+  glide: { width: 46, height: 28.75 }, flare: { width: 45.5, height: 50, down: 3.75 }, settle: { width: 47, height: 48.5, down: 2.75 },
 };
 // Taking off, landing and settling low (depth 0), where only a skim fits.
 export const LOW_FOOTPRINTS: Record<'takeoff' | 'flare' | 'settle', Footprint> = {
-  takeoff: { width: 51, height: 30.5, down: 1.1 }, flare: { width: 43.5, height: 28.5, down: 1.5 }, settle: { width: 47.5, height: 28, down: 1.5 },
+  takeoff: { width: 50.5, height: 30.5, down: 1.75 }, flare: { width: 43, height: 27.75, down: 1.5 }, settle: { width: 47, height: 27.75, down: 1.5 },
 };

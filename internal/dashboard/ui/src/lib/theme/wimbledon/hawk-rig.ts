@@ -98,6 +98,6 @@ export function hawkRig(hawk: RigHawk, look: HawkLook): RigPose {
 // px, from its belly line; `down` below it), as hawk-rig.test.ts measures.
 type Footprint = { width: number; height: number; down?: number };
 export const FOOTPRINTS: Record<HawkPose, Footprint> = {
-  glide: { width: 46, height: 16.5, down: 0.5 },
-  flap: { width: 46, height: 33.5, down: 16 },
+  glide: { width: 46.5, height: 16, down: 0.75 },
+  flap: { width: 46.5, height: 33.5, down: 16 },
 };
